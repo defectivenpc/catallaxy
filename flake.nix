@@ -32,6 +32,8 @@
     let
       lib = nixpkgs.lib;
       pureLib = import ./lib/pure.nix { inherit lib; };
+
+      defaultFloeSet = import ./floes;
     in
     {
       nixosModules.default =
@@ -43,6 +45,10 @@
       nixosModules.hostDns = ./nix/nixos/host-dns.nix;
 
       lib = pureLib;
+
+      # The bundled distro, as a value `mkLab` will take. Exposed so a
+      # consumer can subtract from it, add to it, or ignore it entirely.
+      floeSets.default = defaultFloeSet;
 
       templates.consumer = {
         path = ./templates/consumer;
@@ -78,6 +84,7 @@
             cataCharts
             k8sSpecs
             ;
+          floes = defaultFloeSet;
         };
 
         labs = import ./lib/labs.nix {
@@ -90,6 +97,7 @@
             ;
           modulesPath = ./modules;
           examplesPath = ./examples/labs;
+          inherit defaultFloeSet;
 
           inherit (packages') tools cataWrapped;
         };
@@ -98,6 +106,8 @@
           inherit lib pkgs;
           inherit (packages') cataWrapped;
         };
+
+        floeChecks = import ./lib/floe-checks.nix { inherit lib pkgs; };
 
         exampleLabDefs = labs.discoverExampleLabs;
         fixtureLabDefs = labs.discoverFixtureLabs;
@@ -114,6 +124,7 @@
         legacyPackages = {
           inherit (labs) mkLab mkLabShell k8sTypegenConfig;
           inherit (labChecks) mkLabChecks;
+          inherit (floeChecks) mkFloeChecks;
           inherit (packages') tools;
           inherit e2eLabs;
           labs = lib.mapAttrs (_: lab: lab.config.lab.out.cliConfig) exampleLabDefs;
@@ -180,10 +191,12 @@
             e2eLabs
             ;
           fixtureLabs = fixtureLabDefs;
+          floeSet = defaultFloeSet;
           inherit (labs) k8sTypegenConfig;
           packages = packages';
           inherit (labs) mkLab labRefusal labForce;
           inherit (labChecks) mkLabChecks;
+          inherit (floeChecks) mkFloeChecks;
         };
       }
     );

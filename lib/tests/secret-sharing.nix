@@ -30,6 +30,14 @@ let
           lab.clusters.obs = obs;
         }
       ];
+      specialArgs.clusterFloes = import ./support/floes.nix { inherit lib; } [
+        "external-secrets"
+        # Not exercised here. external-secrets declares `reaches` on
+        # `openbao/api`, and the netpol typo check resolves those names
+        # against the set in force, so omitting openbao turns a real edge
+        # into a reported typo.
+        "openbao"
+      ];
     }).config;
 
   publishHarbor = {

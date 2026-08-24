@@ -10,7 +10,7 @@
         ];
       }
       ''
-        scripts=$(find ${self}/modules ${self}/lib -name '*.sh')
+        scripts=$(find ${self}/modules ${self}/lib ${self}/floes -name '*.sh')
 
         if [ -z "$scripts" ]; then
           echo "no .sh files found, so this check is asserting nothing" >&2

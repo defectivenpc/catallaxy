@@ -6,7 +6,10 @@ let
   # a floe an operator writes outside this repo is checked the same way.
   claimants = lib.filterAttrs (
     _: floe: (floe.enable or false) && (floe.exports or { }) ? clusters
-  ) config.lab.floes;
+    # `lab.floes` is declared by the lab-scope floes themselves, so a lab
+    # built with none of them has no such attribute rather than an empty one.
+    # `modules/lab/floes.nix:6` guards the same way.
+  ) (config.lab.floes or { });
 
   claimedBy = lib.foldl' (
     acc: name:
@@ -18,11 +21,6 @@ let
   contested = lib.filterAttrs (_: names: lib.length names > 1) claimedBy;
 in
 {
-  imports = [
-    ./k3d-local.nix
-    ./talos-local.nix
-  ];
-
   options.lab.platforms.contestedClusters = lib.mkOption {
     type = lib.types.listOf lib.types.str;
     readOnly = true;

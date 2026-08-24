@@ -11,9 +11,11 @@
   labRefusal,
   labForce,
   mkLabChecks,
+  mkFloeChecks,
   exampleLabDefs,
   fixtureLabs,
   e2eLabs,
+  floeSet,
   k8sTypegenConfig,
 }:
 
@@ -37,7 +39,17 @@ in
 // import ./typo-assertions.nix { inherit lib pkgs labRefusal; }
 // import ./capability-conflicts.nix { inherit lib pkgs labRefusal; }
 // import ./floe-collisions.nix { inherit lib pkgs labRefusal; }
-// import ./floe-exports.nix { inherit lib pkgs mkLab; }
+// import ./floe-sets.nix { inherit lib pkgs mkLab; }
+// mkFloeChecks {
+  inherit mkLab;
+  floes = floeSet.cluster;
+  labs = exampleLabDefs // fixtureLabs;
+  sourceDir = ../../floes/cluster;
+  # `custom` renders whatever a lab hands it, so its images and its traffic
+  # are the lab's to declare and not the floe's.
+  cannotKnowItsImages = [ "custom" ];
+  cannotKnowItsTraffic = [ "custom" ];
+}
 // import ./infra-terraform.nix {
   inherit
     lib
@@ -69,19 +81,15 @@ in
 // import ./step-kinds.nix { inherit lib pkgs system; }
 // import ./host-dns.nix { inherit lib pkgs self; }
 // import ./scripts.nix { inherit pkgs self; }
+// import ./platform-floe-coupling.nix { inherit pkgs self; }
 // import ./image-rewrite.nix { inherit lib pkgs; }
 // import ./openbao-ops.nix { inherit lib pkgs mkLab; }
 // import ./image-paths.nix { inherit lib pkgs self; }
-// import ./image-completeness.nix {
-  inherit lib pkgs;
-  labs = exampleLabDefs // fixtureLabs;
-}
 // import ./image-retarget-lab.nix { inherit lib pkgs mkLab; }
 // import ./sbom.nix { inherit lib pkgs mkLab; }
 // import ./network-policies.nix {
   inherit lib pkgs mkLab;
   inherit (packages) cataWrapped;
-  labs = exampleLabDefs // fixtureLabs;
   # An example lab, rendered again with policies on. Those labs leave the
   # option off, so their own output is untouched; this is the only way to
   # analyse a lab whose floes are actually wired to one another.

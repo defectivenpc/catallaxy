@@ -21,6 +21,14 @@ let
           lab.clusters.c = cluster;
         }
       ];
+      specialArgs.clusterFloes = import ./support/floes.nix { inherit lib; } [
+        "gateway"
+        # gateway's option defaults read cert-manager's exports, and
+        # cert-manager's read trust-manager's. Defaults are evaluated whether
+        # or not the producer is enabled, so the closure has to be present.
+        "cert-manager"
+        "trust-manager"
+      ];
     }).config.lab.clusters.c.lint.out.checks;
 in
 lib.runTests {

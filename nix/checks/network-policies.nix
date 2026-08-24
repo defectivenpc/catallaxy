@@ -2,7 +2,6 @@
   lib,
   pkgs,
   mkLab,
-  labs,
   cataWrapped,
   policyLab,
   brokenPolicyLab,
@@ -118,51 +117,8 @@ let
       | length
   '';
 
-  cannotKnowItsTraffic = [ "custom" ];
-
-  allFloes = lib.attrNames (
-    lib.filterAttrs (_: t: t == "directory") (builtins.readDir ../../modules/lab/cluster/floes)
-  );
-
-  declaring = lib.unique (
-    lib.concatLists (
-      lib.mapAttrsToList (
-        _: l:
-        lib.concatLists (
-          lib.mapAttrsToList (
-            _: clusterCfg:
-            lib.attrNames (
-              lib.filterAttrs (
-                _: f: (f.enable or false) && ((f.network or { }).declared or false)
-              ) clusterCfg.floes
-            )
-          ) l.config.lab.clusters
-        )
-      ) labs
-    )
-  );
-
-  missing = lib.subtractLists (declaring ++ cannotKnowItsTraffic) allFloes;
 in
 {
-  every-floe-declares-its-network = pkgs.runCommand "every-floe-declares-its-network" { } ''
-    ${lib.optionalString (missing != [ ]) ''
-      echo "these floes never say what traffic they need:" >&2
-      ${lib.concatMapStringsSep "\n" (f: ''echo "  ${f}" >&2'') missing}
-      echo "" >&2
-      echo "Set network.declared on each, with whatever egress and" >&2
-      echo "ingress it needs. A floe needing nothing beyond the defaults" >&2
-      echo "still sets it, so that it reads as reviewed rather than as" >&2
-      echo "overlooked." >&2
-      echo "" >&2
-      echo "examples/labs/tests/every-floe.nix enables floes no example" >&2
-      echo "lab uses. A floe whose traffic only a lab can know goes in" >&2
-      echo "cannotKnowItsTraffic with a reason." >&2
-      exit 1
-    ''}
-    touch $out
-  '';
-
   network-policies-match-what-is-configured =
     pkgs.runCommand "network-policies-match-what-is-configured"
       {

@@ -4,6 +4,11 @@
   cataCharts,
   k8sSpecs,
   sourceRoot,
+
+  # The floe set to document. The reference pages cover the platform's
+  # options and this set's; a different set documents different floes, which
+  # is the point of the set being a parameter.
+  floes,
 }:
 
 let
@@ -21,8 +26,12 @@ let
         lab.name = "docs-placeholder";
         lab.clusters = { };
       }
-    ];
-    specialArgs = { inherit lib pkgs; };
+    ]
+    ++ lib.attrValues floes.lab;
+    specialArgs = {
+      inherit lib pkgs;
+      clusterFloes = lib.attrValues floes.cluster;
+    };
   };
 
   gitHubBaseUrl = "https://github.com/onepunchtech/catallaxy/blob/master";

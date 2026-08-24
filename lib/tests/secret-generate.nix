@@ -21,6 +21,26 @@ let
           lab.clusters.c = cluster;
         }
       ];
+      specialArgs.clusterFloes = import ./support/floes.nix { inherit lib; } [
+        "external-secrets"
+        "harbor"
+        # The rest are harbor's transitive closure, not things these tests
+        # exercise. A floe's option defaults may read another floe's exports,
+        # and those defaults are evaluated whether or not the producer is
+        # enabled, so the set has to contain everything harbor's defaults
+        # name: gateway and cert-manager and kanidm directly, trust-manager
+        # through cert-manager.
+        "gateway"
+        "cert-manager"
+        "kanidm"
+        "trust-manager"
+        "kaniop"
+        # Not harbor's closure: external-secrets declares `reaches` on
+        # `openbao/api`, and the netpol typo check reads the names a floe may
+        # reach out of the set in force. Omit openbao and a real edge reads
+        # as a typo.
+        "openbao"
+      ];
     }).config;
 
   eso = {

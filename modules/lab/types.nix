@@ -6,6 +6,24 @@
   k8sSpecs ? { },
   k8sHelpers ? import ../../lib/k8s-helpers.nix { inherit lib; },
   contracts ? import ../../lib/contracts { inherit lib; },
+
+  # The cluster-scope floes to make available, as a list of modules. Delivered
+  # by `specialArgs` rather than `_module.args`, because it is consumed in
+  # `imports` and the module system resolves those before the fixpoint that
+  # `_module.args` is part of.
+  #
+  # Required, and deliberately not defaulted to `[ ]`: a lab with no floes
+  # renders almost nothing, and silently producing one is worse than
+  # refusing. `mkLab` supplies the bundled set unless the caller passes its
+  # own, so the only way to reach the refusal is to import the module tree
+  # directly, which is not a supported way to build a lab.
+  #
+  # A `?` default would not help. The module system supplies every formal
+  # from `_module.args`, so the default is shadowed and never evaluated; the
+  # refusal you get is nixpkgs' "attribute 'clusterFloes' missing" either
+  # way. Better to be honestly required than to carry a message that cannot
+  # fire.
+  clusterFloes,
   ...
 }:
 
@@ -25,7 +43,8 @@ let
     {
       imports = [
         ./cluster
-      ];
+      ]
+      ++ clusterFloes;
 
       config = {
         cluster.name = lib.mkDefault name;

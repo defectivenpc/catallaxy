@@ -208,20 +208,27 @@ every kind, param, requiredness, idempotency class, direction and dry-run
 flag. The reference page in the book is generated from the same registry, so
 there is no table to update.
 
-## Adding a built-in floe
+## Adding a floe to the bundled set
+
+The floes under `floes/` are a _distro_: one opinionated set of choices
+about how Kubernetes gets built, separate from the platform in
+`modules/lab/` and replaceable wholesale. `mkLab` takes the set as a
+parameter and defaults to this one. Adding a floe here means adding it to
+what catallaxy ships, not to what catallaxy is.
 
 [Write a Floe](./using/writing-a-floe.md) applies unchanged. The extra
 obligations for one that lives here:
 
 **Register it.** There is no auto-discovery, so add the directory to
-`modules/lab/cluster/floes/default.nix`. An in-tree floe is an ordinary
-module, and reaches the shared option set through the same barrel it takes
-`refs` from:
+`floes/cluster/set.nix`, which is an attribute set of name to path rather
+than an import list — that is what lets a consumer `removeAttrs` one or
+substitute their own. An in-tree floe is an ordinary module, and reaches the
+shared option set through the same barrel it takes `refs` from:
 
 ```nix
 { config, lib, pkgs, cataCharts, k8sSpecs, k8sHelpers, ... }:
 let
-  inherit ((import ../../../../../lib/floe { inherit lib; })) floeOptions;
+  inherit ((import ../../../lib/floe { inherit lib; })) floeOptions;
   cfg = config.floes.<name>;
 in
 {
@@ -240,7 +247,7 @@ error. Add a `crd` attribute if the chart ships CRDs (`type` is `chart`,
 `url` or `github`), and put the CRDs in their own bundle so consumers can
 gate on them being established.
 
-**Ship an isolation check** at `lib/tests/floes/<name>.nix`, registered as
+**Ship an isolation check** at `floes/tests/<name>.nix`, registered as
 `checks.floe-<name>`. Not optional.
 
 **Ship a verify check** at `floes.<name>.verify.<check>` if the floe can say
@@ -253,9 +260,9 @@ means "at least one": use `reject` for "all of them".
 reads every floe's exports with nothing enabled and names any floe that
 cannot answer, so this needs no per-floe registration. Where there is no
 value until the floe runs, the default is `null` and the type `nullOr`.
-`lib/tests/floes/exports-defaults.nix` is the separate, hand-written check
-that pins what particular defaults _are_, and is worth extending when a
-default is load-bearing.
+`floes/tests/exports-defaults.nix` is the separate, hand-written check that
+pins what particular defaults _are_, and is worth extending when a default
+is load-bearing.
 
 **Regenerate types** with `nix run .#generate-k8s-types` if the CRDs
 changed, and commit the result.

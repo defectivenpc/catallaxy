@@ -6,7 +6,7 @@
 
 let
   testsDir = ../../lib/tests;
-  floesDir = ../../lib/tests/floes;
+  floesDir = ../../floes/tests;
 
   mkCheck =
     name: results:

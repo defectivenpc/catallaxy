@@ -19,7 +19,6 @@ in
 {
   imports = [
     ./apiserver
-    ./floes
     ./bundles.nix
     ./infra.nix
     ./prerequisites.nix

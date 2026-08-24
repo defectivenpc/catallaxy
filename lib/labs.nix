@@ -6,6 +6,7 @@
   k8sSpecs,
   modulesPath,
   examplesPath,
+  defaultFloeSet,
 
   tools ? [ ],
   cataWrapped ? null,
@@ -14,7 +15,7 @@
 let
 
   labModules =
-    modules:
+    floes: modules:
     [
       modulesPath
       {
@@ -24,26 +25,38 @@ let
         _module.args.contracts = import ./contracts { inherit lib; };
       }
     ]
+    # Lab-scope floes are ordinary top-level modules, so they go in the list.
+    # Cluster-scope ones cannot: they belong inside the cluster submodule, and
+    # `imports` is resolved before the fixpoint that `_module.args` lives in.
+    # Those travel by `specialArgs` instead — see `clusterFloes` below.
+    ++ lib.attrValues floes.lab
     ++ modules;
 
-  labSpecialArgs = { inherit lib pkgs; };
+  labSpecialArgs = floes: {
+    inherit lib pkgs;
+    clusterFloes = lib.attrValues floes.cluster;
+  };
 
   mkLab =
-    { modules }:
+    {
+      modules,
+      floes ? defaultFloeSet,
+    }:
     pureLib.evalModule {
-      modules = labModules modules;
-      specialArgs = labSpecialArgs;
+      modules = labModules floes modules;
+      specialArgs = labSpecialArgs floes;
     };
 
   labRefusal =
     {
       modules,
+      floes ? defaultFloeSet,
       force ? (config: config.lab.name),
     }:
     let
       result = lib.evalModules {
-        modules = labModules modules;
-        specialArgs = labSpecialArgs;
+        modules = labModules floes modules;
+        specialArgs = labSpecialArgs floes;
       };
 
       messages = map (a: a.message) (lib.filter (a: !a.assertion) result.config.assertions);
@@ -58,12 +71,16 @@ let
     if attempt.success then attempt.value else null;
 
   labForce =
-    { modules, force }:
+    {
+      modules,
+      force,
+      floes ? defaultFloeSet,
+    }:
     builtins.tryEval (
       builtins.deepSeq (force
         (lib.evalModules {
-          modules = labModules modules;
-          specialArgs = labSpecialArgs;
+          modules = labModules floes modules;
+          specialArgs = labSpecialArgs floes;
         }).config
       ) "evaluated"
     );

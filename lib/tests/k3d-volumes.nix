@@ -21,6 +21,8 @@ let
               };
           }
         ];
+        # No floe is involved in where a k3d proxy mounts its CA.
+        specialArgs.clusterFloes = [ ];
       };
     in
     map (v: v.hostPath) evaluated.config.lab.clusters.c.provisioner.k3d.extraVolumes;

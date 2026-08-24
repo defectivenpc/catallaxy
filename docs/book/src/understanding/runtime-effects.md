@@ -14,10 +14,10 @@ this page is about what that costs.
 ## The symptom
 
 `nix/checks/scripts.nix` lints the shell scripts under
-`modules/lab/cluster/floes/netbird/scripts/`. It runs shellcheck but
-deliberately does not run `shfmt`, and the comment says why: reformatting
-those files would change their text, which would change a hash, which would
-re-run every netbird bootstrap Job on the next deploy.
+`floes/cluster/netbird/scripts/`. It runs shellcheck but deliberately does
+not run `shfmt`, and the comment says why: reformatting those files would
+change their text, which would change a hash, which would re-run every
+netbird bootstrap Job on the next deploy.
 
 A whitespace change causes calls to a live API. That is why the formatter is
 not adopted.

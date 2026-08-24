@@ -6,6 +6,7 @@
   rustToolchain,
   cataCharts ? null,
   k8sSpecs ? null,
+  floes,
 }:
 
 let
@@ -77,6 +78,7 @@ let
             pkgs
             cataCharts
             k8sSpecs
+            floes
             ;
           sourceRoot = toString self;
         };

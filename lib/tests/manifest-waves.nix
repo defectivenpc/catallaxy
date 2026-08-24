@@ -17,6 +17,7 @@ let
           lab.clusters.c = cluster;
         }
       ];
+      specialArgs.clusterFloes = import ./support/floes.nix { inherit lib; } [ "reloader" ];
     }).config.lab.clusters.c.cluster.out.manifestWaves;
 
   indexOf =
