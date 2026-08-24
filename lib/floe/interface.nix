@@ -49,9 +49,30 @@ let
   inherit (import (modulesPath + "/lab/cluster/secrets-generate-types.nix") { inherit lib; })
     generateType
     ;
+  inherit (import (modulesPath + "/lab/cluster/prerequisite-types.nix") { inherit lib; })
+    prerequisiteType
+    ;
 
   opsTypes = import (modulesPath + "/lab/ops/types.nix") { inherit lib; };
   opsCommandType = opsTypes.opsCommandType { inherit (opsTypes) optionType argType; };
+
+  # Copied rather than imported from `modules/lab/default.nix:6`, which does not
+  # export it. Same two fields; if that one grows a third this one is wrong.
+  assertionType = types.submodule {
+    options = {
+      assertion = mkOption {
+        type = types.bool;
+        description = "True = check passes. False = violation reported.";
+      };
+      message = mkOption {
+        type = types.str;
+        description = ''
+          Diagnostic shown when the assertion fails. Mention the offending
+          option path and what the user should change.
+        '';
+      };
+    };
+  };
 
   labImages = lab.images or { };
 in
@@ -244,6 +265,73 @@ in
 
         What a floe *needs* is said by its bundles, as a name in the one
         dependency namespace, and never as the name of another floe.
+      '';
+    };
+
+    assertions = mkOption {
+      type = types.listOf assertionType;
+      default = [ ];
+      description = ''
+        Hard config-validity checks this floe makes about its own
+        configuration, folded into the cluster's `assertions`.
+
+        Written at the floe's own path now rather than at the cluster's,
+        which is what says whose constraint it is. Eleven floes write
+        cluster-scope `assertions` today, and nothing in the failure names
+        which one of them objected.
+      '';
+    };
+
+    warnings = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "Non-fatal complaints, folded into the cluster's `warnings`.";
+    };
+
+    # --- contributions to the cluster ----------------------------------------
+    #
+    # A floe writes `cluster.<x>` today, straight into the containing cluster's
+    # own option tree, which works only because the floe is evaluated inside
+    # that tree. Here it declares the contribution on itself and the cluster
+    # folds it, exactly as it already folds `bundles` (`bundles.nix:44`).
+    #
+    # Flat rather than under a `cluster.` prefix, deliberately: `cluster` is the
+    # *read* channel — the module argument carrying facts about the cluster this
+    # floe is in — and one name cannot be both. `bundles`, `steps` and `ops` are
+    # already cluster contributions declared flat, so this follows them.
+    #
+    # Two of the eight are here, the two `gateway` needs. The other six
+    # (`registryDomains`, `bootstrapManifests`, `provisions`,
+    # `kubernetes.uncheckedResources`, `trust.caConfigMaps`,
+    # `secrets.projections`) are declared as their floes are ported, so nothing
+    # here is a channel no instance has ever driven.
+
+    ingress = mkOption {
+      type = types.attrsOf types.port;
+      default = { };
+      description = ''
+        Ports the lab's proxy should dial this cluster's ingress on, merged
+        into `cluster.ingress`.
+
+        Keys are `cluster.ingress`'s own (`httpPort`, `httpsPort`,
+        `passthroughPort`), and an unknown one fails there rather than here —
+        `attrsOf port` cannot name three options and still let a floe answer
+        only the one it knows. Two floes answering the same key is a
+        conflicting definition, which is right: nothing merges two ports.
+      '';
+    };
+
+    prerequisites = mkOption {
+      type = types.attrsOf prerequisiteType;
+      default = { };
+      description = ''
+        Things several floes need installed and exactly one installation of
+        which is correct, merged into `cluster.prerequisites`.
+
+        Not a bundle, because a bundle is stamped with the floe that declared
+        it and two floes declaring the same one is then a conflict rather than
+        a merge — enabling cilium and gateway together failed outright, and
+        both were right to install the Gateway API CRDs.
       '';
     };
 

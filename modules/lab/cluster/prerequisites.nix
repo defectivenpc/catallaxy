@@ -2,44 +2,11 @@
 
 let
   inherit (lib) mkOption types;
+  inherit (import ./prerequisite-types.nix { inherit lib; }) prerequisiteType;
 in
 {
   options.cluster.prerequisites = mkOption {
-    type = types.attrsOf (
-      types.submodule {
-        options = {
-          yamls = mkOption {
-            type = types.listOf (types.either types.str types.path);
-            default = [ ];
-            description = "Rendered manifests the prerequisite installs, deduplicated across contributors.";
-          };
-
-          provides = mkOption {
-            type = types.listOf types.str;
-            default = [ ];
-            description = "Names this supplies, in the one dependency namespace.";
-          };
-
-          requires = mkOption {
-            type = types.listOf types.str;
-            default = [ ];
-            description = "Names that must be supplied and READY before this applies.";
-          };
-
-          after = mkOption {
-            type = types.listOf types.str;
-            default = [ ];
-            description = "Names that must be supplied and APPLIED before this. Ordering only.";
-          };
-
-          conflicts = mkOption {
-            type = types.listOf types.str;
-            default = [ ];
-            description = "Names a second provider of would be a race rather than a merge.";
-          };
-        };
-      }
-    );
+    type = types.attrsOf prerequisiteType;
     default = { };
     example = lib.literalExpression ''
       {

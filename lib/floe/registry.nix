@@ -81,6 +81,26 @@ in
     {
       lab,
 
+      # Facts about the cluster this floe set belongs to: the *read* channel.
+      #
+      # Not in the spike, and found by porting gateway. A floe reads
+      # `config.cluster.<x>` in 41 places today — `cluster.name`,
+      # `cluster.ref.kubeContext`, `cluster.network.serviceSubnet`,
+      # `cluster.provisionerOut.publishesGatewayPorts` and four others — which
+      # works only because the floe is evaluated inside the cluster's own
+      # option tree. Here it is not, so the facts arrive the way `lab`'s do.
+      #
+      # Threaded in rather than read from the enclosing config for the same
+      # reason as `lab`: gateway reads `provisionerOut.publishesGatewayPorts`
+      # while computing a bundle, and a floe may read it at option-*default*
+      # time, before the enclosing fixpoint has settled.
+      #
+      # This is a view, not the cluster: what a floe *contributes* is declared
+      # on the floe (`ingress`, `prerequisites`, `bundles`) and folded upward.
+      # Nothing here is writable, which is the half of `cluster.<x>` that
+      # currently has no boundary at all.
+      cluster ? { },
+
       # Framework values every floe receives: `pkgs`, `cataCharts`,
       # `k8sSpecs`, `k8sHelpers`, `contracts`. Delivered through
       # `_module.args` rather than the submodule type's `specialArgs`, for two
@@ -129,7 +149,7 @@ in
         imports = [ module ];
 
         _module.args = args // {
-          inherit lab;
+          inherit lab cluster;
 
           # The sanctioned cross-floe channel. A floe sees siblings' `exports`
           # and nothing else, so reading another floe's internals is no longer
