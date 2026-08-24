@@ -47,22 +47,8 @@ in
         in
         if synced != null then synced else c.config.cluster.ref.kubeContext;
 
-      gatewayOf =
-        subnet:
-        let
-          base = lib.head (lib.splitString "/" subnet);
-          parts = lib.splitString "." base;
-        in
-        if lib.length parts != 4 then
-          throw ''
-            lab.network.dockerSubnet = '${subnet}' is not a dotted-quad CIDR.
-            The docker bridge gateway is the address after the subnet's first,
-            so there is nothing to derive it from.
-          ''
-        else
-          "${lib.elemAt parts 0}.${lib.elemAt parts 1}.${lib.elemAt parts 2}.${
-            builtins.toString (lib.toInt (lib.elemAt parts 3) + 1)
-          }";
+      # The docker bridge gateway is the address after the subnet's first.
+      gatewayOf = (import ../util/network.nix { inherit lib; }).cidrFirstIP;
 
       labScopeSteps = mergeAttrsList [
 

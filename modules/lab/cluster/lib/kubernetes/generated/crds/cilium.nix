@@ -259,7 +259,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -1524,7 +1524,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -2760,7 +2760,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -3857,7 +3857,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -5029,7 +5029,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -6294,7 +6294,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -7530,7 +7530,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").
@@ -8627,7 +8627,7 @@ in
                                           '';
                                         };
                                         type = mkOption {
-                                          type = types.anything;
+                                          type = (types.either types.int types.str);
                                           description = ''
                                             Type is a ICMP-type.
                                             It should be an 8bit code (0-255), or it's CamelCase name (for example, "EchoReply").

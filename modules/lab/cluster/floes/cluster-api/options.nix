@@ -8,14 +8,7 @@
 let
   inherit (lib) mkOption mkDefault types;
 
-  cidrFirstIP =
-    cidr:
-    let
-      network = lib.head (lib.splitString "/" cidr);
-      octets = map lib.strings.toInt (lib.splitString "." network);
-      firstIP = lib.init octets ++ [ ((lib.last octets) + 1) ];
-    in
-    lib.concatStringsSep "." (map toString firstIP);
+  inherit (import ../../../../../lib/util/network.nix { inherit lib; }) cidrFirstIP;
 
   workerPoolType = types.submodule {
     options = {

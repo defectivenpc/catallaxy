@@ -26,7 +26,7 @@
 let
   inherit (lib) concatStringsSep;
 
-  sanitize = key: builtins.replaceStrings [ "/" ] [ "__" ] key;
+  inherit (import ./bundle-key.nix { }) sanitize;
 
   bundleFleetName = key: prefixUtil.prefixed prefix (sanitize key);
 

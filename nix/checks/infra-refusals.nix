@@ -204,35 +204,27 @@ let
       describe c actual
     )
   ) cases;
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  an-unsound-infra-reference-is-refused =
-    pkgs.runCommand "an-unsound-infra-reference-is-refused" { }
-      (
-        if failures == [ ] then
-          ''
-            echo "every unsound infra declaration fails evaluation, naming what is wrong" > $out
-          ''
-        else
-          ''
-            cat >&2 <<'EOF'
-            An infra declaration that should have been refused was not, or
-            was refused for the wrong reason.
+  an-unsound-infra-reference-is-refused = mkCheck {
+    what = "an-unsound-infra-reference-is-refused";
+    passed = "every unsound infra declaration fails evaluation, naming what is wrong";
+    why = ''
+      An infra declaration that should have been refused was not, or
+      was refused for the wrong reason.
 
-            A reference is the representation of a value that does not exist
-            yet, so nothing at eval can check it against reality. What can be
-            checked is that it is internally sound: that it names a resource
-            that exists and an output that resource declares, that the stacks
-            it implies can be ordered, and that each of them has its own
-            state.
+      A reference is the representation of a value that does not exist
+      yet, so nothing at eval can check it against reality. What can be
+      checked is that it is internally sound: that it names a resource
+      that exists and an output that resource declares, that the stacks
+      it implies can be ordered, and that each of them has its own
+      state.
 
-            Terraform's own schema catches the other half, and that is what
-            `the-rendered-terraform-is-valid-terraform` is for. Neither check
-            subsumes the other.
-
-            ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-            EOF
-            exit 1
-          ''
-      );
+      Terraform's own schema catches the other half, and that is what
+      `the-rendered-terraform-is-valid-terraform` is for. Neither check
+      subsumes the other.
+    '';
+    inherit failures;
+  };
 }

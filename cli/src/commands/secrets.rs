@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 use clap::{Subcommand, ValueEnum};
 use console::style;
-use serde::Deserialize;
 
 use crate::config::Context as CataContext;
+use crate::domain::cluster::ProjectionConfig;
 use crate::domain::secrets::{
     self as secrets, Backend, SecretKind, SecretsSpec, StoreProblem, StoreValues,
     describe_store_problems, env_var_name,
@@ -114,26 +114,20 @@ pub enum SecretsCommands {
     },
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Projection {
-    source: String,
-    namespace: String,
-    keys: HashMap<String, ProjectionKeyDef>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ProjectionKeyDef {
-    from: String,
-    transform: Option<String>,
+/// One cluster's projection, named. This was a `(String, String, Projection)`
+/// whose first two members are both strings with nothing to tell them apart.
+#[derive(Debug)]
+struct ClusterProjection {
+    cluster: String,
+    name: String,
+    config: ProjectionConfig,
 }
 
 #[derive(Debug)]
 struct LabSecrets {
     lab_name: String,
     spec: SecretsSpec,
-    projections: Vec<(String, String, Projection)>,
+    projections: Vec<ClusterProjection>,
 }
 
 pub fn run(ctx: &CataContext, command: SecretsCommands) -> Result<()> {
@@ -247,30 +241,29 @@ fn rotate(_ctx: &CataContext, file: &str) -> Result<()> {
 
 fn get_lab_secrets(ctx: &CataContext, name: Option<&str>) -> Result<LabSecrets> {
     let lab_name = ctx.resolve_lab_name(name)?;
-    let lab = nix::get_lab_config(ctx, &lab_name)?;
-    parse_lab_secrets(&lab_name, &lab)
-}
+    let lab = nix::get_lab_spec(ctx, &lab_name)?;
 
-fn parse_lab_secrets(lab_name: &str, lab: &serde_json::Value) -> Result<LabSecrets> {
-    let spec = SecretsSpec::from_lab_config(lab)?;
-
-    let mut projections = Vec::new();
-    if let Some(clusters) = lab.pointer("/clusters").and_then(|v| v.as_object()) {
-        for (cname, cconfig) in clusters {
-            if let Some(projs) = cconfig.get("projections")
-                && let Ok(cluster_projs) =
-                    serde_json::from_value::<HashMap<String, Projection>>(projs.clone())
-            {
-                for (pname, proj) in cluster_projs {
-                    projections.push((cname.clone(), pname, proj));
-                }
-            }
-        }
-    }
+    // Was a `lab.pointer("/clusters")` walk that decoded each cluster's
+    // projections with `if let Ok(..)`, so a cluster whose projections did not
+    // decode was skipped without a word. `LabSpec` parses them at the seam, so
+    // there is nothing left to drop.
+    let projections = lab
+        .clusters
+        .iter()
+        .flat_map(|(cluster, spec)| {
+            spec.projections
+                .iter()
+                .map(move |(name, config)| ClusterProjection {
+                    cluster: cluster.clone(),
+                    name: name.clone(),
+                    config: config.clone(),
+                })
+        })
+        .collect();
 
     Ok(LabSecrets {
-        lab_name: lab_name.to_string(),
-        spec,
+        lab_name,
+        spec: lab.secrets,
         projections,
     })
 }
@@ -799,7 +792,8 @@ fn list(ctx: &CataContext, cluster: Option<&str>) -> Result<()> {
 
     if !lab.projections.is_empty() {
         println!("{}", style("Projections:").bold());
-        for (cluster_name, proj_name, proj) in &lab.projections {
+        for projection in &lab.projections {
+            let proj = &projection.config;
             let key_list: String = proj
                 .keys
                 .iter()
@@ -815,8 +809,8 @@ fn list(ctx: &CataContext, cluster: Option<&str>) -> Result<()> {
                 .join(", ");
             println!(
                 "  {} → {} [ns:{}, from:{}] {}",
-                style(cluster_name).dim(),
-                style(proj_name).bold(),
+                style(&projection.cluster).dim(),
+                style(&projection.name).bold(),
                 proj.namespace,
                 proj.source,
                 key_list,

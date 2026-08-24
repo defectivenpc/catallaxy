@@ -125,6 +125,20 @@ let
     }
   );
 
+  # A generated value beside a literal one, which is what a consumer wanting a
+  # credential *pair* out of one Secret needs.
+  withLiteral = evalLab (
+    eso
+    // {
+      secrets.generate.grafana-admin = {
+        namespace = "grafana";
+        key = "admin-password";
+        length = 40;
+        extraData.admin-user = "admin";
+      };
+    }
+  );
+
   withoutEso = evalLab { secrets.generate.app-token.namespace = "app"; };
 
   # Harbor is the first floe to use this, and its two Secrets reach the chart
@@ -223,6 +237,30 @@ lib.runTests {
     ];
   };
 
+  # `rewrite` renames the generator's single output and has nowhere to put a
+  # second key, so a literal companion forces the template path even though
+  # the encoding is plain.
+  testALiteralCompanionGoesThroughTheTemplate = {
+    expr = (esFor withLiteral "grafana-admin").spec.target.template.data;
+    expected = {
+      admin-password = "{{ .password }}";
+      admin-user = "admin";
+    };
+  };
+
+  # Both mechanisms at once would leave the template reading `.password` after
+  # the rewrite had renamed it away.
+  testALiteralCompanionSuppressesTheRewrite = {
+    expr = (builtins.head (esFor withLiteral "grafana-admin").spec.dataFrom).rewrite or null;
+    expected = null;
+  };
+
+  # A literal is the value the consumer wants, so `encoding` does not touch it.
+  testALiteralIsWrittenVerbatim = {
+    expr = (esFor withLiteral "grafana-admin").spec.target.template.data.admin-user;
+    expected = "admin";
+  };
+
   testPlainCarriesNoTemplate = {
     expr = (esFor renamed "harbor-admin").spec.target.template;
     expected = null;
@@ -299,7 +337,11 @@ lib.runTests {
     expected = [ ];
   };
 
-  testHarborGeneratesBothOfItsSecrets = {
+  # Every secret harbor needs is minted in the cluster. Four of these used to
+  # be left to the chart, which generated them with `randAlphaNum` while
+  # rendering — so they landed in the manifest, in the digest pinning it and
+  # in the Nix store, and changed on every re-render.
+  testHarborGeneratesEverySecretItNeeds = {
     expr = lib.mapAttrs (_: g: {
       inherit (g) key length namespace;
     }) harbor.lab.clusters.c.secrets.generate;
@@ -314,6 +356,64 @@ lib.runTests {
         length = 16;
         namespace = "harbor";
       };
+      harbor-core-secret = {
+        key = "secret";
+        length = 16;
+        namespace = "harbor";
+      };
+      harbor-xsrf-key = {
+        key = "CSRF_KEY";
+        length = 32;
+        namespace = "harbor";
+      };
+      harbor-jobservice-secret = {
+        key = "JOBSERVICE_SECRET";
+        length = 16;
+        namespace = "harbor";
+      };
+      harbor-registry-http-secret = {
+        key = "REGISTRY_HTTP_SECRET";
+        length = 16;
+        namespace = "harbor";
+      };
+    };
+  };
+
+  # The chart validates these two at runtime rather than at apply, so a wrong
+  # length is a crash loop in core, not a rejected manifest.
+  testHarborsCoreAndJobserviceSecretsAreSixteenCharacters = {
+    expr = [
+      harbor.lab.clusters.c.secrets.generate.harbor-core-secret.length
+      harbor.lab.clusters.c.secrets.generate.harbor-jobservice-secret.length
+    ];
+    expected = [
+      16
+      16
+    ];
+  };
+
+  testHarborsXsrfKeyIsExactlyThirtyTwoCharacters = {
+    expr = harbor.lab.clusters.c.secrets.generate.harbor-xsrf-key.length;
+    expected = 32;
+  };
+
+  # The rendered chart must carry none of these values: that is the whole
+  # point of pointing it at existing Secrets.
+  testHarborRendersNoGeneratedSecretOfItsOwn = {
+    expr =
+      let
+        values = (bundleOf harbor "harbor").helmCharts.harbor.values;
+      in
+      {
+        inherit (values.core) existingSecret existingXsrfSecret;
+        jobservice = values.jobservice.existingSecret;
+        registry = values.registry.existingSecret;
+      };
+    expected = {
+      existingSecret = "harbor-core-secret";
+      existingXsrfSecret = "harbor-xsrf-key";
+      jobservice = "harbor-jobservice-secret";
+      registry = "harbor-registry-http-secret";
     };
   };
 
@@ -324,11 +424,19 @@ lib.runTests {
     expected = 16;
   };
 
-  testHarborWaitsForBothSecrets = {
-    expr = lib.filter (lib.hasPrefix "secret:") (bundleOf harbor "harbor").requires;
+  # Each reaches harbor as a Helm value, so the auto-edge that walks rendered
+  # resources cannot see any of them; the bundle has to name them itself.
+  testHarborWaitsForEverySecretItNeeds = {
+    expr = lib.sort (a: b: a < b) (
+      lib.filter (lib.hasPrefix "secret:") (bundleOf harbor "harbor").requires
+    );
     expected = [
       "secret:harbor/harbor-admin"
+      "secret:harbor/harbor-core-secret"
+      "secret:harbor/harbor-jobservice-secret"
+      "secret:harbor/harbor-registry-http-secret"
       "secret:harbor/harbor-secret-key"
+      "secret:harbor/harbor-xsrf-key"
     ];
   };
 }

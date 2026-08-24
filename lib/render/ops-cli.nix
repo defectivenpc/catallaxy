@@ -124,7 +124,13 @@ in
         if cmd ? userCommand then
 
           let
-            binName = builtins.replaceStrings [ "-" ] [ "-" ] name;
+            # The command's own name is the binary's name. This was
+            # `replaceStrings [ "-" ] [ "-" ]`, a no-op that read as a
+            # transformation — probably a half-written copy of `shellVar`
+            # above, which really does map `-` to `_`. Changing it to do that
+            # would rename every ops binary, so the no-op reading is the one
+            # that matches how labs actually work.
+            binName = name;
             clusterCtx =
               if cmd ? cluster && cmd.cluster != null then
                 runtimeContexts.${cmd.cluster}

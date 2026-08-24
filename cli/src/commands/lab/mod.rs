@@ -13,6 +13,7 @@ mod display;
 pub mod dns;
 pub mod down;
 pub mod env;
+mod golden;
 mod lint_cmd;
 mod ops;
 pub mod plan;

@@ -17,9 +17,10 @@ pub fn api_reachable(context: &str) -> bool {
 ///
 /// # Errors
 ///
-/// If `context` is empty, kubectl cannot be spawned, or it exits non-zero. The
-/// message says nothing below reflects the cluster, because an empty list here
-/// otherwise reads as a healthy one. Output that is not JSON is an empty list.
+/// If `context` is empty, kubectl cannot be spawned, it exits non-zero, or its
+/// output is not JSON. The message says nothing below reflects the cluster,
+/// because an empty list here otherwise reads as a healthy one — which is why
+/// unreadable output is an error rather than an empty list.
 pub fn get_stuck_deployments(context: &str) -> Result<Vec<(String, String)>> {
     let output = super::run::contextual(context)?
         .args(["get", "deployments", "-A", "-o", "json"])
@@ -35,8 +36,8 @@ pub fn get_stuck_deployments(context: &str) -> Result<Vec<(String, String)>> {
         );
     }
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .context("parsing `kubectl get deployments -A -o json`")?;
 
     let mut stuck = Vec::new();
     if let Some(items) = json["items"].as_array() {
@@ -86,8 +87,9 @@ pub fn rollout_restart(context: &str, kind: &str, namespace: &str, name: &str) -
 ///
 /// # Errors
 ///
-/// If `context` is empty, kubectl cannot be spawned, or it exits non-zero, in
-/// which case the message says the result does not reflect the cluster.
+/// If `context` is empty, kubectl cannot be spawned, it exits non-zero, or its
+/// output is not JSON. An empty list means a healthy cluster and nothing else,
+/// so every way of not knowing is an error.
 pub fn get_unhealthy_pods(context: &str) -> Result<Vec<serde_json::Value>> {
     let output = super::run::contextual(context)?
         .args(["get", "pods", "-A", "-o", "json"])
@@ -104,7 +106,7 @@ pub fn get_unhealthy_pods(context: &str) -> Result<Vec<serde_json::Value>> {
     }
 
     let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);
+        serde_json::from_slice(&output.stdout).context("parsing `kubectl get pods -A -o json`")?;
 
     let mut unhealthy = Vec::new();
     if let Some(items) = json["items"].as_array() {
@@ -135,8 +137,9 @@ pub fn get_unhealthy_pods(context: &str) -> Result<Vec<serde_json::Value>> {
 ///
 /// # Errors
 ///
-/// If `context` is empty, kubectl cannot be spawned, or it exits non-zero. An
-/// event whose timestamp does not parse is kept rather than dropped.
+/// If `context` is empty, kubectl cannot be spawned, it exits non-zero, or its
+/// output is not JSON. An event whose timestamp does not parse is kept rather
+/// than dropped.
 pub fn get_warning_events(context: &str, since_minutes: u32) -> Result<Vec<serde_json::Value>> {
     let output = super::run::contextual(context)?
         .args([
@@ -162,8 +165,8 @@ pub fn get_warning_events(context: &str, since_minutes: u32) -> Result<Vec<serde
         );
     }
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .context("parsing `kubectl get events -A --field-selector type=Warning -o json`")?;
 
     let cutoff = chrono::Utc::now() - chrono::Duration::minutes(since_minutes as i64);
     let mut events = Vec::new();
@@ -214,7 +217,8 @@ pub fn get_pod_logs(
 
 /// # Errors
 ///
-/// If `context` is empty, kubectl cannot be spawned, or it exits non-zero.
+/// If `context` is empty, kubectl cannot be spawned, it exits non-zero, or its
+/// output is not JSON.
 pub fn get_node_status(context: &str) -> Result<Vec<serde_json::Value>> {
     let output = super::run::contextual(context)?
         .args(["get", "nodes", "-o", "json"])
@@ -231,7 +235,7 @@ pub fn get_node_status(context: &str) -> Result<Vec<serde_json::Value>> {
     }
 
     let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);
+        serde_json::from_slice(&output.stdout).context("parsing `kubectl get nodes -o json`")?;
 
     Ok(json["items"].as_array().cloned().unwrap_or_default())
 }
@@ -259,6 +263,10 @@ pub fn get_kapp_app_statuses(context: &str) -> Result<Vec<(String, String, Strin
 
     match output {
         Ok(o) if o.status.success() => {
+            // A parse failure is tolerated here on purpose: every other
+            // failure mode in this function is too, because it is one section
+            // of a wider report. Contrast the functions above that `bail!` —
+            // those must not then swallow the parse.
             let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
             let mut apps = Vec::new();
             if let Some(tables) = json["Tables"].as_array() {
@@ -314,6 +322,8 @@ pub fn get_workload_readiness(context: &str, namespaces: &[String]) -> Result<Ve
         if !o.status.success() {
             continue;
         }
+        // Tolerated on purpose, like the two `continue`s above it: a namespace
+        // this cannot read is skipped rather than failing the whole sweep.
         let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
         let Some(items) = json["items"].as_array() else {
             continue;

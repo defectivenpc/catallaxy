@@ -72,27 +72,6 @@ pub fn write_outputs(work_dir: &Path, json: &[u8]) -> Result<()> {
     std::fs::write(&path, json).with_context(|| format!("writing {}", path.display()))
 }
 
-/// What a stack's state records, or none when there is no state yet.
-///
-/// Reads the state through the tool rather than parsing the file, because
-/// where the file lives depends on the backend and only the tool knows.
-///
-/// # Errors
-///
-/// If the tool cannot be spawned.
-pub fn resources_in_state(tool: &Path, work_dir: &Path) -> Result<Vec<String>> {
-    let out = capture(tool, work_dir, "state", &["list"])?;
-    if !out.status.success() {
-        return Ok(Vec::new());
-    }
-    Ok(String::from_utf8_lossy(&out.stdout)
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
-        .map(ToString::to_string)
-        .collect())
-}
-
 pub fn exists(path: &Path) -> bool {
     path.exists()
 }

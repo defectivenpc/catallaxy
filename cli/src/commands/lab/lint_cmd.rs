@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
-use anyhow::{Context as _, Result, bail};
+use anyhow::{Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::CdConfig;
 use crate::io;
 use crate::lint;
 
@@ -43,15 +42,11 @@ pub fn run(
 
     if let Some(ref lab_name) = lab_name {
         println!("{} Configuration", style("catallaxy").cyan().bold());
-        match crate::io::nix::get_lab_config(ctx, lab_name) {
+        match crate::io::nix::get_lab_spec(ctx, lab_name) {
             Ok(lab) => {
-                let cluster_names: Vec<&str> = lab["clusterNames"]
-                    .as_array()
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
-                    .unwrap_or_default();
-                let cd: CdConfig = serde_json::from_value(lab["cd"].clone())
-                    .context("parsing lab.cd from the evaluated lab")?;
-                let strategy = cd.strategy.tag();
+                let cluster_names: Vec<&str> =
+                    lab.cluster_names.iter().map(String::as_str).collect();
+                let strategy = lab.cd.strategy.tag();
 
                 println!("  {} lab: {}", style("✓").green(), lab_name);
                 println!("  {} strategy: {}", style("✓").green(), strategy);
@@ -62,26 +57,14 @@ pub fn run(
                 );
 
                 for cluster in &cluster_names {
-                    match crate::io::nix::get_cluster_config_from_lab(&lab, cluster) {
-                        Ok(config) => {
-                            let provisioner = config["provisioner"].as_str().unwrap_or("unknown");
-                            let floe_count = config["floes"]
-                                .as_object()
-                                .map(|c| {
-                                    c.values()
-                                        .filter(|v| {
-                                            v.get("enable")
-                                                .and_then(|e| e.as_bool())
-                                                .unwrap_or(false)
-                                        })
-                                        .count()
-                                })
-                                .unwrap_or(0);
+                    match lab.cluster(cluster) {
+                        Ok(spec) => {
+                            let floe_count = spec.enabled_floes().count();
                             println!(
                                 "    {} {} ({}, {} floes)",
                                 style("✓").green(),
                                 cluster,
-                                provisioner,
+                                format!("{:?}", spec.provisioner).to_lowercase(),
                                 floe_count,
                             );
                         }

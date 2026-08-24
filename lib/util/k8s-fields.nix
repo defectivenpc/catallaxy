@@ -16,14 +16,11 @@ let
 
   listOrEmpty = path: valueOr path [ ];
 
-  attrsOrEmpty = path: valueOr path { };
-
 in
 {
   inherit
     valueAt
     valueOr
     listOrEmpty
-    attrsOrEmpty
     ;
 }

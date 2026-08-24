@@ -1,8 +1,6 @@
 pub mod checks;
 
-use std::collections::BTreeMap;
-
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::domain::LabSpec;
 pub use crate::domain::diagnostic::{Diagnostic, Severity};
@@ -16,40 +14,7 @@ pub const CHECK_NAMES: [&str; 6] = [
     "chainsaw",
 ];
 
-#[derive(Debug, Clone, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct VerifyConfig {
-    #[serde(default)]
-    pub checks: BTreeMap<String, DeclaredCheck>,
-    #[serde(default)]
-    pub endpoints: EndpointPolicy,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeclaredCheck {
-    pub description: String,
-    pub severity: String,
-    pub scope: String,
-    pub command: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EndpointPolicy {
-    pub enable: bool,
-    #[serde(default)]
-    pub accept_statuses: Vec<u16>,
-}
-
-impl Default for EndpointPolicy {
-    fn default() -> Self {
-        EndpointPolicy {
-            enable: true,
-            accept_statuses: Vec::new(),
-        }
-    }
-}
+pub use crate::domain::verify::{DeclaredCheck, EndpointPolicy, VerifyConfig};
 
 pub use crate::domain::ExposedHost;
 

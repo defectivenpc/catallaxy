@@ -9,29 +9,22 @@ pub fn run(ctx: &CataContext, name: &str) -> Result<()> {
         style("catallaxy").cyan().bold()
     );
 
-    let lab = crate::io::nix::get_lab_config(ctx, name)?;
+    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
 
-    let cluster_names: Vec<String> = lab["clusterNames"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
+    let cluster_names = &lab.cluster_names;
 
     if !cluster_names.is_empty() {
         println!();
         println!("{}", style("Clusters:").bold());
 
-        for cluster_name in &cluster_names {
-            match crate::io::nix::get_cluster_spec_from_lab(&lab, cluster_name) {
+        for cluster_name in cluster_names {
+            match lab.cluster(cluster_name) {
                 Ok(spec) => {
                     println!(
                         "{} Stopping cluster '{cluster_name}'...",
                         style(">>>").cyan()
                     );
-                    if let Err(e) = crate::provision::stop_cluster(ctx, cluster_name, &spec) {
+                    if let Err(e) = crate::provision::stop_cluster(ctx, cluster_name, spec) {
                         println!(
                             "{} Failed to stop '{}': {}",
                             style("Warning:").yellow(),
@@ -58,19 +51,12 @@ pub fn run(ctx: &CataContext, name: &str) -> Result<()> {
         style("catallaxy").cyan().bold()
     );
 
-    let running: Vec<String> = lab["services"]
-        .as_object()
-        .map(|svcs| {
-            svcs.iter()
-                .filter(|(_, svc)| {
-                    svc["container"]
-                        .as_str()
-                        .is_some_and(crate::io::docker::container_running)
-                })
-                .map(|(svc_name, _)| svc_name.clone())
-                .collect()
-        })
-        .unwrap_or_default();
+    let running: Vec<String> = lab
+        .services
+        .iter()
+        .filter(|(_, svc)| crate::io::docker::container_running(&svc.container))
+        .map(|(svc_name, _)| svc_name.clone())
+        .collect();
 
     if !running.is_empty() {
         println!(

@@ -13,281 +13,14 @@
 //! so the existing `cli` check covers them, and `syn` is a dev-dependency so
 //! nothing reaches the shipped binary.
 
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+mod support;
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
 use syn::visit::Visit;
 
-// ---------------------------------------------------------------- loading
-
-fn src_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
-}
-
-/// Every `.rs` file under `cli/src`, parsed once.
-struct Sources {
-    files: Vec<(PathBuf, syn::File)>,
-}
-
-impl Sources {
-    fn load() -> Self {
-        let root = src_root();
-        let mut files = Vec::new();
-
-        for entry in walkdir::WalkDir::new(&root)
-            .sort_by_file_name()
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            let path = entry.path();
-            if path.extension().is_none_or(|e| e != "rs") {
-                continue;
-            }
-            let text = std::fs::read_to_string(path)
-                .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));
-            let parsed = syn::parse_file(&text)
-                .unwrap_or_else(|e| panic!("parsing {}: {e}", path.display()));
-            files.push((path.to_path_buf(), parsed));
-        }
-
-        assert!(
-            files.len() > 50,
-            "only found {} source files under {}; the walk is wrong, and a lint \
-             over no files passes for the wrong reason",
-            files.len(),
-            root.display()
-        );
-
-        Self { files }
-    }
-
-    fn relative(&self, path: &Path) -> String {
-        path.strip_prefix(src_root())
-            .unwrap_or(path)
-            .display()
-            .to_string()
-    }
-
-    fn file(&self, relative: &str) -> &syn::File {
-        let want = src_root().join(relative);
-        &self
-            .files
-            .iter()
-            .find(|(p, _)| *p == want)
-            .unwrap_or_else(|| panic!("{relative} is not in cli/src; did it move?"))
-            .1
-    }
-}
-
-// ---------------------------------------------------------------- visitors
-
-/// Every identifier in whatever it is shown, counted.
-#[derive(Default)]
-struct IdentCounts {
-    counts: BTreeMap<String, usize>,
-}
-
-impl IdentCounts {
-    fn get(&self, name: &str) -> usize {
-        self.counts.get(name).copied().unwrap_or(0)
-    }
-
-    fn contains(&self, name: &str) -> bool {
-        self.get(name) > 0
-    }
-}
-
-impl Visit<'_> for IdentCounts {
-    fn visit_ident(&mut self, ident: &proc_macro2::Ident) {
-        *self.counts.entry(ident.to_string()).or_insert(0) += 1;
-    }
-}
-
-fn idents_of<T>(node: &T) -> IdentCounts
-where
-    for<'a> IdentCounts: Visit<'a>,
-    T: for<'a> VisitableWith<'a>,
-{
-    let mut counts = IdentCounts::default();
-    node.accept(&mut counts);
-    counts
-}
-
-/// Lets `idents_of` take any syn node without a macro.
-trait VisitableWith<'a> {
-    fn accept(&'a self, visitor: &mut IdentCounts);
-}
-
-impl<'a> VisitableWith<'a> for syn::File {
-    fn accept(&'a self, visitor: &mut IdentCounts) {
-        visitor.visit_file(self);
-    }
-}
-
-impl<'a> VisitableWith<'a> for syn::ItemFn {
-    fn accept(&'a self, visitor: &mut IdentCounts) {
-        visitor.visit_item_fn(self);
-    }
-}
-
-impl<'a> VisitableWith<'a> for syn::Expr {
-    fn accept(&'a self, visitor: &mut IdentCounts) {
-        visitor.visit_expr(self);
-    }
-}
-
-// ---------------------------------------------------------------- helpers
-
-/// The named free function, wherever it sits in the file's module tree.
-fn find_fn<'a>(file: &'a syn::File, name: &str) -> &'a syn::ItemFn {
-    fn search<'a>(items: &'a [syn::Item], name: &str) -> Option<&'a syn::ItemFn> {
-        for item in items {
-            match item {
-                syn::Item::Fn(f) if f.sig.ident == name => return Some(f),
-                syn::Item::Mod(m) => {
-                    if let Some((_, inner)) = &m.content
-                        && let Some(found) = search(inner, name)
-                    {
-                        return Some(found);
-                    }
-                }
-                _ => {}
-            }
-        }
-        None
-    }
-
-    search(&file.items, name).unwrap_or_else(|| panic!("no fn {name} in that file; did it move?"))
-}
-
-/// The named struct's field names, in declaration order.
-fn struct_fields(file: &syn::File, name: &str) -> Vec<String> {
-    fn search<'a>(items: &'a [syn::Item], name: &str) -> Option<&'a syn::ItemStruct> {
-        for item in items {
-            match item {
-                syn::Item::Struct(s) if s.ident == name => return Some(s),
-                syn::Item::Mod(m) => {
-                    if let Some((_, inner)) = &m.content
-                        && let Some(found) = search(inner, name)
-                    {
-                        return Some(found);
-                    }
-                }
-                _ => {}
-            }
-        }
-        None
-    }
-
-    let found =
-        search(&file.items, name).unwrap_or_else(|| panic!("no struct {name}; did it move?"));
-
-    let fields = named_fields(&found.fields);
-    assert!(
-        !fields.is_empty(),
-        "struct {name} has no named fields, so any lint over them is vacuous"
-    );
-    fields
-}
-
-fn named_fields(fields: &syn::Fields) -> Vec<String> {
-    match fields {
-        syn::Fields::Named(named) => named
-            .named
-            .iter()
-            .filter_map(|f| f.ident.as_ref().map(ToString::to_string))
-            .collect(),
-        _ => Vec::new(),
-    }
-}
-
-/// Whether an attribute is `#[serde(flatten)]`.
-fn is_serde_flatten(attr: &syn::Attribute) -> bool {
-    if !attr.path().is_ident("serde") {
-        return false;
-    }
-    let mut flatten = false;
-    let _ = attr.parse_nested_meta(|meta| {
-        if meta.path.is_ident("flatten") {
-            flatten = true;
-        }
-        Ok(())
-    });
-    flatten
-}
-
-/// A path written as `a::b::c`, joined, so a lint can compare whole paths
-/// rather than looking for a substring in the file's text.
-fn path_string(path: &syn::Path) -> String {
-    path.segments
-        .iter()
-        .map(|s| s.ident.to_string())
-        .collect::<Vec<_>>()
-        .join("::")
-}
-
-/// Every call of the form `Type::new("literal")`, as (path, literal).
-#[derive(Default)]
-struct NewCalls {
-    calls: Vec<(String, String)>,
-}
-
-impl Visit<'_> for NewCalls {
-    fn visit_expr_call(&mut self, call: &syn::ExprCall) {
-        if let syn::Expr::Path(func) = &*call.func {
-            let path = path_string(&func.path);
-            if let Some(syn::Expr::Lit(lit)) = call.args.first()
-                && let syn::Lit::Str(s) = &lit.lit
-            {
-                self.calls.push((path, s.value()));
-            }
-        }
-        syn::visit::visit_expr_call(self, call);
-    }
-}
-
-/// Every method call by name, with its receiver and first argument available
-/// for inspection.
-struct MethodCalls<'a> {
-    name: &'a str,
-    found: Vec<syn::ExprMethodCall>,
-}
-
-impl<'a> Visit<'_> for MethodCalls<'a> {
-    fn visit_expr_method_call(&mut self, call: &syn::ExprMethodCall) {
-        if call.method == self.name {
-            self.found.push(call.clone());
-        }
-        syn::visit::visit_expr_method_call(self, call);
-    }
-}
-
-fn method_calls(file: &syn::File, name: &str) -> Vec<syn::ExprMethodCall> {
-    let mut visitor = MethodCalls {
-        name,
-        found: Vec::new(),
-    };
-    visitor.visit_file(file);
-    visitor.found
-}
-
-/// The string literals in an array expression, if it is one.
-fn array_strings(expr: &syn::Expr) -> Vec<String> {
-    let syn::Expr::Array(array) = expr else {
-        return Vec::new();
-    };
-    array
-        .elems
-        .iter()
-        .filter_map(|e| match e {
-            syn::Expr::Lit(lit) => match &lit.lit {
-                syn::Lit::Str(s) => Some(s.value()),
-                _ => None,
-            },
-            _ => None,
-        })
-        .collect()
-}
+use support::*;
 
 // ---------------------------------------------------------------- lints
 
@@ -560,6 +293,164 @@ fn trust_goes_through_the_process_seam() {
     );
 }
 
+/// No `serde_json::Value` crosses a public boundary outside `io/`.
+///
+/// `contributing.md`: "Parse `nix eval` JSON into a typed struct at the seam;
+/// downstream code takes `LabSpec`, not `serde_json::Value`. A
+/// `.pointer("/foo/bar")` chain means a type is missing at the edge."
+///
+/// `io/` is where JSON arrives and where the types are made, so it is exempt.
+/// Everywhere else a `Value` in a signature is a type that was not written.
+/// The baseline shrinks only.
+#[test]
+fn no_untyped_json_crosses_a_public_boundary() {
+    let sources = Sources::load();
+    let allowed = untyped_json_baseline();
+
+    let mut found = Vec::new();
+    for (path, file) in &sources.files {
+        let relative = sources.relative(path);
+        if relative.starts_with("io/") || relative.contains("/io/") {
+            continue;
+        }
+        for name in pub_fns_taking_json(file) {
+            found.push(format!("{relative}: {name}"));
+        }
+    }
+
+    let new: Vec<&String> = found
+        .iter()
+        .filter(|f| !allowed.contains(f.as_str()))
+        .collect();
+    let stale: Vec<&&str> = allowed
+        .iter()
+        .filter(|b| !found.iter().any(|f| f == *b))
+        .collect();
+
+    assert!(
+        new.is_empty(),
+        "these public functions outside io/ take or return serde_json::Value:\n  {}\n\n\
+         Parse it into a type at the seam in io/ and hand that down.",
+        new.iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  ")
+    );
+
+    assert!(
+        stale.is_empty(),
+        "these baseline entries no longer fire, so the baseline is stale:\n  {}\n\nDelete them.",
+        stale.iter().map(|s| **s).collect::<Vec<_>>().join("\n  ")
+    );
+}
+
+/// What still hands untyped JSON around outside `io/`. Shrinks only.
+fn untyped_json_baseline() -> BTreeSet<&'static str> {
+    [
+        // JSON Schema *is* the subject of the generator, so a Value here is
+        // the input, not a missing type.
+        "codegen/convert.rs: convert",
+        "codegen/convert.rs: new",
+        // Golden-file rendering canonicalises whatever JSON it is handed,
+        // which is the job.
+        "commands/lab/golden.rs: canonicalize",
+        "commands/lab/golden.rs: render_value",
+        // The constructors that *make* the types: a Value goes in and a type
+        // comes out, which is the seam doing its work.
+        "domain/cluster.rs: from_value",
+        "domain/lab.rs: from_value",
+        "domain/secrets.rs: from_lab_config",
+        // --- Debt below. Each is a type that was never written, and each
+        // --- decodes a reply at the point of use rather than at the edge.
+        "domain/crossplane.rs: of",
+        "images/actual.rs: images_in_pods",
+        "images/mod.rs: publish_one",
+        "images/mod.rs: tags_from_body",
+        "topology/extract.rs: health_of",
+    ]
+    .into_iter()
+    .collect()
+}
+
+fn pub_fns_taking_json(file: &syn::File) -> Vec<String> {
+    struct Finder {
+        found: Vec<String>,
+    }
+
+    impl Visit<'_> for Finder {
+        fn visit_item_fn(&mut self, item: &syn::ItemFn) {
+            if matches!(item.vis, syn::Visibility::Public(_))
+                && signature_mentions(&item.sig, "Value")
+            {
+                self.found.push(item.sig.ident.to_string());
+            }
+            syn::visit::visit_item_fn(self, item);
+        }
+
+        fn visit_impl_item_fn(&mut self, item: &syn::ImplItemFn) {
+            if matches!(item.vis, syn::Visibility::Public(_))
+                && signature_mentions(&item.sig, "Value")
+            {
+                self.found.push(item.sig.ident.to_string());
+            }
+            syn::visit::visit_impl_item_fn(self, item);
+        }
+    }
+
+    let mut finder = Finder { found: Vec::new() };
+    finder.visit_file(file);
+    finder.found
+}
+
+/// No file grows past the size limit.
+///
+/// `docs/book/src/contributing.md` states it as a one-way ratchet — "a file
+/// reduced below the limit may not grow back past it" — and the pull-request
+/// checklist repeats it, but until now nothing checked it, and `io/ssa/mod.rs`
+/// had drifted to 1024 lines.
+///
+/// The cap is on the file, not the module: a file you cannot describe in one
+/// sentence is the thing being ruled out, and splitting one is always
+/// available.
+#[test]
+fn no_file_is_over_the_size_cap() {
+    const CAP: usize = 1000;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut over = Vec::new();
+
+    for dir in ["src", "tests"] {
+        for entry in walkdir::WalkDir::new(root.join(dir))
+            .sort_by_file_name()
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            let path = entry.path();
+            if path.extension().is_none_or(|e| e != "rs") {
+                continue;
+            }
+            let lines = std::fs::read_to_string(path)
+                .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()))
+                .lines()
+                .count();
+            if lines > CAP {
+                over.push(format!(
+                    "{}: {lines} lines",
+                    path.strip_prefix(root).unwrap_or(path).display()
+                ));
+            }
+        }
+    }
+
+    assert!(
+        over.is_empty(),
+        "these files are over the {CAP}-line cap:\n{}\n\n\
+         Split along the seams the file already has. If you cannot say what \
+         the file is for in one sentence, that is the actual finding.",
+        over.join("\n")
+    );
+}
+
 /// Anything that builds a `--context` argument resolves the name first.
 ///
 /// kubectl reads an empty `--context` as unset and falls back to the
@@ -575,6 +466,26 @@ fn kube_contexts_are_checked_before_use() {
     // other is the single place kubectl is built.
     let seams = ["io/kube_context.rs", "io/kubectl/run.rs"];
 
+    // The module, not the file, is the unit that owns the guard. A module
+    // resolves the context once at its entry point and passes a `&str` down;
+    // splitting that module into several files moves the `--context` usage
+    // away from the `require_named` call without changing anything. Scoping
+    // to the file made `io/ssa/mod.rs` fail purely for being split up.
+    //
+    // The real fix is a resolved-context newtype that only
+    // `io::kube_context::require_named` can mint, which would make this check
+    // unnecessary. Until then this is the honest approximation.
+    let guarded_modules: BTreeMap<String, bool> =
+        sources
+            .files
+            .iter()
+            .fold(BTreeMap::new(), |mut acc, (path, file)| {
+                let module = module_of(&sources.relative(path));
+                let guarded = idents_of(file).contains("require_named");
+                *acc.entry(module).or_insert(false) |= guarded;
+                acc
+            });
+
     let mut unguarded = Vec::new();
 
     for (path, file) in &sources.files {
@@ -585,14 +496,18 @@ fn kube_contexts_are_checked_before_use() {
         if !string_literals(file).iter().any(|s| s == "--context") {
             continue;
         }
-        if !idents_of(file).contains("require_named") {
+        if !guarded_modules
+            .get(&module_of(&relative))
+            .copied()
+            .unwrap_or(false)
+        {
             unguarded.push(relative);
         }
     }
 
     assert!(
         unguarded.is_empty(),
-        "these files build a --context argument and never resolve one: {unguarded:?}\n\n\
+        "these modules build a --context argument and never resolve one: {unguarded:?}\n\n\
          Build the command through io::kubectl::run's contextual(), or pass the \
          name through io::kube_context::require_named()."
     );
@@ -612,6 +527,16 @@ fn kube_contexts_are_checked_before_use() {
         "a kube context lookup was collapsed to an empty string: {erased:?}\n\n\
          Handle the error instead."
     );
+}
+
+/// The module a file belongs to: its directory, or the file itself at the top
+/// level. `io/ssa/prune.rs` and `io/ssa/mod.rs` are one module; `commands/x.rs`
+/// and `commands/y.rs` are not.
+fn module_of(relative: &str) -> String {
+    match relative.rsplit_once('/') {
+        Some((dir, _)) => dir.to_string(),
+        None => relative.to_string(),
+    }
 }
 
 fn string_literals(file: &syn::File) -> Vec<String> {

@@ -13,6 +13,17 @@
 let
   inherit ((import ../../../../../lib/floe { inherit lib; })) floeOptions refs;
   cfg = config.floes.grafana;
+
+  # Left to itself the chart mints an admin password with `randAlphaNum 40`
+  # at *render* time, so the value lands in the rendered manifest, in the
+  # digest that pins it, and in the Nix store. It also changes every time the
+  # manifest is re-rendered, which silently rotates the admin password on an
+  # unrelated rebuild. Minting it in the cluster instead keeps the manifest
+  # free of it and the password stable across renders.
+  mintedAdminSecret = "grafana-admin";
+  adminSecret =
+    if cfg.adminCredentialsSecret != null then cfg.adminCredentialsSecret else mintedAdminSecret;
+  mintsAdmin = cfg.adminCredentialsSecret == null;
 in
 {
   imports = [
@@ -218,6 +229,18 @@ in
         else
           [ ];
 
+      # `admin-user` is a literal because a username is not a secret and there
+      # is nothing to generate for it; the chart still refuses to start unless
+      # both keys are in the one Secret it was pointed at.
+      floes.grafana.secrets.generate = lib.optionalAttrs mintsAdmin {
+        ${mintedAdminSecret} = {
+          inherit (cfg) namespace;
+          key = "admin-password";
+          length = 40;
+          extraData.admin-user = "admin";
+        };
+      };
+
       floes.grafana.network = {
 
         declared = true;
@@ -314,8 +337,10 @@ in
               inherit datasources;
             };
           }
-          // optionalAttrs (cfg.adminCredentialsSecret != null) {
-            admin.existingSecret = cfg.adminCredentialsSecret;
+          // {
+            # Always an existing Secret, so the chart never renders one of its
+            # own with a value generated at render time.
+            admin.existingSecret = adminSecret;
           }
           // optionalAttrs (oidcEnvVars != [ ]) {
             envFromSecrets = [ ];
@@ -342,7 +367,12 @@ in
 
         createNamespaces = [ cfg.namespace ];
 
-        requires = [ "config-reload/ready" ];
+        requires = [
+          "config-reload/ready"
+        ]
+        # The chart mounts both keys of this Secret into the Deployment, so
+        # the pod does not start until it exists.
+        ++ lib.optional mintsAdmin "secret:${cfg.namespace}/${adminSecret}";
 
         after = [
           "optional:metrics/scrape/ready"

@@ -1,4 +1,4 @@
-# I/O outside cli/src/io that the scanner can now see.
+# I/O outside cli/src/io that the scanner can see.
 #
 # The check fails on anything not listed here AND on any entry that no
 # longer fires, so this can only shrink. Delete a line when you fix it.
@@ -6,21 +6,14 @@
 # bin/cata.rs is the exception that stays: the interrupt handler exits
 # the process deliberately, which is the whole point of it.
 bin/cata.rs:16
-commands/lab/plan_manifests.rs:254
-commands/lab/plan.rs:268
-commands/pki.rs:402
-domain/subnet.rs:1
-host/dns.rs:201
-host/dns.rs:80
+
+# TcpStream and ToSocketAddrs: a real connect and a real resolve, in the
+# host service prober.
 host/services.rs:5
-images/mod.rs:108
-images/mod.rs:132
-images/mod.rs:133
-images/mod.rs:182
+
+# `reqwest::Client::builder()` handed to io::http::client, which applies the
+# proxy and CA policy. The seam is respected; what leaks is the builder type.
+# Narrowing io::http::client to take the two settings these callers actually
+# want (timeout, user agent) would close it.
 images/mod.rs:250
-images/mod.rs:89
-images/mod.rs:97
-publish/mod.rs:138
-verify/checks/chainsaw.rs:62
-verify/checks/endpoints.rs:1
 verify/checks/endpoints.rs:41

@@ -133,7 +133,6 @@ in
 {
   inherit secretRefType clientOptions;
 
-  clientType = types.submodule { options = clientOptions; };
   clientsType = types.attrsOf (types.submodule { options = clientOptions; });
   nullableClient = types.nullOr (types.submodule { options = clientOptions; });
 }

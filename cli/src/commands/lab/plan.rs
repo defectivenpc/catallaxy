@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -7,6 +6,8 @@ use serde_json::Value;
 
 use crate::config::Context as CataContext;
 use crate::domain::{Direction, PlannedStep, StepParams};
+
+use super::golden;
 
 pub fn run(
     ctx: &CataContext,
@@ -27,7 +28,7 @@ pub fn run(
     if stable {
         let text = format_stable(&steps);
         if let Some(baseline) = diff {
-            if !run_diff(&text, &baseline)? {
+            if !golden::run_diff(&text, &baseline, "plan")? {
                 return Err(crate::domain::ExitWith(1).into());
             }
             return Ok(());
@@ -66,7 +67,7 @@ fn load_steps(
 
     let lab_name =
         name.ok_or_else(|| anyhow::anyhow!("lab name is required unless --from-file is set"))?;
-    let lab = crate::io::nix::get_lab_config(ctx, lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, lab_name)?;
     Ok(lab
         .get(plan_key)
         .and_then(|v| v.as_array())
@@ -151,7 +152,7 @@ fn format_stable(steps: &[Value]) -> String {
         push_params(&mut out, obj.get("params"));
         out.push('\n');
     }
-    normalize_store_paths(&out)
+    golden::normalize_store_paths(&out)
 }
 
 fn push_policy(out: &mut String, value: Option<&Value>) {
@@ -179,7 +180,7 @@ fn push_params(out: &mut String, value: Option<&Value>) {
         out.push_str(" params.");
         out.push_str(key);
         out.push('=');
-        out.push_str(&render_value(&obj[key]));
+        out.push_str(&golden::render_value(&obj[key]));
     }
 }
 
@@ -191,97 +192,6 @@ fn is_at_default(v: &Value) -> bool {
         Value::Object(m) => m.is_empty(),
         _ => false,
     }
-}
-
-fn render_value(v: &Value) -> String {
-    match v {
-        Value::Null => "null".to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Number(n) => n.to_string(),
-        Value::String(s) => {
-            let needs_quote = s
-                .chars()
-                .any(|c| c.is_whitespace() || c == '=' || c == '"' || c == '\\');
-            if needs_quote {
-                serde_json::to_string(s).unwrap_or_else(|_| format!("{s:?}"))
-            } else {
-                s.clone()
-            }
-        }
-        Value::Array(_) | Value::Object(_) => serde_json::to_string(&canonicalize(v))
-            .unwrap_or_else(|_| "<unserializable>".to_string()),
-    }
-}
-
-fn canonicalize(v: &Value) -> Value {
-    match v {
-        Value::Object(m) => {
-            let mut keys: Vec<&String> = m.keys().collect();
-            keys.sort();
-            let mut sorted = serde_json::Map::with_capacity(m.len());
-            for k in keys {
-                sorted.insert(k.clone(), canonicalize(&m[k]));
-            }
-            Value::Object(sorted)
-        }
-        Value::Array(a) => Value::Array(a.iter().map(canonicalize).collect()),
-        _ => v.clone(),
-    }
-}
-
-fn normalize_store_paths(s: &str) -> String {
-    const PREFIX: &str = "/nix/store/";
-    let mut result = String::with_capacity(s.len());
-    let mut rest = s;
-    while let Some(idx) = rest.find(PREFIX) {
-        result.push_str(&rest[..idx]);
-        result.push_str(PREFIX);
-        let after = &rest[idx + PREFIX.len()..];
-        let bytes = after.as_bytes();
-        if bytes.len() >= 33
-            && bytes[32] == b'-'
-            && bytes[..32]
-                .iter()
-                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-        {
-            result.push_str("HASH");
-            rest = &after[32..];
-        } else {
-            rest = after;
-        }
-    }
-    result.push_str(rest);
-    result
-}
-
-fn run_diff(actual: &str, baseline_path: &Path) -> Result<bool> {
-    let baseline = crate::io::fs::read_to_string(baseline_path)
-        .with_context(|| format!("reading baseline {}", baseline_path.display()))?;
-    if actual == baseline {
-        eprintln!(
-            "plan matches baseline {}",
-            style(baseline_path.display()).dim()
-        );
-        return Ok(true);
-    }
-
-    let mut tmp = tempfile::NamedTempFile::new().context("creating temp file for diff")?;
-    tmp.write_all(actual.as_bytes())
-        .context("writing actual plan to temp file")?;
-    tmp.flush()
-        .context("flushing the temp file the diff is read from")?;
-
-    let status = crate::io::diff::unified(baseline_path, tmp.path());
-    match status {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!(
-                "{}: `diff -u` failed ({e}); plan text differs from baseline",
-                style("error").red()
-            );
-        }
-    }
-    Ok(false)
 }
 
 fn render_pretty(lab_name: &str, direction: Direction, steps: &[PlannedStep]) {
@@ -502,27 +412,6 @@ mod tests {
         let parsed = parse_steps(&[step("remove-network", json!({}))], Direction::Deploy)
             .expect("a bare plan array parses whichever way it was produced");
         assert_eq!(parsed.len(), 1);
-    }
-
-    #[test]
-    fn normalize_store_paths_collapses_hash() {
-        let input = "/nix/store/abcdef0123456789abcdef0123456789-foo/bin/foo";
-        let out = normalize_store_paths(input);
-        assert_eq!(out, "/nix/store/HASH-foo/bin/foo");
-    }
-
-    #[test]
-    fn normalize_store_paths_leaves_non_matching_alone() {
-        let input = "/nix/store/short-foo /nix/store/UPPERCASE00000000000000000000000-x";
-        let out = normalize_store_paths(input);
-        assert_eq!(out, input);
-    }
-
-    #[test]
-    fn normalize_store_paths_multiple_occurrences() {
-        let input = "a /nix/store/00000000000000000000000000000000-x b /nix/store/11111111111111111111111111111111-y c";
-        let out = normalize_store_paths(input);
-        assert_eq!(out, "a /nix/store/HASH-x b /nix/store/HASH-y c");
     }
 
     #[test]

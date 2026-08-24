@@ -230,7 +230,7 @@ in
                                       description = "Container name: required for volumes, optional for env vars";
                                     };
                                     divisor = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                       description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                     };
@@ -377,7 +377,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -465,12 +465,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -722,12 +722,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -774,7 +774,7 @@ in
                               types.nullOr (mkTypedSubmodule {
                                 options = {
                                   maxUnavailable = mkOption {
-                                    type = (types.nullOr types.anything);
+                                    type = (types.nullOr (types.either types.int types.str));
                                     default = null;
                                     description = "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding up. This can not be 0. Defaults to 1. This field is alpha-level and is only honored by servers that enable the MaxUnavailableStatefulSet feature. The field applies to all pods in the range 0 to Replicas-1. That means if there is any unavailable pod in the range 0 to Replicas-1, it will be counted towards MaxUnavailable.";
                                   };
@@ -1052,7 +1052,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -1144,12 +1144,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -2095,7 +2095,7 @@ in
                                     description = "Path to access on the HTTP server.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                   scheme = mkOption {
@@ -2135,7 +2135,7 @@ in
                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                 };
@@ -2273,7 +2273,7 @@ in
                                     description = "Path to access on the HTTP server.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                   scheme = mkOption {
@@ -2313,7 +2313,7 @@ in
                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                 };
@@ -3335,7 +3335,7 @@ in
                                     description = "Path to access on the HTTP server.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                   scheme = mkOption {
@@ -3375,7 +3375,7 @@ in
                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                 };
@@ -3513,7 +3513,7 @@ in
                                     description = "Path to access on the HTTP server.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                   scheme = mkOption {
@@ -3553,7 +3553,7 @@ in
                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                   };
                                   port = mkOption {
-                                    type = types.anything;
+                                    type = (types.either types.int types.str);
                                     description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                                   };
                                 };
@@ -3825,12 +3825,12 @@ in
                     '';
                   };
                   limits = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                     description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                   };
                   requests = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                     description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                   };
@@ -3927,7 +3927,7 @@ in
                                                 description = "Container name: required for volumes, optional for env vars";
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                               };
@@ -4094,12 +4094,12 @@ in
                               '';
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
@@ -4367,12 +4367,12 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
@@ -4472,7 +4472,7 @@ in
                                     '';
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = ''
                                       allocatedResources tracks the resources allocated to a PVC including its capacity. Key names follow standard Kubernetes label syntax. Valid values are either: 	* Un-prefixed keys: 		- storage - the capacity of the volume. 	* Custom resources must use implementation-defined prefixed names such as "example.com/my-custom-resource" Apart from above values - keys that are unprefixed or have kubernetes.io prefix are considered reserved and hence may not be used.
@@ -4482,7 +4482,7 @@ in
                                     '';
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = "capacity represents the actual resources of the underlying volume.";
                                   };
@@ -4656,12 +4656,12 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
@@ -4761,7 +4761,7 @@ in
                                     '';
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = ''
                                       allocatedResources tracks the resources allocated to a PVC including its capacity. Key names follow standard Kubernetes label syntax. Valid values are either: 	* Un-prefixed keys: 		- storage - the capacity of the volume. 	* Custom resources must use implementation-defined prefixed names such as "example.com/my-custom-resource" Apart from above values - keys that are unprefixed or have kubernetes.io prefix are considered reserved and hence may not be used.
@@ -4771,7 +4771,7 @@ in
                                     '';
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = "capacity represents the actual resources of the underlying volume.";
                                   };
@@ -5244,7 +5244,7 @@ in
                                                                 description = "Container name: required for volumes, optional for env vars";
                                                               };
                                                               divisor = mkOption {
-                                                                type = (types.nullOr types.anything);
+                                                                type = (types.nullOr (types.either types.int types.str));
                                                                 default = null;
                                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                               };
@@ -5284,7 +5284,7 @@ in
                                               description = "medium represents what type of storage medium should back this directory. The default is \"\" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                             };
                                             sizeLimit = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "sizeLimit is the total amount of local storage required for this EmptyDir volume. The size limit is also applicable for memory medium. The maximum usage on memory medium EmptyDir would be the minimum value between the SizeLimit specified here and the sum of memory limits of all containers in a pod. The default is nil which means that the limit is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                             };
@@ -5375,12 +5375,12 @@ in
                                                                 types.nullOr (mkTypedSubmodule {
                                                                   options = {
                                                                     limits = mkOption {
-                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                       default = null;
                                                                       description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                                     };
                                                                     requests = mkOption {
-                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                       default = null;
                                                                       description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                                     };
@@ -6039,7 +6039,7 @@ in
                                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                                 };
                                                                                 divisor = mkOption {
-                                                                                  type = (types.nullOr types.anything);
+                                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                                   default = null;
                                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                                 };
@@ -7389,7 +7389,7 @@ in
                                       description = "Container name: required for volumes, optional for env vars";
                                     };
                                     divisor = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                       description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                     };
@@ -7532,7 +7532,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -7620,12 +7620,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -7877,12 +7877,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -7929,7 +7929,7 @@ in
                               types.nullOr (mkTypedSubmodule {
                                 options = {
                                   maxUnavailable = mkOption {
-                                    type = (types.nullOr types.anything);
+                                    type = (types.nullOr (types.either types.int types.str));
                                     default = null;
                                     description = "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding up. This can not be 0. Defaults to 1. This field is alpha-level and is only honored by servers that enable the MaxUnavailableStatefulSet feature. The field applies to all pods in the range 0 to Replicas-1. That means if there is any unavailable pod in the range 0 to Replicas-1, it will be counted towards MaxUnavailable.";
                                   };
@@ -8047,7 +8047,7 @@ in
                             description = "Path to access on the HTTP server.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                           scheme = mkOption {
@@ -8087,7 +8087,7 @@ in
                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                         };
@@ -8357,7 +8357,7 @@ in
                             description = "Path to access on the HTTP server.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                           scheme = mkOption {
@@ -8397,7 +8397,7 @@ in
                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                         };
@@ -8520,7 +8520,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -8612,12 +8612,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -9025,7 +9025,7 @@ in
                                                 description = "Container name: required for volumes, optional for env vars";
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                               };
@@ -9192,12 +9192,12 @@ in
                               '';
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
@@ -9461,12 +9461,12 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
@@ -9566,7 +9566,7 @@ in
                                     '';
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = ''
                                       allocatedResources tracks the resources allocated to a PVC including its capacity. Key names follow standard Kubernetes label syntax. Valid values are either: 	* Un-prefixed keys: 		- storage - the capacity of the volume. 	* Custom resources must use implementation-defined prefixed names such as "example.com/my-custom-resource" Apart from above values - keys that are unprefixed or have kubernetes.io prefix are considered reserved and hence may not be used.
@@ -9576,7 +9576,7 @@ in
                                     '';
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = "capacity represents the actual resources of the underlying volume.";
                                   };
@@ -10049,7 +10049,7 @@ in
                                                                 description = "Container name: required for volumes, optional for env vars";
                                                               };
                                                               divisor = mkOption {
-                                                                type = (types.nullOr types.anything);
+                                                                type = (types.nullOr (types.either types.int types.str));
                                                                 default = null;
                                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                               };
@@ -10089,7 +10089,7 @@ in
                                               description = "medium represents what type of storage medium should back this directory. The default is \"\" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                             };
                                             sizeLimit = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "sizeLimit is the total amount of local storage required for this EmptyDir volume. The size limit is also applicable for memory medium. The maximum usage on memory medium EmptyDir would be the minimum value between the SizeLimit specified here and the sum of memory limits of all containers in a pod. The default is nil which means that the limit is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                             };
@@ -10180,12 +10180,12 @@ in
                                                                 types.nullOr (mkTypedSubmodule {
                                                                   options = {
                                                                     limits = mkOption {
-                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                       default = null;
                                                                       description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                                     };
                                                                     requests = mkOption {
-                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                       default = null;
                                                                       description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                                     };
@@ -10844,7 +10844,7 @@ in
                                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                                 };
                                                                                 divisor = mkOption {
-                                                                                  type = (types.nullOr types.anything);
+                                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                                   default = null;
                                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                                 };
@@ -12170,7 +12170,7 @@ in
                                       description = "Container name: required for volumes, optional for env vars";
                                     };
                                     divisor = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                       description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                     };
@@ -12313,7 +12313,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -12401,12 +12401,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -12658,12 +12658,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -12710,7 +12710,7 @@ in
                               types.nullOr (mkTypedSubmodule {
                                 options = {
                                   maxUnavailable = mkOption {
-                                    type = (types.nullOr types.anything);
+                                    type = (types.nullOr (types.either types.int types.str));
                                     default = null;
                                     description = "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding up. This can not be 0. Defaults to 1. This field is alpha-level and is only honored by servers that enable the MaxUnavailableStatefulSet feature. The field applies to all pods in the range 0 to Replicas-1. That means if there is any unavailable pod in the range 0 to Replicas-1, it will be counted towards MaxUnavailable.";
                                   };
@@ -12828,7 +12828,7 @@ in
                             description = "Path to access on the HTTP server.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                           scheme = mkOption {
@@ -12868,7 +12868,7 @@ in
                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                         };
@@ -13161,7 +13161,7 @@ in
                             description = "Path to access on the HTTP server.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                           scheme = mkOption {
@@ -13201,7 +13201,7 @@ in
                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                         };
@@ -13309,7 +13309,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -13401,12 +13401,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -13670,7 +13670,7 @@ in
                                     description = "Container name: required for volumes, optional for env vars";
                                   };
                                   divisor = mkOption {
-                                    type = (types.nullOr types.anything);
+                                    type = (types.nullOr (types.either types.int types.str));
                                     default = null;
                                     description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                   };
@@ -13961,7 +13961,7 @@ in
                                                 description = "Container name: required for volumes, optional for env vars";
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                               };
@@ -14128,12 +14128,12 @@ in
                               '';
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
@@ -14729,7 +14729,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -14769,7 +14769,7 @@ in
                                       description = "medium represents what type of storage medium should back this directory. The default is \"\" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                     };
                                     sizeLimit = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                       description = "sizeLimit is the total amount of local storage required for this EmptyDir volume. The size limit is also applicable for memory medium. The maximum usage on memory medium EmptyDir would be the minimum value between the SizeLimit specified here and the sum of memory limits of all containers in a pod. The default is nil which means that the limit is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                     };
@@ -14860,12 +14860,12 @@ in
                                                         types.nullOr (mkTypedSubmodule {
                                                           options = {
                                                             limits = mkOption {
-                                                              type = (types.nullOr (types.attrsOf types.anything));
+                                                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                               default = null;
                                                               description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                             };
                                                             requests = mkOption {
-                                                              type = (types.nullOr (types.attrsOf types.anything));
+                                                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                               default = null;
                                                               description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                             };
@@ -15524,7 +15524,7 @@ in
                                                                           description = "Container name: required for volumes, optional for env vars";
                                                                         };
                                                                         divisor = mkOption {
-                                                                          type = (types.nullOr types.anything);
+                                                                          type = (types.nullOr (types.either types.int types.str));
                                                                           default = null;
                                                                           description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                         };
@@ -16864,7 +16864,7 @@ in
                                       description = "Container name: required for volumes, optional for env vars";
                                     };
                                     divisor = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                       description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                     };
@@ -17007,7 +17007,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -17095,12 +17095,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -17352,12 +17352,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -17404,7 +17404,7 @@ in
                               types.nullOr (mkTypedSubmodule {
                                 options = {
                                   maxUnavailable = mkOption {
-                                    type = (types.nullOr types.anything);
+                                    type = (types.nullOr (types.either types.int types.str));
                                     default = null;
                                     description = "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding up. This can not be 0. Defaults to 1. This field is alpha-level and is only honored by servers that enable the MaxUnavailableStatefulSet feature. The field applies to all pods in the range 0 to Replicas-1. That means if there is any unavailable pod in the range 0 to Replicas-1, it will be counted towards MaxUnavailable.";
                                   };
@@ -17522,7 +17522,7 @@ in
                             description = "Path to access on the HTTP server.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                           scheme = mkOption {
@@ -17562,7 +17562,7 @@ in
                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                         };
@@ -17832,7 +17832,7 @@ in
                             description = "Path to access on the HTTP server.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                           scheme = mkOption {
@@ -17872,7 +17872,7 @@ in
                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                             description = "Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.";
                           };
                         };
@@ -17995,7 +17995,7 @@ in
                                               description = "Container name: required for volumes, optional for env vars";
                                             };
                                             divisor = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                             };
@@ -18087,12 +18087,12 @@ in
                             '';
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                           };
@@ -18500,7 +18500,7 @@ in
                                                 description = "Container name: required for volumes, optional for env vars";
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                               };
@@ -18667,12 +18667,12 @@ in
                               '';
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                               description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                             };
@@ -18936,12 +18936,12 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                           };
@@ -19041,7 +19041,7 @@ in
                                     '';
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = ''
                                       allocatedResources tracks the resources allocated to a PVC including its capacity. Key names follow standard Kubernetes label syntax. Valid values are either: 	* Un-prefixed keys: 		- storage - the capacity of the volume. 	* Custom resources must use implementation-defined prefixed names such as "example.com/my-custom-resource" Apart from above values - keys that are unprefixed or have kubernetes.io prefix are considered reserved and hence may not be used.
@@ -19051,7 +19051,7 @@ in
                                     '';
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                     description = "capacity represents the actual resources of the underlying volume.";
                                   };
@@ -19524,7 +19524,7 @@ in
                                                                 description = "Container name: required for volumes, optional for env vars";
                                                               };
                                                               divisor = mkOption {
-                                                                type = (types.nullOr types.anything);
+                                                                type = (types.nullOr (types.either types.int types.str));
                                                                 default = null;
                                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                               };
@@ -19564,7 +19564,7 @@ in
                                               description = "medium represents what type of storage medium should back this directory. The default is \"\" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                             };
                                             sizeLimit = mkOption {
-                                              type = (types.nullOr types.anything);
+                                              type = (types.nullOr (types.either types.int types.str));
                                               default = null;
                                               description = "sizeLimit is the total amount of local storage required for this EmptyDir volume. The size limit is also applicable for memory medium. The maximum usage on memory medium EmptyDir would be the minimum value between the SizeLimit specified here and the sum of memory limits of all containers in a pod. The default is nil which means that the limit is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir";
                                             };
@@ -19655,12 +19655,12 @@ in
                                                                 types.nullOr (mkTypedSubmodule {
                                                                   options = {
                                                                     limits = mkOption {
-                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                       default = null;
                                                                       description = "Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                                     };
                                                                     requests = mkOption {
-                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                       default = null;
                                                                       description = "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/";
                                                                     };
@@ -20319,7 +20319,7 @@ in
                                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                                 };
                                                                                 divisor = mkOption {
-                                                                                  type = (types.nullOr types.anything);
+                                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                                   default = null;
                                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                                 };

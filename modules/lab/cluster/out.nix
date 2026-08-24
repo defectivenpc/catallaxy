@@ -312,8 +312,8 @@ in
     let
       # The graph refuses a conflict too, but only once waves are computed.
       # A lab that is wrong is wrong whether or not anyone asked for its
-      # ordering, so it is an assertion as well: that is the layer
-      # `evalClusterConfig` checks, and the one a lab author sees first.
+      # ordering, so it is an assertion as well: that is the layer evaluation
+      # checks, and the one a lab author sees first.
       conflicts = map (message: {
         assertion = false;
         inherit message;

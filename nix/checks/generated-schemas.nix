@@ -39,37 +39,33 @@ let
     ++ compare "Kubernetes schema files" (nixFilesIn (generated + "/k8s")) (
       expected k8sTypegenConfig.k8sVersions
     );
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  generated-schemas-match-their-sources =
-    pkgs.runCommand "generated-schemas-match-their-sources" { }
-      (
-        if failures == [ ] then
-          ''
-            echo "every generated schema file has a source, and every source has a file" > $out
-          ''
-        else
-          ''
-            cat >&2 <<'EOF'
-            The committed Kubernetes schemas no longer match what generates them.
+  generated-schemas-match-their-sources = mkCheck {
+    what = "generated-schemas-match-their-sources";
+    passed = "every generated schema file has a source, and every source has a file";
+    why = ''
+      The committed Kubernetes schemas no longer match what generates them.
 
-            `lib/k8s-specs.nix` derives the input set from `lib/charts.nix`: every
-            chart with a `crd` definition, plus the standalone CRD bundles. Adding
-            a chart, removing one, or renaming its key changes that set, and the
-            committed tree only follows when the generator is run.
+      `lib/k8s-specs.nix` derives the input set from `lib/charts.nix`: every
+      chart with a `crd` definition, plus the standalone CRD bundles. Adding
+      a chart, removing one, or renaming its key changes that set, and the
+      committed tree only follows when the generator is run.
 
-            The two ways this goes wrong are opposite and both silent. A file with
-            no source is a schema for a chart the lab no longer ships, and it keeps
-            validating resources against a version nothing installs. A source with
-            no file is a CRD whose kinds fall back to unchecked attrs, which looks
-            exactly like a resource that has no schema at all.
+      The two ways this goes wrong are opposite and both silent. A file with
+      no source is a schema for a chart the lab no longer ships, and it keeps
+      validating resources against a version nothing installs. A source with
+      no file is a CRD whose kinds fall back to unchecked attrs, which looks
+      exactly like a resource that has no schema at all.
 
-            ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-
-            Run `nix run .#generate-k8s-types`, then `nix fmt`, and commit the
-            result. Delete any file the run does not rewrite.
-            EOF
-            exit 1
-          ''
-      );
+      This compares the *set of files*, not their contents: a committed schema
+      can be stale against the chart it came from and still pass here.
+    '';
+    fix = ''
+      Run `nix run .#generate-k8s-types`, then `nix fmt`, and commit the
+      result. Delete any file the run does not rewrite.
+    '';
+    inherit failures;
+  };
 }

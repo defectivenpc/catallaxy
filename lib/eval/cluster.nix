@@ -1,34 +1,16 @@
 { lib, pkgs }:
 
+# Lowering an evaluated cluster to the JSON the CLI reads.
+#
+# There used to be an evaluator here as well — `baseModules`, `evalCluster`,
+# `evalClusterConfig`, `evalClusterJSON` — and it could not have worked:
+# `baseModules` was `[ ../modules ]`, which resolves to `lib/modules`, a
+# directory that does not exist. Nothing called any of it, and Nix's laziness
+# meant the broken path was never forced, so it sat here looking like API.
+# `lib/tests/cluster-lint.nix` defines its own `evalCluster` against the real
+# `modules/lab`, which is presumably how the breakage went unnoticed.
+
 let
-
-  baseModules = [
-    ../modules
-  ];
-
-  evalCluster =
-    {
-      modules ? [ ],
-      extraArgs ? { },
-    }:
-    lib.evalModules {
-      modules = baseModules ++ modules;
-      specialArgs = {
-        inherit lib pkgs;
-      }
-      // extraArgs;
-    };
-
-  evalClusterConfig =
-    args:
-    let
-      config = (evalCluster args).config;
-      failedAssertions = builtins.filter (a: !a.assertion) config.assertions;
-    in
-    if failedAssertions != [ ] then
-      throw (lib.concatStringsSep "\n" (map (a: "Assertion failed: ${a.message}") failedAssertions))
-    else
-      config;
 
   clusterConfigToJSON = config: {
     inherit (config.cluster) name provider provisioner;
@@ -147,15 +129,7 @@ let
       };
   };
 
-  evalClusterJSON = args: clusterConfigToJSON (evalClusterConfig args);
-
 in
 {
-  inherit
-    evalCluster
-    evalClusterConfig
-    evalClusterJSON
-    clusterConfigToJSON
-    ;
-  inherit baseModules;
+  inherit clusterConfigToJSON;
 }

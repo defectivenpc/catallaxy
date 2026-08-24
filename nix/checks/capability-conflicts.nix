@@ -131,6 +131,9 @@ let
         floes.cilium.gatewayAPI.enable = true;
         floes.cert-manager.enable = true;
         floes.reloader.enable = true;
+        # grafana mints its admin password in the cluster, which needs the
+        # controller that reconciles the generator.
+        floes.external-secrets.enable = true;
         floes.grafana = {
           enable = true;
           domain = "grafana.test.local";
@@ -210,34 +213,28 @@ let
         + "    capability layer resolves, and delete it from knownRefusedCases."
       )
     ) knownRefusedCases;
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  two-floes-doing-one-job-is-refused = pkgs.runCommand "two-floes-doing-one-job-is-refused" { } (
-    if failures == [ ] then
-      ''
-        echo "an exclusive capability with two providers fails evaluation" > $out
-      ''
-    else
-      ''
-        cat >&2 <<'EOF'
-        A cluster is accepting two implementations of one exclusive
-        capability, or refusing a combination that is fine.
+  two-floes-doing-one-job-is-refused = mkCheck {
+    what = "two-floes-doing-one-job-is-refused";
+    passed = "an exclusive capability with two providers fails evaluation";
+    why = ''
+      A cluster is accepting two implementations of one exclusive
+      capability, or refusing a combination that is fine.
 
-        Two Gateway API implementations do not merge: they claim the same
-        objects and the same traffic, and which one wins depends on the
-        order things reconcile in, so the cluster comes up and then
-        disagrees with itself. Additive capabilities are the opposite
-        case: two registries on two hostnames is a supported
-        configuration, and refusing it would make the arity flag
-        meaningless.
+      Two Gateway API implementations do not merge: they claim the same
+      objects and the same traffic, and which one wins depends on the
+      order things reconcile in, so the cluster comes up and then
+      disagrees with itself. Additive capabilities are the opposite
+      case: two registries on two hostnames is a supported
+      configuration, and refusing it would make the arity flag
+      meaningless.
 
-        Each exclusive case is run twice, once in a combination that
-        should work and once in one that should not, so an assertion that
-        refuses everything fails here too.
-
-        ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-        EOF
-        exit 1
-      ''
-  );
+      Each exclusive case is run twice, once in a combination that
+      should work and once in one that should not, so an assertion that
+      refuses everything fails here too.
+    '';
+    inherit failures;
+  };
 }

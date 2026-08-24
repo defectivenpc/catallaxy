@@ -150,32 +150,26 @@ let
       the colliding lab should be refused by an assertion quoting
         '${c.expect}', but ${describe bad}: ${c.what}''
   ) cases;
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  a-collision-between-floes-is-refused = pkgs.runCommand "a-collision-between-floes-is-refused" { } (
-    if failures == [ ] then
-      ''
-        echo "two floes claiming one key fails evaluation, naming both" > $out
-      ''
-    else
-      ''
-        cat >&2 <<'EOF'
-        Two floes are claiming one key and the lab still evaluates, or a
-        lab with no collision is being refused.
+  a-collision-between-floes-is-refused = mkCheck {
+    what = "a-collision-between-floes-is-refused";
+    passed = "two floes claiming one key fails evaluation, naming both";
+    why = ''
+      Two floes are claiming one key and the lab still evaluates, or a
+      lab with no collision is being refused.
 
-        Steps, ops commands and generated secrets are lifted into one
-        namespace per cluster. Without the check, the second claimant does
-        not merge with the first: it collides on whichever field the two
-        happen to disagree about, and the module system reports that
-        naming neither floe.
+      Steps, ops commands and generated secrets are lifted into one
+      namespace per cluster. Without the check, the second claimant does
+      not merge with the first: it collides on whichever field the two
+      happen to disagree about, and the module system reports that
+      naming neither floe.
 
-        Each case runs twice, once in a shape that should work and once in
-        one that should not, so a check that refuses everything fails here
-        too.
-
-        ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-        EOF
-        exit 1
-      ''
-  );
+      Each case runs twice, once in a shape that should work and once in
+      one that should not, so a check that refuses everything fails here
+      too.
+    '';
+    inherit failures;
+  };
 }

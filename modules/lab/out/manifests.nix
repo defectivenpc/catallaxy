@@ -20,7 +20,6 @@ let
     inherit lib pkgs;
     waitImages = lib.mapAttrs (_: i: i.ref) config.lab.images.wait;
   };
-  catallaxyLib = import ../../../lib/eval/cluster.nix { inherit lib pkgs; };
 
   # Read once here rather than in each renderer. A missing file is an eval
   # error, so `lockFile = null` is what a lab that has not generated one yet

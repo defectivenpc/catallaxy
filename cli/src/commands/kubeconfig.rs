@@ -1,9 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Subcommand;
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
 use crate::io;
 
 #[derive(Subcommand)]
@@ -25,15 +24,13 @@ fn show(ctx: &CataContext) -> Result<()> {
         .as_deref()
         .ok_or_else(|| anyhow::anyhow!("No lab specified. Use --flake <ref>#<lab>"))?;
 
-    let lab = crate::io::nix::get_lab_config(ctx, name)?;
+    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
 
     println!(
         "{} Kubeconfig contexts for lab '{name}'",
         style("catallaxy").cyan().bold()
     );
     println!();
-
-    let lab = LabSpec::from_value(lab).context("parsing the lab configuration")?;
 
     for cluster_name in &lab.cluster_names {
         let context = lab.kube_context(cluster_name)?;

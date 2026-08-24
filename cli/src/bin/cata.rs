@@ -10,7 +10,7 @@ async fn main() -> ExitCode {
 
     tokio::spawn(async {
         if tokio::signal::ctrl_c().await.is_ok() {
-            cata::io::fs::erase_secure_tempdirs();
+            cata::io::fs::erase_secure_temp_paths();
             eprintln!();
             eprintln!("interrupted; erased any decrypted secrets from the temp directory");
             std::process::exit(130);
@@ -28,7 +28,7 @@ async fn main() -> ExitCode {
         },
     };
 
-    cata::io::fs::erase_secure_tempdirs();
+    cata::io::fs::erase_secure_temp_paths();
     code
 }
 

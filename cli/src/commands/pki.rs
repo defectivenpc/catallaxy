@@ -399,9 +399,7 @@ fn provision(_ctx: &CataContext, cluster_name: &str, user: &str) -> Result<()> {
         bail!("Certificate not found for '{user}'. Run `cata pki issue {user}` first.");
     }
 
-    which::which("ykman").context(
-        "ykman not found. Install it: brew install ykman (macOS) or pip install yubikey-manager",
-    )?;
+    crate::io::ykman::require()?;
 
     println!(
         "{} Provisioning certificate for '{user}' to YubiKey",

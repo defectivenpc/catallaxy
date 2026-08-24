@@ -163,6 +163,43 @@ The format is based on
 
 ### Fixed
 
+- **A hand-set OIDC `clientSecretRef` reads the key kanidm actually
+  writes.** `floes.{grafana,zot,argocd,forgejo}.oidc.clientSecretRef.key`
+  defaulted to `client-secret`. Nothing in the tree writes that key — kanidm
+  materialises the client secret under `CLIENT_SECRET`, which is what harbor
+  already defaulted to — so a lab that named a Secret without naming a key
+  read an absent key and got an empty client secret. All four now default to
+  `CLIENT_SECRET`. A lab that hand-made a Secret keyed `client-secret` and
+  relied on the old default has to say so explicitly.
+
+- **No credential is generated while rendering a manifest.** Grafana's admin
+  password and four of Harbor's internal secrets (`CSRF_KEY`, the core
+  secret, `JOBSERVICE_SECRET`, `REGISTRY_HTTP_SECRET`) were left to their
+  charts, which mint them with Helm's `randAlphaNum` when nothing is
+  supplied. Rendering happens at build time here, so each value landed in
+  the rendered manifest, in the digest that pins it and in the Nix store —
+  and changed on every re-render, so re-applying a lab silently rotated it.
+  A rotating `REGISTRY_HTTP_SECRET` invalidates uploads in flight; a
+  rotating Grafana admin password locks the operator out of the account they
+  were handed.
+
+  All five are now minted in the cluster through `secrets.generate` and
+  reached with the charts' own `existingSecret` settings, the way Harbor's
+  admin password and `secretKey` already were.
+  `checks.<lab>-renders-no-secret-material` fails any lab whose rendered
+  manifests carry a value shaped like a generated one, so this cannot come
+  back quietly.
+
+  `secrets.generate` gained `extraData` for the case that forced it: Grafana
+  reads `admin-user` and `admin-password` from one Secret and will not start
+  without both, and a username is not a secret, so there is nothing to
+  generate for it.
+
+  **Enabling `floes.grafana` now requires `floes.external-secrets`**, which
+  reconciles the generator — the same requirement Harbor already had. Set
+  `floes.grafana.adminCredentialsSecret` to keep using a Secret you manage
+  yourself, in which case nothing is minted.
+
 - **An export without a default is refused for every floe, not just the
   listed ones.** `checks.every-floe-export-has-a-default` reads every floe's
   exports with nothing enabled and names any floe that cannot answer. The

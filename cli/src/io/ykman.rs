@@ -3,6 +3,21 @@ use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 
+/// Fail now, with installation instructions, if `ykman` is not on PATH.
+///
+/// The module that runs the tool owns finding it: the caller used to do its
+/// own `which::which`, which is a PATH search sitting outside the io seam.
+///
+/// # Errors
+///
+/// If `ykman` is not on PATH.
+pub fn require() -> Result<()> {
+    which::which("ykman").context(
+        "ykman not found. Install it: brew install ykman (macOS) or pip install yubikey-manager",
+    )?;
+    Ok(())
+}
+
 /// # Errors
 ///
 /// If `ykman` cannot be spawned, or exits non-zero. Its output goes to the

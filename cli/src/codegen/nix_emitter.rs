@@ -514,6 +514,16 @@ let
         (attrNames versionedTypes.crds)
     else k8sByKind;
 
+  coreKinds = versionedTypes:
+    let
+      inherit (builtins) isAttrs attrNames foldl' elem;
+      inherit (lib) filterAttrs;
+      groups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
+      addGroup = acc: group:
+        foldl' (a: av: a // lib.genAttrs (attrNames group.${av}) (_: true)) acc (attrNames group);
+    in
+    foldl' (acc: gn: addGroup acc groups.${gn}) {} (attrNames groups);
+
   apiVersionOfType = type: (type.getSubOptions [ ]).apiVersion.default or null;
 
   apiVersionsForKind = byKind: kind:
@@ -527,7 +537,7 @@ let
 
 in {
   inherit k8sVersions loadCrds forVersion flattenTypes;
-  inherit typesByKind apiVersionsForKind resolveResourceType;
+  inherit typesByKind apiVersionsForKind resolveResourceType coreKinds;
 
   default = forVersion "1.31";
 }

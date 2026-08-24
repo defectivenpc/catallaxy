@@ -504,7 +504,7 @@ in
                                 types.listOf (mkTypedSubmodule {
                                   options = {
                                     count = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                       description = "Number of replicas";
                                     };
                                     name = mkOption {
@@ -1091,7 +1091,7 @@ in
                                   types.listOf (mkTypedSubmodule {
                                     options = {
                                       count = mkOption {
-                                        type = types.anything;
+                                        type = (types.either types.int types.str);
                                         description = "Number of replicas";
                                       };
                                       name = mkOption {
@@ -1844,7 +1844,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -2334,7 +2334,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -3045,7 +3045,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -3535,7 +3535,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -4254,7 +4254,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -4744,7 +4744,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -5423,7 +5423,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -5913,7 +5913,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -6635,7 +6635,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -7125,7 +7125,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -7836,7 +7836,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -8326,7 +8326,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -9045,7 +9045,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -9535,7 +9535,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -10214,7 +10214,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -10704,7 +10704,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -11409,7 +11409,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -11899,7 +11899,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -12946,7 +12946,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -13436,7 +13436,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -14505,7 +14505,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -14995,7 +14995,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -15703,7 +15703,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -16193,7 +16193,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -16915,7 +16915,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -17405,7 +17405,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -18116,7 +18116,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -18606,7 +18606,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -19325,7 +19325,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -19815,7 +19815,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -20494,7 +20494,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -20984,7 +20984,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -21689,7 +21689,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -22179,7 +22179,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -23226,7 +23226,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -23716,7 +23716,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -24785,7 +24785,7 @@ in
                                                                                 types.listOf (mkTypedSubmodule {
                                                                                   options = {
                                                                                     count = mkOption {
-                                                                                      type = types.anything;
+                                                                                      type = (types.either types.int types.str);
                                                                                     };
                                                                                     name = mkOption {
                                                                                       type = types.str;
@@ -25275,7 +25275,7 @@ in
                                                                                   types.listOf (mkTypedSubmodule {
                                                                                     options = {
                                                                                       count = mkOption {
-                                                                                        type = types.anything;
+                                                                                        type = (types.either types.int types.str);
                                                                                       };
                                                                                       name = mkOption {
                                                                                         type = types.str;
@@ -25986,7 +25986,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -26476,7 +26476,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -27173,7 +27173,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -27663,7 +27663,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -28710,7 +28710,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -29200,7 +29200,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -30269,7 +30269,7 @@ in
                                                                 types.listOf (mkTypedSubmodule {
                                                                   options = {
                                                                     count = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                     };
                                                                     name = mkOption {
                                                                       type = types.str;
@@ -30759,7 +30759,7 @@ in
                                                                   types.listOf (mkTypedSubmodule {
                                                                     options = {
                                                                       count = mkOption {
-                                                                        type = types.anything;
+                                                                        type = (types.either types.int types.str);
                                                                       };
                                                                       name = mkOption {
                                                                         type = types.str;
@@ -31107,7 +31107,7 @@ in
                                       default = null;
                                     };
                                     maxUpdate = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                     };
                                   };
@@ -31608,7 +31608,7 @@ in
                                                 types.listOf (mkTypedSubmodule {
                                                   options = {
                                                     count = mkOption {
-                                                      type = types.anything;
+                                                      type = (types.either types.int types.str);
                                                     };
                                                     name = mkOption {
                                                       type = types.str;
@@ -32098,7 +32098,7 @@ in
                                                   types.listOf (mkTypedSubmodule {
                                                     options = {
                                                       count = mkOption {
-                                                        type = types.anything;
+                                                        type = (types.either types.int types.str);
                                                       };
                                                       name = mkOption {
                                                         type = types.str;

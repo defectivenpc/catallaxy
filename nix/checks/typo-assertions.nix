@@ -208,35 +208,27 @@ let
       bad == null || bad == [ ] || !(lib.any (m: lib.hasInfix c.expect m) bad)
     ) (describe c)
   ) cases;
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  a-mistyped-name-is-refused-not-ignored =
-    pkgs.runCommand "a-mistyped-name-is-refused-not-ignored" { }
-      (
-        if failures == [ ] then
-          ''
-            echo "every free-form name that matches nothing fails evaluation" > $out
-          ''
-        else
-          ''
-            cat >&2 <<'EOF'
-            A free-form option key that names nothing is being ignored rather
-            than refused.
+  a-mistyped-name-is-refused-not-ignored = mkCheck {
+    what = "a-mistyped-name-is-refused-not-ignored";
+    passed = "every free-form name that matches nothing fails evaluation";
+    why = ''
+      A free-form option key that names nothing is being ignored rather
+      than refused.
 
-            These options are keyed by a name the lab writes by hand: a floe,
-            a namespace, an image label, a cluster, an account. Nothing checks
-            spelling, and the consumer of each reads with a fallback, so a
-            typo does not fail. It renders one fewer rule, one fewer label,
-            one fewer member, and the lab comes up subtly wrong in a way that
-            looks like a bug in the thing being configured.
+      These options are keyed by a name the lab writes by hand: a floe,
+      a namespace, an image label, a cluster, an account. Nothing checks
+      spelling, and the consumer of each reads with a fallback, so a
+      typo does not fail. It renders one fewer rule, one fewer label,
+      one fewer member, and the lab comes up subtly wrong in a way that
+      looks like a bug in the thing being configured.
 
-            Each case below is run twice, once spelled correctly and once
-            with a typo, so an assertion that refuses everything fails here
-            too.
-
-            ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-            EOF
-            exit 1
-          ''
-      );
+      Each case below is run twice, once spelled correctly and once
+      with a typo, so an assertion that refuses everything fails here
+      too.
+    '';
+    inherit failures;
+  };
 }

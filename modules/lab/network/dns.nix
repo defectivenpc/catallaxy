@@ -7,6 +7,7 @@ let
     types
     mkIf
     ;
+  inherit (import ../../../lib/util/network.nix { inherit lib; }) cidrFirstIP;
   cfg = config.lab.dns;
 
   knotConf = ''
@@ -135,14 +136,7 @@ in
 
     server = mkOption {
       type = types.str;
-      default =
-        let
-
-          octets = lib.splitString "." (lib.head (lib.splitString "/" config.lab.network.dockerSubnet));
-          nums = map lib.strings.toInt octets;
-          firstIP = lib.init nums ++ [ ((lib.last nums) + 1) ];
-        in
-        lib.concatStringsSep "." (map toString firstIP);
+      default = cidrFirstIP config.lab.network.dockerSubnet;
       description = "IP address where the DNS server is reachable from clusters (Docker gateway by default)";
     };
 

@@ -98,11 +98,6 @@ let
     else
       k8sByKind;
 
-  # Kinds the API server ships, as a set. Everything else needs something to
-  # install its CRD first, which is what makes this the dividing line for a
-  # derived `kind:` requirement. `crds` is excluded on purpose: a vendor CRD
-  # being in the generated schemas says catallaxy can type-check it, not that
-  # any cluster has it.
   coreKinds =
     versionedTypes:
     let

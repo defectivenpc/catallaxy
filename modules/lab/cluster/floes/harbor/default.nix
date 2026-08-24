@@ -147,53 +147,20 @@ in
         else
           null;
 
+      # Only when the Secret is in another namespace: in harbor's own, the
+      # bootstrap ServiceAccount's Role already covers it.
       oidcRbacResource =
         optionalAttrs
           (cfg.oidc.enable && cfg.oidc.clientSecretRef != null && oidcClientSecretNs != cfg.namespace)
-          {
-            harbor-oidc-secret-reader-role = {
-              apiVersion = "rbac.authorization.k8s.io/v1";
-              kind = "Role";
-              metadata = {
-                name = "harbor-oidc-secret-reader";
-                namespace = oidcClientSecretNs;
-                labels."app.kubernetes.io/managed-by" = "catallaxy";
-              };
-              rules = [
-                {
-                  apiGroups = [ "" ];
-                  resources = [ "secrets" ];
-                  resourceNames = [ cfg.oidc.clientSecretRef.name ];
-                  verbs = [
-                    "get"
-                    "list"
-                    "watch"
-                  ];
-                }
-              ];
-            };
-            harbor-oidc-secret-reader-rb = {
-              apiVersion = "rbac.authorization.k8s.io/v1";
-              kind = "RoleBinding";
-              metadata = {
-                name = "harbor-oidc-secret-reader";
-                namespace = oidcClientSecretNs;
-                labels."app.kubernetes.io/managed-by" = "catallaxy";
-              };
-              roleRef = {
-                apiGroup = "rbac.authorization.k8s.io";
-                kind = "Role";
-                name = "harbor-oidc-secret-reader";
-              };
-              subjects = [
-                {
-                  kind = "ServiceAccount";
-                  name = "harbor-bootstrap";
-                  namespace = cfg.namespace;
-                }
-              ];
-            };
-          };
+          (
+            k8sHelpers.mkSecretReaderRbac {
+              name = "harbor-oidc-secret-reader";
+              namespace = oidcClientSecretNs;
+              secretNames = [ cfg.oidc.clientSecretRef.name ];
+              serviceAccount = "harbor-bootstrap";
+              serviceAccountNamespace = cfg.namespace;
+            }
+          );
 
       oidcBootstrapResource = optionalAttrs cfg.oidc.enable {
         harbor-oidc-bootstrap = {
@@ -535,6 +502,29 @@ in
         existingSecretSecretKey = cfg.secretKeySecret;
       }
 
+      # The admin password and secretKey above were already minted in-cluster.
+      # These four were not, so the chart generated them with `randAlphaNum` at
+      # *render* time: four secrets in the rendered manifest, in the digest
+      # that pins it and in the Nix store, all of which changed on any
+      # re-render. A rotating REGISTRY_HTTP_SECRET invalidates in-flight
+      # uploads, and a rotating core secret breaks core↔jobservice until every
+      # pod has restarted.
+      // {
+        core = {
+          existingSecret = cfg.coreSecret;
+          existingXsrfSecret = cfg.xsrfSecret;
+          existingXsrfSecretKey = "CSRF_KEY";
+        };
+        jobservice = {
+          existingSecret = cfg.jobserviceSecret;
+          existingSecretKey = "JOBSERVICE_SECRET";
+        };
+        registry = {
+          existingSecret = cfg.registryHttpSecret;
+          existingSecretKey = "REGISTRY_HTTP_SECRET";
+        };
+      }
+
       // optionalAttrs (cfg.tls.caBundleSecret != null) {
         caBundleSecretName = cfg.tls.caBundleSecret.name;
       }
@@ -616,6 +606,30 @@ in
         ${cfg.secretKeySecret} = {
           inherit (cfg) namespace;
           key = "secretKey";
+          length = 16;
+        };
+
+        # Lengths are the chart's, not ours: core and jobservice validate
+        # 16 characters and the XSRF key 32, and Harbor fails at runtime
+        # rather than at apply if either is wrong.
+        ${cfg.coreSecret} = {
+          inherit (cfg) namespace;
+          key = "secret";
+          length = 16;
+        };
+        ${cfg.xsrfSecret} = {
+          inherit (cfg) namespace;
+          key = "CSRF_KEY";
+          length = 32;
+        };
+        ${cfg.jobserviceSecret} = {
+          inherit (cfg) namespace;
+          key = "JOBSERVICE_SECRET";
+          length = 16;
+        };
+        ${cfg.registryHttpSecret} = {
+          inherit (cfg) namespace;
+          key = "REGISTRY_HTTP_SECRET";
           length = 16;
         };
       };
@@ -727,14 +741,18 @@ in
 
         createNamespaces = [ cfg.namespace ];
 
-        # Both Secrets reach harbor as Helm values, and the auto-edge that
-        # would find them walks rendered resources, so it sees neither. It
-        # does reach the admin one through the bootstrap Jobs' secretKeyRef,
-        # but only when OIDC or robots or projects are configured, so both are
-        # named here.
+        # Every one of these reaches harbor as a Helm value, and the auto-edge
+        # that would find them walks rendered resources, so it sees none of
+        # them. It does reach the admin one through the bootstrap Jobs'
+        # secretKeyRef, but only when OIDC or robots or projects are
+        # configured, so they are all named here.
         requires = [
           "secret:${cfg.namespace}/${cfg.adminPasswordSecret}"
           "secret:${cfg.namespace}/${cfg.secretKeySecret}"
+          "secret:${cfg.namespace}/${cfg.coreSecret}"
+          "secret:${cfg.namespace}/${cfg.xsrfSecret}"
+          "secret:${cfg.namespace}/${cfg.jobserviceSecret}"
+          "secret:${cfg.namespace}/${cfg.registryHttpSecret}"
         ]
         ++ optional (hasCaBundle && cfg.tls.caBundle.readyToken != null) cfg.tls.caBundle.readyToken;
         provides = [

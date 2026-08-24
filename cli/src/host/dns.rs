@@ -77,9 +77,7 @@ pub fn dns_setup(host: &str, port: u64, zone: &str) -> Result<()> {
 }
 
 fn install_resolver_file(dns_host: &str, port: u64, resolver_file: &str) -> Result<()> {
-    let staged = tempfile::Builder::new()
-        .prefix("cata-resolver-")
-        .tempfile()
+    let staged = crate::io::fs::secure_tempfile("cata-resolver-", "")
         .context("staging the resolver file")?;
     io::fs::write(
         staged.path(),
@@ -198,10 +196,7 @@ fn dns_setup_systemd_resolved(host: &str, port: u64, zone: &str) -> Result<()> {
 
     println!("{} Creating {}...", style(">>>").cyan(), target.path);
 
-    let staged = tempfile::Builder::new()
-        .prefix("cata-resolved-")
-        .suffix(".conf")
-        .tempfile()
+    let staged = crate::io::fs::secure_tempfile("cata-resolved-", ".conf")
         .context("staging the resolver drop-in")?;
     io::fs::write(staged.path(), desired.as_bytes())
         .with_context(|| format!("writing staged drop-in {}", staged.path().display()))?;

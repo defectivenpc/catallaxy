@@ -37,3 +37,18 @@ mod second_tests {
         let _ = std::process::Command::new("true");
     }
 }
+
+/// Naming a handle type is not acquiring one, so neither of these is a
+/// finding. Constructing one two lines down is.
+pub fn holds_a_handle(dir: Option<tempfile::TempDir>) -> Option<tempfile::TempDir> {
+    dir
+}
+
+/// Address arithmetic touches no network.
+pub fn addresses(a: std::net::Ipv4Addr) -> std::net::IpAddr {
+    std::net::IpAddr::V4(a)
+}
+
+pub fn actually_makes_one() {
+    let _ = tempfile::TempDir::new();
+}

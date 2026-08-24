@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  sanitize = key: builtins.replaceStrings [ "/" ] [ "__" ] key;
+  inherit (import ./bundle-key.nix { }) sanitize;
 
   structuralDirs = [
     "bundles"

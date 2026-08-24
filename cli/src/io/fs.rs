@@ -308,15 +308,21 @@ mod tests {
     }
 }
 
-/// Temp directories holding plaintext, so an interrupt can still erase them.
+/// Temp paths holding plaintext, so an interrupt can still erase them.
 ///
 /// `tempfile` cleans up in `Drop`, which a signal never runs. `lab up` holds
 /// decrypted secret projections for the length of a deploy, so a Ctrl-C used
 /// to leave them in $TMPDIR.
-static SECURE_TEMPDIRS: std::sync::Mutex<Vec<std::path::PathBuf>> =
+static SECURE_TEMP_PATHS: std::sync::Mutex<Vec<std::path::PathBuf>> =
     std::sync::Mutex::new(Vec::new());
 
-/// A 0700 temp directory whose path is remembered for `erase_secure_tempdirs`.
+fn register_secure_temp(path: &Path) {
+    if let Ok(mut paths) = SECURE_TEMP_PATHS.lock() {
+        paths.push(path.to_path_buf());
+    }
+}
+
+/// A 0700 temp directory whose path is remembered for `erase_secure_temp_paths`.
 ///
 /// The returned handle still erases on drop; the registry is what covers the
 /// paths drop never runs for.
@@ -335,22 +341,50 @@ pub fn secure_tempdir() -> Result<tempfile::TempDir> {
         .tempdir()
         .context("creating a private temp directory")?;
 
-    if let Ok(mut dirs) = SECURE_TEMPDIRS.lock() {
-        dirs.push(dir.path().to_path_buf());
-    }
+    register_secure_temp(dir.path());
     Ok(dir)
 }
 
-/// Remove every registered temp directory, ignoring ones already gone.
+/// A 0600 temp file whose path is remembered for `erase_secure_temp_paths`.
+///
+/// The file counterpart of `secure_tempdir`, for the callers that want one
+/// file rather than a directory — a rendered manifest staged for a diff, a
+/// decompressed image tarball. Same reason: `Drop` does not run on a signal.
+///
+/// # Errors
+///
+/// If `$TMPDIR` is missing or not writable.
+pub fn secure_tempfile(prefix: &str, suffix: &str) -> Result<tempfile::NamedTempFile> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let file = tempfile::Builder::new()
+        .prefix(prefix)
+        .suffix(suffix)
+        .permissions(std::fs::Permissions::from_mode(0o600))
+        .tempfile()
+        .context("creating a private temp file")?;
+
+    register_secure_temp(file.path());
+    Ok(file)
+}
+
+/// Remove every registered temp path, ignoring ones already gone.
 ///
 /// Safe to call twice: `main` calls it on the way out and the signal handler
 /// calls it on the way down.
-pub fn erase_secure_tempdirs() {
-    let Ok(mut dirs) = SECURE_TEMPDIRS.lock() else {
+pub fn erase_secure_temp_paths() {
+    let Ok(mut paths) = SECURE_TEMP_PATHS.lock() else {
         return;
     };
-    for dir in dirs.drain(..) {
-        let _ = std::fs::remove_dir_all(&dir);
+    for path in paths.drain(..) {
+        // A registered path is a directory or a file depending on which
+        // constructor made it, and by here it may be neither: the handle's own
+        // Drop may have run first. Both removals are best-effort.
+        if path.is_dir() {
+            let _ = std::fs::remove_dir_all(&path);
+        } else {
+            let _ = std::fs::remove_file(&path);
+        }
     }
 }
 
@@ -359,8 +393,20 @@ mod secure_tempdir_tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
 
+    /// The registry is process-global, so a test that erases would otherwise
+    /// delete a path a concurrently running test had just registered. Every
+    /// test here takes this first.
+    static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn serially() -> std::sync::MutexGuard<'static, ()> {
+        // A panicking test poisons the lock; the guard is still what the next
+        // test needs, and the panic is already reported.
+        SERIAL.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     #[test]
     fn it_is_private_to_the_user() {
+        let _serial = serially();
         let dir = secure_tempdir().unwrap();
         let mode = std::fs::metadata(dir.path()).unwrap().permissions().mode();
         assert_eq!(
@@ -371,24 +417,56 @@ mod secure_tempdir_tests {
     }
 
     #[test]
+    fn a_temp_file_is_private_to_the_user() {
+        let _serial = serially();
+        let file = secure_tempfile("cata-test-", ".yaml").unwrap();
+        let mode = std::fs::metadata(file.path()).unwrap().permissions().mode();
+        assert_eq!(
+            mode & 0o777,
+            0o600,
+            "a plaintext file must not be readable by others"
+        );
+    }
+
+    #[test]
     fn erasing_removes_it_without_waiting_for_drop() {
+        let _serial = serially();
         let dir = secure_tempdir().unwrap();
         let path = dir.path().to_path_buf();
         std::fs::write(path.join("secret"), b"plaintext").unwrap();
         assert!(path.exists());
 
-        erase_secure_tempdirs();
+        erase_secure_temp_paths();
         assert!(
             !path.exists(),
             "a registered directory must be gone after erasing"
         );
     }
 
+    /// The signal handler is the reason the registry exists, and it erases
+    /// files as well as directories now that callers stage single files.
+    #[test]
+    fn erasing_removes_a_registered_file_too() {
+        let _serial = serially();
+        let file = secure_tempfile("cata-test-", ".yaml").unwrap();
+        let path = file.path().to_path_buf();
+        std::fs::write(&path, b"plaintext").unwrap();
+        assert!(path.exists());
+
+        erase_secure_temp_paths();
+        assert!(
+            !path.exists(),
+            "a registered file must be gone after erasing"
+        );
+    }
+
     #[test]
     fn erasing_twice_is_not_an_error() {
+        let _serial = serially();
         let _dir = secure_tempdir().unwrap();
-        erase_secure_tempdirs();
-        erase_secure_tempdirs();
+        let _file = secure_tempfile("cata-test-", ".txt").unwrap();
+        erase_secure_temp_paths();
+        erase_secure_temp_paths();
     }
 }
 

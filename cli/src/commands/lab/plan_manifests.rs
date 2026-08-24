@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -6,6 +5,8 @@ use console::style;
 use serde_json::Value;
 
 use crate::config::Context as CataContext;
+
+use super::golden;
 
 pub fn run(
     ctx: &CataContext,
@@ -22,7 +23,7 @@ pub fn run(
     if stable {
         let text = format_stable(&waves);
         if let Some(baseline) = diff {
-            if !run_diff(&text, &baseline)? {
+            if !golden::run_diff(&text, &baseline, "manifest waves")? {
                 return Err(crate::domain::ExitWith(1).into());
             }
             return Ok(());
@@ -56,7 +57,7 @@ fn load_waves(
 
     let lab_name =
         name.ok_or_else(|| anyhow::anyhow!("lab name is required unless --from-file is set"))?;
-    let lab = crate::io::nix::get_lab_config(ctx, lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, lab_name)?;
     extract_waves(&lab, cluster).with_context(|| {
         format!(
             "extracting manifestWaves for lab '{lab_name}' cluster '{}'",
@@ -172,99 +173,12 @@ fn format_stable(waves: &[Vec<Value>]) -> String {
                 out.push(' ');
                 out.push_str(key);
                 out.push('=');
-                out.push_str(&render_value(&obj[key]));
+                out.push_str(&golden::render_value(&obj[key]));
             }
             out.push('\n');
         }
     }
-    normalize_store_paths(&out)
-}
-
-fn render_value(v: &Value) -> String {
-    match v {
-        Value::Null => "null".to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Number(n) => n.to_string(),
-        Value::String(s) => {
-            let needs_quote = s
-                .chars()
-                .any(|c| c.is_whitespace() || c == '=' || c == '"' || c == '\\');
-            if needs_quote {
-                serde_json::to_string(s).unwrap_or_else(|_| format!("{s:?}"))
-            } else {
-                s.clone()
-            }
-        }
-        Value::Array(_) | Value::Object(_) => serde_json::to_string(&canonicalize(v))
-            .unwrap_or_else(|_| "<unserializable>".to_string()),
-    }
-}
-
-fn canonicalize(v: &Value) -> Value {
-    match v {
-        Value::Object(m) => {
-            let mut keys: Vec<&String> = m.keys().collect();
-            keys.sort();
-            let mut sorted = serde_json::Map::with_capacity(m.len());
-            for k in keys {
-                sorted.insert(k.clone(), canonicalize(&m[k]));
-            }
-            Value::Object(sorted)
-        }
-        Value::Array(a) => Value::Array(a.iter().map(canonicalize).collect()),
-        _ => v.clone(),
-    }
-}
-
-fn normalize_store_paths(s: &str) -> String {
-    const PREFIX: &str = "/nix/store/";
-    let mut result = String::with_capacity(s.len());
-    let mut rest = s;
-    while let Some(idx) = rest.find(PREFIX) {
-        result.push_str(&rest[..idx]);
-        result.push_str(PREFIX);
-        let after = &rest[idx + PREFIX.len()..];
-        let bytes = after.as_bytes();
-        if bytes.len() >= 33
-            && bytes[32] == b'-'
-            && bytes[..32]
-                .iter()
-                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
-        {
-            result.push_str("HASH");
-            rest = &after[32..];
-        } else {
-            rest = after;
-        }
-    }
-    result.push_str(rest);
-    result
-}
-
-fn run_diff(actual: &str, baseline_path: &Path) -> Result<bool> {
-    let baseline = crate::io::fs::read_to_string(baseline_path)
-        .with_context(|| format!("reading baseline {}", baseline_path.display()))?;
-    if actual == baseline {
-        eprintln!(
-            "manifest waves match baseline {}",
-            style(baseline_path.display()).dim()
-        );
-        return Ok(true);
-    }
-    let mut tmp = tempfile::NamedTempFile::new().context("creating temp file for diff")?;
-    tmp.write_all(actual.as_bytes())
-        .context("writing actual waves to temp file")?;
-    tmp.flush()
-        .context("flushing the temp file the diff is read from")?;
-
-    let status = crate::io::diff::unified(baseline_path, tmp.path());
-    if let Err(e) = status {
-        eprintln!(
-            "{}: `diff -u` failed ({e}); waves differ from baseline",
-            style("error").red()
-        );
-    }
-    Ok(false)
+    golden::normalize_store_paths(&out)
 }
 
 fn render_pretty(lab_name: &str, cluster: &str, waves: &[Vec<Value>]) {

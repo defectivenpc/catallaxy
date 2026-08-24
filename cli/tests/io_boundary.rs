@@ -63,11 +63,55 @@ const FORBIDDEN: &[(&str, &str, Reach)] = &[
     ("which::which", "searches PATH", Reach::OrDeeper),
 ];
 
+/// Handle types: naming one is free, constructing one is not.
+///
+/// `-> Result<Option<tempfile::TempDir>>` is a handle being passed to whoever
+/// keeps it alive; `tempfile::TempDir::new()` makes a real directory. So only
+/// the *exact* path is exempt and anything called on it still counts. Same
+/// distinction as `reqwest::Client` above: holding one is not doing the I/O.
+const HANDLE_TYPES: &[&str] = &[
+    "tempfile::TempDir",
+    "tempfile::TempPath",
+    "tempfile::NamedTempFile",
+];
+
+/// Pure value types that happen to live under `std::net`.
+///
+/// `std::net` holds both sockets and the values that address them. An
+/// `Ipv4Addr` is arithmetic over four bytes — `domain/subnet.rs` computes
+/// subnets with it and touches no network — and every associated function on
+/// these is equally pure, so unlike a handle type they are exempt *and so is
+/// anything under them*: `IpAddr::V4(..)` and `Ipv4Addr::from(..)` are
+/// constructors for a number, not for a connection.
+///
+/// `TcpStream`, `TcpListener`, `UdpSocket` and `ToSocketAddrs` are the ones
+/// that connect or resolve. They are deliberately absent.
+const NET_VALUE_TYPES: &[&str] = &[
+    "std::net::IpAddr",
+    "std::net::Ipv4Addr",
+    "std::net::Ipv6Addr",
+    "std::net::SocketAddr",
+    "std::net::SocketAddrV4",
+    "std::net::SocketAddrV6",
+    "std::net::AddrParseError",
+];
+
 /// Why this path is I/O, if it is.
 ///
 /// A rule matches at a segment boundary, so `std::fs` catches
 /// `std::fs::read_to_string` without also catching a `std::fsync`-shaped name.
 fn reason_for(path: &str) -> Option<&'static str> {
+    if HANDLE_TYPES.contains(&path) {
+        return None;
+    }
+
+    let is_net_value = NET_VALUE_TYPES
+        .iter()
+        .any(|ty| path == *ty || path.starts_with(&format!("{ty}::")));
+    if is_net_value {
+        return None;
+    }
+
     FORBIDDEN.iter().find_map(|(rule, why, reach)| {
         let deeper = path.starts_with(&format!("{rule}::"));
         let matches = deeper || (*reach == Reach::OrDeeper && path == *rule);
@@ -328,7 +372,12 @@ fn the_scanner_reads_its_fixture() {
 
     assert_eq!(
         found,
-        vec!["tricky.rs:6", "tricky.rs:15", "tricky.rs:30"],
+        vec![
+            "tricky.rs:6",
+            "tricky.rs:15",
+            "tricky.rs:30",
+            "tricky.rs:53"
+        ],
         "the I/O scanner does not read its own fixture correctly"
     );
 }

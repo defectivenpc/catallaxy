@@ -37,7 +37,26 @@ let
         type = lib.types.bool;
         default = true;
       };
+
+      # The datasource peers, so a case may read the rendered chart values.
+      # Disabled, which is what leaves grafana with no datasources at all.
+      options.floes.prometheus = datasourcePeer;
+      options.floes.loki = datasourcePeer;
+      options.floes.tempo = datasourcePeer;
     };
+
+  datasourcePeer = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+    };
+    exports = lib.mkOption {
+      type = lib.types.attrs;
+      default = {
+        url = "";
+      };
+    };
+  };
 
   client = grantedScopes: {
     clientId = "grafana";
@@ -53,7 +72,12 @@ let
   mk =
     {
       providers ? { },
-      oidc,
+      oidc ? {
+        enable = false;
+      },
+      # Anything else the case wants on the floe, for the settings that have
+      # nothing to do with OIDC.
+      extra ? { },
     }:
     evalFloe (
       baseArgs
@@ -66,7 +90,8 @@ let
             enable = true;
             domain = "grafana.test.local";
             inherit oidc;
-          };
+          }
+          // extra;
         };
       }
     );
@@ -112,6 +137,13 @@ let
     providers.kanidm.oauth2Clients.grafana = client [ ];
     oidc.enable = false;
   };
+
+  # A lab that brings its own admin Secret, so nothing is minted for it.
+  ownAdminSecret = mk {
+    extra.adminCredentialsSecret = "my-own-grafana-admin";
+  };
+
+  chartValuesOf = r: r.config.bundles.grafana.helmCharts.grafana.values;
 in
 lib.runTests {
 
@@ -148,5 +180,49 @@ lib.runTests {
   testClientResolvesFromProvider = {
     expr = fullyGranted.config.floes.grafana.oidc.client.clientSecretRef.name;
     expected = "grafana-kanidm-oauth2-credentials";
+  };
+
+  # Left to itself the chart renders `admin-password: <randAlphaNum 40>` into
+  # the manifest, which puts the credential in the digest and in the Nix
+  # store, and rotates it on any re-render. Pointing it at a Secret minted in
+  # the cluster is what keeps it out.
+  testTheChartIsAlwaysPointedAtAnExistingAdminSecret = {
+    expr = (chartValuesOf oidcOff).admin.existingSecret;
+    expected = "grafana-admin";
+  };
+
+  testTheAdminSecretIsMinted = {
+    expr =
+      let
+        g = oidcOff.config.floes.grafana.secrets.generate.grafana-admin;
+      in
+      {
+        inherit (g) key length namespace;
+        user = g.extraData.admin-user;
+      };
+    expected = {
+      key = "admin-password";
+      length = 40;
+      namespace = "grafana";
+      user = "admin";
+    };
+  };
+
+  # The chart mounts both keys into the Deployment, so the pod would sit in
+  # CreateContainerConfigError if the bundle did not wait for the Secret.
+  testTheBundleWaitsForTheMintedSecret = {
+    expr = builtins.elem "secret:grafana/grafana-admin" oidcOff.config.bundles.grafana.requires;
+    expected = true;
+  };
+
+  testALabsOwnSecretIsUsedInstead = {
+    expr = (chartValuesOf ownAdminSecret).admin.existingSecret;
+    expected = "my-own-grafana-admin";
+  };
+
+  # Nothing is minted for a Secret the lab already owns.
+  testALabsOwnSecretIsNotMinted = {
+    expr = ownAdminSecret.config.floes.grafana.secrets.generate;
+    expected = { };
   };
 }

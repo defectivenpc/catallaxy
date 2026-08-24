@@ -30,6 +30,7 @@ let
     wait-helpers = testsDir + "/util-wait.nix";
     duration = testsDir + "/util-duration.nix";
     ident = testsDir + "/util-ident.nix";
+    network = testsDir + "/util-network.nix";
     hcl = testsDir + "/util-hcl.nix";
     image-types = testsDir + "/image-types.nix";
     netpol = testsDir + "/netpol.nix";
@@ -54,44 +55,17 @@ let
     render-images = testsDir + "/render-images.nix";
   };
 
-  floeTests = [
-    "argocd"
-    "boundary"
-    "cert-manager"
-    "cnpg"
-    "custom"
-    "delivery"
-    "exports-defaults"
-    "external-dns"
-    "forgejo"
-    "gateway"
-    "grafana"
-    "harbor"
-    "kanidm"
-    "kaniop"
-    "loki"
-    "netbird"
-    "openbao"
-    "openebs"
-    "prometheus"
-    "redis-operator"
-    "seaweedfs"
-    "tempo"
-    "trust-manager"
-    "velero"
-    "zot"
-  ];
-
-  onDisk = map (lib.removeSuffix ".nix") (
+  nixFilesIn =
+    dir:
     lib.attrNames (
-      lib.filterAttrs (file: kind: kind == "regular" && lib.hasSuffix ".nix" file) (
-        builtins.readDir floesDir
-      )
-    )
-  );
+      lib.filterAttrs (file: kind: kind == "regular" && lib.hasSuffix ".nix" file) (builtins.readDir dir)
+    );
 
-  unregistered = lib.subtractLists floeTests onDisk;
-  missing = lib.subtractLists onDisk floeTests;
+  # Discovered, not listed. There used to be a hand-written list here beside
+  # two assertions that between them proved it equalled this readDir — forty
+  # lines whose only achievement was to fail when someone added a file and
+  # forgot to name it here.
+  floeTests = map (lib.removeSuffix ".nix") (nixFilesIn floesDir);
 
   floeSuites = lib.listToAttrs (
     map (name: {
@@ -111,12 +85,17 @@ let
         import (testsDir + "/contracts/oidc-scopes.nix") { inherit lib pkgs; }
         ++ import (testsDir + "/contracts/oidc-client-type.nix") { inherit lib pkgs; };
     };
+  # The floe suites are discovered, but `pure` and `withPkgs` are still
+  # written out, so a new lib/tests/*.nix would otherwise sit there running
+  # nowhere and looking like coverage.
+  registeredFiles = map baseNameOf (lib.attrValues pure ++ lib.attrValues withPkgs) ++ [
+    "self-contained.nix"
+  ];
+
+  unrunTests = lib.subtractLists registeredFiles (nixFilesIn testsDir);
 in
-assert lib.assertMsg (unregistered == [ ]) ''
-  lib/tests/floes holds test files no check runs: ${lib.concatStringsSep ", " unregistered}.
-  Add them to floeTests in nix/checks/lib-tests.nix.
-'';
-assert lib.assertMsg (missing == [ ]) ''
-  floeTests in nix/checks/lib-tests.nix names tests that do not exist: ${lib.concatStringsSep ", " missing}.
+assert lib.assertMsg (unrunTests == [ ]) ''
+  lib/tests holds test files no check runs: ${lib.concatStringsSep ", " unrunTests}.
+  Add each to `pure` or `withPkgs` in nix/checks/lib-tests.nix.
 '';
 lib.mapAttrs mkCheck suites

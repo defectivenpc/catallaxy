@@ -121,6 +121,33 @@ let
         name: lab: lib.nameValuePair "manifest-digest-${name}" (manifestDigestCheck name lab)
       ) snapshotLabs;
 
+      # A rendered manifest must carry no secret material.
+      #
+      # Several upstream charts mint their own credentials with Helm's
+      # `randAlphaNum` when nothing is supplied — grafana's admin password,
+      # four of harbor's internal secrets. Rendering happens at build time
+      # here, so such a value lands in the manifest, in the digest that pins
+      # it and in the Nix store, and changes on every re-render: applying it
+      # again silently rotates the credential. Every one of those charts takes
+      # an `existingSecret`, and `secrets.generate` mints one in the cluster.
+      #
+      # The test is entropy-shaped because the problem is: a value that
+      # decodes to a long mixed-case alphanumeric string with no structure is
+      # what a generator emits and is not what anyone writes by hand.
+      noSecretMaterialChecks = lib.mapAttrs' (
+        name: lab:
+        lib.nameValuePair "${name}-renders-no-secret-material" (
+          pkgs.runCommand "${name}-renders-no-secret-material"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+            }
+            ''
+              python3 ${./checks/secret-material.py} ${lab.config.lab.out.package} >&2
+              touch $out
+            ''
+        )
+      ) snapshotLabs;
+
       declaredBundleChecks = lib.mapAttrs' (
         name: lab:
         lib.nameValuePair "${name}-declared-bundles" (
@@ -322,6 +349,7 @@ let
     evalChecks
     // lintChecks
     // declaredBundleChecks
+    // noSecretMaterialChecks
     // lib.optionalAttrs (snapshotDir != null) planSnapshotChecks
     // lib.optionalAttrs (digestDir != null) manifestDigestChecks
     // {

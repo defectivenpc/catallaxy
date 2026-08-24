@@ -76,11 +76,16 @@ let
     ++ lib.optional (lib.all (
       a: a.assertion
     ) withoutResolved.assertions) "enabling without services.resolved should assert, and did not";
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  host-dns =
-    if failures == [ ] then
-      pkgs.runCommand "host-dns" { } "touch $out"
-    else
-      throw ("services.catallaxy.hostDns is wrong:\n  " + lib.concatStringsSep "\n  " failures);
+  # This used to `throw`, which is not a failing check but a failing
+  # evaluation: `nix flake check` then reports nothing about the other two
+  # hundred derivations because it never gets to build them.
+  host-dns = mkCheck {
+    what = "host-dns";
+    why = "services.catallaxy.hostDns does not render what it should.";
+    passed = "host-dns renders the drop-ins it declares";
+    inherit failures;
+  };
 }

@@ -110,6 +110,10 @@ pub fn wait_crossplane_healthy(context: &str) -> Result<()> {
         if let Ok(ref o) = output
             && o.status.success()
         {
+            // Tolerated on purpose: this is a poll loop, so an unreadable reply
+            // means "cannot tell yet" and the surrounding deadline is what
+            // reports failure. Erroring here would abort a wait the next poll
+            // may well satisfy.
             let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
             let installed = json["items"].as_array().map(|i| i.len()).unwrap_or(0);
             waiting_on = unhealthy_provider_names(&json);
@@ -181,6 +185,10 @@ pub fn wait_managed_ready(context: &str, timeout_secs: u64) -> Result<()> {
         if let Ok(ref o) = output
             && o.status.success()
         {
+            // Tolerated on purpose: this is a poll loop, so an unreadable reply
+            // means "cannot tell yet" and the surrounding deadline is what
+            // reports failure. Erroring here would abort a wait the next poll
+            // may well satisfy.
             let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
             if let Some(items) = json["items"].as_array() {
                 if items.is_empty() {

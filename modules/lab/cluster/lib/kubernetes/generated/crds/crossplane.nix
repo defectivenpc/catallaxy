@@ -4769,7 +4769,7 @@ in
                                       description = "Container name: required for volumes, optional for env vars";
                                     };
                                     divisor = mkOption {
-                                      type = (types.nullOr types.anything);
+                                      type = (types.nullOr (types.either types.int types.str));
                                       default = null;
                                       description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                     };
@@ -5423,7 +5423,7 @@ in
                     '';
                   };
                   limits = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                     description = ''
                       Limits describes the maximum amount of compute resources allowed.
@@ -5431,7 +5431,7 @@ in
                     '';
                   };
                   requests = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                     description = ''
                       Requests describes the minimum amount of compute resources required.
@@ -6392,7 +6392,7 @@ in
                                                 description = "Container name: required for volumes, optional for env vars";
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                               };
@@ -6440,7 +6440,7 @@ in
                               '';
                             };
                             sizeLimit = mkOption {
-                              type = (types.nullOr types.anything);
+                              type = (types.nullOr (types.either types.int types.str));
                               default = null;
                               description = ''
                                 sizeLimit is the total amount of local storage required for this EmptyDir volume.
@@ -6619,7 +6619,7 @@ in
                                                 types.nullOr (mkTypedSubmodule {
                                                   options = {
                                                     limits = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                       description = ''
                                                         Limits describes the maximum amount of compute resources allowed.
@@ -6627,7 +6627,7 @@ in
                                                       '';
                                                     };
                                                     requests = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                       description = ''
                                                         Requests describes the minimum amount of compute resources required.
@@ -7660,7 +7660,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -8441,7 +8441,7 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           maxSurge = mkOption {
-                                            type = (types.nullOr types.anything);
+                                            type = (types.nullOr (types.either types.int types.str));
                                             default = null;
                                             description = ''
                                               The maximum number of pods that can be scheduled above the desired number of
@@ -8458,7 +8458,7 @@ in
                                             '';
                                           };
                                           maxUnavailable = mkOption {
-                                            type = (types.nullOr types.anything);
+                                            type = (types.nullOr (types.either types.int types.str));
                                             default = null;
                                             description = ''
                                               The maximum number of pods that can be unavailable during the update.
@@ -9713,7 +9713,7 @@ in
                                                                               description = "Container name: required for volumes, optional for env vars";
                                                                             };
                                                                             divisor = mkOption {
-                                                                              type = (types.nullOr types.anything);
+                                                                              type = (types.nullOr (types.either types.int types.str));
                                                                               default = null;
                                                                               description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                             };
@@ -9952,7 +9952,7 @@ in
                                                                             description = "Path to access on the HTTP server.";
                                                                           };
                                                                           port = mkOption {
-                                                                            type = types.anything;
+                                                                            type = (types.either types.int types.str);
                                                                             description = ''
                                                                               Name or number of the port to access on the container.
                                                                               Number must be in the range 1 to 65535.
@@ -9999,7 +9999,7 @@ in
                                                                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                           };
                                                                           port = mkOption {
-                                                                            type = types.anything;
+                                                                            type = (types.either types.int types.str);
                                                                             description = ''
                                                                               Number or name of the port to access on the container.
                                                                               Number must be in the range 1 to 65535.
@@ -10097,7 +10097,7 @@ in
                                                                             description = "Path to access on the HTTP server.";
                                                                           };
                                                                           port = mkOption {
-                                                                            type = types.anything;
+                                                                            type = (types.either types.int types.str);
                                                                             description = ''
                                                                               Name or number of the port to access on the container.
                                                                               Number must be in the range 1 to 65535.
@@ -10144,7 +10144,7 @@ in
                                                                             description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                           };
                                                                           port = mkOption {
-                                                                            type = types.anything;
+                                                                            type = (types.either types.int types.str);
                                                                             description = ''
                                                                               Number or name of the port to access on the container.
                                                                               Number must be in the range 1 to 65535.
@@ -10290,7 +10290,7 @@ in
                                                                     description = "Path to access on the HTTP server.";
                                                                   };
                                                                   port = mkOption {
-                                                                    type = types.anything;
+                                                                    type = (types.either types.int types.str);
                                                                     description = ''
                                                                       Name or number of the port to access on the container.
                                                                       Number must be in the range 1 to 65535.
@@ -10346,7 +10346,7 @@ in
                                                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                   };
                                                                   port = mkOption {
-                                                                    type = types.anything;
+                                                                    type = (types.either types.int types.str);
                                                                     description = ''
                                                                       Number or name of the port to access on the container.
                                                                       Number must be in the range 1 to 65535.
@@ -10566,7 +10566,7 @@ in
                                                                     description = "Path to access on the HTTP server.";
                                                                   };
                                                                   port = mkOption {
-                                                                    type = types.anything;
+                                                                    type = (types.either types.int types.str);
                                                                     description = ''
                                                                       Name or number of the port to access on the container.
                                                                       Number must be in the range 1 to 65535.
@@ -10622,7 +10622,7 @@ in
                                                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                   };
                                                                   port = mkOption {
-                                                                    type = types.anything;
+                                                                    type = (types.either types.int types.str);
                                                                     description = ''
                                                                       Number or name of the port to access on the container.
                                                                       Number must be in the range 1 to 65535.
@@ -10743,7 +10743,7 @@ in
                                                             '';
                                                           };
                                                           limits = mkOption {
-                                                            type = (types.nullOr (types.attrsOf types.anything));
+                                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                             default = null;
                                                             description = ''
                                                               Limits describes the maximum amount of compute resources allowed.
@@ -10751,7 +10751,7 @@ in
                                                             '';
                                                           };
                                                           requests = mkOption {
-                                                            type = (types.nullOr (types.attrsOf types.anything));
+                                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                             default = null;
                                                             description = ''
                                                               Requests describes the minimum amount of compute resources required.
@@ -11169,7 +11169,7 @@ in
                                                                     description = "Path to access on the HTTP server.";
                                                                   };
                                                                   port = mkOption {
-                                                                    type = types.anything;
+                                                                    type = (types.either types.int types.str);
                                                                     description = ''
                                                                       Name or number of the port to access on the container.
                                                                       Number must be in the range 1 to 65535.
@@ -11225,7 +11225,7 @@ in
                                                                     description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                   };
                                                                   port = mkOption {
-                                                                    type = types.anything;
+                                                                    type = (types.either types.int types.str);
                                                                     description = ''
                                                                       Number or name of the port to access on the container.
                                                                       Number must be in the range 1 to 65535.
@@ -11670,7 +11670,7 @@ in
                                                                                 description = "Container name: required for volumes, optional for env vars";
                                                                               };
                                                                               divisor = mkOption {
-                                                                                type = (types.nullOr types.anything);
+                                                                                type = (types.nullOr (types.either types.int types.str));
                                                                                 default = null;
                                                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                               };
@@ -11907,7 +11907,7 @@ in
                                                                               description = "Path to access on the HTTP server.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Name or number of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -11954,7 +11954,7 @@ in
                                                                               description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Number or name of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -12052,7 +12052,7 @@ in
                                                                               description = "Path to access on the HTTP server.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Name or number of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -12099,7 +12099,7 @@ in
                                                                               description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Number or name of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -12242,7 +12242,7 @@ in
                                                                       description = "Path to access on the HTTP server.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Name or number of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -12298,7 +12298,7 @@ in
                                                                       description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Number or name of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -12504,7 +12504,7 @@ in
                                                                       description = "Path to access on the HTTP server.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Name or number of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -12560,7 +12560,7 @@ in
                                                                       description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Number or name of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -12676,7 +12676,7 @@ in
                                                               '';
                                                             };
                                                             limits = mkOption {
-                                                              type = (types.nullOr (types.attrsOf types.anything));
+                                                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                               default = null;
                                                               description = ''
                                                                 Limits describes the maximum amount of compute resources allowed.
@@ -12684,7 +12684,7 @@ in
                                                               '';
                                                             };
                                                             requests = mkOption {
-                                                              type = (types.nullOr (types.attrsOf types.anything));
+                                                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                               default = null;
                                                               description = ''
                                                                 Requests describes the minimum amount of compute resources required.
@@ -13089,7 +13089,7 @@ in
                                                                       description = "Path to access on the HTTP server.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Name or number of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -13145,7 +13145,7 @@ in
                                                                       description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Number or name of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -13615,7 +13615,7 @@ in
                                                                                 description = "Container name: required for volumes, optional for env vars";
                                                                               };
                                                                               divisor = mkOption {
-                                                                                type = (types.nullOr types.anything);
+                                                                                type = (types.nullOr (types.either types.int types.str));
                                                                                 default = null;
                                                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                               };
@@ -13854,7 +13854,7 @@ in
                                                                               description = "Path to access on the HTTP server.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Name or number of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -13901,7 +13901,7 @@ in
                                                                               description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Number or name of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -13999,7 +13999,7 @@ in
                                                                               description = "Path to access on the HTTP server.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Name or number of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -14046,7 +14046,7 @@ in
                                                                               description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                             };
                                                                             port = mkOption {
-                                                                              type = types.anything;
+                                                                              type = (types.either types.int types.str);
                                                                               description = ''
                                                                                 Number or name of the port to access on the container.
                                                                                 Number must be in the range 1 to 65535.
@@ -14192,7 +14192,7 @@ in
                                                                       description = "Path to access on the HTTP server.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Name or number of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -14248,7 +14248,7 @@ in
                                                                       description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Number or name of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -14468,7 +14468,7 @@ in
                                                                       description = "Path to access on the HTTP server.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Name or number of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -14524,7 +14524,7 @@ in
                                                                       description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Number or name of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -14645,7 +14645,7 @@ in
                                                               '';
                                                             };
                                                             limits = mkOption {
-                                                              type = (types.nullOr (types.attrsOf types.anything));
+                                                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                               default = null;
                                                               description = ''
                                                                 Limits describes the maximum amount of compute resources allowed.
@@ -14653,7 +14653,7 @@ in
                                                               '';
                                                             };
                                                             requests = mkOption {
-                                                              type = (types.nullOr (types.attrsOf types.anything));
+                                                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                               default = null;
                                                               description = ''
                                                                 Requests describes the minimum amount of compute resources required.
@@ -15071,7 +15071,7 @@ in
                                                                       description = "Path to access on the HTTP server.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Name or number of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -15127,7 +15127,7 @@ in
                                                                       description = "Optional: Host name to connect to, defaults to the pod IP.";
                                                                     };
                                                                     port = mkOption {
-                                                                      type = types.anything;
+                                                                      type = (types.either types.int types.str);
                                                                       description = ''
                                                                         Number or name of the port to access on the container.
                                                                         Number must be in the range 1 to 65535.
@@ -15450,7 +15450,7 @@ in
                                             '';
                                           };
                                           overhead = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                             description = ''
                                               Overhead represents the resource overhead associated with running a pod for a given RuntimeClass.
@@ -16732,7 +16732,7 @@ in
                                                                                 description = "Container name: required for volumes, optional for env vars";
                                                                               };
                                                                               divisor = mkOption {
-                                                                                type = (types.nullOr types.anything);
+                                                                                type = (types.nullOr (types.either types.int types.str));
                                                                                 default = null;
                                                                                 description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                               };
@@ -16780,7 +16780,7 @@ in
                                                               '';
                                                             };
                                                             sizeLimit = mkOption {
-                                                              type = (types.nullOr types.anything);
+                                                              type = (types.nullOr (types.either types.int types.str));
                                                               default = null;
                                                               description = ''
                                                                 sizeLimit is the total amount of local storage required for this EmptyDir volume.
@@ -16959,7 +16959,7 @@ in
                                                                                 types.nullOr (mkTypedSubmodule {
                                                                                   options = {
                                                                                     limits = mkOption {
-                                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                                       default = null;
                                                                                       description = ''
                                                                                         Limits describes the maximum amount of compute resources allowed.
@@ -16967,7 +16967,7 @@ in
                                                                                       '';
                                                                                     };
                                                                                     requests = mkOption {
-                                                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                                                       default = null;
                                                                                       description = ''
                                                                                         Requests describes the minimum amount of compute resources required.
@@ -18000,7 +18000,7 @@ in
                                                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                                                 };
                                                                                                 divisor = mkOption {
-                                                                                                  type = (types.nullOr types.anything);
+                                                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                                                   default = null;
                                                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                                                 };

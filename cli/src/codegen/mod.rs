@@ -1,3 +1,4 @@
+mod convert;
 pub mod crd;
 pub mod nix_emitter;
 pub mod schema;

@@ -32,10 +32,6 @@ impl NixType {
     pub fn list(inner: NixType) -> Self {
         NixType::ListOf(Box::new(inner))
     }
-
-    pub fn attrs_of(inner: NixType) -> Self {
-        NixType::AttrsOf(Box::new(inner))
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -52,16 +48,6 @@ impl Submodule {
             freeform_type: None,
             description: None,
         }
-    }
-
-    pub fn with_freeform(mut self, ty: NixType) -> Self {
-        self.freeform_type = Some(Box::new(ty));
-        self
-    }
-
-    pub fn with_option(mut self, name: impl Into<String>, opt: NixOption) -> Self {
-        self.options.insert(name.into(), opt);
-        self
     }
 }
 
@@ -93,21 +79,6 @@ impl NixOption {
             internal: false,
             read_only: false,
         }
-    }
-
-    pub fn with_default(mut self, default: impl Into<String>) -> Self {
-        self.default = Some(default.into());
-        self
-    }
-
-    pub fn with_description(mut self, desc: impl Into<String>) -> Self {
-        self.description = Some(desc.into());
-        self
-    }
-
-    pub fn with_example(mut self, example: impl Into<String>) -> Self {
-        self.example = Some(example.into());
-        self
     }
 
     pub fn internal(mut self) -> Self {
@@ -147,15 +118,6 @@ impl K8sResourceType {
             description: None,
             namespaced: true,
         }
-    }
-
-    pub fn nix_path(&self) -> String {
-        let group = if self.group.is_empty() || self.group == "core" {
-            "core".to_string()
-        } else {
-            self.group.replace(['.', '-'], "_")
-        };
-        format!("{}.{}.{}", group, self.version, self.kind)
     }
 }
 

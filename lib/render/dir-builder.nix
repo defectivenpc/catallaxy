@@ -90,7 +90,7 @@ in
   buildWaveDirs =
     name: packages: waves:
     let
-      sanitize = key: builtins.replaceStrings [ "/" ] [ "__" ] key;
+      inherit (import ./bundle-key.nix { }) sanitize;
       waveIndex = lib.listToAttrs (
         lib.concatLists (
           imap0 (

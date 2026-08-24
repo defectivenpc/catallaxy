@@ -1213,7 +1213,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -1329,7 +1329,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -1337,7 +1337,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -3036,7 +3036,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -3152,7 +3152,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -3160,7 +3160,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.
@@ -4990,7 +4990,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -5106,7 +5106,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -5114,7 +5114,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -6813,7 +6813,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -6929,7 +6929,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -6937,7 +6937,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.
@@ -8767,7 +8767,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -8883,7 +8883,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -8891,7 +8891,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -10590,7 +10590,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -10706,7 +10706,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -10714,7 +10714,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.
@@ -12544,7 +12544,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -12660,7 +12660,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -12668,7 +12668,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -14367,7 +14367,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -14483,7 +14483,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -14491,7 +14491,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.
@@ -16321,7 +16321,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -16437,7 +16437,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -16445,7 +16445,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -18144,7 +18144,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -18260,7 +18260,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -18268,7 +18268,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.
@@ -20098,7 +20098,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -20214,7 +20214,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -20222,7 +20222,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -21921,7 +21921,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -22037,7 +22037,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -22045,7 +22045,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.
@@ -23875,7 +23875,7 @@ in
                                                                   description = "Container name: required for volumes, optional for env vars";
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                   description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                                 };
@@ -23991,7 +23991,7 @@ in
                                                 '';
                                               };
                                               limits = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Limits describes the maximum amount of compute resources allowed.
@@ -23999,7 +23999,7 @@ in
                                                 '';
                                               };
                                               requests = mkOption {
-                                                type = (types.nullOr (types.attrsOf types.anything));
+                                                type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                 default = null;
                                                 description = ''
                                                   Requests describes the minimum amount of compute resources required.
@@ -25698,7 +25698,7 @@ in
                                                         description = "Container name: required for volumes, optional for env vars";
                                                       };
                                                       divisor = mkOption {
-                                                        type = (types.nullOr types.anything);
+                                                        type = (types.nullOr (types.either types.int types.str));
                                                         default = null;
                                                         description = "Specifies the output format of the exposed resources, defaults to \"1\"";
                                                       };
@@ -25814,7 +25814,7 @@ in
                                       '';
                                     };
                                     limits = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Limits describes the maximum amount of compute resources allowed.
@@ -25822,7 +25822,7 @@ in
                                       '';
                                     };
                                     requests = mkOption {
-                                      type = (types.nullOr (types.attrsOf types.anything));
+                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                       default = null;
                                       description = ''
                                         Requests describes the minimum amount of compute resources required.

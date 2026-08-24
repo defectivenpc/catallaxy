@@ -42,6 +42,34 @@ let
       + "exported, add it to ${builtins.elemAt m 0}'s `exports`; publishing is that floe's call."
     ) bad;
 
-  violations = concatMap violationsFor (concatMap nixFilesIn floeNames);
+  # The extractor above is a regex over source text, because Nix offers no
+  # parser to ask instead. That has one failure mode worth guarding: when it
+  # stops matching it returns nothing, and no violations is indistinguishable
+  # from a clean tree. So run it against a fixture that plants exactly one
+  # violation beside two legitimate reads, and fail if the count is not one —
+  # which catches both a pattern that has gone blind and one that has started
+  # flagging everything.
+  canaryFile = {
+    floe = "canary";
+    name = "floe-boundary-violation.nix";
+    path = ../fixtures/floe-boundary-violation.nix;
+  };
+
+  canaryFound = builtins.length (violationsFor canaryFile);
+
+  canaryFailure = lib.optional (canaryFound != 1) ''
+    the floe-boundary extractor found ${toString canaryFound} violation(s) in
+    its own fixture, not 1.
+
+    ${canaryFile.name} plants one read of another floe's internals beside a
+    read of that floe's `exports` and a read of its own config. Finding none
+    means the pattern no longer matches the source it is aimed at, and a
+    check that matches nothing reports every floe as clean. Finding more than
+    one means it is now flagging reads that are allowed.
+
+    Fix `matchesIn` in lib/tests/floes/boundary.nix.
+  '';
+
+  violations = canaryFailure ++ concatMap violationsFor (concatMap nixFilesIn floeNames);
 in
 violations

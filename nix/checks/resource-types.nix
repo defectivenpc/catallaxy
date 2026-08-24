@@ -257,31 +257,25 @@ let
     ++
       lib.optional (!uncheckedPairIsAllowedWhenNamed.success)
         "naming the pair in `cluster.kubernetes.uncheckedResources` should let it through, but it still threw";
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  resource-types-are-applied = pkgs.runCommand "resource-types-are-applied" { } (
-    if failures == [ ] then
-      ''
-        echo "generated Kubernetes types validate typed resources" > $out
-      ''
-    else
-      ''
-        cat >&2 <<'EOF'
-        The generated Kubernetes types are not doing what they should.
+  resource-types-are-applied = mkCheck {
+    what = "resource-types-are-applied";
+    passed = "generated Kubernetes types validate typed resources";
+    why = ''
+      The generated Kubernetes types are not doing what they should.
 
-        modules/lab/cluster/lib/kubernetes/types.nix resolves a resource's
-        `kind` against the generated K8s and CRD types and uses that type for
-        `spec`. If that wiring is removed the 41MB of committed schema goes
-        back to validating nothing, which is how it sat before: `kindType`
-        was computed and never referenced.
+      modules/lab/cluster/lib/kubernetes/types.nix resolves a resource's
+      `kind` against the generated K8s and CRD types and uses that type for
+      `spec`. If that wiring is removed the 41MB of committed schema goes
+      back to validating nothing, which is how it sat before: `kindType`
+      was computed and never referenced.
 
-        The CRD schemas load through a different path than the core ones, so
-        both are exercised here. A Deployment passing says nothing about
-        whether generated/index.nix wired a single CRD.
-
-        ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-        EOF
-        exit 1
-      ''
-  );
+      The CRD schemas load through a different path than the core ones, so
+      both are exercised here. A Deployment passing says nothing about
+      whether generated/index.nix wired a single CRD.
+    '';
+    inherit failures;
+  };
 }

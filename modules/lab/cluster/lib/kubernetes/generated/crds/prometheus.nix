@@ -11915,7 +11915,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -12074,7 +12074,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -12108,7 +12108,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -12171,7 +12171,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -12205,7 +12205,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -12295,7 +12295,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -12328,7 +12328,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -12454,7 +12454,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -12487,7 +12487,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -12551,11 +12551,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -12780,7 +12780,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -12813,7 +12813,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -13115,7 +13115,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -13274,7 +13274,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -13308,7 +13308,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -13371,7 +13371,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -13405,7 +13405,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -13495,7 +13495,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -13528,7 +13528,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -13654,7 +13654,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -13687,7 +13687,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -13751,11 +13751,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -13980,7 +13980,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -14013,7 +14013,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -14240,11 +14240,11 @@ in
                     default = null;
                   };
                   limits = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                   requests = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                 };
@@ -14440,7 +14440,7 @@ in
                             default = null;
                           };
                           sizeLimit = mkOption {
-                            type = (types.nullOr types.anything);
+                            type = (types.nullOr (types.either types.int types.str));
                             default = null;
                           };
                         };
@@ -14518,11 +14518,11 @@ in
                                               types.nullOr (mkTypedSubmodule {
                                                 options = {
                                                   limits = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                   requests = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                 };
@@ -14691,11 +14691,11 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                         };
@@ -14775,11 +14775,11 @@ in
                                     default = null;
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   conditions = mkOption {
@@ -15303,7 +15303,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -15337,7 +15337,7 @@ in
                               default = null;
                             };
                             sizeLimit = mkOption {
-                              type = (types.nullOr types.anything);
+                              type = (types.nullOr (types.either types.int types.str));
                               default = null;
                             };
                           };
@@ -15415,11 +15415,11 @@ in
                                                 types.nullOr (mkTypedSubmodule {
                                                   options = {
                                                     limits = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                     requests = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                   };
@@ -15980,7 +15980,7 @@ in
                                                                   default = null;
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                 };
                                                                 resource = mkOption {
@@ -16673,7 +16673,7 @@ in
             default = null;
           };
           nativeHistogramMinBucketFactor = mkOption {
-            type = (types.nullOr types.anything);
+            type = (types.nullOr (types.either types.int types.str));
             default = null;
           };
           podMetricsEndpoints = mkOption {
@@ -17281,7 +17281,7 @@ in
                       default = null;
                     };
                     targetPort = mkOption {
-                      type = (types.nullOr types.anything);
+                      type = (types.nullOr (types.either types.int types.str));
                       default = null;
                     };
                     tlsConfig = mkOption {
@@ -17784,7 +17784,7 @@ in
             default = null;
           };
           nativeHistogramMinBucketFactor = mkOption {
-            type = (types.nullOr types.anything);
+            type = (types.nullOr (types.either types.int types.str));
             default = null;
           };
           oauth2 = mkOption {
@@ -19586,7 +19586,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -19745,7 +19745,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -19779,7 +19779,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -19842,7 +19842,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -19876,7 +19876,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -19966,7 +19966,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -19999,7 +19999,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -20125,7 +20125,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -20158,7 +20158,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -20222,11 +20222,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -20451,7 +20451,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -20484,7 +20484,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -20868,7 +20868,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -21027,7 +21027,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -21061,7 +21061,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -21124,7 +21124,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -21158,7 +21158,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -21248,7 +21248,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -21281,7 +21281,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -21407,7 +21407,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -21440,7 +21440,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -21504,11 +21504,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -21733,7 +21733,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -21766,7 +21766,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -23213,11 +23213,11 @@ in
                     default = null;
                   };
                   limits = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                   requests = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                 };
@@ -24011,7 +24011,7 @@ in
                             default = null;
                           };
                           sizeLimit = mkOption {
-                            type = (types.nullOr types.anything);
+                            type = (types.nullOr (types.either types.int types.str));
                             default = null;
                           };
                         };
@@ -24089,11 +24089,11 @@ in
                                               types.nullOr (mkTypedSubmodule {
                                                 options = {
                                                   limits = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                   requests = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                 };
@@ -24262,11 +24262,11 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                         };
@@ -24346,11 +24346,11 @@ in
                                     default = null;
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   conditions = mkOption {
@@ -24585,7 +24585,7 @@ in
                     default = null;
                   };
                   samplingFraction = mkOption {
-                    type = (types.nullOr types.anything);
+                    type = (types.nullOr (types.either types.int types.str));
                     default = null;
                   };
                   timeout = mkOption {
@@ -25124,7 +25124,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -25158,7 +25158,7 @@ in
                               default = null;
                             };
                             sizeLimit = mkOption {
-                              type = (types.nullOr types.anything);
+                              type = (types.nullOr (types.either types.int types.str));
                               default = null;
                             };
                           };
@@ -25236,11 +25236,11 @@ in
                                                 types.nullOr (mkTypedSubmodule {
                                                   options = {
                                                     limits = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                     requests = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                   };
@@ -25801,7 +25801,7 @@ in
                                                                   default = null;
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                 };
                                                                 resource = mkOption {
@@ -27291,7 +27291,7 @@ in
                             default = null;
                           };
                           port = mkOption {
-                            type = types.anything;
+                            type = (types.either types.int types.str);
                           };
                           proxyConnectHeader = mkOption {
                             type = (
@@ -28060,7 +28060,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -28219,7 +28219,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -28253,7 +28253,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -28316,7 +28316,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -28350,7 +28350,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -28440,7 +28440,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -28473,7 +28473,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -28599,7 +28599,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -28632,7 +28632,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -28696,11 +28696,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -28925,7 +28925,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -28958,7 +28958,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -29368,7 +29368,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -29527,7 +29527,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -29561,7 +29561,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -29624,7 +29624,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -29658,7 +29658,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -29748,7 +29748,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -29781,7 +29781,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -29907,7 +29907,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -29940,7 +29940,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -30004,11 +30004,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -30233,7 +30233,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -30266,7 +30266,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -32408,11 +32408,11 @@ in
                     default = null;
                   };
                   limits = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                   requests = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                 };
@@ -33360,7 +33360,7 @@ in
                             default = null;
                           };
                           sizeLimit = mkOption {
-                            type = (types.nullOr types.anything);
+                            type = (types.nullOr (types.either types.int types.str));
                             default = null;
                           };
                         };
@@ -33438,11 +33438,11 @@ in
                                               types.nullOr (mkTypedSubmodule {
                                                 options = {
                                                   limits = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                   requests = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                 };
@@ -33611,11 +33611,11 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                         };
@@ -33695,11 +33695,11 @@ in
                                     default = null;
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   conditions = mkOption {
@@ -34110,11 +34110,11 @@ in
                             default = null;
                           };
                           limits = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                           };
                           requests = mkOption {
-                            type = (types.nullOr (types.attrsOf types.anything));
+                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                             default = null;
                           };
                         };
@@ -34351,7 +34351,7 @@ in
                     default = null;
                   };
                   samplingFraction = mkOption {
-                    type = (types.nullOr types.anything);
+                    type = (types.nullOr (types.either types.int types.str));
                     default = null;
                   };
                   timeout = mkOption {
@@ -34890,7 +34890,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -34924,7 +34924,7 @@ in
                               default = null;
                             };
                             sizeLimit = mkOption {
-                              type = (types.nullOr types.anything);
+                              type = (types.nullOr (types.either types.int types.str));
                               default = null;
                             };
                           };
@@ -35002,11 +35002,11 @@ in
                                                 types.nullOr (mkTypedSubmodule {
                                                   options = {
                                                     limits = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                     requests = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                   };
@@ -35567,7 +35567,7 @@ in
                                                                   default = null;
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                 };
                                                                 resource = mkOption {
@@ -36227,7 +36227,7 @@ in
                                 default = null;
                               };
                               expr = mkOption {
-                                type = types.anything;
+                                type = (types.either types.int types.str);
                               };
                               for = mkOption {
                                 type = (types.nullOr types.str);
@@ -45104,7 +45104,7 @@ in
             default = null;
           };
           nativeHistogramMinBucketFactor = mkOption {
-            type = (types.nullOr types.anything);
+            type = (types.nullOr (types.either types.int types.str));
             default = null;
           };
           noProxy = mkOption {
@@ -48305,7 +48305,7 @@ in
                     default = null;
                   };
                   targetPort = mkOption {
-                    type = (types.nullOr types.anything);
+                    type = (types.nullOr (types.either types.int types.str));
                     default = null;
                   };
                   tlsConfig = mkOption {
@@ -48555,7 +48555,7 @@ in
             default = null;
           };
           nativeHistogramMinBucketFactor = mkOption {
-            type = (types.nullOr types.anything);
+            type = (types.nullOr (types.either types.int types.str));
             default = null;
           };
           podTargetLabels = mkOption {
@@ -49400,7 +49400,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -49559,7 +49559,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -49593,7 +49593,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -49656,7 +49656,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -49690,7 +49690,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -49780,7 +49780,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -49813,7 +49813,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -49939,7 +49939,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -49972,7 +49972,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -50036,11 +50036,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -50265,7 +50265,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -50298,7 +50298,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -50815,7 +50815,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -50974,7 +50974,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -51008,7 +51008,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -51071,7 +51071,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                             scheme = mkOption {
                                               type = (types.nullOr types.str);
@@ -51105,7 +51105,7 @@ in
                                               default = null;
                                             };
                                             port = mkOption {
-                                              type = types.anything;
+                                              type = (types.either types.int types.str);
                                             };
                                           };
                                           freeformType = types.attrs;
@@ -51195,7 +51195,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -51228,7 +51228,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -51354,7 +51354,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -51387,7 +51387,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -51451,11 +51451,11 @@ in
                               default = null;
                             };
                             limits = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                             requests = mkOption {
-                              type = (types.nullOr (types.attrsOf types.anything));
+                              type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                               default = null;
                             };
                           };
@@ -51680,7 +51680,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                     scheme = mkOption {
                                       type = (types.nullOr types.str);
@@ -51713,7 +51713,7 @@ in
                                       default = null;
                                     };
                                     port = mkOption {
-                                      type = types.anything;
+                                      type = (types.either types.int types.str);
                                     };
                                   };
                                   freeformType = types.attrs;
@@ -52955,11 +52955,11 @@ in
                     default = null;
                   };
                   limits = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                   requests = mkOption {
-                    type = (types.nullOr (types.attrsOf types.anything));
+                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                     default = null;
                   };
                 };
@@ -53219,7 +53219,7 @@ in
                             default = null;
                           };
                           sizeLimit = mkOption {
-                            type = (types.nullOr types.anything);
+                            type = (types.nullOr (types.either types.int types.str));
                             default = null;
                           };
                         };
@@ -53297,11 +53297,11 @@ in
                                               types.nullOr (mkTypedSubmodule {
                                                 options = {
                                                   limits = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                   requests = mkOption {
-                                                    type = (types.nullOr (types.attrsOf types.anything));
+                                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                     default = null;
                                                   };
                                                 };
@@ -53470,11 +53470,11 @@ in
                                       types.nullOr (mkTypedSubmodule {
                                         options = {
                                           limits = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                           requests = mkOption {
-                                            type = (types.nullOr (types.attrsOf types.anything));
+                                            type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                             default = null;
                                           };
                                         };
@@ -53554,11 +53554,11 @@ in
                                     default = null;
                                   };
                                   allocatedResources = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   capacity = mkOption {
-                                    type = (types.nullOr (types.attrsOf types.anything));
+                                    type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                     default = null;
                                   };
                                   conditions = mkOption {
@@ -54103,7 +54103,7 @@ in
                                                 default = null;
                                               };
                                               divisor = mkOption {
-                                                type = (types.nullOr types.anything);
+                                                type = (types.nullOr (types.either types.int types.str));
                                                 default = null;
                                               };
                                               resource = mkOption {
@@ -54137,7 +54137,7 @@ in
                               default = null;
                             };
                             sizeLimit = mkOption {
-                              type = (types.nullOr types.anything);
+                              type = (types.nullOr (types.either types.int types.str));
                               default = null;
                             };
                           };
@@ -54215,11 +54215,11 @@ in
                                                 types.nullOr (mkTypedSubmodule {
                                                   options = {
                                                     limits = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                     requests = mkOption {
-                                                      type = (types.nullOr (types.attrsOf types.anything));
+                                                      type = (types.nullOr (types.attrsOf (types.either types.int types.str)));
                                                       default = null;
                                                     };
                                                   };
@@ -54780,7 +54780,7 @@ in
                                                                   default = null;
                                                                 };
                                                                 divisor = mkOption {
-                                                                  type = (types.nullOr types.anything);
+                                                                  type = (types.nullOr (types.either types.int types.str));
                                                                   default = null;
                                                                 };
                                                                 resource = mkOption {

@@ -1,5 +1,13 @@
 # Roadmap
 
+## TODO
+
+- Need to clearly define floes as modules/submodules. Not intersperse with
+  other options. The definition of what a floe is belongs in a global space.
+  The implementation of a floe is a distribution level package. So move all
+  floe implementations into a floe library. Keep platform implementation
+  agnostic.
+
 ## Later
 
 - **Talos on bare metal.** `cluster.provisioner = "talos"` exists today, but

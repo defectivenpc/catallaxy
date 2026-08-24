@@ -2,37 +2,28 @@ use anyhow::{Context, Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
+use crate::domain::lab::{GitConfig, GitCredentialRef};
 
 /// `Ok(None)` means the lab configured no credential. Every other failure is
 /// an error: a lab that asked for one and did not get it must not fall back to
 /// an anonymous push, which fails later as an unexplained git error.
-fn resolve_publish_auth(lab: &serde_json::Value) -> Result<Option<(String, String)>> {
-    let Some(cred) = lab.pointer("/cd/git/credentialFromKubeSecret") else {
+fn resolve_publish_auth(git: &GitConfig) -> Result<Option<GitCredential>> {
+    let Some(cred) = &git.credential_from_kube_secret else {
         return Ok(None);
     };
-    if cred.is_null() {
-        return Ok(None);
-    }
 
-    let field = |k: &str| -> Result<String> {
-        cred.get(k)
-            .and_then(|v| v.as_str())
-            .map(String::from)
-            .with_context(|| {
-                format!("cd.git.credentialFromKubeSecret is set but has no string `{k}`")
-            })
-    };
-
-    let context = field("context")?;
-    let namespace = field("namespace")?;
-    let name = field("name")?;
-    let username = field("username")?;
-    let key = cred.get("key").and_then(|v| v.as_str()).unwrap_or("token");
+    let GitCredentialRef {
+        context,
+        namespace,
+        name,
+        key,
+        username,
+    } = cred;
 
     let jsonpath = format!("jsonpath={{.data.{key}}}");
     let out = crate::io::kubectl::output(
-        &context,
-        &["-n", &namespace, "get", "secret", &name, "-o", &jsonpath],
+        context,
+        &["-n", namespace, "get", "secret", name, "-o", &jsonpath],
     )
     .with_context(|| format!("reading credential Secret {namespace}/{name} on '{context}'"))?;
 
@@ -57,18 +48,29 @@ fn resolve_publish_auth(lab: &serde_json::Value) -> Result<Option<(String, Strin
     let token = String::from_utf8(decoded)
         .with_context(|| format!("key `{key}` of {namespace}/{name} is not valid UTF-8"))?;
 
-    Ok(Some((username, token)))
+    Ok(Some(GitCredential {
+        username: username.clone(),
+        token,
+    }))
 }
 
-fn maybe_embed_publish_auth(repo: &str, lab: &serde_json::Value) -> Result<String> {
+/// Named rather than a `(String, String)`, because the two are both strings
+/// and swapping them puts the token in the URL's username position — where it
+/// reaches the remote, and any proxy in between, in the clear.
+struct GitCredential {
+    username: String,
+    token: String,
+}
+
+fn maybe_embed_publish_auth(repo: &str, git: &GitConfig) -> Result<String> {
     if !repo.starts_with("https://") {
         return Ok(repo.to_string());
     }
-    match resolve_publish_auth(lab)? {
-        Some((user, token)) => {
+    match resolve_publish_auth(git)? {
+        Some(cred) => {
             let rest = &repo["https://".len()..];
-            let token_esc = token.replace('@', "%40").replace(':', "%3A");
-            let user_esc = user.replace('@', "%40").replace(':', "%3A");
+            let token_esc = cred.token.replace('@', "%40").replace(':', "%3A");
+            let user_esc = cred.username.replace('@', "%40").replace(':', "%3A");
             Ok(format!("https://{user_esc}:{token_esc}@{rest}"))
         }
         None => Ok(repo.to_string()),
@@ -82,29 +84,21 @@ pub async fn publish(
     message: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
-    let lab = crate::io::nix::get_lab_config(ctx, name)?;
+    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let git = &lab.cd.git;
 
-    let git_cfg = lab.pointer("/cd/git");
-    let repo = git_cfg.and_then(|g| g["repo"].as_str()).unwrap_or("");
-
-    if repo.is_empty() {
+    if git.repo.is_empty() {
         bail!("No git repo configured. Set lab.cd.git.repo in your lab config.");
     }
 
-    let branch = git_cfg.and_then(|g| g["branch"].as_str()).unwrap_or("main");
-    let repo_path = git_cfg.and_then(|g| g["path"].as_str()).unwrap_or("");
-    let provider = git_cfg
-        .and_then(|g| g["provider"].as_str())
-        .unwrap_or("github");
+    let repo = git.repo.as_str();
+    let branch = git.branch.as_str();
+    let repo_path = git.path.as_str();
+    let provider = git.provider.as_str();
 
-    let effective_repo = maybe_embed_publish_auth(repo, &lab)?;
-    let pr_enabled = pr
-        || git_cfg
-            .and_then(|g| g["prEnabled"].as_bool())
-            .unwrap_or(false);
-    let pr_base = git_cfg
-        .and_then(|g| g["prBaseBranch"].as_str())
-        .unwrap_or("main");
+    let effective_repo = maybe_embed_publish_auth(repo, git)?;
+    let pr_enabled = pr || git.pr_enabled;
+    let pr_base = git.pr_base_branch.as_str();
 
     println!(
         "{} Publishing manifests for lab '{name}'",
@@ -135,7 +129,7 @@ pub async fn publish(
         return Ok(());
     }
 
-    let tmp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+    let tmp_dir = crate::io::fs::secure_tempdir().context("Failed to create temp directory")?;
     let clone_dir = tmp_dir.path().join("repo");
     clone_repo(&effective_repo, repo, branch, &clone_dir)?;
 

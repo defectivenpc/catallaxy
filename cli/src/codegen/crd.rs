@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use super::types::{GeneratorOptions, K8sResourceType, NixOption, NixType, Submodule};
+use super::types::{GeneratorOptions, K8sResourceType};
 
 pub fn parse_crds_from_yaml(
     yaml: &str,
@@ -84,7 +84,8 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
 
     if let Some(schema) = schema {
         if let Some(spec_schema) = schema.get("properties").and_then(|p| p.get("spec")) {
-            resource.spec = Some(convert_crd_schema(spec_schema, options));
+            resource.spec =
+                Some(super::convert::Converter::standalone(options).convert(spec_schema));
         }
 
         if options.include_descriptions {
@@ -102,112 +103,6 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
         .unwrap_or(true);
 
     Ok(Some(resource))
-}
-
-fn convert_crd_schema(schema: &Value, options: &GeneratorOptions) -> NixType {
-    let type_str = schema.get("type").and_then(|v| v.as_str());
-
-    match type_str {
-        Some("string") => convert_crd_string_schema(schema),
-        Some("integer") => NixType::Int,
-        Some("number") => NixType::Float,
-        Some("boolean") => NixType::Bool,
-        Some("array") => {
-            let items = schema.get("items");
-            let inner = match items {
-                Some(items_schema) => convert_crd_schema(items_schema, options),
-                None => NixType::Anything,
-            };
-            NixType::ListOf(Box::new(inner))
-        }
-        Some("object") => convert_crd_object_schema(schema, options),
-        _ => {
-            if schema.get("properties").is_some() {
-                convert_crd_object_schema(schema, options)
-            } else {
-                NixType::Anything
-            }
-        }
-    }
-}
-
-fn convert_crd_string_schema(schema: &Value) -> NixType {
-    if let Some(enum_values) = schema.get("enum").and_then(|v| v.as_array()) {
-        let values: Vec<String> = enum_values
-            .iter()
-            .filter_map(|v| v.as_str().map(String::from))
-            .collect();
-        if !values.is_empty() {
-            return NixType::Enum(values);
-        }
-    }
-
-    if let Some(format) = schema.get("format").and_then(|v| v.as_str())
-        && format == "int-or-string"
-    {
-        return NixType::Either(Box::new(NixType::Int), Box::new(NixType::Str));
-    }
-
-    NixType::Str
-}
-
-fn convert_crd_object_schema(schema: &Value, options: &GeneratorOptions) -> NixType {
-    if let Some(additional) = schema.get("additionalProperties") {
-        if additional.is_boolean() {
-            if additional.as_bool() == Some(true) {
-                return NixType::Attrs;
-            }
-        } else {
-            let value_type = convert_crd_schema(additional, options);
-            return NixType::AttrsOf(Box::new(value_type));
-        }
-    }
-
-    let preserve_unknown = schema
-        .get("x-kubernetes-preserve-unknown-fields")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    if let Some(properties) = schema.get("properties").and_then(|v| v.as_object()) {
-        let required: Vec<&str> = schema
-            .get("required")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
-            .unwrap_or_default();
-
-        let mut submodule = Submodule::new();
-
-        for (name, prop_schema) in properties {
-            let prop_type = convert_crd_schema(prop_schema, options);
-            let is_required = required.contains(&name.as_str());
-
-            let mut option = NixOption::new(if is_required {
-                prop_type
-            } else {
-                prop_type.nullable()
-            });
-
-            if !is_required {
-                option.default = Some("null".to_string());
-            }
-
-            if options.include_descriptions
-                && let Some(desc) = prop_schema.get("description").and_then(|v| v.as_str())
-            {
-                option.description = Some(desc.to_string());
-            }
-
-            submodule.options.insert(name.clone(), option);
-        }
-
-        if options.freeform_type || preserve_unknown {
-            submodule.freeform_type = Some(Box::new(NixType::Attrs));
-        }
-
-        return NixType::Submodule(submodule);
-    }
-
-    NixType::Attrs
 }
 
 fn yaml_to_json(yaml: &yaml_rust2::Yaml) -> Result<Value> {

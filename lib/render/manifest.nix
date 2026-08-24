@@ -285,11 +285,11 @@ let
     bundleKey: bundleConfig:
     let
       ownership = bundleConfig.ownership;
-      sanitize = builtins.replaceStrings [ "/" ] [ "__" ] bundleKey;
+      dirName = (import ./bundle-key.nix { }).sanitize bundleKey;
       helmOutputs = lib.mapAttrs renderHelmChart bundleConfig.helmCharts;
       hasResources = bundleConfig.resources != { };
       resourcesOutput = lib.optionalAttrs hasResources {
-        resources = renderResources sanitize (
+        resources = renderResources dirName (
           if bundleConfig.awaitRollout or true then
             bundleConfig.resources
           else
@@ -298,11 +298,11 @@ let
       };
       hasYamls = bundleConfig.yamls != [ ];
       yamlsOutput = lib.optionalAttrs hasYamls {
-        yamls = renderYamls sanitize bundleConfig.yamls;
+        yamls = renderYamls dirName bundleConfig.yamls;
       };
       allOutputs = helmOutputs // resourcesOutput // yamlsOutput;
     in
-    pkgs.runCommand "bundle-${sanitize}" { nativeBuildInputs = [ pkgs.yq-go ]; } ''
+    pkgs.runCommand "bundle-${dirName}" { nativeBuildInputs = [ pkgs.yq-go ]; } ''
       mkdir -p $out
       ${concatStringsSep "\n" (
         mapAttrsToList (name: drv: ''

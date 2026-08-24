@@ -50,6 +50,10 @@ let
         floes.cert-manager.enable = true;
         floes.reloader.enable = true;
         floes.gateway.enable = true;
+        # grafana mints its admin password in the cluster rather than letting
+        # the chart render one, so it needs the controller that reconciles the
+        # generator.
+        floes.external-secrets.enable = true;
         floes.grafana = {
           enable = true;
           domain = "grafana.test";

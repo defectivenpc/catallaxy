@@ -12,6 +12,16 @@ let
 
   typesByKind = generatedTypes.typesByKind versionedTypes;
 
+  # Kinds the API server ships, as a set. Everything else needs something to
+  # install its CRD first, which is what makes this the dividing line for a
+  # derived `kind:` requirement. `crds` is excluded on purpose: a vendor CRD
+  # being in the generated schemas says catallaxy can type-check it, not that
+  # any cluster has it.
+  #
+  # The comment lives here rather than beside the definition because that
+  # definition is emitted, and `the_generated_index_carries_no_nix_comment`
+  # keeps generated files comment-free — a generated file that reads like
+  # source invites the hand edit that this function used to be.
   coreKinds = generatedTypes.coreKinds versionedTypes;
 
   metadataType = import ./generated/k8s-api.nix;

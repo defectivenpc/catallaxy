@@ -3,6 +3,28 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// One Secret a cluster builds out of a store's values.
+///
+/// Was `serde_json::Value` on `ClusterSpec`, decoded by `parse_projections`,
+/// which printed a warning and returned an empty map when the decode failed —
+/// so a misconfigured projection produced no Secret and no error, and the
+/// deploy went on to fail wherever that Secret was mounted.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectionConfig {
+    pub source: String,
+    pub namespace: String,
+    pub keys: BTreeMap<String, ProjectionKeyConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectionKeyConfig {
+    pub from: String,
+    pub transform: Option<String>,
+    pub json_key: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterSpec {
@@ -30,7 +52,8 @@ pub struct ClusterSpec {
 
     pub exposed_hosts: Vec<ExposedHost>,
 
-    pub projections: Value,
+    #[serde(default)]
+    pub projections: BTreeMap<String, ProjectionConfig>,
 
     #[serde(default)]
     pub trust: ClusterTrust,

@@ -1,9 +1,8 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
-use crate::verify::{self, CHECK_NAMES, Severity, VerifyConfig, VerifyContext};
+use crate::verify::{self, CHECK_NAMES, Severity, VerifyContext};
 
 pub async fn run(
     ctx: &CataContext,
@@ -21,11 +20,11 @@ pub async fn run(
     }
 
     let lab_name = ctx.resolve_lab_name(name.as_deref())?;
-    let raw = crate::io::nix::get_lab_config(ctx, &lab_name)?;
-    let config: VerifyConfig = serde_json::from_value(raw["verify"].clone())
-        .context("parsing the lab's verify configuration")?;
-    let lab: LabSpec =
-        serde_json::from_value(raw).context("parsing the lab configuration into a LabSpec")?;
+    // One parse. This read the same document twice — once untyped, to reach
+    // `raw["verify"]`, and once into `LabSpec` — because `LabSpec.verify` was
+    // itself a `serde_json::Value`.
+    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+    let config = lab.verify.clone();
 
     crate::io::trust::activate(&lab_name).ok();
 

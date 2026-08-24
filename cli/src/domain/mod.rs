@@ -16,6 +16,7 @@ pub mod step_kind;
 mod step_kind_conformance;
 pub mod subnet;
 pub mod teardown;
+pub mod verify;
 
 pub use cluster::{
     ClusterSpec, DeploySpec, DeployStrategy, ExposedHost, FloeSpec, ProvisionerKind,

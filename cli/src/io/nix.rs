@@ -120,19 +120,6 @@ fn run_nix_with_stderr(args: &[&str], stderr: fn() -> Stdio) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-/// # Errors
-///
-/// If `nix eval` cannot be spawned, exits non-zero because the attribute is
-/// missing or the flake does not evaluate, or produces JSON that is not a `T`.
-/// Nix's own stderr is inherited, so evaluation errors are already on screen.
-pub fn eval_flake<T: DeserializeOwned>(ctx: &CataContext, attr: &str) -> Result<T> {
-    let uri = ctx.flake_uri();
-    let installable = format!("{uri}#{attr}");
-
-    let stdout = run_nix(&["eval", "--json", &installable])?;
-    serde_json::from_str(&stdout).context("Failed to parse nix eval output")
-}
-
 fn eval_flake_quiet<T: DeserializeOwned>(ctx: &CataContext, attr: &str) -> Result<T> {
     let uri = ctx.flake_uri();
     let installable = format!("{uri}#{attr}");
@@ -198,7 +185,7 @@ pub fn get_cluster_spec_from_lab(
 /// evaluate, or if it has no cluster by that name.
 pub fn get_cluster_config(ctx: &CataContext, cluster_name: &str) -> Result<serde_json::Value> {
     let lab_name = ctx.resolve_lab_name(None)?;
-    let lab = get_lab_config(ctx, &lab_name)?;
+    let lab = get_lab_document(ctx, &lab_name)?;
     get_cluster_config_from_lab(&lab, cluster_name)
 }
 
@@ -209,17 +196,7 @@ pub fn get_cluster_config(ctx: &CataContext, cluster_name: &str) -> Result<serde
 /// list, not an error.
 pub fn list_clusters(ctx: &CataContext) -> Result<Vec<String>> {
     let lab_name = ctx.resolve_lab_name(None)?;
-    let lab = get_lab_config(ctx, &lab_name)?;
-    let names = lab
-        .get("clusterNames")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-    Ok(names)
+    Ok(get_lab_spec(ctx, &lab_name)?.cluster_names)
 }
 
 pub fn current_system() -> String {
@@ -247,7 +224,7 @@ pub fn current_system() -> String {
 /// # Panics
 ///
 /// If the memo table's lock is poisoned.
-pub fn get_lab_config(ctx: &CataContext, lab_name: &str) -> Result<serde_json::Value> {
+pub fn get_lab_document(ctx: &CataContext, lab_name: &str) -> Result<serde_json::Value> {
     let cache_key = format!("{}#{}", ctx.flake_uri(), lab_name);
     if let Some(cached) = lab_config_cache()
         .lock()
@@ -326,7 +303,7 @@ fn edit_distance(a: &str, b: &str) -> usize {
 /// If the lab does not evaluate, or its config does not parse as a
 /// [`LabSpec`].
 pub fn get_lab_spec(ctx: &CataContext, lab_name: &str) -> Result<LabSpec> {
-    let value = get_lab_config(ctx, lab_name)?;
+    let value = get_lab_document(ctx, lab_name)?;
     let spec = LabSpec::from_value(value)
         .with_context(|| format!("parsing the evaluated config for lab '{lab_name}'"))?;
     crate::io::egress::activate_from(&spec);

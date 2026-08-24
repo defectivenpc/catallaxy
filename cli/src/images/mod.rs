@@ -105,10 +105,7 @@ fn build_image_archive(
                 && hdr == [0x1f, 0x8b]
         };
         if is_gz {
-            let tmp = tempfile::Builder::new()
-                .prefix("cata-publish-")
-                .suffix(".tar")
-                .tempfile()
+            let tmp = crate::io::fs::secure_tempfile("cata-publish-", ".tar")
                 .context("creating tempfile for decompressed tarball")?;
             let tmp_path = tmp.into_temp_path();
             if !crate::io::fs::gunzip_to(Path::new(&archive_path), &tmp_path)? {
@@ -179,7 +176,10 @@ fn image_credentials(
             let json_bytes = base64::engine::general_purpose::STANDARD
                 .decode(b64.as_bytes())
                 .context("base64-decoding dockerconfigjson")?;
-            let tmp = tempfile::tempdir().context("creating temp DOCKER_CONFIG dir")?;
+            // A registry credential on disk. `secure_tempdir` is 0700 and, more
+            // to the point, registers the path so the Ctrl-C handler erases it
+            // — `std::process::exit` never runs `TempDir::drop`.
+            let tmp = crate::io::fs::secure_tempdir().context("creating temp DOCKER_CONFIG dir")?;
             crate::io::fs::write(tmp.path().join("config.json"), &json_bytes)
                 .context("writing temp config.json")?;
             let cfg: serde_json::Value =

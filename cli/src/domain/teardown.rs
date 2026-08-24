@@ -13,10 +13,6 @@ impl ResourceRef {
             name: name.into(),
         }
     }
-
-    pub fn qualified(&self) -> String {
-        format!("{}/{}", self.kind, self.name)
-    }
 }
 
 impl std::fmt::Display for ResourceRef {

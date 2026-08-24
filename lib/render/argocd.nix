@@ -38,7 +38,7 @@ let
 
   appName = name: if prefix == "" then name else "${prefix}-${name}";
 
-  sanitize = key: builtins.replaceStrings [ "/" ] [ "__" ] key;
+  inherit (import ./bundle-key.nix { }) sanitize;
 
   sanitizeName = key: lib.toLower (builtins.replaceStrings [ "/" "_" ] [ "-" "-" ] key);
 

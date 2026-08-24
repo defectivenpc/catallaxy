@@ -126,7 +126,11 @@ in
               };
               key = mkOption {
                 type = types.str;
-                default = "client-secret";
+                # kanidm materialises the client secret under this key, and
+                # it is the only producer in the tree. This defaulted to
+                # `client-secret`, which nothing writes, so a lab that set
+                # only `name` read an absent key and got an empty secret.
+                default = "CLIENT_SECRET";
                 description = "Key within that Secret.";
               };
             };

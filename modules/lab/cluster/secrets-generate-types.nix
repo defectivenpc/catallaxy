@@ -25,6 +25,28 @@ in
           description = "Key within the Secret that the value lands under.";
         };
 
+        extraData = mkOption {
+          type = types.attrsOf types.str;
+          default = { };
+          example = {
+            admin-user = "admin";
+          };
+          description = ''
+            Literal keys to place in the same Secret alongside the generated
+            one, written verbatim.
+
+            For a consumer that reads a credential pair out of one Secret and
+            will not start without both keys. Grafana is the case this exists
+            for: its chart reads `admin-user` and `admin-password` from the
+            Secret named by `admin.existingSecret`, and a username is not a
+            secret, so there is nothing to generate for it.
+
+            Nothing here is encoded, whatever `encoding` says: that setting
+            describes the generated value, and a literal is already the value
+            the consumer wants.
+          '';
+        };
+
         length = mkOption {
           type = types.int;
           default = 24;

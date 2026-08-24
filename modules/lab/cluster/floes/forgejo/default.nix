@@ -85,51 +85,15 @@ in
         }
       );
 
-      oidcRbacResources = optionalAttrs wantOidcWait {
-        forgejo-oidc-secret-reader-role = {
-          apiVersion = "rbac.authorization.k8s.io/v1";
-          kind = "Role";
-          metadata = {
-            name = "forgejo-oidc-secret-reader";
-            namespace = oidcSecretNs;
-            labels."app.kubernetes.io/managed-by" = "catallaxy";
-          };
-          rules = [
-            {
-              apiGroups = [ "" ];
-              resources = [ "secrets" ];
-              resourceNames = [ cfg.oidc.clientSecretRef.name ];
-
-              verbs = [
-                "get"
-                "list"
-                "watch"
-              ];
-            }
-          ];
-        };
-        forgejo-oidc-secret-reader-rb = {
-          apiVersion = "rbac.authorization.k8s.io/v1";
-          kind = "RoleBinding";
-          metadata = {
-            name = "forgejo-oidc-secret-reader";
-            namespace = oidcSecretNs;
-            labels."app.kubernetes.io/managed-by" = "catallaxy";
-          };
-          roleRef = {
-            apiGroup = "rbac.authorization.k8s.io";
-            kind = "Role";
-            name = "forgejo-oidc-secret-reader";
-          };
-          subjects = [
-            {
-              kind = "ServiceAccount";
-              name = "forgejo";
-              namespace = cfg.namespace;
-            }
-          ];
-        };
-      };
+      oidcRbacResources = optionalAttrs wantOidcWait (
+        k8sHelpers.mkSecretReaderRbac {
+          name = "forgejo-oidc-secret-reader";
+          namespace = oidcSecretNs;
+          secretNames = [ cfg.oidc.clientSecretRef.name ];
+          serviceAccount = "forgejo";
+          serviceAccountNamespace = cfg.namespace;
+        }
+      );
     in
     {
 

@@ -59,7 +59,7 @@ pub fn run(ctx: &VerifyContext<'_>, package: &Path) -> Vec<Diagnostic> {
             continue;
         };
 
-        let report_dir = match tempfile::tempdir() {
+        let report_dir = match crate::io::fs::secure_tempdir() {
             Ok(d) => d,
             Err(e) => {
                 diags.push(diag(

@@ -3,9 +3,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use console::style;
-use serde::Deserialize;
 
 use crate::config::Context as CataContext;
+pub use crate::domain::cluster::{ProjectionConfig, ProjectionKeyConfig};
+
 use crate::domain::secrets::{self, SecretsSpec};
 use crate::domain::{ClusterSpec, LabSpec};
 use crate::io;
@@ -44,32 +45,6 @@ struct BundleDir {
     key: String,
     dir: PathBuf,
     wave: usize,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProjectionConfig {
-    pub source: String,
-    pub namespace: String,
-    pub keys: HashMap<String, ProjectionKeyConfig>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProjectionKeyConfig {
-    pub from: String,
-    pub transform: Option<String>,
-    pub json_key: Option<String>,
-}
-
-pub fn parse_projections(projections: &serde_json::Value) -> HashMap<String, ProjectionConfig> {
-    match serde_json::from_value(projections.clone()) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("Warning: failed to parse projections: {e}");
-            HashMap::new()
-        }
-    }
 }
 
 /// Whether the caller narrates the manifest build. `apply` has always printed
@@ -357,7 +332,7 @@ fn apply_kapp(
         }
     }
 
-    let projections = parse_projections(&spec.projections);
+    let projections = &spec.projections;
     if !projections.is_empty() {
         println!(
             "{} Found {} projection(s){}",
@@ -382,7 +357,10 @@ fn apply_kapp(
     }
 
     if !projections.is_empty() {
-        let ordered: Vec<(String, ProjectionConfig)> = projections.into_iter().collect();
+        let ordered: Vec<(String, ProjectionConfig)> = projections
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         inject_projections(
             ctx,
             kube_context,

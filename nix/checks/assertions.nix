@@ -108,29 +108,23 @@ let
     ++ lib.optional (
       !(quotes clusterScopeEntry "the cluster-scope assertion fired")
     ) "evaluation failed, but not because the cluster-scope assertion fired";
+  inherit (import ./report.nix { inherit lib pkgs; }) mkCheck;
 in
 {
-  assertions-fail-evaluation = pkgs.runCommand "assertions-fail-evaluation" { } (
-    if failures == [ ] then
-      ''
-        echo "lab and cluster assertions fail evaluation" > $out
-      ''
-    else
-      ''
-        cat >&2 <<'EOF'
-        An assertion that should have failed evaluation did not.
+  assertions-fail-evaluation = mkCheck {
+    what = "assertions-fail-evaluation";
+    passed = "lab and cluster assertions fail evaluation";
+    why = ''
+      An assertion that should have failed evaluation did not.
 
-        lib/eval/module.nix throws on any entry in the top-level
-        `assertions`, and modules/lab/default.nix gathers `lab.assertions`
-        and every `lab.clusters.<n>.assertions` into it. If that fold is
-        removed, every constraint in the system silently becomes advisory
-        and is only reported by `cata lab lint`.
-
-        ${lib.concatStringsSep "\n" (map (f: "  - ${f}") failures)}
-        EOF
-        exit 1
-      ''
-  );
+      lib/eval/module.nix throws on any entry in the top-level
+      `assertions`, and modules/lab/default.nix gathers `lab.assertions`
+      and every `lab.clusters.<n>.assertions` into it. If that fold is
+      removed, every constraint in the system silently becomes advisory
+      and is only reported by `cata lab lint`.
+    '';
+    inherit failures;
+  };
 
   a-bgp-router-says-which-lab-it-belongs-to =
     let

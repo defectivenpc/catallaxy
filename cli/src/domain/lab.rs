@@ -65,7 +65,8 @@ pub struct LabSpec {
 
     pub destroy: DestroyConfig,
 
-    pub verify: Value,
+    #[serde(default)]
+    pub verify: super::verify::VerifyConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,7 +92,69 @@ pub struct DnsInfo {
 pub struct CdConfig {
     pub strategy: DeployStrategy,
     pub bootstrap: BootstrapTool,
-    pub git: Value,
+    pub git: GitConfig,
+}
+
+/// Where `lab publish` pushes rendered manifests.
+///
+/// This was a `serde_json::Value` read through six `git_cfg.and_then(|g|
+/// g["..."])` chains, each supplying its own default. The defaults are the
+/// Nix option's to decide, and they are stated once here.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitConfig {
+    #[serde(default)]
+    pub repo: String,
+
+    #[serde(default = "GitConfig::default_branch")]
+    pub branch: String,
+
+    /// Subdirectory within the repo. Empty means the root.
+    #[serde(default)]
+    pub path: String,
+
+    #[serde(default = "GitConfig::default_provider")]
+    pub provider: String,
+
+    /// Open a pull request rather than pushing to `branch` directly.
+    #[serde(default)]
+    pub pr_enabled: bool,
+
+    #[serde(default = "GitConfig::default_branch")]
+    pub pr_base_branch: String,
+
+    #[serde(default)]
+    pub credential_from_kube_secret: Option<GitCredentialRef>,
+}
+
+impl GitConfig {
+    fn default_branch() -> String {
+        "main".to_string()
+    }
+
+    fn default_provider() -> String {
+        "github".to_string()
+    }
+}
+
+/// A Secret in some cluster holding the token `lab publish` pushes with.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitCredentialRef {
+    pub context: String,
+    pub namespace: String,
+    pub name: String,
+
+    #[serde(default = "GitCredentialRef::default_key")]
+    pub key: String,
+
+    pub username: String,
+}
+
+impl GitCredentialRef {
+    fn default_key() -> String {
+        "token".to_string()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

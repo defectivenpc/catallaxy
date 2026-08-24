@@ -45,6 +45,49 @@ in
       '';
     };
 
+    coreSecret = mkOption {
+      type = types.str;
+      default = "harbor-core-secret";
+      description = ''
+        Secret carrying the 16-char value core presents to the other
+        components, under key `secret`.
+
+        Minted in-cluster rather than left to the chart, which generates it
+        with `randAlphaNum` while rendering — putting it in the manifest, in
+        the digest and in the Nix store, and changing it on every re-render.
+        A core secret that rotates breaks core↔jobservice calls until every
+        pod has restarted.
+      '';
+    };
+
+    xsrfSecret = mkOption {
+      type = types.str;
+      default = "harbor-xsrf-key";
+      description = ''
+        Secret carrying core's 32-char XSRF key, under key `CSRF_KEY`. The
+        chart validates the length at runtime, so this is not adjustable.
+      '';
+    };
+
+    jobserviceSecret = mkOption {
+      type = types.str;
+      default = "harbor-jobservice-secret";
+      description = ''
+        Secret carrying the 16-char value jobservice presents to core, under
+        key `JOBSERVICE_SECRET`.
+      '';
+    };
+
+    registryHttpSecret = mkOption {
+      type = types.str;
+      default = "harbor-registry-http-secret";
+      description = ''
+        Secret carrying the registry's 16-char HTTP secret, under key
+        `REGISTRY_HTTP_SECRET`. It signs upload state, so a rotation
+        invalidates any push in flight.
+      '';
+    };
+
     tls = {
       issuerRef = contracts.tls.issuerRefOption {
         default = contracts.tls.defaultIssuer config;

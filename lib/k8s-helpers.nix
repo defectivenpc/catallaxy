@@ -14,15 +14,6 @@ rec {
 
   inherit wait;
 
-  # Which Gateway a floe attaches to. Nine floes wrote this branch out, and
-  # it is the whole of what `tier` means at the point of use.
-  gatewayNameFor =
-    {
-      gateway,
-      internalGatewayName,
-    }:
-    if gateway.tier == "internal" then internalGatewayName else gateway.gatewayRef;
-
   mkGatewayParent =
     {
       name,
@@ -209,5 +200,71 @@ rec {
       }
       // optionalAttrs (labels != { }) { inherit labels; };
       spec = { inherit secretName issuerRef dnsNames; };
+    };
+
+  # A Role and RoleBinding letting one ServiceAccount read named Secrets in
+  # one namespace.
+  #
+  # Nine floes wrote this pair out, and the OIDC-client-secret case alone
+  # accounted for four byte-identical copies differing only in a name. The
+  # `resourceNames` restriction is the point of it: a Role that could read
+  # every Secret in the namespace would defeat putting the client secret in
+  # its own namespace in the first place.
+  #
+  # Returns the two resources keyed `<name>-role` and `<name>-rb`, ready to
+  # merge into a bundle's `resources`.
+  mkSecretReaderRbac =
+    {
+      # Names both objects and the Role the binding points at.
+      name,
+      # Where the Secrets are, which is not always where the reader runs.
+      namespace,
+      secretNames,
+      serviceAccount,
+      # Where the ServiceAccount is.
+      serviceAccountNamespace,
+    }:
+    let
+      metadata = {
+        inherit name namespace;
+        labels."app.kubernetes.io/managed-by" = "catallaxy";
+      };
+    in
+    {
+      "${name}-role" = {
+        apiVersion = "rbac.authorization.k8s.io/v1";
+        kind = "Role";
+        inherit metadata;
+        rules = [
+          {
+            apiGroups = [ "" ];
+            resources = [ "secrets" ];
+            resourceNames = secretNames;
+            verbs = [
+              "get"
+              "list"
+              "watch"
+            ];
+          }
+        ];
+      };
+
+      "${name}-rb" = {
+        apiVersion = "rbac.authorization.k8s.io/v1";
+        kind = "RoleBinding";
+        inherit metadata;
+        roleRef = {
+          apiGroup = "rbac.authorization.k8s.io";
+          kind = "Role";
+          inherit name;
+        };
+        subjects = [
+          {
+            kind = "ServiceAccount";
+            name = serviceAccount;
+            namespace = serviceAccountNamespace;
+          }
+        ];
+      };
     };
 }

@@ -33,6 +33,19 @@ let
     };
   };
 
+  # A template names every key it writes, so it is the only way to put a
+  # literal beside the generated value. `rewrite` below cannot: it renames the
+  # generator's one output and has nowhere to put a second key.
+  usesTemplate = g: g.encoding == "base64" || g.extraData != { };
+
+  templateFor = g: {
+    engineVersion = "v2";
+    data = {
+      ${g.key} = if g.encoding == "base64" then "{{ .password | b64enc }}" else "{{ .password }}";
+    }
+    // g.extraData;
+  };
+
   externalSecretFor = g: {
     apiVersion = "external-secrets.io/v1beta1";
     kind = "ExternalSecret";
@@ -48,12 +61,7 @@ let
         name = g.secret;
         creationPolicy = "Owner";
       }
-      // lib.optionalAttrs (g.encoding == "base64") {
-        template = {
-          engineVersion = "v2";
-          data.${g.key} = "{{ .password | b64enc }}";
-        };
-      };
+      // lib.optionalAttrs (usesTemplate g) { template = templateFor g; };
 
       dataFrom = [
         (
@@ -64,7 +72,10 @@ let
               name = g.secret;
             };
           }
-          // lib.optionalAttrs (g.encoding == "plain" && g.key != "password") {
+          # A template already names the key, and it reads `.password`, so
+          # renaming the generator's output would leave it with nothing to
+          # read. Only the plain, no-literals path needs the rewrite.
+          // lib.optionalAttrs (!(usesTemplate g) && g.key != "password") {
             rewrite = [
               {
                 regexp = {
