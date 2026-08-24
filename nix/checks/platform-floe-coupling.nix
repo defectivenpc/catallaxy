@@ -34,11 +34,26 @@
         build=$PWD
         cd ${self}
 
+        # Comments are stripped before matching. Prose that mentions a floe by
+        # name is not coupling — a docstring saying "the gateway floe exports
+        # this" costs a bring-your-own set nothing, while `config.floes.gateway`
+        # costs it everything. Counting both made the baseline grow whenever
+        # someone explained the problem, which is the opposite of the
+        # incentive this is meant to create.
+        #
         # `cluster` and `lab` are the floe set's two scopes rather than floe
         # names, and `nix` is the tail of the filename `floes.nix`.
-        rg --no-heading --no-line-number -o 'floes\.[a-z][a-z0-9-]*' \
-           --glob '!lib/tests/**' --glob '!lib/floe-checks/**' -- modules lib \
-          | sed 's/:floes\./ /' \
+        find modules lib -name '*.nix' \
+             -not -path 'lib/tests/*' -not -path 'lib/floe-checks/*' \
+          | sort \
+          | while read -r f; do
+              # `|| true` because most files match nothing and grep exits 1,
+              # which under the builder's `set -e -o pipefail` would abort the
+              # whole check on the first unrelated file.
+              sed 's/#.*//' "$f" \
+                | { grep -o 'floes\.[a-z][a-z0-9-]*' || true; } \
+                | sed "s|^floes\.|$f |"
+            done \
           | grep -vE ' (cluster|lab|nix)$' \
           | sort -u > "$build/actual.txt"
 

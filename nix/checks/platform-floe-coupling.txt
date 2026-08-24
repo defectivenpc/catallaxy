@@ -1,7 +1,6 @@
 lib/contracts/tls.nix cert-manager
 lib/floe/gateway-options.nix gateway
 lib/lab-checks.nix netbird
-lib/util/duration.nix external-dns
 modules/lab/cluster/apiserver/oidc.nix kanidm
 modules/lab/cluster/capabilities.nix gateway
 modules/lab/cluster/coredns-internal.nix gateway

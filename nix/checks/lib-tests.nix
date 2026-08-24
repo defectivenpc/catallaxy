@@ -43,6 +43,7 @@ let
     secret-sharing = testsDir + "/secret-sharing.nix";
     secret-stores = testsDir + "/secret-stores.nix";
     eval-floe = testsDir + "/floe/eval-floe.nix";
+    floe-typeclass = testsDir + "/floe-typeclass.nix";
     cluster-lint = testsDir + "/cluster-lint.nix";
   };
 
@@ -50,6 +51,7 @@ let
     secret-generate = testsDir + "/secret-generate.nix";
     manifest-waves = testsDir + "/manifest-waves.nix";
     floe-options = testsDir + "/floe/floe-options.nix";
+    floe-port-equivalence = testsDir + "/floe-port-equivalence.nix";
     infra-refs = testsDir + "/infra/refs.nix";
     infra-providers = testsDir + "/infra/providers.nix";
     render-images = testsDir + "/render-images.nix";
