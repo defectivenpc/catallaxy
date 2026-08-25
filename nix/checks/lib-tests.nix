@@ -52,6 +52,7 @@ let
     manifest-waves = testsDir + "/manifest-waves.nix";
     floe-options = testsDir + "/floe/floe-options.nix";
     floe-port-equivalence = testsDir + "/floe-port-equivalence.nix";
+    floe-composition = testsDir + "/floe-composition.nix";
     infra-refs = testsDir + "/infra/refs.nix";
     infra-providers = testsDir + "/infra/providers.nix";
     render-images = testsDir + "/render-images.nix";

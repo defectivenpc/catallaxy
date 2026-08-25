@@ -45,13 +45,14 @@ let
     (lib.evalModules {
       modules = [
         (registry.mkRegistryModule {
-          lab = {
-            name = "t";
-            images = { };
-          };
+          extensions = [ registry.clusterExtension ];
           args = {
             inherit pkgs;
             cataCharts = charts;
+            lab = {
+              name = "t";
+              images = { };
+            };
           };
         })
         {
@@ -207,15 +208,15 @@ let
     (lib.evalModules {
       modules = [
         (registry.mkRegistryModule {
-          lab = gatewayLab;
-          args = gatewayArgs;
+          extensions = [ registry.clusterExtension ];
+          args = gatewayArgs // {
+            lab = gatewayLab;
 
-          # The read channel. Threaded from the enclosing config, which is what
-          # a real cluster will do — the values a floe reads are the ones the
-          # cluster settled on, not the ones the harness typed.
-          cluster = {
-            network.serviceSubnet = "10.96.0.0/12";
-            provisionerOut.publishesGatewayPorts = publishesGatewayPorts;
+            # The read channel. Facts about the cluster this floe set is in.
+            cluster = {
+              network.serviceSubnet = "10.96.0.0/12";
+              provisionerOut.publishesGatewayPorts = publishesGatewayPorts;
+            };
           };
         })
         (stubClusterFold publishesGatewayPorts)
@@ -440,9 +441,11 @@ lib.runTests (
         (lib.evalModules {
           modules = [
             (registry.mkRegistryModule {
-              lab = gatewayLab;
-              args = gatewayArgs;
-              cluster.provisionerOut.publishesGatewayPorts = true;
+              extensions = [ registry.clusterExtension ];
+              args = gatewayArgs // {
+                lab = gatewayLab;
+                cluster.provisionerOut.publishesGatewayPorts = true;
+              };
             })
             {
               floeModules.gateway = import ../../floes/cluster/gateway/modular.nix;

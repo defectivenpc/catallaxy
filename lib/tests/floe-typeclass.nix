@@ -20,7 +20,10 @@ let
     floeModules:
     lib.evalModules {
       modules = [
-        (registry.mkRegistryModule { lab = labStub; })
+        (registry.mkRegistryModule {
+          args.lab = labStub;
+          extensions = [ registry.clusterExtension ];
+        })
         { inherit floeModules; }
       ];
     };
