@@ -44,6 +44,8 @@ let
     secret-stores = testsDir + "/secret-stores.nix";
     eval-floe = testsDir + "/floe/eval-floe.nix";
     floe-typeclass = testsDir + "/floe-typeclass.nix";
+    floe-core = testsDir + "/floe-core.nix";
+    floe-cluster = testsDir + "/floe-cluster.nix";
     cluster-lint = testsDir + "/cluster-lint.nix";
   };
 

@@ -9,6 +9,52 @@ The format is based on
 
 ### Added
 
+- **A floe interface prototype, and one cluster built on it.**
+  `lib/floe-core/` is a mixin linking layer over `lib.evalModules` (RFC
+  0001): a floe declares typed `inputs`, `requires`/`requiresMany` holes and
+  `provides` signatures, and a linker resolves holes by signature, seals
+  each provide against its schema, collects outputs by kind, and derives
+  apply order from deferred values. It contains no Kubernetes.
+  `lib/floe-catallaxy/` is the distribution over it: the
+  `catallaxy.component` and `catallaxy.cluster` kinds, the
+  `KUBERNETES_CLUSTER` / `API_GATEWAY` / `GATEWAY_API` signatures, link-time
+  policies, the fold from a link result to a cluster picture, and a renderer
+  over that which reuses the existing bundle renderer.
+
+  `staging/` composes `minimal.local`'s `app` cluster out of four floes and
+  every bundle it renders is byte-identical to what the lab renders today,
+  in the same wave layout. It is staged rather than shipped: nothing
+  provisions a cluster, and it writes no `.wave-meta`, so `cata` cannot
+  consume it. Neither `lib/floe/` nor any shipped floe is affected. See
+  `staging/README.md`.
+
+  Not part of the stable API: `lib/pure.nix` does not export it.
+
+- **Cluster components compose, and the join is a monoid.** Every
+  cluster-component floe emits one output kind, `catallaxy.component` —
+  `{ bundles; backs; }`, where a bundle carries manifests, a readiness
+  probe, intra-floe ordering, ownership, images, and the operator surface
+  (`ops`, `lint`, `verify`) that RFC 0002 §6 puts on the bundle rather than
+  the floe, because that is where a command can interpolate the namespace
+  and names of the thing it is about. A bundle is not tied to one namespace
+  and a floe is not one bundle.
+
+  Bundle keys are unit-qualified, so the join is total: identity,
+  associativity and commutativity on disjoint domains are asserted rather
+  than delegated to the module system. `lib/floe-catallaxy/elaborate.nix` is
+  `bundles + link edges -> cluster metadata`; it derives every ordering edge
+  and hands the result to `lib/eval/manifest-graph.nix` and
+  `manifest-autoedges.nix`, both reused unchanged.
+
+  Cross-floe ordering is derived, not declared. A component carries no
+  `requires`/`provides`/`after` token strings — RFC 0002 §5 says ordering
+  between floes must not be expressible on a bundle. A consumer's edge comes
+  from the link graph crossed with the producer's `backs`, so the staged
+  service declares no ordering at all and still lands in the last wave.
+
+  `link` now returns `wiring`, saying which provide each hole resolved to.
+  Additive; no existing field changed.
+
 - **A floe can declare infrastructure, and the lab applies it.** `infra` is
   the plan/apply camp beside `bundles`, which is the reconcile camp:
   terraform, OpenTofu, Pulumi and CloudFormation all share one shape, where

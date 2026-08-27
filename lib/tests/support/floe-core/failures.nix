@@ -1,0 +1,123 @@
+# Each attribute here throws when evaluated. Evaluate one at a time to see
+# the error class it demonstrates:
+#
+#   nix eval .#example.failures.missingInput
+#
+{
+  lib,
+  floe,
+  sigs,
+  kinds,
+  floes,
+  policies,
+}:
+
+let
+  ingressUnit = floes.nginxIngress.instantiate { baseDomain = "lab.example.com"; };
+in
+{
+  # instantiate-time input errors (module system messages, floe context)
+  missingInput = (floes.grafana.instantiate { size = "50Gi"; }).inputsChecked;
+
+  unknownInput =
+    (floes.grafana.instantiate {
+      adminUser = "michael";
+      sizes = "50Gi"; # typo
+    }).inputsChecked;
+
+  wrongInputType =
+    (floes.grafana.instantiate {
+      adminUser = "michael";
+      size = 50; # int, not string
+    }).inputsChecked;
+
+  # link-time coherence error
+  missingProvider =
+    (floe.link {
+      units = {
+        grafana = floes.grafana.instantiate { adminUser = "michael"; };
+        myapp = floes.myapp.instantiate { };
+      };
+    }).graph;
+
+  # seal-time signature violation: bad URL shape in a provide
+  badProvideShape =
+    let
+      broken = floe.mkFloe {
+        name = "broken-observer";
+        provides.observer = sigs.OBSERVER;
+        modules = [
+          {
+            config.floe.provides.observer = {
+              ingressUrl = "grafana.example.com"; # missing scheme
+              dashboards = { };
+            };
+          }
+        ];
+      };
+    in
+    (floe.link {
+      units = {
+        observer = broken.instantiate { };
+        myapp = floes.myapp.instantiate { };
+      };
+    }).provides.observer.observer;
+
+  # deferred misuse: a post-apply value where a concrete url is required
+  deferredMisuse =
+    let
+      impatient = floe.mkFloe {
+        name = "impatient";
+        requires.ingress = sigs.INGRESS;
+        provides.observer = sigs.OBSERVER;
+        modules = [
+          ({ config, ... }: {
+            config.floe.provides.observer = {
+              # address only exists post-apply; OBSERVER.ingressUrl is concrete
+              ingressUrl = config.floe.requires.ingress.address;
+              dashboards = { };
+            };
+          })
+        ];
+      };
+    in
+    (floe.link {
+      units = {
+        ingress = ingressUnit;
+        obs = impatient.instantiate { };
+      };
+    }).provides.obs.observer.ingressUrl;
+
+  # policy violation: a prod unit linked into a lab graph
+  policyViolation =
+    let
+      prodApp = floe.mkFloe {
+        name = "prod-app";
+        requires.observer = sigs.OBSERVER;
+        provides.dashboardReq = sigs.DASHBOARD_REQ;
+        out = {
+          meta = kinds.meta;
+        };
+        modules = [
+          {
+            config.floe.provides.dashboardReq = {
+              app = "prod-app";
+              panels = [ ];
+            };
+            config.floe.out.meta = {
+              cluster = "internal";
+              environment = "prod";
+            };
+          }
+        ];
+      };
+    in
+    (floe.link {
+      units = {
+        ingress = ingressUnit;
+        grafana = floes.grafana.instantiate { adminUser = "michael"; };
+        myapp = prodApp.instantiate { };
+      };
+      policies = [ policies.noEnvMixing ];
+    }).graph;
+}

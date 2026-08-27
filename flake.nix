@@ -109,6 +109,17 @@
 
         floeChecks = import ./lib/floe-checks.nix { inherit lib pkgs; };
 
+        # Staged, not shipped. Deliberately not under `labs`/`labPackages`:
+        # those two names are the CLI's contract, and this cannot meet it yet.
+        staging = import ./staging {
+          inherit
+            lib
+            pkgs
+            cataCharts
+            k8sSpecs
+            ;
+        };
+
         exampleLabDefs = labs.discoverExampleLabs;
         fixtureLabDefs = labs.discoverFixtureLabs;
         digestedLabDefs = exampleLabDefs // fixtureLabDefs;
@@ -131,6 +142,8 @@
           labPackages = lib.mapAttrs (_: lab: lab.config.lab.out.package) digestedLabDefs;
           digestLabs = lib.attrNames digestedLabDefs;
           charts = cataCharts;
+          stagingCluster = staging.link;
+          stagingClusterMetadata = staging.cluster;
         };
 
         packages = {
@@ -142,6 +155,7 @@
           refresh-digests = packages'.refresh-digests;
           option-docs = packages'.optionDocs;
           docs = packages'.docs;
+          staging-cluster-manifests = staging.manifests;
         };
 
         apps = {
@@ -189,6 +203,7 @@
             treefmtEval
             exampleLabDefs
             e2eLabs
+            staging
             ;
           fixtureLabs = fixtureLabDefs;
           floeSet = defaultFloeSet;

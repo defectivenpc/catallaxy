@@ -1,0 +1,74 @@
+# Wraps the grafana chart. Demonstrates: inputs with and without defaults,
+# an exactly-one hole (ingress), a fan-in hole (dashboards, collected from
+# every DASHBOARD_REQ provider), providing OBSERVER, and consuming a deferred
+# value in out.k8s (which creates a deploy edge to nginx-ingress).
+{
+  lib,
+  floe,
+  sigs,
+  kinds,
+}:
+
+floe.mkFloe {
+  name = "grafana";
+
+  inputs = {
+    size = lib.mkOption {
+      type = lib.types.str;
+      default = "10Gi";
+      description = "PVC size for Grafana storage.";
+    };
+    adminUser = lib.mkOption {
+      type = lib.types.str;
+      description = "Initial admin username. Required.";
+    };
+  };
+
+  requires.ingress = sigs.INGRESS;
+  requiresMany.dashboards = sigs.DASHBOARD_REQ;
+  provides.observer = sigs.OBSERVER;
+  out = {
+    k8s = kinds.k8s;
+    meta = kinds.meta;
+  };
+
+  modules = [
+    (
+      { config, lib, ... }:
+      let
+        ingress = config.floe.requires.ingress;
+        host = "grafana.${ingress.baseDomain}";
+        # attrset keyed by providing unit name -> sealed DASHBOARD_REQ
+        dashboardReqs = config.floe.requires.dashboards;
+      in
+      {
+        config.floe.provides.observer = {
+          ingressUrl = "https://${host}";
+          dashboards = lib.mapAttrs (_unit: req: { url = "https://${host}/d/app-${req.app}"; }) dashboardReqs;
+        };
+
+        config.floe.out.k8s.helmRelease = {
+          chart = "grafana/grafana";
+          version = "8.5.1";
+          values = {
+            adminUser = config.floe.inputs.adminUser;
+            persistence.size = config.floe.inputs.size;
+            ingress = {
+              enabled = true;
+              hosts = [ host ];
+              ingressClassName = ingress.className;
+            };
+            # Deferred token flows into output data; the linker's scan turns
+            # this into a deploy edge grafana -> nginx-ingress and a phase.
+            annotations."floe.dev/lb-address" = ingress.address;
+          };
+        };
+
+        config.floe.out.meta = {
+          cluster = "observability";
+          environment = "lab";
+        };
+      }
+    )
+  ];
+}

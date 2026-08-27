@@ -17,6 +17,7 @@
   e2eLabs,
   floeSet,
   k8sTypegenConfig,
+  staging,
 }:
 
 let
@@ -135,3 +136,4 @@ in
   inherit exampleLabDefs mkLabChecks;
   inherit fixtureLabs;
 }
+// import ./staging-cluster.nix { inherit lib pkgs staging; }
