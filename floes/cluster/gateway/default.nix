@@ -1,621 +1,243 @@
+# Traefik as the Gateway API implementation, providing API_GATEWAY.
+#
+# Two bundles, which is the point of bundles: the controller and the Gateway
+# object have different readiness (a running Deployment is not a programmed
+# Gateway) and a real order between them. Both are this floe's business and
+# `needs` says so without entering any namespace another floe can see.
+#
+# A port of the configuration `minimal.local` produces, not of
+# `floes/cluster/gateway/`'s full option surface: no TLS, no internal tier, no
+# passthrough, no NodePort fallback.
 {
-  config,
   lib,
-  pkgs,
-  cataCharts,
-  k8sSpecs,
-  k8sHelpers,
-  contracts,
-  lab,
-  ...
+  floe,
+  sigs,
+  kinds,
 }:
 
-let
-  inherit ((import ../../../lib/floe { inherit lib; })) floeOptions refs;
-  verifyTypes = import ../../../modules/lab/verify-types.nix { inherit lib; };
-  cfg = config.floes.gateway;
-in
-{
-  imports = [
-    (floeOptions {
-      name = "gateway";
-    })
-    ./options.nix
-  ];
+floe.mkFloe {
+  name = "gateway";
 
-  options.floes.gateway.exports = {
-    routing = (import ../../../lib/contracts/routing.nix { inherit lib; }).routingOption;
+  inputs = {
+    chart = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Store path of the Traefik Helm chart. Required — the caller pins it
+        in `lib/charts.nix` and interpolates it.
+
+        A path and not the derivation: `instantiate` deep-forces its inputs
+        to check them eagerly, and a derivation is a self-referential
+        attrset, so passing one overflows the stack before the floe is ever
+        linked.
+      '';
+    };
+
+    baseDomain = lib.mkOption {
+      type = lib.types.str;
+      description = "Domain the routes through this gateway hang off. Required.";
+    };
+
+    namespace = lib.mkOption {
+      type = lib.types.str;
+      default = "kube-system";
+      description = ''
+        Namespace the controller and the Gateway live in. Neither bundle
+        creates it: `kube-system` is one the cluster ships with, and emitting
+        a Namespace object for it would have the applier adopt it.
+      '';
+    };
 
     className = lib.mkOption {
       type = lib.types.str;
       default = "traefik";
-      description = "GatewayClass name.";
+      description = "GatewayClass the Gateway names. Traefik's chart installs it.";
     };
-    namespace = lib.mkOption {
-      type = lib.types.str;
-      default = "kube-system";
-      description = "Gateway namespace.";
-    };
+
     gatewayName = lib.mkOption {
       type = lib.types.str;
       default = "default-gateway";
-      description = "Public Gateway resource name.";
+      description = "Name of the Gateway resource routes attach to.";
     };
-    defaultTier = lib.mkOption {
-      type = lib.types.enum [
-        "public"
-        "internal"
-      ];
-      default = "public";
-      description = ''
-        Network tier a gateway-exposed floe attaches to unless it sets
-        `gateway.tier` itself.
 
-        Read this rather than `lab.policy.exposure.defaultTier`. The
-        gateway floe owns what exposure means, so it is the one place
-        that reads the lab policy, and a floe that wants the default
-        tier depends on the gateway rather than assuming a lab shape.
-      '';
-    };
-    passthroughEnabled = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Whether the TLS passthrough listener is enabled.";
-    };
-    terminatingListenerName = lib.mkOption {
-      type = lib.types.str;
-      default = "https";
-      description = ''
-        Listener a plain (non-passthrough) HTTPRoute should name in
-        `parentRefs.sectionName`. `https` when TLS terminates here,
-        `http` when it does not: a lab with `tls.enable = false`
-        has no `https` listener, so a route pinned to it attaches to
-        nothing (`NoMatchingParent`) and the gateway 404s.
-      '';
-    };
-    passthroughPort = lib.mkOption {
+    httpPort = lib.mkOption {
       type = lib.types.port;
-      default = 8444;
-      description = "Passthrough entryPoint port on Traefik.";
-    };
-    internalEnabled = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Whether the internal-tier Gateway is on.";
-    };
-    internalGatewayName = lib.mkOption {
-      type = lib.types.str;
-      default = "default-gateway";
+      default = 8000;
       description = ''
-        Name of the Gateway resource internal-tier HTTPRoutes
-        attach to. Falls back to the public gateway when the
-        internal tier is disabled, so misconfigurations degrade
-        gracefully.
-      '';
-    };
-    internalExposureMode = lib.mkOption {
-      type = lib.types.str;
-      default = "haproxy-local";
-      description = "How the internal Gateway is reachable (haproxy-local | netbird | none).";
-    };
-    internalGatewayClusterIP = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Pinned ClusterIP for the traefik-internal Service (netbird mode).";
-    };
-    internalHostnames = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Registered internal-tier hostnames (deduped + sorted).";
-    };
-    internalDomain = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = ''
-        DNS zone the internal tier is named under, or "" when there
-        is no internal tier.
-
-        Whatever resolves the internal tier claims this zone, so
-        consumers read it here rather than deriving their own: netbird
-        pushes exactly this to mesh peers, and CoreDNS answers it.
+        Listener port. Traefik's chart maps its `web` entrypoint to 8000 in
+        the pod and exposes it on 80, so the listener has to name the pod's
+        port and not the service's.
       '';
     };
   };
 
-  config = lib.mkIf cfg.enable (
-    let
-      inherit (lib) optionals optionalAttrs;
-      cidrLib = import ../../../lib/util/network.nix { inherit lib; };
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
 
-      # k3s's ServiceLB binds 80 and 443 on the node, so a LoadBalancer
-      # Service is reachable at the node's name. Nothing else does, and a
-      # LoadBalancer there stays Pending forever with port 80 of the node
-      # answering nothing.
-      reachedByNodePort =
-        cfg.controller == "traefik" && !config.cluster.provisionerOut.publishesGatewayPorts;
+  # The Gateway and GatewayClass objects below have no types without these.
+  # Resolved from a peer rather than installed here, because cilium's floe
+  # needs the same CRDs and two installs of one thing is the conflict the
+  # shipped tree routes around with `cluster.prerequisites`.
+  requires.gatewayApi = sigs.GATEWAY_API;
 
-      httpPort = if cfg.controller == "traefik" then 8000 else 80;
-      httpsPort = if cfg.controller == "traefik" then 8443 else 443;
+  provides.gateway = sigs.API_GATEWAY;
+  out.component = kinds.component;
 
-      passthroughPort = if cfg.controller == "traefik" then cfg.tls.passthrough.port else 443;
+  modules = [
+    (
+      { config, lib, ... }:
+      let
+        inputs = config.floe.inputs;
+        listenerName = "http";
+      in
+      {
+        # The assembly point. `provides` and `out` are both projections of
+        # this, so a consumer's parentRef cannot drift from the Gateway that
+        # actually gets applied.
+        options.gatewayResource = lib.mkOption {
+          type = lib.types.attrs;
+          description = "The Gateway object, and the single source of truth for what it is called.";
+        };
 
-      standardListeners = [
-        {
-          name = "http";
-          protocol = "HTTP";
-          port = httpPort;
-          allowedRoutes.namespaces.from = "All";
-        }
-      ]
-      ++ optionals (cfg.tls.enable && cfg.tls.domain != "") [
-        {
-          name = "https";
-          protocol = "HTTPS";
-          port = httpsPort;
-          allowedRoutes.namespaces.from = "All";
-          tls = {
-            mode = "Terminate";
-
-            certificateRefs = [
-              { name = "gateway-tls"; }
-            ]
-            ++ map (
-              r: { name = r.name; } // lib.optionalAttrs (r.namespace != null) { namespace = r.namespace; }
-            ) cfg.tls.extraCertificateRefs;
-          };
-        }
-      ]
-      ++ optionals cfg.tls.passthrough.enable [
-        {
-          name = "tls-passthrough";
-          protocol = "TLS";
-          port = passthroughPort;
-          allowedRoutes.namespaces.from = "All";
-          tls.mode = "Passthrough";
-        }
-      ];
-
-      publicGateway = {
-        "default-gateway" = {
+        config.gatewayResource = {
           apiVersion = "gateway.networking.k8s.io/v1";
           kind = "Gateway";
           metadata = {
-            name = cfg.gatewayName;
-            namespace = cfg.namespace;
+            name = inputs.gatewayName;
+            namespace = inputs.namespace;
             labels."catallaxy.io/network-tier" = "public";
           };
           spec = {
-            gatewayClassName = cfg.className;
-            listeners = standardListeners;
-          };
-        };
-      };
-
-      internalGateway = optionalAttrs cfg.internal.enable {
-
-        "internal-gateway" = {
-          apiVersion = "gateway.networking.k8s.io/v1";
-          kind = "Gateway";
-          metadata = {
-            name = cfg.internal.name;
-            namespace = cfg.namespace;
-            labels."catallaxy.io/network-tier" = "internal";
-            annotations."catallaxy.io/exposure-mode" = cfg.internal.exposureMode;
-          };
-          spec = {
-            gatewayClassName = cfg.className;
-            listeners = standardListeners;
-          };
-        };
-      };
-
-      internalService =
-        optionalAttrs
-          (
-            cfg.controller == "traefik"
-            && cfg.internal.enable
-            && cfg.internal.exposureMode == "netbird"
-            && cfg.internal.clusterIPAddress != null
-          )
-          {
-
-            "traefik-internal" = {
-              apiVersion = "v1";
-              kind = "Service";
-              metadata = {
-                name = "traefik-internal";
-                namespace = cfg.namespace;
-                labels = {
-                  "app.kubernetes.io/managed-by" = "catallaxy";
-                  "catallaxy.io/network-tier" = "internal";
-                };
-              };
-              spec = {
-                type = "ClusterIP";
-                clusterIP = cfg.internal.clusterIPAddress;
-                selector = {
-                  "app.kubernetes.io/instance" = "traefik-${cfg.namespace}";
-                  "app.kubernetes.io/name" = "traefik";
-                };
-                ports = [
-                  {
-                    name = "web";
-                    port = 80;
-                    targetPort = "web";
-                    protocol = "TCP";
-                  }
-                ]
-                ++ optionals (cfg.tls.enable && cfg.tls.domain != "") [
-                  {
-                    name = "websecure";
-                    port = 443;
-                    targetPort = "websecure";
-                    protocol = "TCP";
-                  }
-                ]
-                ++ optionals cfg.tls.passthrough.enable [
-                  {
-                    name = "passthrough";
-                    port = cfg.tls.passthrough.port;
-                    targetPort = "passthrough";
-                    protocol = "TCP";
-                  }
-                ];
-              };
-            };
-          };
-
-      externalGatewayClass = optionalAttrs (cfg.controller != "traefik") {
-        "gateway-class" = {
-          apiVersion = "gateway.networking.k8s.io/v1";
-          kind = "GatewayClass";
-          metadata.name = cfg.className;
-          spec.controllerName = cfg.controllerName;
-        };
-      };
-
-      traefikHelm = optionalAttrs (cfg.controller == "traefik") {
-        traefik = {
-          chart = cfg.chart;
-          releaseName = "traefik";
-          namespace = cfg.namespace;
-          values = {
-
-            providers.kubernetesGateway = {
-              enabled = true;
-              experimentalChannel = true;
-            };
-
-            gateway.enabled = false;
-
-            ingressRoute.dashboard.enabled = false;
-
-            additionalArguments = [
-              "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=0s"
-              "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=0s"
-              "--serversTransport.forwardingTimeouts.idleConnTimeout=0s"
-              "--serversTransport.forwardingTimeouts.responseHeaderTimeout=0s"
-            ];
-          }
-
-          // optionalAttrs reachedByNodePort {
-            service.type = "NodePort";
-            ports.web.nodePort = cfg.nodePorts.http;
-            ports.websecure.nodePort = cfg.nodePorts.https;
-          }
-
-          // optionalAttrs cfg.tls.passthrough.enable {
-            ports.passthrough = {
-              port = cfg.tls.passthrough.port;
-              expose.default = true;
-              exposedPort = cfg.tls.passthrough.port;
-              protocol = "TCP";
-            }
-            // optionalAttrs reachedByNodePort { nodePort = cfg.nodePorts.passthrough; };
-          };
-        };
-      };
-
-      tlsResources = optionalAttrs (cfg.tls.enable && cfg.tls.domain != "") {
-        "gateway-tls-cert" = {
-          apiVersion = "cert-manager.io/v1";
-          kind = "Certificate";
-          metadata = {
-            name = "gateway-tls";
-            namespace = cfg.namespace;
-          };
-          spec = {
-            secretName = "gateway-tls";
-            issuerRef = {
-              name = cfg.tls.issuerRef.name;
-              kind = cfg.tls.issuerRef.kind;
-            };
-            dnsNames = [
-              cfg.tls.domain
-              "*.${cfg.tls.domain}"
-            ]
-            ++ lib.optionals (cfg.internal.enable && cfg.internal.domain != "") [
-              cfg.internal.domain
-              "*.${cfg.internal.domain}"
-            ];
-          };
-        };
-
-        "http-to-https-redirect" = {
-          apiVersion = "gateway.networking.k8s.io/v1";
-          kind = "HTTPRoute";
-          metadata = {
-            name = "http-to-https-redirect";
-            namespace = cfg.namespace;
-
-            annotations."external-dns.alpha.kubernetes.io/controller" = "none";
-          };
-          spec = {
-            parentRefs = [
+            gatewayClassName = inputs.className;
+            listeners = [
               {
-                name = cfg.gatewayName;
-                namespace = cfg.namespace;
-                sectionName = "http";
-              }
-            ];
-            hostnames = [ "*.${cfg.tls.domain}" ];
-            rules = [
-              {
-                filters = [
-                  {
-                    type = "RequestRedirect";
-                    requestRedirect = {
-                      scheme = "https";
-                      statusCode = 301;
-                    };
-                  }
-                ];
+                name = listenerName;
+                protocol = "HTTP";
+                port = inputs.httpPort;
+                allowedRoutes.namespaces.from = "All";
               }
             ];
           };
         };
-      };
-    in
-    {
 
-      floes.gateway.drift.expected = lib.optionals (cfg.controller == "traefik") [
-        {
-          group = "gateway.networking.k8s.io";
-          kinds = [
-            "Gateway"
-            "HTTPRoute"
+        config.floe.provides.gateway = {
+          className = config.gatewayResource.spec.gatewayClassName;
+          inherit (inputs) baseDomain;
+          parentRef = {
+            inherit (config.gatewayResource.metadata) name namespace;
+            sectionName = listenerName;
+          };
+        };
+
+        config.floe.out.component = kinds.mkComponent {
+          # Both bundles have to be ready before a consumer's route means
+          # anything: a route attached to a Gateway whose controller is not
+          # running is admitted and serves nothing. Naming them here is what
+          # lets a consumer order against this floe without naming either.
+          backs.gateway = [
+            "controller"
+            "gateway"
           ];
-          managedBy = [ "traefik" ];
-          reason = "traefik defaults listener/backendRef fields on the Gateway and HTTPRoute objects it admits.";
-        }
-      ];
 
-      # The one mistake a route can make that nothing else catches: a lab with
-      # `tls.enable = false` exports the listener name "http", and a route
-      # naming "https" attaches to a listener that is not there. It fails at
-      # apply time with a message about a parent that does not exist, which is
-      # a long way from the line that caused it.
-      floes.gateway.lint.route-listener-exists = {
-        description = "Every HTTPRoute and TLSRoute attaches to a listener some Gateway declares";
-        severity = "error";
-        scope = "per-cluster";
-        format = "json";
-        command = builtins.readFile ./lint/route-listener-exists.sh;
-      };
+          bundles = {
+            controller = kinds.mkBundle {
+              helmCharts.traefik = kinds.mkHelmChart {
+                inherit (inputs) chart namespace;
+                releaseName = "traefik";
+                values = {
+                  providers.kubernetesGateway = {
+                    enabled = true;
+                    experimentalChannel = true;
+                  };
 
-      floes.gateway.exports = {
-        routing = {
-          publicReady = "gateway/public/ready";
-          controllerReady = "gateway/controller/ready";
-        };
-        inherit (cfg) className gatewayName;
-        namespace = cfg.namespace;
-        defaultTier = lab.policy.exposure.defaultTier or "public";
-        passthroughEnabled = cfg.tls.passthrough.enable;
-        passthroughPort = cfg.tls.passthrough.port;
+                  # The chart can create its own Gateway. This floe creates
+                  # one, so letting the chart do it too would put two objects
+                  # with different names in front of the same controller.
+                  gateway.enabled = false;
 
-        terminatingListenerName = if (cfg.tls.enable && cfg.tls.domain != "") then "https" else "http";
+                  ingressRoute.dashboard.enabled = false;
 
-        internalEnabled = cfg.internal.enable;
-        internalGatewayName = if cfg.internal.enable then cfg.internal.name else cfg.gatewayName;
-        internalExposureMode = cfg.internal.exposureMode;
-        internalGatewayClusterIP = cfg.internal.clusterIPAddress;
+                  additionalArguments = [
+                    "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=0s"
+                    "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=0s"
+                    "--serversTransport.forwardingTimeouts.idleConnTimeout=0s"
+                    "--serversTransport.forwardingTimeouts.responseHeaderTimeout=0s"
+                  ];
+                };
+              };
 
-        internalHostnames = lib.unique (lib.sort lib.lessThan cfg.internalHostnames);
-        internalDomain = if cfg.internal.enable then cfg.internal.domain else "";
-      };
+              images.traefik = {
+                registry = "docker.io";
+                repository = "traefik";
+                tag = "v3.3.6";
+                digest = null;
+              };
 
-      floes.gateway.verify.gateways-programmed = {
-        description = "Every Gateway was programmed, so something is actually listening";
-        reject = [
-          {
-            apiVersion = "gateway.networking.k8s.io/v1";
-            kind = "Gateway";
-            metadata.namespace = cfg.namespace;
-            ${verifyTypes.conditionIsNot { type = "Programmed"; }} = true;
-          }
-        ];
-      };
+              ready = {
+                kind = "condition";
+                resource = "deployment/traefik";
+                namespace = inputs.namespace;
+                condition = "Available";
+                timeout = "5m";
+              };
 
-      assertions = [
+              ops.gateway.listeners = {
+                description = "Show every listener the Gateway declares and its programmed status";
+                command = [
+                  "kubectl"
+                  "-n"
+                  inputs.namespace
+                  "get"
+                  "gateway"
+                  inputs.gatewayName
+                  "-o"
+                  "jsonpath={range .status.listeners[*]}{.name}{\"\\t\"}{.attachedRoutes}{\"\\n\"}{end}"
+                ];
+              };
+            };
 
-        {
-          assertion =
-            !(cfg.tls.enable && cfg.tls.domain != "") || (config.floes.cert-manager.exports.issuance != null);
-          message = "gateway tls.enable requires floes.cert-manager to be enabled (reconciles the wildcard Certificate CR).";
-        }
-        {
-          assertion =
-            !(cfg.internal.enable && cfg.internal.exposureMode == "netbird")
-            || cfg.internal.clusterIPAddress != null;
-          message = ''
-            floes.gateway.internal.clusterIPAddress must be set
-            when internal.exposureMode = "netbird". Pick an IP inside
-            the cluster's service CIDR but outside the kube-allocated
-            range (convention: `<cidr-base>.250`). Required so
-            internal-tier hostnames have a mesh-reachable address.
-          '';
-        }
+            gateway = kinds.mkBundle {
+              needs = [ "controller" ];
 
-        {
-          assertion =
-            cfg.internal.clusterIPAddress == null
-            || cidrLib.ipInCidr cfg.internal.clusterIPAddress config.cluster.network.serviceSubnet;
-          message = ''
-            floes.gateway.internal.clusterIPAddress
-            (${toString cfg.internal.clusterIPAddress}) is not inside
-            cluster.network.serviceSubnet
-            (${config.cluster.network.serviceSubnet}). The apiserver
-            will reject the Service create with `failed to allocate
-            IP: not in valid range`. Update clusterIPAddress to fall
-            within the service subnet.
-          '';
-        }
-      ];
+              resources.default-gateway = config.gatewayResource;
 
-      floes.gateway.network = {
+              # A Deployment being Available says the controller is up; it
+              # says nothing about whether this Gateway got an address. That
+              # is a second fact and so a second probe.
+              ready = {
+                kind = "jsonpath";
+                resource = "gateway/${inputs.gatewayName}";
+                namespace = inputs.namespace;
+                jsonpath = "{.status.addresses[0].value}";
+                timeout = "10m";
+              };
 
-        declared = true;
+              # A check about *other* floes' output would not belong on a
+              # bundle. This one reads every route in the cluster against the
+              # listeners this bundle declares, which is this bundle's claim.
+              lint.route-listener-exists = {
+                description = "Every HTTPRoute and TLSRoute attaches to a listener some Gateway declares";
+                severity = "error";
+                scope = "per-cluster";
+                format = "json";
+                command = builtins.readFile ./lint/route-listener-exists.sh;
+              };
 
-        serves.web = {
-
-          port = 80;
-
-          fromExternal = true;
-
-        };
-
-        serves.websecure = {
-
-          port = 443;
-
-          fromExternal = true;
-
-        };
-
-      };
-
-      floes.gateway.imagesComplete = true;
-
-      floes.gateway.images.traefik = {
-
-        repository = "traefik";
-
-        tag = "v3.3.6";
-
-      };
-
-      # http and https keep the cluster's defaults when the provisioner
-      # publishes them, but the passthrough listener has no such convention:
-      # its port is whatever the lab set, so it is answered here either way
-      # rather than left to a default that is only right by coincidence.
-      cluster.ingress =
-        if reachedByNodePort then
-          {
-            httpPort = cfg.nodePorts.http;
-            httpsPort = cfg.nodePorts.https;
-            passthroughPort = cfg.nodePorts.passthrough;
-          }
-        else
-          {
-            inherit passthroughPort;
+              verify.gateways-programmed = {
+                description = "Every Gateway was programmed, so something is actually listening";
+                timeout = "2m";
+                expect = null;
+                reject = [
+                  {
+                    apiVersion = "gateway.networking.k8s.io/v1";
+                    kind = "Gateway";
+                    metadata.namespace = inputs.namespace;
+                    ${kinds.conditionIsNot { type = "Programmed"; }} = true;
+                  }
+                ];
+              };
+            };
           };
-
-      floes.gateway.capabilities.provides.api-gateway = contracts.api-gateway.apiGateway.claim {
-        routing = {
-          publicReady = "gateway/public/ready";
-          controllerReady = "gateway/controller/ready";
         };
-        internalEnabled = cfg.internal.enable;
-      };
-      floes.gateway.bundles.gateway.conflicts = [ "api-gateway" ];
-      floes.gateway.bundles.gateway.disableWith = "floes.gateway.enable = false";
-
-      cluster.prerequisites.gateway-api-crds = {
-        yamls = [ k8sSpecs.standaloneCrds.gateway-api ];
-        provides = [ "gateway-api/crds/established" ] ++ contracts.gateway-api.crdKinds;
-      };
-
-      floes.gateway.bundles.gateway-controller.owner = {
-        bootstrap = "install-target";
-        steady = "argocd";
-      };
-      floes.gateway.bundles.gateway-controller.helmCharts = traefikHelm;
-      floes.gateway.bundles.gateway-controller.resources = externalGatewayClass;
-
-      floes.gateway.bundles.gateway-controller.requires = [
-        "gateway-api/crds/established"
-      ];
-      floes.gateway.bundles.gateway-controller.provides = [
-        "gateway/controller/ready"
-      ];
-      floes.gateway.bundles.gateway-controller.readyProbe = {
-        kind = "condition";
-        resource = "deployment/traefik";
-        namespace = cfg.namespace;
-        condition = "Available";
-        timeout = "5m";
-      };
-
-      floes.gateway.bundles.gateway.owner = {
-        bootstrap = "install-target";
-        steady = "argocd";
-      };
-      floes.gateway.bundles.gateway.resources = publicGateway // internalGateway // internalService;
-      floes.gateway.bundles.gateway.requires = [
-        "gateway/controller/ready"
-      ];
-      floes.gateway.bundles.gateway.provides = [
-        "gateway/public/ready"
-        "api-gateway"
-      ]
-      ++ contracts.gateway-api.routeKinds;
-
-      # An address is the right thing to wait for when something assigns one:
-      # it is the difference between a Gateway the controller has accepted and
-      # one traffic can actually arrive at. A Gateway fronted by a NodePort
-      # never gets one, because there is no address to assign, so waiting for
-      # it waits out the timeout on a gateway that has been serving the whole
-      # time. `Programmed` is what remains true in both cases.
-      floes.gateway.bundles.gateway.readyProbe =
-        if reachedByNodePort then
-          {
-            kind = "condition";
-            resource = "gateway/${cfg.gatewayName}";
-            namespace = cfg.namespace;
-            condition = "Programmed";
-            timeout = "10m";
-          }
-        else
-          {
-            kind = "jsonpath";
-            resource = "gateway/${cfg.gatewayName}";
-            namespace = cfg.namespace;
-            jsonpath = "{.status.addresses[0].value}";
-
-            timeout = "10m";
-          };
-
-      floes.gateway.bundles.gateway-tls.owner = {
-        bootstrap = "install-target";
-        steady = "argocd";
-      };
-      floes.gateway.bundles.gateway-tls.resources = tlsResources;
-
-      floes.gateway.bundles.gateway-tls.requires = [
-        "gateway/public/ready"
-      ];
-      floes.gateway.bundles.gateway-tls.provides = [
-        "gateway/tls/ready"
-      ];
-
-      floes.gateway.bundles.gateway-tls.readyProbe = {
-        kind = "condition";
-        resource = "certificate/gateway-tls";
-        namespace = cfg.namespace;
-        condition = "Ready";
-        timeout = "15m";
-      };
-    }
-  );
+      }
+    )
+  ];
 }

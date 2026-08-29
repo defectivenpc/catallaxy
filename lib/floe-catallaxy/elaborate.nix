@@ -231,19 +231,40 @@ in
         "TLSRoute"
       ];
 
-      exposedHosts = lib.unique (
-        lib.concatLists (
-          lib.mapAttrsToList (
-            _name: b:
-            lib.concatMap (
-              r:
-              if lib.elem (r.kind or "") routeKinds then
-                lib.filter (h: !(lib.hasInfix "*" h)) (r.spec.hostnames or [ ])
-              else
-                [ ]
-            ) (lib.attrValues b.resources)
-          ) bundles
-        )
+      # A record per hostname, not a bare string: `cata lab verify` probes
+      # these, and a failing probe has to be able to name the bundle that
+      # declared the route. `paths` matters too — probing `/` on a host whose
+      # route only matches `/api` proves nothing, and the gateway is right to
+      # refuse it.
+      routePaths =
+        r:
+        lib.unique (
+          lib.concatMap (
+            rule:
+            lib.concatMap (m: lib.optional ((m.path.value or "") != "") m.path.value) (rule.matches or [ ])
+          ) (r.spec.rules or [ ])
+        );
+
+      exposedHosts = lib.concatLists (
+        lib.mapAttrsToList (
+          name: b:
+          lib.concatMap (
+            r:
+            if lib.elem (r.kind or "") routeKinds then
+              map (host: {
+                inherit host;
+                namespace = r.metadata.namespace or "default";
+                bundle = name;
+                # Every route is public until there is an internal tier to
+                # put one behind. Saying "public" when we cannot tell would
+                # be a lie; there is currently only one tier.
+                tier = "public";
+                paths = routePaths r;
+              }) (lib.filter (h: !(lib.hasInfix "*" h)) (r.spec.hostnames or [ ]))
+            else
+              [ ]
+          ) (lib.attrValues b.resources)
+        ) bundles
       );
     in
     if orphaned != [ ] then

@@ -129,7 +129,7 @@ let
   # parses as a pipeline and evaluates to nonsense instead of erroring. There
   # is one correct spelling and it already exists; re-exported so a floe
   # author reaches it through `kinds` rather than writing it out.
-  verifyTypes = import ../../modules/lab/verify-types.nix { inherit lib; };
+  verifyTypes = import ../verify-types.nix { inherit lib; };
 
 in
 rec {
@@ -219,7 +219,7 @@ rec {
   #
   # This is what makes the join total. Two floes cannot produce the same key,
   # so `//` is disjoint union — associative, with `empty` as a two-sided
-  # identity, and commutative on disjoint domains. `lib/floe/fold.nix` can
+  # identity, and commutative on disjoint domains. `old-floe`'s `fold.nix` can
   # state none of those about itself, because it returns an unrealised
   # `mkMerge` and delegates the join to the module system.
   qualify =

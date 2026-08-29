@@ -1,7 +1,6 @@
 # Summary
 
-[Introduction](./introduction.md)
-[Why Catallaxy](./why.md)
+[Introduction](./introduction.md) [Why Catallaxy](./why.md)
 
 # Start Here
 
@@ -30,9 +29,9 @@
 
 - [CLI](./reference/cli.md)
 - [Module Options](./reference/options.md)
-  - [lab.*](./reference/options/lab.md)
-  - [cluster.*](./reference/options/cluster.md)
-  - [floes.*](./reference/options/floes/index.md)
+  - [lab.\*](./reference/options/lab.md)
+  - [cluster.\*](./reference/options/cluster.md)
+  - [floes.\*](./reference/options/floes/index.md)
     - [argocd](./reference/options/floes/argocd.md)
     - [cert-manager](./reference/options/floes/cert-manager.md)
     - [cilium](./reference/options/floes/cilium.md)

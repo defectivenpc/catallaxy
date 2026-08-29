@@ -1,6 +1,15 @@
 {
   description = "catallaxy: declarative Kubernetes platform management";
 
+  # The platform is built on the floe interface of RFC 0001 (`lib/floe-core`).
+  # The two earlier floe implementations and everything written against them
+  # are parked in `old-floes/`, which nothing here imports and which is not
+  # expected to evaluate. See `old-floes/README.md`.
+  #
+  # `labs` and `labPackages` are the two attribute paths `cata` resolves, and
+  # they carry one lab so far. The CLI is untouched and its contract is
+  # unchanged.
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
@@ -31,31 +40,8 @@
     }:
     let
       lib = nixpkgs.lib;
-      pureLib = import ./lib/pure.nix { inherit lib; };
-
-      defaultFloeSet = import ./floes;
     in
-    {
-      nixosModules.default =
-        { ... }:
-        {
-          imports = [ ./modules ];
-        };
-
-      nixosModules.hostDns = ./nix/nixos/host-dns.nix;
-
-      lib = pureLib;
-
-      # The bundled distro, as a value `mkLab` will take. Exposed so a
-      # consumer can subtract from it, add to it, or ignore it entirely.
-      floeSets.default = defaultFloeSet;
-
-      templates.consumer = {
-        path = ./templates/consumer;
-        description = "A catallaxy consumer flake with a custom floe";
-      };
-    }
-    // flake-utils.lib.eachDefaultSystem (
+    flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = import nixpkgs {
@@ -76,118 +62,51 @@
 
         packages' = import ./pkgs {
           inherit
-            self
             lib
             pkgs
             craneLib
             rustToolchain
-            cataCharts
-            k8sSpecs
             ;
-          floes = defaultFloeSet;
         };
 
-        labs = import ./lib/labs.nix {
+        labs = import ./lib/lab.nix {
           inherit
             lib
             pkgs
-            pureLib
             cataCharts
             k8sSpecs
             ;
-          modulesPath = ./modules;
           examplesPath = ./examples/labs;
-          inherit defaultFloeSet;
-
-          inherit (packages') tools cataWrapped;
         };
 
-        labChecks = import ./lib/lab-checks.nix {
-          inherit lib pkgs;
-          inherit (packages') cataWrapped;
-        };
-
-        floeChecks = import ./lib/floe-checks.nix { inherit lib pkgs; };
-
-        # Staged, not shipped. Deliberately not under `labs`/`labPackages`:
-        # those two names are the CLI's contract, and this cannot meet it yet.
-        staging = import ./staging {
-          inherit
-            lib
-            pkgs
-            cataCharts
-            k8sSpecs
-            ;
-        };
-
-        exampleLabDefs = labs.discoverExampleLabs;
-        fixtureLabDefs = labs.discoverFixtureLabs;
-        digestedLabDefs = exampleLabDefs // fixtureLabDefs;
-
-        e2eLabs = lib.mapAttrs (_: lab: lab.config.lab.out.selfContained) exampleLabDefs;
-
-        labApp = program: {
-          type = "app";
-          inherit program;
-        };
+        labDefs = labs.discoverLabs;
       in
       {
         legacyPackages = {
-          inherit (labs) mkLab mkLabShell k8sTypegenConfig;
-          inherit (labChecks) mkLabChecks;
-          inherit (floeChecks) mkFloeChecks;
-          inherit (packages') tools;
-          inherit e2eLabs;
-          labs = lib.mapAttrs (_: lab: lab.config.lab.out.cliConfig) exampleLabDefs;
-          labPackages = lib.mapAttrs (_: lab: lab.config.lab.out.package) digestedLabDefs;
-          digestLabs = lib.attrNames digestedLabDefs;
           charts = cataCharts;
-          stagingCluster = staging.link;
-          stagingClusterMetadata = staging.cluster;
+
+          # The two the CLI resolves, and the only two.
+          labs = lib.mapAttrs (_: l: l.config.lab.out.cliConfig) labDefs;
+          labPackages = lib.mapAttrs (_: l: l.config.lab.out.package) labDefs;
+
+          # The intermediate the lab is lowered from, for reading by hand.
+          clusters = lib.mapAttrs (_: l: lib.mapAttrs (_: c: c.out) l.config.lab.clusters) labDefs;
         };
 
         packages = {
           default = packages'.cataWrapped;
           cata = packages'.cataWrapped;
           cata-unwrapped = packages'.cata;
-          e2e = packages'.e2e;
-          e2e-all = packages'.e2e-all;
-          refresh-digests = packages'.refresh-digests;
-          option-docs = packages'.optionDocs;
-          docs = packages'.docs;
-          staging-cluster-manifests = staging.manifests;
         };
 
-        apps = {
-          default = labApp "${packages'.cataWrapped}/bin/cata";
-          cata = labApp "${packages'.cataWrapped}/bin/cata";
-          e2e = labApp "${packages'.e2e}/bin/cata-e2e";
-          e2e-all = labApp "${packages'.e2e-all}/bin/cata-e2e-all";
-          refresh-digests = labApp "${packages'.refresh-digests}/bin/cata-refresh-digests";
-          generate-k8s-types = labApp (
-            let
-              configFile = pkgs.writeText "k8s-typegen-config.json" (builtins.toJSON labs.k8sTypegenConfig);
-            in
-            toString (
-              pkgs.writeShellScript "generate-k8s-types" ''
-                set -euo pipefail
-                exec ${packages'.cata}/bin/cata-build generate ${configFile}
-              ''
-            )
-          );
-        }
-        // lib.concatMapAttrs (
-          name: lab:
-          lib.optionalAttrs (lab.config.lab.ops.out.tool != null) {
-            "${name}-ops" = labApp "${lab.config.lab.ops.out.tool}/bin/${name}-ops";
-          }
-        ) exampleLabDefs;
+        apps.default = {
+          type = "app";
+          program = "${packages'.cataWrapped}/bin/cata";
+        };
 
-        devShells = lib.mapAttrs (_: lab: labs.mkLabShell lab) exampleLabDefs // {
-          default = import ./nix/devshell.nix {
-            inherit pkgs rustToolchain;
-            packages = packages';
-          };
+        devShells.default = import ./nix/devshell.nix {
+          inherit pkgs rustToolchain;
+          packages = packages';
         };
 
         formatter = treefmtEval.config.build.wrapper;
@@ -197,21 +116,10 @@
             self
             lib
             pkgs
-            system
-            nixpkgs
-            pureLib
             treefmtEval
-            exampleLabDefs
-            e2eLabs
-            staging
             ;
-          fixtureLabs = fixtureLabDefs;
-          floeSet = defaultFloeSet;
-          inherit (labs) k8sTypegenConfig;
           packages = packages';
-          inherit (labs) mkLab labRefusal labForce;
-          inherit (labChecks) mkLabChecks;
-          inherit (floeChecks) mkFloeChecks;
+          inherit labDefs;
         };
       }
     );

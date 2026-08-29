@@ -30,10 +30,34 @@ let
       podSubnet = T.str;
       serviceSubnet = T.str;
     };
+    # `K3dConfig` in `cli/src/domain/cluster.rs`, field for field. Only
+    # `image` and `network` are `Option` there; every other key is required,
+    # so an omitted one is a parse error rather than a default.
+    #
+    # `network` is `null` here on purpose: which docker network a cluster
+    # joins is a lab fact, and the lab fills it in.
     k3d = T.record {
       clusterName = T.str;
-      image = T.str;
+      image = T.nullOr T.str;
+      network = T.nullOr T.str;
+      noTraefik = T.bool;
+      noServiceLB = T.bool;
+      noFlannel = T.bool;
+      noLocalStorage = T.bool;
       ports = T.listOf T.str;
+      extraApiServerArgs = T.listOf T.str;
+      extraVolumes = T.listOf (
+        T.record {
+          hostPath = T.str;
+          containerPath = T.str;
+        }
+      );
+      autoDeployManifests = T.listOf (
+        T.record {
+          name = T.str;
+          path = T.str;
+        }
+      );
     };
   };
 

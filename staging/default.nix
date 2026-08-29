@@ -23,7 +23,7 @@ let
   # the only place the two floes' outputs are joined.
   cluster = catallaxy.elaborateCluster {
     linkResult = link;
-    coreKinds = (import ../modules/lab/cluster/lib/kubernetes/types.nix { inherit lib; }).coreKinds;
+    coreKinds = (import ../lib/kubernetes/types.nix { inherit lib; }).coreKinds;
   };
 in
 {

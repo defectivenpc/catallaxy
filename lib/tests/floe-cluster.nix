@@ -331,7 +331,8 @@ lib.runTests {
 
   # ---- 1. the join is a monoid -------------------------------------------
   #
-  # `lib/floe/fold.nix` can state none of these about itself: `collectChannel`
+  # `old-floe/lib/floe/fold.nix` can state none of these about itself:
+  # `collectChannel`
   # returns an unrealised `mkMerge`, so its associativity is the module
   # system's rather than its own.
 
@@ -411,9 +412,19 @@ lib.runTests {
     expected = [ "svc" ];
   };
 
+  # A record rather than a bare hostname: `cata lab verify` probes these, and
+  # a failing probe has to name the bundle that declared the route.
   testExposedHostsAreReadOffTheRoutes = {
     expr = cluster.exposedHosts;
-    expected = [ "svc.lab.test" ];
+    expected = [
+      {
+        host = "svc.lab.test";
+        namespace = "svc";
+        bundle = "svc/app";
+        tier = "public";
+        paths = [ ];
+      }
+    ];
   };
 
   # ---- 3. derived install order ------------------------------------------

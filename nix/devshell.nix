@@ -22,8 +22,9 @@ pkgs.mkShell {
     echo "  cata-dev             # run the CLI you are editing"
     echo "  cargo build          # build CLI"
     echo "  bacon                # watch + rebuild on change"
-    echo "  nix build .#docs     # build the book"
     echo "  nix run .#cata       # the released CLI, built from a clean tree"
-    echo "  nix develop .#<lab>  # a lab's tools, its CA trust, and cata"
+    echo ""
+    echo "  nix build .#staging-cluster-manifests   # the RFC-0001 cluster"
+    echo "  nix flake check                         # the gate"
   '';
 }

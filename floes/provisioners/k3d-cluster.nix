@@ -109,7 +109,24 @@ floe.mkFloe {
           k3d = {
             clusterName = inputs.instanceName;
             inherit (inputs) image;
+
+            # Which docker network the cluster joins is a lab fact — the
+            # cluster does not know what else shares it. The lab fills it in.
+            network = null;
+
+            # Traefik comes from the gateway floe, at a version this lab
+            # pins, so the one k3s bundles would be a second ingress nobody
+            # declared. The rest of k3s's batteries stay in: a floe that
+            # needs Cilium or OpenEBS turns the conflicting one off itself.
+            noTraefik = true;
+            noServiceLB = false;
+            noFlannel = false;
+            noLocalStorage = false;
+
             ports = [ ];
+            extraApiServerArgs = [ ];
+            extraVolumes = [ ];
+            autoDeployManifests = [ ];
           };
         };
       }

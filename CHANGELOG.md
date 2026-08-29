@@ -30,6 +30,36 @@ The format is based on
 
   Not part of the stable API: `lib/pure.nix` does not export it.
 
+- **A lab, and `cata` runs it.** `modules/lab/` is a NixOS module that takes
+  clusters built from composed floes and emits the two things the CLI
+  resolves: `lab.out.cliConfig` at `legacyPackages.<system>.labs."<lab>"`
+  and `lab.out.package` at `labPackages."<lab>"`. `cata lab up` stands
+  `examples/labs/minimal` on real k3d, applies the derived wave order, and
+  serves podinfo through the gateway. The CLI is unchanged.
+
+  A lab is not a floe. Floes are the inter-component interface, which the
+  module system is bad at; a lab is partial configuration merged from
+  several files, which is what it is good at. Five options — `lab.name`,
+  `lab.dns.zone`, `lab.network.{subnet,gateway}`, `lab.clusters.<n>.floes` —
+  and each exists because a field the CLI requires cannot be derived without
+  it.
+
+  The plan is three steps written out rather than derived: a planner with an
+  anchor grammar earns its place when floes contribute steps, and none does
+  yet. `lib/floe-catallaxy/render.nix` now writes `.wave-meta`,
+  `.declared-bundles`, `.deploy-config` and per-bundle `.crd-wait`, and
+  lowers `http`/`tcp`/`dns` readiness probes into the one-shot Pod form the
+  applier accepts — its enum knows six kinds and those three are not among
+  them.
+
+  `staging/` is gone: the floes are `floes/`, the lab is
+  `examples/labs/minimal/`.
+
+  Not rebuilt yet, and absent rather than half-working: host DNS, the
+  pull-through registry, the proxy, secrets, and the lab package's
+  `metadata.json`/`images.txt`, so `cata images` and `cata lab lint` do not
+  work. `lab up`, `lab plan`, `lab list` and `lab destroy` do.
+
 - **Cluster components compose, and the join is a monoid.** Every
   cluster-component floe emits one output kind, `catallaxy.component` —
   `{ bundles; backs; }`, where a bundle carries manifests, a readiness
@@ -187,6 +217,34 @@ The format is based on
   `floes.<name>.bundles.<name>`.
 
 ### Removed
+
+- **The platform is being re-architected on the RFC-0001 floe interface, and
+  everything built on the two earlier ones is parked in `old-floes/`.**
+  Three floe implementations had accumulated side by side: the original
+  option-declaring one under `lib/floe/` + `modules/`, an ML-style mixin
+  spike (`interface`/`registry`/`fold`/`wiring`), and `lib/floe-core/`. Only
+  the third is being taken forward.
+
+  Parked, not deleted: `lib/floe/`, `modules/`, `floes/` (29 shipped floes
+  and their tests), `examples/`, `templates/`, `docs/book/`, `secrets/`, and
+  the parts of `lib/`, `nix/checks/`, `pkgs/` and `.github/workflows/` that
+  exist only to evaluate or test a lab. Paths mirror where each file came
+  from and `old-floes/README.md` records what each implementation got right
+  and where it fell down.
+
+  **`labs` and `labPackages` are gone from the flake, so `cata` has nothing
+  to evaluate.** That is the expected state until `staging/` grows into the
+  contract. The CLI is untouched and its contract is unchanged.
+  `nix flake check` covers what remains: the CLI, formatting, and the three
+  checks over the new implementation.
+
+  Four things were pulled _out_ of the parked area because the new
+  implementation needs them and they are domain infrastructure rather than
+  floe interface: the generated Kubernetes and CRD schemas
+  (`modules/lab/cluster/lib/kubernetes/` -> `lib/kubernetes/`),
+  `verify-types.nix`, the gateway's route lint script, and the subset of
+  `lib/{eval,render,util}/` holding the graph algorithms, the bundle
+  renderer and the readiness-probe DSL.
 
 - **`cata new floe` is gone.** Scaffolding a floe from a template the CLI
   carried was a second copy of what `nix flake init -t` already does, and it

@@ -55,12 +55,11 @@ produce the same key and `//` is disjoint union. `empty` is a two-sided
 identity, the join is associative, and it is commutative on disjoint domains
 — all three asserted in `lib/tests/floe-cluster.nix`.
 
-That is the difference from `lib/floe/fold.nix`, which is the closest thing
-in the tree and has no production callers: `collectChannel` returns an
-unrealised `mkMerge`, so it has no join of its own, no identity to name, and
-its associativity is the module system's. The shipped tree has six different
-merge mechanisms across eleven channels, one of which silently drops a
-contested capability.
+That is the difference from the earlier typeclass spike, now parked in
+`old-floe/`: its `collectChannel` returns an unrealised `mkMerge`, so it has
+no join of its own, no identity to name, and its associativity is the module
+system's. The shipped tree has six different merge mechanisms across eleven
+channels, one of which silently drops a contested capability.
 
 ## bundles + link edges → cluster metadata
 
