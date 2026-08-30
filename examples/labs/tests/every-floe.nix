@@ -189,6 +189,11 @@
     loki = floes.loki { chart = "${cataCharts.loki.chart}"; };
     tempo = floes.tempo { chart = "${cataCharts.tempo.chart}"; };
 
+    # All three backends are in this lab, so all three pipelines exist. That
+    # is the point of the fixture: `every-floe` is where the collector's
+    # fan-in is exercised at full width.
+    otel-collector = floes.otel-collector { chart = "${cataCharts.otel-collector.chart}"; };
+
     # ---- policy ---------------------------------------------------------
     # Installs nothing; it is here so something reads its signature.
     delivery = floes.delivery { };

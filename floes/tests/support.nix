@@ -93,6 +93,37 @@ let
         };
       };
     };
+
+    logIngest = {
+      sig = sigs.LOG_INGEST;
+      value = {
+        readyToken = "stub/logs/ready";
+        pushUrl = "http://stub-loki:3100/loki/api/v1/push";
+        queryUrl = "http://stub-loki:3100";
+        otlpUrl = "http://stub-loki:3100/otlp";
+      };
+    };
+
+    traceIngest = {
+      sig = sigs.TRACE_INGEST;
+      value = {
+        readyToken = "stub/traces/ready";
+        queryUrl = "http://stub-tempo:3100";
+        otlpGrpc = "stub-tempo:4317";
+        otlpHttp = "http://stub-tempo:4318";
+      };
+    };
+
+    metricsIngest = {
+      sig = sigs.METRICS_INGEST;
+      value = {
+        readyToken = "stub/metrics/ready";
+        crdsEstablished = "stub/metrics/crds";
+        crdKinds = [ "kind:monitoring.coreos.com/ServiceMonitor" ];
+        queryUrl = "http://stub-prometheus:9090";
+        remoteWriteUrl = "http://stub-prometheus:9090/api/v1/write";
+      };
+    };
   };
 
   mkStub =
@@ -111,15 +142,21 @@ in
 {
   inherit catallaxy stubs;
 
-  # evalFloe :: { name; inputs ? { }; } -> { link; cluster; component; bundles; }
+  # evalFloe :: { name; inputs ? { }; without ? [ ]; } -> { link; cluster; ... }
   #
   # Every stub is in the link whether the floe asks for it or not: an unused
   # provider is not an error, and listing per-floe which stubs it needs would
   # be restating its `requires` in a second place that can disagree.
+  #
+  # `without` names stubs to leave out, for the one thing that arrangement
+  # cannot express: a `requiresMany` hole resolving to nothing. That is the
+  # whole behaviour of an optional dependency, and with every stub always
+  # present it is the one case never exercised.
   evalFloe =
     {
       name,
       inputs ? { },
+      without ? [ ],
     }:
     let
       def = import floeSet.cluster.${name} {
@@ -137,7 +174,9 @@ in
       # signature this floe answers is dropped rather than the check being
       # written to expect a failure.
       provided = map (p: p.name) (lib.attrValues def.provides);
-      usable = lib.filterAttrs (_: u: !(lib.elem u.def.provides.it.name provided)) stubUnits;
+      usable = lib.filterAttrs (
+        n: u: !(lib.elem u.def.provides.it.name provided) && !(lib.elem n (map (w: "stub-${w}") without))
+      ) stubUnits;
 
       link = floe.link {
         units = usable // {

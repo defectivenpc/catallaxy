@@ -21,6 +21,7 @@
     lab-dns = ./cluster/lab-dns;
     loki = ./cluster/loki;
     openebs = ./cluster/openebs;
+    otel-collector = ./cluster/otel-collector;
     podinfo = ./cluster/podinfo;
     prometheus = ./cluster/prometheus;
     redis-operator = ./cluster/redis-operator;
