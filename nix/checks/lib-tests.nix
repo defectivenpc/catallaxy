@@ -46,6 +46,7 @@ let
     util-wait = testsDir + "/util-wait.nix";
     manifest-graph = testsDir + "/manifest-graph.nix";
     manifest-autoedges = testsDir + "/manifest-autoedges.nix";
+    plan-graph = testsDir + "/plan-graph.nix";
   };
 
   # Discovered, not listed. A hand-written list beside a `readDir` only ever
