@@ -114,13 +114,22 @@ in
 
       # unit -> the qualified bundle names its requirements must follow.
       #
-      # Exactly-one holes only. A fan-in hole runs the other way: the
-      # collector is what has to exist before the collected attach to it, so
-      # ordering a gateway after its own routes would be backwards, and a
-      # cycle wherever the routes also depend on the gateway — which they
-      # always do, because that is what they attach to.
+      # Both hole kinds, because both mean the same thing about order: this
+      # unit depends on that one. An optional hole that resolved to nothing is
+      # `null` and contributes no edge, which is the only difference.
+      #
+      # This read exactly-one holes alone while `requiresMany` existed, on the
+      # theory that a fan-in always ran the other way. It did for the gateway
+      # collecting routes and for nothing else — otel-collector rendered three
+      # waves before the Prometheus it remote-writes to, because consuming a
+      # fan-in produced no edge at all.
       upstreamOf =
         unit:
+        let
+          holes =
+            (linkResult.wiring.one.${unit} or { })
+            // lib.filterAttrs (_: p: p != null) (linkResult.wiring.optional.${unit} or { });
+        in
         lib.unique (
           lib.concatLists (
             lib.mapAttrsToList (
@@ -129,7 +138,7 @@ in
                 [ ] # a floe resolving its own provide orders nothing
               else
                 backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)
-            ) (linkResult.wiring.one.${unit} or { })
+            ) holes
           )
         );
 

@@ -398,6 +398,85 @@ rec {
         ;
     };
 
+  # ---- constructors a floe ships for its consumers ------------------------
+  #
+  # `mkGeneratedSecret` and `mkRoute` are the same idea, and it is the one
+  # that replaced the fan-in: a floe that installs a capability ships the
+  # constructor for using it, and the *consumer* emits the resource into its
+  # own bundle.
+  #
+  # This is how Kubernetes already works. A registered CRD is a primitive
+  # anyone may use; making the installing floe the only party that can render
+  # one is a restriction the cluster does not have, and expressing it needed a
+  # `requiresMany` whose ordering ran backwards for every case except routes.
+  #
+  # What the installing floe keeps is the part it is uniquely able to do:
+  # knowing what a well-formed one looks like, and refusing a malformed one
+  # at construction, where the trace names the floe that asked.
+
+  # A route through the gateway. The consumer already holds the sealed
+  # `API_GATEWAY` value, so it never spells the gateway's name, its namespace
+  # or its listener — `parentRef` carries all three.
+  mkRoute =
+    {
+      gateway,
+      name,
+      namespace,
+      service,
+      port,
+      # Defaults to `<name>.<zone>`, which is what every consumer wanted and
+      # each was computing for itself.
+      hostname ? "${name}.${gateway.baseDomain}",
+      path ? "/",
+    }:
+    let
+      inZone = hostname == gateway.baseDomain || lib.hasSuffix ".${gateway.baseDomain}" hostname;
+    in
+    if !inZone then
+      # A route naming a host outside the zone attaches happily and then
+      # serves nothing: the wildcard certificate does not cover it, and no DNS
+      # in the lab answers for it. This used to be an assertion on the
+      # gateway, over the fan-in — which could only say *that* some route was
+      # wrong. Here the eval trace names the floe that wrote it.
+      throw ''
+        route '${name}' asks for hostname '${hostname}', which is outside the
+        gateway's zone '${gateway.baseDomain}'.
+
+        The gateway cannot serve it: the wildcard certificate does not cover
+        it and no DNS in the lab answers for it.
+      ''
+    else
+      {
+        apiVersion = "gateway.networking.k8s.io/v1";
+        kind = "HTTPRoute";
+        metadata = {
+          inherit name namespace;
+          labels."app.kubernetes.io/managed-by" = "catallaxy";
+        };
+        spec = {
+          parentRefs = [ gateway.parentRef ];
+          hostnames = [ hostname ];
+          rules = [
+            {
+              matches = [
+                {
+                  path = {
+                    type = "PathPrefix";
+                    value = path;
+                  };
+                }
+              ];
+              backendRefs = [
+                {
+                  name = service;
+                  inherit port;
+                }
+              ];
+            }
+          ];
+        };
+      };
+
   # A credential the floe mints for itself: an external-secrets `Password`
   # generator and the ExternalSecret that lands its output in a Secret.
   #

@@ -45,6 +45,14 @@ in
   # `parentRef` is the whole point: an HTTPRoute's attachment is a value the
   # gateway hands out, sealed to these three fields, rather than a hostname
   # and a namespace the consumer spells for itself off the gateway's options.
+  #
+  # This is the whole of the routing inversion. There was also a ROUTE_REQUEST
+  # that the gateway collected with `requiresMany`, on the theory that the floe
+  # installing a capability is the one that renders resources using it. That is
+  # not how Kubernetes works — a registered CRD is a primitive anyone may use —
+  # and it was not even how this tree worked: consumers already rendered their
+  # own HTTPRoutes from `parentRef` below. The consumer builds one with
+  # `kinds.mkRoute`, which the gateway ships.
   API_GATEWAY = floe.mkSig {
     name = "API_GATEWAY";
     fields = {
@@ -55,22 +63,6 @@ in
         namespace = T.k8sName;
         sectionName = T.str;
       };
-    };
-  };
-
-  # A workload asking to be routed. The inverse of the old
-  # `floes.gateway.internalHostnames`, which eight consumers wrote *into* the
-  # gateway — a direction `provides` does not have. The gateway collects these
-  # with `requiresMany`, so the flow matches the model and the linker checks
-  # it. RFC 0001 prescribes exactly this inversion.
-  ROUTE_REQUEST = floe.mkSig {
-    name = "ROUTE_REQUEST";
-    fields = {
-      hostname = T.dnsName;
-      tier = T.enum [
-        "public"
-        "internal"
-      ];
     };
   };
 

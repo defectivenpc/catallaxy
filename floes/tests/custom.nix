@@ -18,8 +18,43 @@ lib.runTests {
   # From the stub gateway's `baseDomain`, not spelled here. A lab that writes
   # its own zone into this floe has two places to change it.
   testTheHostnameComesFromTheGateway = {
-    expr = r.provides.route.hostname;
-    expected = "app.stub.test";
+    expr = route.spec.hostnames;
+    expected = [ "app.stub.test" ];
+  };
+
+  # `kinds.mkRoute` refuses it at construction, so the eval trace names the
+  # floe that asked rather than reporting, from the gateway, that some route
+  # somewhere is wrong. A route on a host the gateway cannot serve attaches
+  # happily and then serves nothing: the wildcard certificate does not cover
+  # it and no DNS in the lab answers for it.
+  testAHostnameOutsideTheZoneIsRefused = {
+    expr =
+      support.fails
+        (support.evalFloe {
+          name = "custom";
+          inputs = {
+            name = "app";
+            namespace = "app";
+            hostname = "app.somewhere-else.test";
+          };
+        }).bundles;
+    expected = true;
+  };
+
+  # The paired positive. Without it the refusal above could pass because the
+  # floe fails to evaluate for some unrelated reason, which is how five
+  # refusals in nix/checks/secret-sharing.nix once passed for the wrong one.
+  testAHostnameInsideTheZoneIsAccepted = {
+    expr =
+      (support.evalFloe {
+        name = "custom";
+        inputs = {
+          name = "app";
+          namespace = "app";
+          hostname = "anything.stub.test";
+        };
+      }).bundles.app.resources.route.spec.hostnames;
+    expected = [ "anything.stub.test" ];
   };
 
   # The route attaches through the sealed API_GATEWAY value, so this floe

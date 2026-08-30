@@ -1,7 +1,7 @@
 # Wraps the grafana chart. Demonstrates: inputs with and without defaults,
-# an exactly-one hole (ingress), a fan-in hole (dashboards, collected from
-# every DASHBOARD_REQ provider), providing OBSERVER, and consuming a deferred
-# value in out.k8s (which creates a deploy edge to nginx-ingress).
+# an exactly-one hole (ingress), an optional hole (dashboards, which may
+# resolve to nothing), providing OBSERVER, and consuming a deferred value in
+# out.k8s (which creates a deploy edge to nginx-ingress).
 {
   lib,
   floe,
@@ -25,7 +25,7 @@ floe.mkFloe {
   };
 
   requires.ingress = sigs.INGRESS;
-  requiresMany.dashboards = sigs.DASHBOARD_REQ;
+  requiresOptional.dashboards = sigs.DASHBOARD_REQ;
   provides.observer = sigs.OBSERVER;
   out = {
     k8s = kinds.k8s;
@@ -38,13 +38,17 @@ floe.mkFloe {
       let
         ingress = config.floe.requires.ingress;
         host = "grafana.${ingress.baseDomain}";
-        # attrset keyed by providing unit name -> sealed DASHBOARD_REQ
-        dashboardReqs = config.floe.requires.dashboards;
+        # The sealed DASHBOARD_REQ, or null when nothing provides one.
+        dashboardReq = config.floe.requires.dashboards;
       in
       {
         config.floe.provides.observer = {
           ingressUrl = "https://${host}";
-          dashboards = lib.mapAttrs (_unit: req: { url = "https://${host}/d/app-${req.app}"; }) dashboardReqs;
+          dashboards =
+            if dashboardReq == null then
+              { }
+            else
+              { ${dashboardReq.app}.url = "https://${host}/d/app-${dashboardReq.app}"; };
         };
 
         config.floe.out.k8s.helmRelease = {

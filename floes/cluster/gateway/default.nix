@@ -107,12 +107,15 @@ floe.mkFloe {
   # and `tlsEnable` decides only whether it is used.
   requires.issuance = sigs.X509_ISSUANCE;
 
-  # The replacement for `floes.gateway.internalHostnames`, which eight
-  # consumers used to write *into* this floe. They provide a ROUTE_REQUEST
-  # and this collects them, so the flow runs the same direction as every
-  # other edge and the linker checks it.
-  requiresMany.routes = sigs.ROUTE_REQUEST;
-
+  # No fan-in. `floes.gateway.internalHostnames` — which eight consumers used
+  # to write *into* this floe — was inverted correctly, but the inversion is
+  # `provides.gateway` below, not a collection.
+  #
+  # A consumer requires API_GATEWAY, gets `parentRef`, and renders its own
+  # HTTPRoute with `kinds.mkRoute`. That is how Kubernetes already works: a
+  # registered CRD is a primitive anyone may use. What this floe keeps is the
+  # part only it can do — knowing what a well-formed route looks like, and
+  # refusing an out-of-zone one at construction.
   provides.gateway = sigs.API_GATEWAY;
   out.component = kinds.component;
 
@@ -152,6 +155,21 @@ floe.mkFloe {
             name = inputs.gatewayName;
             namespace = inputs.namespace;
             labels."catallaxy.io/network-tier" = "public";
+
+            # The zone this Gateway serves, as rendered metadata.
+            #
+            # Inert to Kubernetes and load-bearing for
+            # `lint.route-hostname-in-zone`, which reads what was applied
+            # rather than what a floe was configured with. Without it the
+            # zone exists only as this floe's `baseDomain` input and the
+            # lint has nothing to compare against — it would find no zones
+            # and pass by having looked at nothing.
+            #
+            # Not `listener.hostname`, which would be the Gateway API way to
+            # say it and would have the gateway enforce it at runtime: a
+            # wildcard listener does not match the apex, and `mkRoute`
+            # deliberately allows a route on the base domain itself.
+            labels."catallaxy.io/base-domain" = inputs.baseDomain;
           };
           spec = {
             gatewayClassName = inputs.className;
@@ -205,28 +223,12 @@ floe.mkFloe {
             };
           };
 
-          assertions = [
-            # A route naming a host outside the zone attaches happily and
-            # then serves nothing: the wildcard certificate does not cover
-            # it, and no DNS in the lab answers for it. The gateway is the
-            # only party that can see both the zone and every route, which
-            # is what the fan-in is for.
-            (
-              let
-                stray = lib.filter (
-                  r: !(lib.hasSuffix ".${inputs.baseDomain}" r.hostname) && r.hostname != inputs.baseDomain
-                ) (lib.attrValues config.floe.requires.routes);
-              in
-              {
-                assertion = stray == [ ];
-                message =
-                  "these routes ask for hostnames outside this gateway's zone "
-                  + "'${inputs.baseDomain}', which it cannot serve: "
-                  + lib.concatMapStringsSep ", " (r: r.hostname) stray;
-              }
-            )
-
-          ];
+          # The out-of-zone check that used to live here, over the fan-in,
+          # is now in two places that between them cover more: `mkRoute`
+          # refuses one at construction, where the trace names the floe that
+          # asked, and `lint.route-hostname-in-zone` reads what was actually
+          # rendered, which holds for a hand-written route too.
+          assertions = [ ];
 
           # Both bundles have to be ready before a consumer's route means
           # anything: a route attached to a Gateway whose controller is not
@@ -341,6 +343,14 @@ floe.mkFloe {
                 scope = "per-cluster";
                 format = "json";
                 command = builtins.readFile ./lint/route-listener-exists.sh;
+              };
+
+              lint.route-hostname-in-zone = {
+                description = "Every route asks for a hostname some Gateway in this cluster can serve";
+                severity = "error";
+                scope = "per-cluster";
+                format = "json";
+                command = builtins.readFile ./lint/route-hostname-in-zone.sh;
               };
 
               verify.gateways-programmed = {

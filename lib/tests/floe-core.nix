@@ -69,9 +69,12 @@ lib.runTests {
     expected = "https://grafana.lab.example.com";
   };
 
-  # The fan-in hole arrives keyed by providing unit name, so grafana can
-  # name the requester without any unit having spelled the other's name.
-  testFanInIsKeyedByUnit = {
+  # An optional hole that resolved arrives as the sealed value itself, the
+  # same as an exactly-one hole — the only difference between the two is that
+  # this one may be `null`. It used to be `requiresMany` and arrive keyed by
+  # providing unit; the fan-in went because it collected in the one direction
+  # that made ordering run backwards.
+  testAResolvedOptionalHoleIsTheSealedValue = {
     expr = deployment.provides.grafana.observer.dashboards;
     expected = {
       myapp.url = "https://grafana.lab.example.com/d/app-myapp";

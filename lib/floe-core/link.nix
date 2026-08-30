@@ -70,8 +70,26 @@
         ) inst.def.requires
       ) (lib.genAttrs unitNames getInstance);
 
-      wiringMany = lib.mapAttrs (
-        u: inst: lib.mapAttrs (_hole: sig: providersOf sig.name) inst.def.requiresMany
+      # Same refusal as `wiringOne` for two providers, and `null` rather than
+      # a throw for none. The difference from `requires` is only that zero is
+      # allowed; everything else about it — sealing, ordering — is identical,
+      # which is the point.
+      wiringOptional = lib.mapAttrs (
+        u: inst:
+        lib.mapAttrs (
+          hole: sig:
+          let
+            ps = providersOf sig.name;
+          in
+          if lib.length ps > 1 then
+            throw (
+              "floe link error: signature '${sig.name}' (optionally required by "
+              + "unit '${u}' as hole '${hole}') is provided by multiple units: "
+              + "${describeProviders ps}. Remove one or split the deployment."
+            )
+          else
+            (if ps == [ ] then null else lib.head ps)
+        ) inst.def.requiresOptional
       ) (lib.genAttrs unitNames getInstance);
 
       # ---- Evaluation fixpoint ---------------------------------------------
@@ -93,9 +111,8 @@
             resolved =
               lib.mapAttrs (_hole: p: self.${p.unit}.sealedProvides.${p.instance}) wiringOne.${u}
               // lib.mapAttrs (
-                _hole: ps:
-                lib.listToAttrs (map (p: lib.nameValuePair p.unit self.${p.unit}.sealedProvides.${p.instance}) ps)
-              ) wiringMany.${u};
+                _hole: p: if p == null then null else self.${p.unit}.sealedProvides.${p.instance}
+              ) wiringOptional.${u};
           in
           rec {
             evaluated = floeLib.evalFloe {
@@ -146,14 +163,14 @@
         }) wiringOne.${u}
         ++ lib.concatLists (
           lib.mapAttrsToList (
-            hole: ps:
-            map (p: {
+            hole: p:
+            lib.optional (p != null) {
               from = u;
               to = p.unit;
               via = hole;
               kind = "eval";
-            }) ps
-          ) wiringMany.${u}
+            }
+          ) wiringOptional.${u}
         )
       ) unitNames;
 
@@ -222,17 +239,21 @@
         # which is the only thing that can key a backend's "and therefore
         # wait for these parts of B" rule.
         #
-        # The two hole kinds stay apart, because they mean opposite things
-        # about order. An exactly-one hole is A depending on B: whatever B
-        # promised has to be true before A can use it. A fan-in hole is B
-        # collecting from A, and B is the thing that has to exist first — a
-        # gateway comes up and *then* routes attach to it. A backend that
-        # treated the two alike would order a collector after everything it
-        # collects, which is a cycle wherever the collected also depend on
-        # the collector.
+        # Both kinds mean the same thing about order — A depends on B, so
+        # whatever B promised has to be true before A can use it — and a
+        # backend should treat them alike. They stay apart only because an
+        # optional hole may be `null`, which is not a unit a backend can
+        # order against.
+        #
+        # This used to say the opposite, of `requiresMany`: that a fan-in ran
+        # the other way, because the gateway comes up and *then* routes attach
+        # to it. That was true of the one fan-in there was and false in
+        # general — a collector consuming its backends has to follow them —
+        # and it cost the ordering edge for every case that was not routes.
+        # `requiresOptional` has no such ambiguity.
         wiring = {
           one = wiringOne;
-          many = wiringMany;
+          optional = wiringOptional;
         };
       };
 

@@ -64,7 +64,6 @@ floe.mkFloe {
   # `floes.gateway.internalHostnames`; providing it instead means the gateway
   # learns the same fact through an edge the linker checks, and this floe
   # still names nothing of the gateway's.
-  provides.route = sigs.ROUTE_REQUEST;
 
   out.component = kinds.component;
 
@@ -100,10 +99,6 @@ floe.mkFloe {
           };
       in
       {
-        config.floe.provides.route = {
-          hostname = host;
-          tier = "public";
-        };
 
         config.floe.out.component = kinds.mkComponent {
           # One container, and it is the one below.
@@ -216,36 +211,14 @@ floe.mkFloe {
                 };
               };
 
-              podinfo-route = {
-                apiVersion = "gateway.networking.k8s.io/v1";
-                kind = "HTTPRoute";
-                metadata = {
-                  name = "podinfo";
-                  inherit (inputs) namespace;
-                  labels."app.kubernetes.io/managed-by" = "catallaxy";
-                };
-                spec = {
-                  parentRefs = [ gateway.parentRef ];
-                  hostnames = [ host ];
-                  rules = [
-                    {
-                      matches = [
-                        {
-                          path = {
-                            type = "PathPrefix";
-                            value = "/";
-                          };
-                        }
-                      ];
-                      backendRefs = [
-                        {
-                          name = "podinfo";
-                          port = inputs.servicePort;
-                        }
-                      ];
-                    }
-                  ];
-                };
+              # The gateway's own constructor, so the shape of a route and the
+              # check that it is in-zone live with the floe that serves it.
+              podinfo-route = kinds.mkRoute {
+                inherit gateway;
+                name = "podinfo";
+                inherit (inputs) namespace;
+                service = "podinfo";
+                port = inputs.servicePort;
               };
             };
           };

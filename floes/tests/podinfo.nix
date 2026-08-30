@@ -30,14 +30,20 @@ lib.runTests {
     expected = [ "podinfo.stub.test" ];
   };
 
-  # What the gateway collects. This replaced eight consumers writing into
-  # `floes.gateway.internalHostnames`.
-  testItAsksToBeRouted = {
-    expr = r.provides.route;
-    expected = {
-      hostname = "podinfo.stub.test";
-      tier = "public";
-    };
+  # The route is the gateway's own constructor's output, not a hand-rolled
+  # HTTPRoute. That is the whole of the routing inversion now: a consumer
+  # requires API_GATEWAY and renders its own resource, and there is no
+  # ROUTE_REQUEST for the gateway to collect.
+  testTheRouteIsBuiltByTheGatewaysConstructor = {
+    expr =
+      route == support.catallaxy.kinds.mkRoute {
+        gateway = support.stubs.apiGateway.value;
+        name = "podinfo";
+        namespace = "podinfo";
+        service = "podinfo";
+        port = 80;
+      };
+    expected = true;
   };
 
   # No `needs`, no token, nothing naming the gateway. Every edge it ends up

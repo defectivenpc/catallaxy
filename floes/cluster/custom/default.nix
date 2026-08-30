@@ -122,7 +122,6 @@ floe.mkFloe {
   requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
-  provides.route = sigs.ROUTE_REQUEST;
   out.component = kinds.component;
 
   modules = [
@@ -136,10 +135,6 @@ floe.mkFloe {
         host = if inputs.hostname != null then inputs.hostname else "${inputs.name}.${gateway.baseDomain}";
       in
       {
-        config.floe.provides.route = {
-          hostname = host;
-          tier = "public";
-        };
 
         config.floe.out.component = kinds.mkComponent {
           # It cannot know. Whatever it was handed may pull images it has no
@@ -157,38 +152,16 @@ floe.mkFloe {
             inherit (inputs) yamls images ready;
 
             resources = inputs.resources // {
-              route = {
-                apiVersion = "gateway.networking.k8s.io/v1";
-                kind = "HTTPRoute";
-                metadata = {
-                  inherit (inputs) namespace;
-                  name = inputs.name;
-                  labels."app.kubernetes.io/managed-by" = "catallaxy";
-                };
-                spec = {
-                  # Out of the sealed value, so this floe never spells the
-                  # gateway's name, its namespace or its listener.
-                  parentRefs = [ gateway.parentRef ];
-                  hostnames = [ host ];
-                  rules = [
-                    {
-                      matches = [
-                        {
-                          path = {
-                            type = "PathPrefix";
-                            value = inputs.path;
-                          };
-                        }
-                      ];
-                      backendRefs = [
-                        {
-                          name = service;
-                          port = inputs.servicePort;
-                        }
-                      ];
-                    }
-                  ];
-                };
+              # The gateway's own constructor. It takes `parentRef` off the
+              # sealed value, so this floe never spells the gateway's name,
+              # its namespace or its listener — and it refuses a hostname
+              # outside the zone at construction, naming this floe.
+              route = kinds.mkRoute {
+                inherit gateway service;
+                name = inputs.name;
+                inherit (inputs) namespace path;
+                hostname = host;
+                port = inputs.servicePort;
               };
             };
           };

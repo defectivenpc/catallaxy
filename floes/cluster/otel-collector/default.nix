@@ -66,12 +66,12 @@ floe.mkFloe {
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
 
-  # Zero or more of each. See the header: this is the optional-dependency
-  # shape, and the reason no `enable` flag or endpoint option exists for any
-  # of the three.
-  requiresMany.logs = sigs.LOG_INGEST;
-  requiresMany.traces = sigs.TRACE_INGEST;
-  requiresMany.metrics = sigs.METRICS_INGEST;
+  # Zero or one of each, and the reason no `enable` flag or endpoint option
+  # exists for any of the three. An optional hole orders like an ordinary
+  # one, so the collector follows whatever backends the cluster has.
+  requiresOptional.logs = sigs.LOG_INGEST;
+  requiresOptional.traces = sigs.TRACE_INGEST;
+  requiresOptional.metrics = sigs.METRICS_INGEST;
 
   # No `provides`. The obvious one — TRACE_INGEST, so another floe can send
   # here rather than to tempo — is wrong twice over. `providersOf` includes the
@@ -89,12 +89,10 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        # Fan-in results land in `floe.requires` alongside the exactly-one
-        # holes — the difference is the shape: a `requiresMany` hole resolves
-        # to an attrset keyed by the *provider's unit name*, where an exactly-one
-        # hole resolves to the sealed value itself. `gateway` reads its
-        # ROUTE_REQUESTs the same way.
-        backends = hole: lib.attrValues (config.floe.requires.${hole} or { });
+        # Optional holes land in `floe.requires` alongside the exactly-one
+        # ones, resolved to the sealed value or to `null`.
+        backends =
+          hole: lib.optional (config.floe.requires.${hole} or null != null) config.floe.requires.${hole};
 
         release = "otel-collector";
 

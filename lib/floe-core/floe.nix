@@ -1,4 +1,4 @@
-# mkFloe: a unit with declared surfaces (inputs, requires, requiresMany,
+# mkFloe: a unit with declared surfaces (inputs, requires, requiresOptional,
 # provides, out) and a body of ordinary NixOS-style modules.
 #
 # Surfaces by writer:
@@ -25,7 +25,23 @@ rec {
       name,
       inputs ? { },
       requires ? { },
-      requiresMany ? { },
+
+      # Zero-or-one. Resolves to `null` when nothing provides the signature,
+      # refuses two providers exactly as `requires` does, and orders the same
+      # way — the consumer follows whatever satisfied it.
+      #
+      # This replaced `requiresMany`, a fan-in that collected every provider.
+      # Two things were wrong with that. It carried no ordering: the elaborator
+      # derived edges from exactly-one holes only, on the theory that a fan-in
+      # always runs the other way — true for the gateway collecting routes,
+      # false for a collector consuming its backends, which rendered three
+      # waves before the Prometheus it wrote to. And the collection model
+      # itself said only the floe installing a capability may render resources
+      # using it, which is not how Kubernetes works: a registered CRD is a
+      # primitive anyone may use. A floe now ships a constructor
+      # (`kinds.mkRoute`, `kinds.mkGeneratedSecret`) and the consumer emits
+      # the resource into its own bundle.
+      requiresOptional ? { },
       provides ? { },
       out ? { },
       modules ? [ ],
@@ -67,7 +83,7 @@ rec {
           name
           inputs
           requires
-          requiresMany
+          requiresOptional
           provides
           out
           modules

@@ -1,7 +1,7 @@
 # Consumes OBSERVER without knowing it is grafana, and provides its own
-# DASHBOARD_REQ (which grafana collects via requiresMany). Note the mutual
-# reference: myapp requires OBSERVER from grafana while grafana's fan-in hole
-# collects myapp's DASHBOARD_REQ. Laziness resolves it because neither
+# DASHBOARD_REQ (which grafana optionally requires). Note the mutual
+# reference: myapp requires OBSERVER from grafana while grafana's optional
+# hole resolves to myapp's DASHBOARD_REQ. Laziness resolves it because neither
 # provide's fields depend on the other unit's provides.
 {
   floe,
