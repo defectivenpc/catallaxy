@@ -279,7 +279,7 @@ floe.mkFloe {
                 timeout = "5m";
               };
 
-              ops.gateway.listeners = {
+              ops.gateway.listeners = kinds.mkOpsCommand {
                 description = "Show every listener the Gateway declares and its programmed status";
                 command = [
                   "kubectl"

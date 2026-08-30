@@ -25,12 +25,49 @@ let
     digest = T.nullOr T.str;
   };
 
-  # RFC 0002 §6's shape, not `modules/lab/ops/types.nix`'s. The shipped type
-  # carries `package = types.package`, a derivation, which cannot live in a
-  # kind schema. Lowering a command to a wrapper script is the backend's job.
+  # A flag the generated CLI parses, as `--<name> <value>` or, for a bool,
+  # `--<name>`. `values` is meaningful only for `enum` and is checked at
+  # dispatch, so a wrong `--cluster` fails before the command runs rather than
+  # by whatever the underlying tool makes of an unknown context.
+  opsOptionSchema = T.record {
+    type = T.enum [
+      "str"
+      "bool"
+      "enum"
+    ];
+    values = T.listOf T.str;
+    required = T.bool;
+    default = T.nullOr T.str;
+    description = T.str;
+  };
+
+  # A positional. `variadic` is last-only and takes the rest, which is what
+  # `velero backup create` wants for its passthrough flags.
+  opsArgSchema = T.record {
+    name = T.str;
+    description = T.str;
+    required = T.bool;
+    variadic = T.bool;
+  };
+
+  # RFC 0002 §6's shape. `modules/lab/ops/types.nix` carries
+  # `package = types.package`, a derivation, which cannot live in a kind
+  # schema — the linker's scan walks every output and `nix eval --json` has to
+  # serialise it. So `package` is a store path *string*, the same
+  # `"${drv}/bin/x"` trick `helmChartSchema.chart` already uses: it keeps the
+  # string context, so the tool that interpolates it still gets a real
+  # dependency.
+  #
+  # `command` and `package` are the two ways to say what runs, and exactly one
+  # must be set. `command` is a fixed argv for the commands that are one line;
+  # `package` is for the ones that need a script, which is most of them once
+  # options and args are in play.
   opsCommandSchema = T.record {
     description = T.str;
     command = T.listOf T.str;
+    package = T.nullOr T.str;
+    options = T.attrsOf opsOptionSchema;
+    args = T.listOf opsArgSchema;
   };
 
   lintCheckSchema = T.record {
@@ -304,6 +341,60 @@ rec {
         ops
         lint
         verify
+        ;
+    };
+
+  # An ops command. `command` and `package` are the two ways to say what runs
+  # and exactly one must be set; the elaborator refuses a command with neither,
+  # because the generated tool would match the branch and `exec` nothing.
+  mkOpsCommand =
+    {
+      description,
+      command ? [ ],
+      package ? null,
+      options ? { },
+      args ? [ ],
+    }:
+    {
+      inherit description command package;
+      options = lib.mapAttrs (_: mkOpsOption) options;
+      args = map mkOpsArg args;
+    };
+
+  # `values` is meaningful only for `enum`, and `default` only for `str` —
+  # a bool's absence is its default and an enum with one would be a choice
+  # nobody made.
+  mkOpsOption =
+    {
+      type ? "str",
+      values ? [ ],
+      required ? false,
+      default ? null,
+      description ? "",
+    }:
+    {
+      inherit
+        type
+        values
+        required
+        default
+        description
+        ;
+    };
+
+  mkOpsArg =
+    {
+      name,
+      description ? "",
+      required ? true,
+      variadic ? false,
+    }:
+    {
+      inherit
+        name
+        description
+        required
+        variadic
         ;
     };
 

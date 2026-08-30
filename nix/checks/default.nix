@@ -23,6 +23,7 @@
 // import ./lab-manifests.nix { inherit lib pkgs labDefs; }
 // import ./self-contained.nix { inherit lib pkgs e2eLabs; }
 // import ./step-kinds.nix { inherit lib pkgs; }
+// import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
   inherit
     lib

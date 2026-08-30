@@ -5,12 +5,21 @@
 # `floes.seaweedfs.exports.s3Endpoint` with a hardcoded fallback beside it,
 # which is a default that silently works until the day the store moves.
 #
-# No `ops` in this round. Velero's seven commands each need the `velero`
-# binary on PATH and take user arguments, which the current
-# `opsCommandSchema` — `{ description, command }` — cannot carry. They come
-# back with the widened schema, alongside the planner.
+# The seven `ops` commands are wrappers around the `velero` binary, which is
+# why each is a `package` rather than a fixed argv: they take user arguments
+# and need `velero` on PATH.
+#
+# The parked floe gave every one a required `--cluster` enum with exactly one
+# value — `config.cluster.name` — that the script then ignored, baking the
+# kubecontext in at build time regardless. That is not carried forward. The
+# context this floe backs up is the one it `requires`, and it knows it; and
+# the case the flag was standing in for — two clusters in a lab both running
+# velero — is caught by `opsCollisions` in `modules/lab/out.nix`, which names
+# both clusters rather than making every invocation carry a flag with one
+# legal value.
 {
   lib,
+  pkgs,
   floe,
   sigs,
   kinds,
@@ -94,8 +103,29 @@ floe.mkFloe {
       let
         inputs = config.floe.inputs;
         store = config.floe.requires.store;
+        cluster = config.floe.requires.cluster;
 
         credentialsSecret = "velero-credentials";
+
+        # `--kubecontext` on every invocation rather than relying on whatever
+        # the caller's current context happens to be: `cata lab ops` is run
+        # from a shell that may be pointed anywhere, and a backup taken
+        # against the wrong cluster is worse than one that fails.
+        velero =
+          name: text:
+          "${
+            pkgs.writeShellApplication {
+              name = "velero-${name}";
+              runtimeInputs = [
+                pkgs.kubectl
+                pkgs.velero
+              ];
+              text = ''
+                KUBE_CONTEXT=${lib.escapeShellArg cluster.context}
+                ${text}
+              '';
+            }
+          }/bin/velero-${name}";
 
         # Velero's AWS plugin reads an credentials *file*, not two keys, so a
         # Secret holding an access key pair cannot be handed to it as-is.
@@ -277,6 +307,96 @@ floe.mkFloe {
               namespace = inputs.namespace;
               condition = "Available";
               timeout = "5m";
+            };
+
+            ops.backup = {
+              create = kinds.mkOpsCommand {
+                description = "Create a backup";
+                args = [
+                  {
+                    name = "name";
+                    description = "Backup name. Timestamped if omitted.";
+                    required = false;
+                  }
+                ];
+                package = velero "create" ''
+                  # kube-system holds the cluster's own control plane and
+                  # velero's namespace holds the backup records themselves;
+                  # restoring either over a live cluster is how a restore
+                  # takes down the thing it was meant to rescue.
+                  velero backup create "''${1:-$(date +%Y%m%d-%H%M%S)}" \
+                    --kubecontext "$KUBE_CONTEXT" \
+                    --exclude-namespaces kube-system,${inputs.namespace} \
+                    --include-cluster-resources=true \
+                    --wait
+                '';
+              };
+
+              list = kinds.mkOpsCommand {
+                description = "List backups";
+                package = velero "list" ''
+                  velero backup get --kubecontext "$KUBE_CONTEXT"
+                '';
+              };
+
+              describe = kinds.mkOpsCommand {
+                description = "Describe a backup";
+                args = [
+                  {
+                    name = "name";
+                    description = "Backup name";
+                  }
+                ];
+                package = velero "describe" ''
+                  velero backup describe "$1" --kubecontext "$KUBE_CONTEXT" --details
+                '';
+              };
+
+              delete = kinds.mkOpsCommand {
+                description = "Delete a backup";
+                args = [
+                  {
+                    name = "name";
+                    description = "Backup name";
+                  }
+                ];
+                package = velero "delete" ''
+                  velero backup delete "$1" --kubecontext "$KUBE_CONTEXT" --confirm
+                '';
+              };
+
+              restore = kinds.mkOpsCommand {
+                description = "Restore from a backup";
+                args = [
+                  {
+                    name = "backup";
+                    description = "Backup to restore from";
+                  }
+                ];
+                package = velero "restore" ''
+                  velero restore create --from-backup "$1" --kubecontext "$KUBE_CONTEXT" --wait
+                '';
+              };
+
+              schedules = kinds.mkOpsCommand {
+                description = "List backup schedules";
+                package = velero "schedules" ''
+                  velero schedule get --kubecontext "$KUBE_CONTEXT"
+                '';
+              };
+
+              trigger = kinds.mkOpsCommand {
+                description = "Run a schedule now";
+                args = [
+                  {
+                    name = "schedule";
+                    description = "Schedule to trigger";
+                  }
+                ];
+                package = velero "trigger" ''
+                  velero backup create --from-schedule "$1" --kubecontext "$KUBE_CONTEXT"
+                '';
+              };
             };
           };
         };

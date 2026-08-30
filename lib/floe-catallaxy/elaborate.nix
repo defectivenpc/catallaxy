@@ -283,12 +283,46 @@ in
       # `<lab>-ops <category> <name>`, so the category has to survive the lift
       # and the qualifier goes on the name. A slash would not survive an
       # argv position, so it becomes a dash.
+      # `command` and `package` are the two ways to say what runs, and a
+      # command with neither is dispatchable but unrunnable: the generated
+      # tool would match the branch and `exec` nothing. Checked here rather
+      # than in the renderer because every cluster elaborates and only a lab
+      # with ops renders, so a floe with a malformed command would otherwise
+      # go unnoticed until something happened to use it.
+      checkRunnable =
+        bundle: category: n: v:
+        let
+          hasCommand = v.command != [ ];
+          hasPackage = v.package != null;
+        in
+        if hasCommand && hasPackage then
+          throw "ops command '${category} ${n}' on bundle '${bundle}' sets both `command` and `package`; set one"
+        else if !hasCommand && !hasPackage then
+          throw "ops command '${category} ${n}' on bundle '${bundle}' sets neither `command` nor `package`, so there is nothing to run"
+        else
+          v;
+
+      # `<unit>/<bundle>` with a dash for the slash, which an argv position
+      # would not carry. A floe whose only bundle is named after itself —
+      # velero, and most single-bundle floes — would otherwise reach the
+      # operator as `velero-velero-create`, and this is the one surface where
+      # the name is something a person types.
+      opsPrefix =
+        name:
+        let
+          parts = lib.splitString "/" name;
+        in
+        if lib.length parts == 2 && lib.head parts == lib.last parts then
+          lib.head parts
+        else
+          lib.replaceStrings [ "/" ] [ "-" ] name;
+
       ops = lib.zipAttrsWith (_category: perBundle: lib.foldl' lib.mergeAttrs { } perBundle) (
         lib.mapAttrsToList (
           name: b:
           lib.mapAttrs (
-            _category:
-            lib.mapAttrs' (n: v: lib.nameValuePair "${lib.replaceStrings [ "/" ] [ "-" ] name}-${n}" v)
+            category:
+            lib.mapAttrs' (n: v: lib.nameValuePair "${opsPrefix name}-${n}" (checkRunnable name category n v))
           ) b.ops
         ) bundles
       );

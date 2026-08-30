@@ -20,6 +20,7 @@ let
 
   inherit (kinds)
     mkBundle
+    mkOpsCommand
     mkComponent
     mkHelmChart
     empty
@@ -126,7 +127,7 @@ let
                 namespace = "kube-system";
                 condition = "Available";
               };
-              ops.gateway.listeners = {
+              ops.gateway.listeners = mkOpsCommand {
                 description = "Show the listeners";
                 command = [ "kubectl" ];
               };
@@ -482,6 +483,41 @@ lib.runTests {
     expr = lib.mapAttrs (_: lib.attrNames) cluster.ops;
     expected.gateway = [ "gateway-controller-listeners" ];
   };
+
+  # `<unit>-<bundle>` collapses to one when they are the same word, which is
+  # the shape of every single-bundle floe. Without it velero's commands reach
+  # the operator as `velero-velero-create`, and this is the one surface where
+  # the name is something a person types rather than something a tool reads.
+  testOpsDoNotRepeatAUnitNamedAfterItsOnlyBundle =
+    let
+      solo = floe.mkFloe {
+        name = "velero";
+        out.component = kinds.component;
+        modules = [
+          {
+            config.floe.out.component = mkComponent {
+              bundles.velero = mkBundle {
+                resources = { };
+                ops.backup.create = mkOpsCommand {
+                  description = "Create a backup";
+                  command = [ "velero" ];
+                };
+              };
+            };
+          }
+        ];
+      };
+      # No policies: `oneCluster` would want a cluster floe, and this is
+      # about the name the join produces, not about a well-formed cluster.
+      linked = floe.link {
+        units.velero = solo.instantiate { };
+        policies = [ ];
+      };
+    in
+    {
+      expr = lib.attrNames (elaborate.elaborateCluster { linkResult = linked; }).ops.backup;
+      expected = [ "velero-create" ];
+    };
 
   testLintAndVerifyAreLiftedAndQualified = {
     expr = {
