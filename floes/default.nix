@@ -13,6 +13,7 @@
     cnpg = ./cluster/cnpg;
     custom = ./cluster/custom;
     delivery = ./cluster/delivery;
+    external-dns = ./cluster/external-dns;
     external-secrets = ./cluster/external-secrets;
     gateway = ./cluster/gateway;
     gateway-api-crds = ./cluster/gateway-api-crds;

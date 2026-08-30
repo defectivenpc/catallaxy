@@ -48,6 +48,24 @@
     keys.token.from = "token";
   };
 
+  # external-dns authenticates to the RFC2136 server with a TSIG key it does
+  # not create either. Same shape as the vault token, and the reason the floe
+  # takes a reference rather than the value: a key in a Helm value renders
+  # into the Deployment's argv.
+  lab.secrets.managed.externaldns-tsig = {
+    store = "authored";
+    keys.tsig-secret = {
+      generator = "base64";
+      length = 32;
+    };
+  };
+
+  lab.clusters.core.secrets.project.externaldns-tsig = {
+    source = "externaldns-tsig";
+    namespace = "external-dns";
+    keys.tsig-secret.from = "tsig-secret";
+  };
+
   lab.clusters.core.floes = {
     cluster = floes.k3d-cluster {
       name = "core";
@@ -62,6 +80,16 @@
     lab-dns = floes.lab-dns {
       inherit (config.lab.dns) zone;
       server = config.lab.network.gateway;
+    };
+    # Records for what the gateway routes. `defaultTargets` because a k3d
+    # Service reports a cluster-internal LoadBalancer address that nothing
+    # outside the cluster can reach.
+    external-dns = floes.external-dns {
+      chart = "${cataCharts.external-dns.chart}";
+      inherit (config.lab.dns) zone;
+      dnsServer = config.lab.network.gateway;
+      tsigSecretRef = "external-dns/externaldns-tsig";
+      defaultTargets = [ config.lab.network.gateway ];
     };
     gateway-api = floes.gateway-api-crds {
       manifest = "${k8sSpecs.standaloneCrds.gateway-api}";

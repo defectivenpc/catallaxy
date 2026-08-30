@@ -24,6 +24,30 @@ let
 
   clusters = config.lab.clusters;
 
+  # A floe step arrives as plain data. The component schema carries `steps` as
+  # `T.attrsOf T.any`, because a kind schema cannot hold a module type — so a
+  # floe writes the two or three fields it cares about and nothing fills the
+  # rest in.
+  #
+  # Running it through the same submodule the lab's own steps use is what
+  # supplies the defaults, and it type-checks the floe's step as a side
+  # effect, which is the one thing the free-form schema gave up. Merging
+  # against a hand-written defaults attrset would do neither, and would be a
+  # second place for the step's shape to be written down.
+  normalise =
+    origin: raw:
+    (lib.evalModules {
+      modules = [
+        {
+          options.step = mkOption { type = stepTypes.declaredStepType; };
+        }
+        {
+          step = raw;
+          _file = origin;
+        }
+      ];
+    }).config.step;
+
   # A floe's steps, stamped with the floe that declared them and the cluster
   # they act on. A lab names units, so the *unit* is what an error should
   # name — that is what the deployer can find.
@@ -33,13 +57,19 @@ let
       lib.concatLists (
         lib.mapAttrsToList (
           unit: steps:
-          lib.mapAttrsToList (stepName: step: {
-            name = "${clusterName}-${stepName}";
-            value = step // {
-              cluster = clusterName;
+          lib.mapAttrsToList (
+            stepName: step:
+            let
               origin = "floe '${unit}' on cluster '${clusterName}'";
-            };
-          }) steps
+            in
+            {
+              name = "${clusterName}-${stepName}";
+              value = (normalise origin step) // {
+                cluster = clusterName;
+                inherit origin;
+              };
+            }
+          ) steps
         ) (cluster.out.steps or { })
       )
     ) clusters
