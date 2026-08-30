@@ -150,6 +150,14 @@
     openebs = floes.openebs { chart = "${cataCharts.openebs.chart}"; };
     seaweedfs = floes.seaweedfs { chart = "${cataCharts.seaweedfs.chart}"; };
     zot = floes.zot { chart = "${cataCharts.zot.chart}"; };
+    velero = floes.velero {
+      chart = "${cataCharts.velero.chart}";
+      crds = "${cataCharts.velero.crds}";
+      schedules.daily = {
+        schedule = "0 2 * * *";
+        ttl = "168h";
+      };
+    };
     loki = floes.loki { chart = "${cataCharts.loki.chart}"; };
     tempo = floes.tempo { chart = "${cataCharts.tempo.chart}"; };
 

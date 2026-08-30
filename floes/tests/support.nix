@@ -57,6 +57,16 @@ let
       };
     };
 
+    objectStore = {
+      sig = sigs.OBJECT_STORE;
+      value = {
+        namespace = "stub-store";
+        readyToken = "stub/store/ready";
+        s3Endpoint = "http://stub-s3.stub-store.svc.cluster.local:8333";
+        credentials = null;
+      };
+    };
+
     generation = {
       sig = sigs.SECRET_GENERATION;
       value = {

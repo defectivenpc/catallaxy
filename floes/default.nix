@@ -28,6 +28,7 @@
     secret-store = ./cluster/secret-store;
     tempo = ./cluster/tempo;
     trust-manager = ./cluster/trust-manager;
+    velero = ./cluster/velero;
     zot = ./cluster/zot;
   };
 

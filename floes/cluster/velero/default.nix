@@ -1,0 +1,286 @@
+# Velero: backups of the cluster, into an object store.
+#
+# Rebuilt against RFC 0001. It takes its bucket endpoint from `OBJECT_STORE`
+# rather than from a hostname written twice — the parked floe read
+# `floes.seaweedfs.exports.s3Endpoint` with a hardcoded fallback beside it,
+# which is a default that silently works until the day the store moves.
+#
+# No `ops` in this round. Velero's seven commands each need the `velero`
+# binary on PATH and take user arguments, which the current
+# `opsCommandSchema` — `{ description, command }` — cannot carry. They come
+# back with the widened schema, alongside the planner.
+{
+  lib,
+  floe,
+  sigs,
+  kinds,
+  ...
+}:
+
+floe.mkFloe {
+  name = "velero";
+
+  inputs = {
+    chart = lib.mkOption {
+      type = lib.types.str;
+      description = "Store path of the Velero Helm chart. Required.";
+    };
+
+    crds = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Store path of the CRD manifest extracted from the chart. Required.
+
+        Their own bundle, because the chart's `installCRDs` runs them through
+        a hook that re-applies on every upgrade, and because a consumer
+        emitting a `Backup` needs the kind to exist without waiting for the
+        controller.
+      '';
+    };
+
+    namespace = lib.mkOption {
+      type = lib.types.str;
+      default = "velero";
+      description = "Namespace the controller runs in.";
+    };
+
+    bucket = lib.mkOption {
+      type = lib.types.str;
+      default = "velero";
+      description = "Bucket backups are written to. It must already exist.";
+    };
+
+    region = lib.mkOption {
+      type = lib.types.str;
+      default = "us-east-1";
+      description = ''
+        Region the S3 client claims.
+
+        Meaningless to a self-hosted store and required by the client anyway:
+        the AWS SDK refuses to sign a request without one.
+      '';
+    };
+
+    schedules = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            schedule = lib.mkOption {
+              type = lib.types.str;
+              description = "Cron expression.";
+            };
+            ttl = lib.mkOption {
+              type = lib.types.str;
+              default = "168h";
+              description = "How long a backup from this schedule is kept.";
+            };
+          };
+        }
+      );
+      default = { };
+      example = lib.literalExpression ''{ daily = { schedule = "0 2 * * *"; ttl = "168h"; }; }'';
+      description = "Recurring backups, as Velero `Schedule` resources.";
+    };
+  };
+
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
+  requires.store = sigs.OBJECT_STORE;
+
+  out.component = kinds.component;
+
+  modules = [
+    (
+      { config, ... }:
+      let
+        inputs = config.floe.inputs;
+        store = config.floe.requires.store;
+
+        credentialsSecret = "velero-credentials";
+
+        # Velero's AWS plugin reads an credentials *file*, not two keys, so a
+        # Secret holding an access key pair cannot be handed to it as-is.
+        # Converting one would mean rendering the values into a manifest,
+        # which is the thing that must not happen.
+        storeIsOpen = store.credentials == null;
+      in
+      {
+        config.floe.out.component = kinds.mkComponent {
+          imagesComplete = true;
+
+          assertions = [
+            {
+              assertion = storeIsOpen;
+              message =
+                "the object store at '${store.s3Endpoint}' requires credentials, and velero's "
+                + "AWS plugin reads them from a credentials *file* rather than from the two keys "
+                + "the store publishes. Building that file means rendering the values into a "
+                + "manifest, which puts them in the digest and in the Nix store. It needs a "
+                + "projection or a generated Secret shaped like the file, which is not built yet.";
+            }
+          ];
+
+          network = {
+            declared = true;
+            # It dials the store, and on a restore it writes to every
+            # namespace — which is not a set that can be named here.
+            reaches = [ ];
+          };
+
+          bundles.crds = kinds.mkBundle {
+            yamls = [ inputs.crds ];
+            crds = map (k: "velero.io/${k}") [
+              "Backup"
+              "BackupRepository"
+              "BackupStorageLocation"
+              "DeleteBackupRequest"
+              "DownloadRequest"
+              "PodVolumeBackup"
+              "PodVolumeRestore"
+              "Restore"
+              "Schedule"
+              "ServerStatusRequest"
+              "VolumeSnapshotLocation"
+            ];
+            awaitRollout = false;
+          };
+
+          bundles.velero = kinds.mkBundle {
+            needs = [ "crds" ];
+            createNamespaces = [ inputs.namespace ];
+
+            resources = {
+              # Not a secret. The store this points at takes anything — that
+              # is what `credentials = null` on OBJECT_STORE says — and the
+              # AWS SDK refuses to sign a request without *some* key pair, so
+              # these are the placeholders that let it sign one. The
+              # assertion above is what keeps that true.
+              credentials = {
+                apiVersion = "v1";
+                kind = "Secret";
+                metadata = {
+                  name = credentialsSecret;
+                  inherit (inputs) namespace;
+                  labels."app.kubernetes.io/managed-by" = "catallaxy";
+                };
+                type = "Opaque";
+                stringData.cloud = ''
+                  [default]
+                  aws_access_key_id = unauthenticated
+                  aws_secret_access_key = unauthenticated
+                '';
+              };
+            }
+            // lib.mapAttrs' (
+              name: s:
+              lib.nameValuePair "schedule-${name}" {
+                apiVersion = "velero.io/v1";
+                kind = "Schedule";
+                metadata = {
+                  name = name;
+                  inherit (inputs) namespace;
+                };
+                spec = {
+                  inherit (s) schedule;
+                  template = {
+                    inherit (s) ttl;
+                    # kube-system holds the cluster's own control plane, and
+                    # velero's namespace holds the thing taking the backup.
+                    excludedNamespaces = [
+                      "kube-system"
+                      inputs.namespace
+                    ];
+                    includeClusterResources = true;
+                  };
+                };
+              }
+            ) inputs.schedules;
+
+            helmCharts.velero = kinds.mkHelmChart {
+              inherit (inputs) chart namespace;
+              releaseName = "velero";
+              values = {
+                # Installed by the bundle above, which owns them.
+                installCRDs = false;
+                upgradeCRDs = false;
+
+                credentials = {
+                  useSecret = true;
+                  existingSecret = credentialsSecret;
+                };
+
+                configuration.backupStorageLocation = [
+                  {
+                    name = "default";
+                    provider = "aws";
+                    inherit (inputs) bucket;
+                    config = {
+                      inherit (inputs) region;
+
+                      # Straight off the signature. The parked floe read this
+                      # from a sibling floe's exports with a hardcoded
+                      # fallback beside it.
+                      s3Url = store.s3Endpoint;
+
+                      # A self-hosted store has no per-bucket DNS, so the
+                      # bucket has to be a path segment rather than a
+                      # subdomain.
+                      s3ForcePathStyle = "true";
+                    };
+                    credential = {
+                      name = credentialsSecret;
+                      key = "cloud";
+                    };
+                  }
+                ];
+
+                # The AWS plugin arrives as an init container that copies
+                # itself into a shared volume; velero loads plugins from
+                # there at startup.
+                initContainers = [
+                  {
+                    name = "velero-plugin-for-aws";
+                    image = "velero/velero-plugin-for-aws:v1.12.0";
+                    imagePullPolicy = "IfNotPresent";
+                    volumeMounts = [
+                      {
+                        mountPath = "/target";
+                        name = "plugins";
+                      }
+                    ];
+                  }
+                ];
+
+                # Snapshots need a CSI driver that supports them, and a
+                # filesystem backup needs a node agent on every node. Both are
+                # decisions a lab makes, not defaults it inherits.
+                snapshotsEnabled = false;
+                deployNodeAgent = false;
+              };
+            };
+
+            images.velero = {
+              registry = "docker.io";
+              repository = "velero/velero";
+              tag = "v1.16.0";
+              digest = null;
+            };
+            images.awsPlugin = {
+              registry = "docker.io";
+              repository = "velero/velero-plugin-for-aws";
+              tag = "v1.12.0";
+              digest = null;
+            };
+
+            ready = {
+              kind = "condition";
+              resource = "deployment/velero";
+              namespace = inputs.namespace;
+              condition = "Available";
+              timeout = "5m";
+            };
+          };
+        };
+      }
+    )
+  ];
+}
