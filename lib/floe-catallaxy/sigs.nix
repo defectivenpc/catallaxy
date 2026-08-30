@@ -292,6 +292,32 @@ in
     };
   };
 
+  # A registry inside the cluster that can hold images.
+  #
+  # `pullRef` is the field that matters and the one a consumer gets wrong: an
+  # image reference needs `host:port` with no scheme, which is a different
+  # string from the URL something dials over HTTP. Carrying both means a
+  # consumer never has to strip one to make the other.
+  OCI_REGISTRY = floe.mkSig {
+    name = "OCI_REGISTRY";
+    fields = {
+      readyToken = T.str;
+      namespace = T.k8sName;
+      url = T.str;
+      pullRef = T.str;
+
+      # Null when the registry takes anything. A consumer pushing to one that
+      # does not has to know before it tries, and finding out from a 401 in a
+      # Job's logs is finding out too late.
+      credentials = T.nullOr (
+        T.record {
+          name = T.k8sName;
+          namespace = T.k8sName;
+        }
+      );
+    };
+  };
+
   # Somewhere to send metrics, and the kinds needed to ask for them.
   #
   # `crdsEstablished` is separate from `readyToken` because they gate different

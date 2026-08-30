@@ -96,6 +96,7 @@
     };
     openebs = floes.openebs { chart = "${cataCharts.openebs.chart}"; };
     seaweedfs = floes.seaweedfs { chart = "${cataCharts.seaweedfs.chart}"; };
+    zot = floes.zot { chart = "${cataCharts.zot.chart}"; };
     loki = floes.loki { chart = "${cataCharts.loki.chart}"; };
     tempo = floes.tempo { chart = "${cataCharts.tempo.chart}"; };
 

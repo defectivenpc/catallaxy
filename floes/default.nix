@@ -27,6 +27,7 @@
     secret-store = ./cluster/secret-store;
     tempo = ./cluster/tempo;
     trust-manager = ./cluster/trust-manager;
+    zot = ./cluster/zot;
   };
 
   provisioners = {
