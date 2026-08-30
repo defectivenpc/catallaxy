@@ -30,6 +30,61 @@ The format is based on
 
   Not part of the stable API: `lib/pure.nix` does not export it.
 
+- **Twelve more floes, and a lab that serves HTTPS from a CA it mints.** The
+  first migration round off the parked set: `cert-manager`, `trust-manager`,
+  `cnpg`, `delivery`, `kaniop`, `reloader`, `seaweedfs`, `openebs`, `loki`,
+  `tempo`, `external-secrets`, `redis-operator` — 3,650 old lines in about
+  1,400, keeping what the example labs exercise and naming what was dropped.
+
+  **The cert-manager/trust-manager cycle is gone.** In the parked tree
+  cert-manager read trust-manager's export while trust-manager waited on
+  cert-manager's webhook — a loop at floe granularity, survivable only
+  because the edges sat on different bundles. cert-manager is now two
+  provides (`X509_WEBHOOK`, `X509_ISSUANCE`) and the second edge is
+  reversed: trust-manager asks cert-manager for the CA Secret and
+  distributes it, rather than cert-manager asking to be distributed. That is
+  the truer arrangement and it is a DAG at any granularity.
+
+  Fifteen signatures replace the by-name reads.
+  `contracts.tls.defaultIssuer` — which hard-coded
+  `config.floes.cert-manager` and gave nine floes a by-name dependency
+  through a file calling itself a contract — is gone; the gateway asks for
+  `X509_ISSUANCE` and gets an `issuerRef`.
+
+  **The gateway collects routes instead of being written into.** Eight floes
+  used to write `floes.gateway.internalHostnames`. A consumer now provides a
+  `ROUTE_REQUEST` and the gateway declares `requiresMany.routes`, which
+  gives it something no consumer could check: that a route's hostname is
+  inside the zone it can actually serve.
+
+  `reloader.mkPatches` — the one export in the catalogue that was a
+  _function_, which a signature cannot carry — is `lib/k8s-annotations.nix`,
+  built from the two annotation keys that do travel.
+
+  The component grew `network`, `imagesComplete`, `assertions`, `warnings`
+  and `drift`. `overrides` and `infra.resources` did not: the parked
+  framework declared both and no floe ever wrote either.
+
+  `examples/labs/tests/every-floe.nix` returns, renders all fifteen floes,
+  and asserts it renders every floe the set ships — a floe no lab renders is
+  a floe whose declarations nothing checks. `minimal.tls` is a second
+  environment of the minimal lab that terminates HTTPS;
+  `curl --cacert <lab CA> https://podinfo.minimal.test/` answers through the
+  gateway. `minimal.local` stays plain HTTP so the untrusted path is still
+  covered. Every floe also ships an isolation check at
+  `floes/tests/<name>.nix`, discovered rather than listed.
+
+### Fixed
+
+- **A fan-in hole no longer orders its collector last.** `link` returned
+  `wiring` with exactly-one and fan-in holes flattened together, and the
+  elaborator derived install order from both — so a gateway was ordered
+  after the routes that attach to it, which is a cycle wherever the routes
+  also depend on the gateway. They always do. The two kinds stay apart now,
+  and only exactly-one holes carry ordering.
+
+### Added
+
 - **A lab, and `cata` runs it.** `modules/lab/` is a NixOS module that takes
   clusters built from composed floes and emits the two things the CLI
   resolves: `lab.out.cliConfig` at `legacyPackages.<system>.labs."<lab>"`

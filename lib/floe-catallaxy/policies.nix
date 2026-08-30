@@ -29,22 +29,28 @@ in
         + "Assembling several is a lab, which is not built yet."
       );
 
-  # A unit that installs into the cluster has to have said so. The eval edge
-  # exists because it resolved KUBERNETES_CLUSTER; a unit emitting a component
+  # A unit that *installs* into the cluster has to have said so. The eval edge
+  # exists because it resolved KUBERNETES_CLUSTER; a unit rendering bundles
   # with no such edge is reading cluster facts from somewhere it should not,
   # or is about to render something that lands wherever kubectl points.
+  #
+  # Bundles, not components: a floe can emit a component and install nothing —
+  # `delivery` carries a policy value and no manifests — and requiring it to
+  # name a cluster it never touches would be asking for a dependency to
+  # satisfy a check rather than because it is true.
   componentsTargetTheCluster =
     result:
     let
       clusters = lib.attrNames (clustersIn result);
       reaches =
         from: to: lib.any (e: e.from == from && e.to == to && e.kind == "eval") result.graph.edges;
+      installs = lib.filterAttrs (_: c: c.bundles != { }) (componentsIn result);
     in
     lib.concatMap (
       unit:
       lib.optional (!(lib.elem unit clusters) && !(lib.any (c: reaches unit c) clusters))
-        "unit '${unit}' emits a component but requires no cluster. Add `requires.cluster = sigs.KUBERNETES_CLUSTER`."
-    ) (lib.attrNames (componentsIn result));
+        "unit '${unit}' renders bundles but requires no cluster. Add `requires.cluster = sigs.KUBERNETES_CLUSTER`."
+    ) (lib.attrNames installs);
 
   # `needs` names a sibling in the floe's own bundle namespace. Naming
   # something that is not there is caught here rather than at the graph, where

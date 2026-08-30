@@ -67,6 +67,79 @@ in
       };
     })
   ]
+
+  # Before anything that could consume a value, and early enough that a lab
+  # missing a secret fails in seconds rather than after a cluster exists.
+  #
+  # Authored stores only. A runtime store holds values the lab mints and is
+  # read by external-secrets from inside the cluster, so there is nothing here
+  # for the CLI to check and asking it to would fail on a backend it
+  # deliberately cannot open.
+  ++ lib.optional (config.lab.secrets.managed != { }) (step {
+    name = "ensure-secrets";
+    kind = "ensure-secrets";
+    retry = "idempotent";
+    description = "Check the lab's authored secret stores are readable";
+    params.stores = lib.attrNames (
+      lib.filterAttrs (_: s: s.direction == "authored") config.lab.secrets.stores
+    );
+  })
+
+  # Before the services, because the ingress bind-mounts the certificate this
+  # writes and a container cannot mount a file that does not exist yet.
+  ++ lib.optional (config.lab.proxy.enable && config.lab.proxy.tls.enable) (step {
+    name = "cert-generate";
+    kind = "cert-generate";
+    retry = "idempotent";
+    description = "Mint the lab CA and a wildcard certificate for '*.${config.lab.dns.zone}'";
+    params = {
+      inherit (config.lab.dns) zone;
+    };
+  })
+
+  # The host services, and then the steps that depend on one being up.
+  #
+  # Order here is load-bearing rather than tidy. `registry-setup` reads the
+  # live DNS container's address, so it cannot precede `setup-services`; and
+  # both have to precede `create-cluster`, because `k3d cluster create` mounts
+  # `registries.yaml` at creation time and k3s never reads it again.
+  ++ lib.optional (config.lab.out.services != { }) (step {
+    name = "setup-services";
+    kind = "setup-services";
+    retry = "idempotent";
+    description = "Start lab infrastructure services";
+  })
+
+  ++ lib.optional config.lab.registry.enable (step {
+    name = "registry-setup";
+    kind = "registry-setup";
+    retry = "idempotent";
+    description = "Write registries.yaml + certs.d + lab-resolv.conf";
+    params = {
+      inherit (config.lab.registry) port;
+      upstreams = map (u: u.host) config.lab.registry.upstreams;
+      inherit (config.lab.dns) zone;
+    };
+  })
+
+  ++ lib.optional (config.lab.registry.enable && config.lab.registry.warmCache) (step {
+    name = "warm-cache";
+    kind = "warm-cache";
+    retry = "idempotent";
+    description = "Pre-warm the lab registry with every declared image";
+  })
+
+  # Off unless asked for: it needs sudo and edits the host's resolver.
+  ++ lib.optional (config.lab.dns.enable && config.lab.dns.configureHost) (step {
+    name = "dns-setup";
+    kind = "dns-setup";
+    retry = "idempotent";
+    description = "Point host DNS for '${config.lab.dns.zone}' at the lab resolver";
+    params = {
+      inherit (config.lab.dns.out.dnsInfo) host port zone;
+    };
+  })
+
   ++ lib.concatLists (
     lib.mapAttrsToList (name: c: [
       (step {
@@ -111,6 +184,26 @@ in
         };
       }
     ) clusters
+
+    ++ lib.optional (config.lab.dns.enable && config.lab.dns.configureHost) (step {
+      name = "dns-teardown";
+      kind = "dns-teardown";
+      retry = "idempotent";
+      description = "Remove host DNS configuration for '${config.lab.dns.zone}'";
+      params = {
+        inherit (config.lab.dns) zone;
+      };
+    })
+
+    # Services come down after the clusters and before the network they are
+    # on, or `docker network rm` fails on a network still in use.
+    ++ lib.optional (config.lab.out.services != { }) (step {
+      name = "remove-services";
+      kind = "remove-services";
+      retry = "destructive";
+      description = "Remove lab infrastructure services";
+    })
+
     ++ [
       (step {
         name = "remove-network";

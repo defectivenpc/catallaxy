@@ -9,6 +9,7 @@
   floe,
   sigs,
   kinds,
+  ...
 }:
 
 floe.mkFloe {

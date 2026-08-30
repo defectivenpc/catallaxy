@@ -5,14 +5,15 @@
 # Gateway) and a real order between them. Both are this floe's business and
 # `needs` says so without entering any namespace another floe can see.
 #
-# A port of the configuration `minimal.local` produces, not of
-# `floes/cluster/gateway/`'s full option surface: no TLS, no internal tier, no
-# passthrough, no NodePort fallback.
+# A port of what the example labs exercise, not of the old floe's full option
+# surface: no internal tier, no passthrough, no NodePort fallback. TLS is
+# here — it was absent only while nothing provided an issuer.
 {
   lib,
   floe,
   sigs,
   kinds,
+  ...
 }:
 
 floe.mkFloe {
@@ -59,6 +60,26 @@ floe.mkFloe {
       description = "Name of the Gateway resource routes attach to.";
     };
 
+    tlsEnable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Terminate TLS on the Gateway, signed by whatever provides
+        X509_ISSUANCE. Off by default: a lab with no issuer in its link
+        cannot serve https, and quietly rendering a listener with no
+        certificate produces a Gateway that never programs.
+      '';
+    };
+
+    httpsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8443;
+      description = ''
+        TLS listener port. Traefik maps its `websecure` entrypoint to 8443 in
+        the pod and exposes it on 443, so the listener names the pod's port.
+      '';
+    };
+
     httpPort = lib.mkOption {
       type = lib.types.port;
       default = 8000;
@@ -78,6 +99,20 @@ floe.mkFloe {
   # shipped tree routes around with `cluster.prerequisites`.
   requires.gatewayApi = sigs.GATEWAY_API;
 
+  # Exactly-one, not fan-in, because this is a dependency rather than a
+  # collection: the Gateway's certificate is signed by it, and the listener
+  # never programs until the issuer exists. `requiresMany` would have made it
+  # optional at the cost of the ordering edge, and floe-core has no
+  # optional-exactly-one hole — so every cluster with a gateway has an issuer,
+  # and `tlsEnable` decides only whether it is used.
+  requires.issuance = sigs.X509_ISSUANCE;
+
+  # The replacement for `floes.gateway.internalHostnames`, which eight
+  # consumers used to write *into* this floe. They provide a ROUTE_REQUEST
+  # and this collects them, so the flow runs the same direction as every
+  # other edge and the linker checks it.
+  requiresMany.routes = sigs.ROUTE_REQUEST;
+
   provides.gateway = sigs.API_GATEWAY;
   out.component = kinds.component;
 
@@ -86,7 +121,20 @@ floe.mkFloe {
       { config, lib, ... }:
       let
         inputs = config.floe.inputs;
-        listenerName = "http";
+
+        # Exactly-one, expressed over a fan-in hole: a lab either has an
+        # issuer in the link or it does not, and `tls.enable` says which the
+        # gateway was configured for. Two issuers is the linker's problem;
+        # disagreeing with the lab is this floe's.
+        issuance = config.floe.requires.issuance;
+        tls = inputs.tlsEnable;
+
+        # The listener a route attaches to. With TLS on, plaintext exists only
+        # to be redirected, so a consumer's `parentRef` has to name the https
+        # one — which is why this is derived rather than fixed.
+        listenerName = if tls then "https" else "http";
+
+        certSecret = "gateway-tls";
       in
       {
         # The assembly point. `provides` and `out` are both projections of
@@ -109,12 +157,22 @@ floe.mkFloe {
             gatewayClassName = inputs.className;
             listeners = [
               {
-                name = listenerName;
+                name = "http";
                 protocol = "HTTP";
                 port = inputs.httpPort;
                 allowedRoutes.namespaces.from = "All";
               }
-            ];
+            ]
+            ++ lib.optional tls {
+              name = "https";
+              protocol = "HTTPS";
+              port = inputs.httpsPort;
+              allowedRoutes.namespaces.from = "All";
+              tls = {
+                mode = "Terminate";
+                certificateRefs = [ { name = certSecret; } ];
+              };
+            };
           };
         };
 
@@ -128,6 +186,48 @@ floe.mkFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
+          # The chart renders one workload and `images.traefik` below is it.
+          imagesComplete = true;
+
+          # The lab's edge: everything from outside arrives here, and it
+          # reaches every workload with a route. `reaches` is left empty
+          # because the backends are whatever attached a route, which is not
+          # knowable from here — the routes name the gateway, not the reverse.
+          network = {
+            declared = true;
+            serves.http = {
+              port = inputs.httpPort;
+              fromExternal = true;
+            };
+            serves.https = {
+              port = inputs.httpsPort;
+              fromExternal = true;
+            };
+          };
+
+          assertions = [
+            # A route naming a host outside the zone attaches happily and
+            # then serves nothing: the wildcard certificate does not cover
+            # it, and no DNS in the lab answers for it. The gateway is the
+            # only party that can see both the zone and every route, which
+            # is what the fan-in is for.
+            (
+              let
+                stray = lib.filter (
+                  r: !(lib.hasSuffix ".${inputs.baseDomain}" r.hostname) && r.hostname != inputs.baseDomain
+                ) (lib.attrValues config.floe.requires.routes);
+              in
+              {
+                assertion = stray == [ ];
+                message =
+                  "these routes ask for hostnames outside this gateway's zone "
+                  + "'${inputs.baseDomain}', which it cannot serve: "
+                  + lib.concatMapStringsSep ", " (r: r.hostname) stray;
+              }
+            )
+
+          ];
+
           # Both bundles have to be ready before a consumer's route means
           # anything: a route attached to a Gateway whose controller is not
           # running is admitted and serves nothing. Naming them here is what
@@ -197,7 +297,29 @@ floe.mkFloe {
             gateway = kinds.mkBundle {
               needs = [ "controller" ];
 
-              resources.default-gateway = config.gatewayResource;
+              resources = {
+                default-gateway = config.gatewayResource;
+              }
+              // lib.optionalAttrs tls {
+                # One wildcard for the zone, so every route through this
+                # gateway is covered by one certificate rather than one each.
+                gateway-tls = {
+                  apiVersion = "cert-manager.io/v1";
+                  kind = "Certificate";
+                  metadata = {
+                    name = certSecret;
+                    namespace = inputs.namespace;
+                  };
+                  spec = {
+                    secretName = certSecret;
+                    dnsNames = [
+                      inputs.baseDomain
+                      "*.${inputs.baseDomain}"
+                    ];
+                    inherit (issuance) issuerRef;
+                  };
+                };
+              };
 
               # A Deployment being Available says the controller is up; it
               # says nothing about whether this Gateway got an address. That

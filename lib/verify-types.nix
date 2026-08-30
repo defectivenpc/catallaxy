@@ -8,7 +8,7 @@ let
     "error"
   ];
 in
-{
+rec {
   inherit readOnlyOperations;
 
   /*
@@ -32,6 +32,45 @@ in
     "(${value} != null && ${value} != '${status}')";
 
   fieldIsNot = { field, value }: "(${field} != null && ${field} != '${value}')";
+
+  /*
+    A check lowered to Chainsaw steps.
+
+    Two callers with the same answer: `checkType` below, which a lab or
+    cluster module declares checks through, and `lib/render/chainsaw.nix`,
+    which lowers the checks a *floe* contributed. A floe's check is plain data
+    from a kind schema rather than a module, so it never reaches `config`, and
+    without this the lowering would be spelled twice and could disagree about
+    what a check means.
+  */
+  stepsFor =
+    {
+      name,
+      timeout ? "2m",
+      expect ? null,
+      reject ? [ ],
+      steps ? [ ],
+    }:
+    if steps != [ ] then
+      steps
+    else
+      [
+        {
+          inherit name;
+          try =
+            lib.optional (expect != null) {
+              "assert" = {
+                inherit timeout;
+                resource = expect;
+              };
+            }
+            ++ map (resource: {
+              error = {
+                inherit timeout resource;
+              };
+            }) reject;
+        }
+      ];
 
   checkType = types.submodule (
     { name, config, ... }:
@@ -131,28 +170,15 @@ in
         };
       };
 
-      config.out.steps =
-        if config.steps != [ ] then
-          config.steps
-        else
-          [
-            {
-              inherit name;
-              try =
-                lib.optional (config.expect != null) {
-                  "assert" = {
-                    inherit (config) timeout;
-                    resource = config.expect;
-                  };
-                }
-                ++ map (resource: {
-                  error = {
-                    inherit (config) timeout;
-                    inherit resource;
-                  };
-                }) config.reject;
-            }
-          ];
+      config.out.steps = stepsFor {
+        inherit name;
+        inherit (config)
+          timeout
+          expect
+          reject
+          steps
+          ;
+      };
     }
   );
 

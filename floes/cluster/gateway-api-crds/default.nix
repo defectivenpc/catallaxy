@@ -10,6 +10,7 @@
   floe,
   sigs,
   kinds,
+  ...
 }:
 
 floe.mkFloe {
@@ -66,6 +67,13 @@ floe.mkFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
+          # It installs CRDs and nothing that runs, so the exhaustive image set
+          # is the empty one and it needs no traffic at all. Saying so is not
+          # the same as saying nothing: an undeclared floe reads as one nobody
+          # has looked at.
+          imagesComplete = true;
+          network.declared = true;
+
           backs.api = [ "crds" ];
 
           bundles.crds = kinds.mkBundle {

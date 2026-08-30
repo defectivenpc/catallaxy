@@ -25,9 +25,11 @@
     # something. Every one of these edges but `gateway.needs` was derived.
     expected="00-wave/gateway-api__crds
     00-wave/namespaces
-    01-wave/gateway__controller
-    02-wave/gateway__gateway
-    03-wave/podinfo__podinfo"
+    01-wave/cert-manager__cert-manager
+    02-wave/cert-manager__issuers
+    03-wave/gateway__controller
+    04-wave/gateway__gateway
+    05-wave/podinfo__podinfo"
 
     actual=$(cd "$tree" && find . -mindepth 2 -maxdepth 2 -type d | sed 's#^\./##' | sort)
     if [ "$actual" != "$(echo "$expected" | sed 's/^ *//')" ]; then
@@ -45,17 +47,17 @@
 
     # Probes reach the applier in the shape its enum accepts.
     jq -e '[.waves[].bundles[].readyProbe | select(. != null) | .kind]
-           | length == 3
+           | length == 5
            and all(. as $k | ["condition","jsonpath","exists","pod","kubectl-wait","script"]
                              | index($k) != null)' \
       "$tree/.wave-meta" >/dev/null || fail "a readyProbe kind the applier would reject"
 
-    grep -q 'kind: Deployment' "$tree/01-wave/gateway__controller/traefik.yaml" \
+    grep -q 'kind: Deployment' "$tree/03-wave/gateway__controller/traefik.yaml" \
       || fail "traefik chart rendered no Deployment"
 
     # The route's attachment came through the sealed API_GATEWAY value, so
     # podinfo never spelled any of these three.
-    route="$tree/03-wave/podinfo__podinfo/resources.yaml"
+    route="$tree/05-wave/podinfo__podinfo/resources.yaml"
     grep -q 'name: default-gateway' "$route" || fail "route names no parent gateway"
     grep -q 'sectionName: http'     "$route" || fail "route names no listener"
     grep -q 'podinfo.minimal.test'  "$route" || fail "route carries no hostname"

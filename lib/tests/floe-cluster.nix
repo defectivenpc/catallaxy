@@ -35,6 +35,7 @@ let
     Service = true;
     ConfigMap = true;
     Namespace = true;
+    Secret = true;
   };
 
   clusterKind = floe.mkOutputKind {
@@ -326,15 +327,101 @@ let
         };
       })).waves;
 
+  # ---- secret fixtures ---------------------------------------------------
+
+  podReading = secret: {
+    apiVersion = "apps/v1";
+    kind = "Deployment";
+    metadata = {
+      name = "w";
+      namespace = "app";
+    };
+    spec.template.spec.containers = [
+      { env = [ { valueFrom.secretKeyRef.name = secret; } ]; }
+    ];
+  };
+
+  secretResource = name: {
+    apiVersion = "v1";
+    kind = "Secret";
+    metadata = {
+      inherit name;
+      namespace = "app";
+    };
+  };
+
+  secretNobodyMakes =
+    fails
+      (elaborated (mkComponent {
+        bundles.b = mkBundle {
+          createNamespaces = [ "app" ];
+          resources.w = podReading "absent";
+        };
+      })).waves;
+
+  # The same reference, once something creates it.
+  secretMadeBySibling = elaborated (mkComponent {
+    bundles.maker = mkBundle {
+      createNamespaces = [ "app" ];
+      resources.s = secretResource "shared";
+    };
+    bundles.reader = mkBundle { resources.w = podReading "shared"; };
+  });
+
+  secretMadeAndReadTogether = elaborated (mkComponent {
+    bundles.b = mkBundle {
+      createNamespaces = [ "app" ];
+      resources = {
+        s = secretResource "own";
+        w = podReading "own";
+      };
+    };
+  });
+
+  secretFromOutside = elaborated (mkComponent {
+    bundles.b = mkBundle {
+      createNamespaces = [ "app" ];
+      externalSecrets = [ "app/seeded" ];
+      resources.w = podReading "seeded";
+    };
+  });
+
+  # A reference eval cannot see, because it reaches the chart as a value.
+  invisibleReferenceUndeclared =
+    fails
+      (elaborated (mkComponent {
+        bundles.b = mkBundle {
+          createNamespaces = [ "app" ];
+          needsSecrets = [ "app/by-helm-value" ];
+        };
+      })).waves;
+
+  wildcardSatisfiesEveryNamespace = elaborated (mkComponent {
+    bundles.maker = mkBundle {
+      createNamespaces = [ "app" ];
+      secrets = [ "*/everywhere" ];
+    };
+    bundles.reader = mkBundle { resources.w = podReading "everywhere"; };
+  });
+
+  waveOf =
+    c: bundleName:
+    let
+      hits = lib.filter (e: lib.any (b: b.name == bundleName) e.wave) (
+        lib.imap0 (i: wave: { inherit i wave; }) c.waves
+      );
+    in
+    if hits == [ ] then null else (lib.head hits).i;
+
 in
 lib.runTests {
 
   # ---- 1. the join is a monoid -------------------------------------------
   #
-  # `old-floe/lib/floe/fold.nix` can state none of these about itself:
-  # `collectChannel`
-  # returns an unrealised `mkMerge`, so its associativity is the module
-  # system's rather than its own.
+  # Worth asserting rather than assuming. The design this replaced could state
+  # none of these about itself: its collector returned an unrealised
+  # `mkMerge`, so associativity was the module system's property and not the
+  # function's, and there was nothing to write a test against.
 
   testLeftIdentity = {
     expr = join empty compA;
@@ -497,6 +584,51 @@ lib.runTests {
   # exists only once the components are joined.
   testANamespaceWithNoCreatorFails = {
     expr = namespaceWithNoCreator;
+    expected = true;
+  };
+
+  # ---- secrets -----------------------------------------------------------
+  #
+  # The same shape of check as the namespace one above, for the same reason: a
+  # floe reading a Secret is rarely the floe that makes it.
+
+  testASecretWithNoCreatorFails = {
+    expr = secretNobodyMakes;
+    expected = true;
+  };
+
+  # The reference the walk cannot see is the common case — a credential that
+  # reaches a chart as a value — and it has to be refused too, or declaring it
+  # would be optional and nobody would.
+  testAnInvisibleReferenceMustStillBeDeclared = {
+    expr = invisibleReferenceUndeclared;
+    expected = true;
+  };
+
+  # Ordering nobody wrote: the reader names no bundle and the maker names no
+  # reader, and the graph still puts them in that order.
+  testAReaderLandsAfterTheBundleThatMakesItsSecret = {
+    expr = waveOf secretMadeBySibling "broken/maker" < waveOf secretMadeBySibling "broken/reader";
+    expected = true;
+  };
+
+  # One bundle doing both is self-satisfied. An edge here would be a bundle
+  # waiting on itself, which is a cycle rather than an ordering.
+  testMakingAndReadingInOneBundleIsNotACycle = {
+    expr = builtins.length secretMadeAndReadTogether.waves > 0;
+    expected = true;
+  };
+
+  # `cert-generate` and an operator both land Secrets no manifest contains.
+  testAnExternallySuppliedSecretSatisfiesTheCheck = {
+    expr = secretFromOutside.runtimeMaterialised;
+    expected = [ "app/seeded" ];
+  };
+
+  # A trust-manager Bundle with an empty `namespaceSelector` writes into every
+  # namespace, which the floe cannot enumerate and the cluster can.
+  testAWildcardCoversEveryNamespace = {
+    expr = waveOf wildcardSatisfiesEveryNamespace "broken/reader" != null;
     expected = true;
   };
 }

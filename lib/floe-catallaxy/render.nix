@@ -114,7 +114,28 @@ in
         awaitRollout = true;
       };
 
-      bundleFor = key: if key == "namespaces" then namespacesBundle else cluster.bundles.${key};
+      # A projection renders nothing at all: the Secret it stands for is
+      # applied by `cata` from the decrypted store, and a value in the
+      # manifest tree is exactly what must not happen. It is in the graph so a
+      # bundle reading it can order against it, and `hasContent` drops it
+      # before any directory is written.
+      isProjection = lib.hasPrefix "projection/";
+
+      emptyBundle = {
+        resources = { };
+        helmCharts = { };
+        yamls = [ ];
+        awaitRollout = true;
+      };
+
+      bundleFor =
+        key:
+        if key == "namespaces" then
+          namespacesBundle
+        else if isProjection key then
+          emptyBundle
+        else
+          cluster.bundles.${key};
 
       renderOne =
         waveIndex: key:
@@ -164,7 +185,14 @@ in
       waveMeta.waves = lib.imap0 (i: wave: {
         index = i;
         bundles = map (entry: {
-          key = sanitize entry.name;
+          # Sanitized for everything with resources, raw for a projection.
+          # The applier finds the Secrets it has to inject by looking for the
+          # literal `projection/` prefix on this field
+          # (`cli/src/io/ssa/mod.rs:212`), so sanitizing it here means no
+          # projection is ever applied and nothing says so. A projection
+          # renders no resources, so no label ever carries its name and the
+          # prune comparison below is unaffected either way.
+          key = if isProjection entry.name then entry.name else sanitize entry.name;
           dir = "${pad i}-wave/${sanitize entry.name}";
           hasContent = hasContent entry.name;
           readyProbe = normalizeProbe entry.name (entry.readyProbe or null);

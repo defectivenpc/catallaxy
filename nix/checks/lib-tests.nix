@@ -21,10 +21,7 @@ let
       fi
     '';
 
-  pure = {
-    floe-core = testsDir + "/floe-core.nix";
-    floe-cluster = testsDir + "/floe-cluster.nix";
-  };
+  floesDir = ../../floes/tests;
 
   nixFilesIn =
     dir:
@@ -32,7 +29,36 @@ let
       lib.filterAttrs (file: kind: kind == "regular" && lib.hasSuffix ".nix" file) (builtins.readDir dir)
     );
 
-  suites = lib.mapAttrs (_: path: import path { inherit lib; }) pure;
+  pure = {
+    floe-core = testsDir + "/floe-core.nix";
+    floe-cluster = testsDir + "/floe-cluster.nix";
+    secret-refs = testsDir + "/secret-refs.nix";
+    secret-generate = testsDir + "/secret-generate.nix";
+
+    # Suites for code already in the tree that was, until now, untested here:
+    # they were parked alongside the lab system and test none of it.
+    #
+    # Two more are still parked because they test things that are:
+    # `render-images` covers `applyToDir`, the image-lock rewriting that comes
+    # back with `lab.images`, and `drift` covers the argocd lowering.
+    util-network = testsDir + "/util-network.nix";
+    util-duration = testsDir + "/util-duration.nix";
+    util-wait = testsDir + "/util-wait.nix";
+    manifest-graph = testsDir + "/manifest-graph.nix";
+    manifest-autoedges = testsDir + "/manifest-autoedges.nix";
+  };
+
+  # Discovered, not listed. A hand-written list beside a `readDir` only ever
+  # achieves failing when someone adds a floe and forgets to name it here.
+  # `support.nix` is the harness, not a suite.
+  floeSuites = lib.listToAttrs (
+    map (file: {
+      name = "floe-${lib.removeSuffix ".nix" file}";
+      value = import (floesDir + "/${file}") { inherit lib pkgs; };
+    }) (lib.filter (f: f != "support.nix") (nixFilesIn floesDir))
+  );
+
+  suites = lib.mapAttrs (_: path: import path { inherit lib; }) pure // floeSuites;
 
   # A new `lib/tests/*.nix` would otherwise sit there running nowhere and
   # looking like coverage.

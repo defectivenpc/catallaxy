@@ -220,14 +220,20 @@
         # What each hole resolved to, as `[ { unit; instance; } ]`. An eval
         # edge says A needed B; this says which of B's provides answered,
         # which is the only thing that can key a backend's "and therefore
-        # wait for these parts of B" rule. The linker computes it either way,
-        # so withholding it just forces a backend to guess.
+        # wait for these parts of B" rule.
         #
-        # A list even for an exactly-one hole, so a consumer walks holes
-        # without asking which kind each one was.
-        wiring = lib.genAttrs unitNames (
-          u: (lib.mapAttrs (_hole: p: [ p ]) wiringOne.${u}) // wiringMany.${u}
-        );
+        # The two hole kinds stay apart, because they mean opposite things
+        # about order. An exactly-one hole is A depending on B: whatever B
+        # promised has to be true before A can use it. A fan-in hole is B
+        # collecting from A, and B is the thing that has to exist first — a
+        # gateway comes up and *then* routes attach to it. A backend that
+        # treated the two alike would order a collector after everything it
+        # collects, which is a cycle wherever the collected also depend on
+        # the collector.
+        wiring = {
+          one = wiringOne;
+          many = wiringMany;
+        };
       };
 
       violations = lib.concatMap (p: p result) policies;

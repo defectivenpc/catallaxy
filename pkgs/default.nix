@@ -1,9 +1,7 @@
-# The CLI and the tools it shells out to.
+# The CLI, the tools it shells out to, and the runners that test a whole lab.
 #
-# The e2e runners, the option-docs generator and the book build are parked in
-# `old-floes/pkgs/` and `old-floes/lib/docs/`: each of them evaluates the lab
-# module tree, which is parked with the floe implementation it was written
-# against. They come back as the platform is rebuilt on `lib/floe-core`.
+# The option-docs generator and the book build are still parked in
+# `old-floes/lib/docs/`; they come back with the book.
 {
   lib,
   pkgs,
@@ -59,11 +57,18 @@ let
     '';
   };
 
+  e2e = import ./e2e.nix { inherit lib pkgs cataWrapped; };
+  e2e-all = import ./e2e-all.nix { inherit lib pkgs e2e; };
+  refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
+
 in
 {
   inherit
     tools
     cata
     cataWrapped
+    e2e
+    e2e-all
+    refresh-digests
     ;
 }

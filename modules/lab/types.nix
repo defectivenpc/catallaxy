@@ -13,7 +13,7 @@
   catallaxy,
   cataCharts,
   k8sSpecs,
-  floeSet,
+  floes,
   ...
 }:
 
@@ -27,7 +27,7 @@ let
       catallaxy
       cataCharts
       k8sSpecs
-      floeSet
+      floes
       ;
     lab = config.lab;
   };
@@ -55,20 +55,6 @@ in
       description = ''
         Unique name for the lab. Also the docker network name and the prefix
         on every k3d container, so two labs on one host do not collide.
-      '';
-    };
-
-    dns.zone = mkOption {
-      type = types.str;
-      default = "${config.lab.name}.test";
-      defaultText = lib.literalExpression ''"''${config.lab.name}.test"'';
-      description = ''
-        Domain the lab's hostnames hang off, handed to floes as their
-        `baseDomain`.
-
-        Nothing resolves it yet: the host resolver and the in-cluster CoreDNS
-        that made these names reachable are not rebuilt. A route is declared
-        with the name and answers to it from inside the cluster.
       '';
     };
 
@@ -108,6 +94,50 @@ in
         Hard config-validity checks at lab scope. A failed entry fails
         evaluation, so it blocks every command that evaluates the lab.
       '';
+    };
+
+    warnings = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = ''
+        Soft advisories at lab scope, carried into `metadata.json` and
+        surfaced by `cata lab lint`.
+
+        The counterpart to `assertions`: something worth saying that is not
+        worth refusing to build over. A floe's warnings arrive here already
+        prefixed with the floe that raised them.
+      '';
+    };
+
+    verify.endpoints = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Probe every publicly routed hostname the clusters expose.
+
+          The hosts and the paths come from `cluster.out.exposedHosts`, which
+          the elaborator reads off the rendered routes, so this needs no list
+          to maintain.
+        '';
+      };
+
+      acceptStatuses = mkOption {
+        type = types.listOf (types.ints.between 100 599);
+        default = [ ];
+        example = [
+          401
+          403
+        ];
+        description = ''
+          Extra HTTP statuses that count as the endpoint answering.
+
+          A gateway that routes to a workload demanding auth answers 401, and
+          that proves the route works. 404 is deliberately not listable here:
+          it is what a gateway returns when it has *no* route, which is the
+          failure this check exists to catch.
+        '';
+      };
     };
   };
 

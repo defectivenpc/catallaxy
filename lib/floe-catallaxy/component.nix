@@ -91,6 +91,37 @@ let
     # RFC 0002 §7's `<bundle>.crd "<group>/<Kind>"`, as data.
     crds = T.listOf T.str;
 
+    # ---- Secrets, as `<namespace>/<name>` -------------------------------
+    #
+    # `lib/eval/secret-refs.nix` reads both sides off `resources`, so a floe
+    # whose Secrets are ordinary manifests declares nothing. These three are
+    # for what eval cannot see, and they exist for the same reason `crds`
+    # does: a chart's output is opaque until apply.
+
+    # Secrets this bundle causes to exist. A chart template, or a controller
+    # this bundle installs that mints one.
+    #
+    # `*/<name>` means every namespace the cluster creates, which is what a
+    # trust-manager Bundle with an empty `namespaceSelector` actually does.
+    # The cluster expands it, because the set of namespaces is a fact the
+    # cluster holds and the floe does not.
+    secrets = T.listOf T.str;
+
+    # Secrets this bundle reads somewhere the walk cannot follow — almost
+    # always a Helm value. Harbor is the case: four credentials reach it as
+    # chart values, so nothing in its rendered resources names them.
+    needsSecrets = T.listOf T.str;
+
+    # Secrets that arrive from outside the manifest stream: a plan step, an
+    # operator, a human. These satisfy the cluster's coherence check the same
+    # way `secrets` does, and are additionally reported to `cata lab lint` as
+    # `runtimeMaterialised` so its dangling-reference rule agrees with ours.
+    #
+    # The distinction from `secrets` is who to talk to when it is missing, and
+    # that is worth keeping separate: one is a bug in this repo, the other is
+    # a lab that was not set up.
+    externalSecrets = T.listOf T.str;
+
     # readiness — RFC 0002 §4. Free-form because the fields a probe needs
     # depend on its `kind`; `lib/util/wait.nix:requiredBy` is the table that
     # says which, and the elaborator checks against it.
@@ -114,6 +145,66 @@ let
     verify = T.attrsOf verifyCheckSchema;
   };
 
+  # What a floe declares about its own network needs, from which the cluster
+  # synthesises NetworkPolicies. `reaches` names `<unit>/<label>` — the unit
+  # namespace the join already established, so a label no enabled floe serves
+  # is an error rather than a rule that renders and does nothing.
+  #
+  # `declared` is not redundant with the rest being empty: a floe that needs
+  # nothing beyond the namespace default still sets it, because otherwise it
+  # is indistinguishable from one nobody has looked at, and telling those two
+  # apart is the whole point of asking.
+  portSchema = T.record {
+    port = T.any;
+    protocol = T.enum [
+      "TCP"
+      "UDP"
+      "SCTP"
+    ];
+  };
+
+  networkSchema = T.record {
+    declared = T.bool;
+    serves = T.attrsOf (
+      T.record {
+        port = T.any;
+        protocol = T.enum [
+          "TCP"
+          "UDP"
+          "SCTP"
+        ];
+        fromExternal = T.bool;
+        fromApiServer = T.bool;
+      }
+    );
+    reaches = T.listOf T.str;
+    egress = T.record {
+      internet = T.record { ports = T.listOf portSchema; };
+      cidrs = T.listOf (
+        T.record {
+          cidr = T.str;
+          except = T.listOf T.str;
+          ports = T.listOf portSchema;
+        }
+      );
+    };
+  };
+
+  # Drift a CD tool should not fight. `reason` is required and deliberately
+  # has no default: a rule with no rationale cannot be retired safely and is
+  # indistinguishable from one added to turn a red light green.
+  driftSchema = T.record {
+    reason = T.str;
+    group = T.str;
+    kinds = T.listOf T.str;
+    managedBy = T.listOf T.str;
+  };
+
+  assertionSchema = T.record {
+    assertion = T.bool;
+    message = T.str;
+  };
+
   componentSchema = T.record {
     bundles = T.attrsOf bundleSchema;
 
@@ -122,6 +213,20 @@ let
     # `backedBy`, carried here rather than on the provide because a provide
     # is sealed against its signature and an extra field would be dropped.
     backs = T.attrsOf (T.listOf T.str);
+
+    network = networkSchema;
+
+    # A floe claiming its image set is exhaustive, so the cluster can check
+    # that claim against what it actually rendered. Floe-level rather than
+    # per-bundle: it is a statement about the floe's whole output.
+    imagesComplete = T.bool;
+
+    # Folded to the cluster with the floe's name prefixed, so a failure names
+    # the floe that objected rather than landing in one flat list.
+    assertions = T.listOf assertionSchema;
+    warnings = T.listOf T.str;
+
+    drift = T.listOf driftSchema;
   };
 
   # A verify `reject` key is a JMESPath, and the two halves have to be
@@ -152,6 +257,9 @@ rec {
       yamls ? [ ],
       createNamespaces ? [ ],
       crds ? [ ],
+      secrets ? [ ],
+      needsSecrets ? [ ],
+      externalSecrets ? [ ],
       ready ? null,
       awaitRollout ? true,
       needs ? [ ],
@@ -174,6 +282,9 @@ rec {
         yamls
         createNamespaces
         crds
+        secrets
+        needsSecrets
+        externalSecrets
         ready
         awaitRollout
         needs
@@ -183,6 +294,143 @@ rec {
         lint
         verify
         ;
+    };
+
+  # A credential the floe mints for itself: an external-secrets `Password`
+  # generator and the ExternalSecret that lands its output in a Secret.
+  #
+  # Returns `{ resources; secrets; ready; }` to merge into a bundle, so the
+  # floe emits it in its own bundle rather than writing into a lab channel.
+  # The floe must `require` SECRET_GENERATION — these two kinds are reconciled
+  # by the external-secrets controller and its validating webhook rejects them
+  # outright when it is not running.
+  #
+  # Every default here is an incident, not a preference.
+  mkGeneratedSecret =
+    {
+      namespace,
+      secret,
+      key ? "password",
+      length ? 24,
+      digits ? null,
+      # Zero, because a consumer that puts the value in a URL, a connection
+      # string, or a config file it does not quote breaks on them.
+      symbols ? 0,
+      symbolCharacters ? null,
+      allowRepeat ? true,
+      noUpper ? false,
+      # `base64` is for a consumer that decodes the value to get raw key bytes
+      # rather than reading it as a string. Under it, `length` counts the bytes
+      # the consumer decodes, not the characters that reach the Secret.
+      encoding ? "plain",
+      # Literals to place beside the generated value, for a consumer that will
+      # not start without both keys. Grafana is the case: its chart reads
+      # `admin-user` and `admin-password` from one Secret, and a username is
+      # not a secret. Nothing here is encoded, whatever `encoding` says.
+      extraData ? { },
+    }:
+    let
+      generatorRef = {
+        apiVersion = "generators.external-secrets.io/v1alpha1";
+        kind = "Password";
+        name = secret;
+      };
+
+      # A template names every key it writes, so it is the only way to put a
+      # literal beside the generated value. `rewrite` below cannot: it renames
+      # the generator's one output and has nowhere to put a second key.
+      usesTemplate = encoding == "base64" || extraData != { };
+
+      managed.labels."app.kubernetes.io/managed-by" = "catallaxy";
+    in
+    {
+      # The ExternalSecret's target is readable off `resources`, so this is
+      # belt and braces — but a floe reading its own generated credential
+      # through a Helm value has no other way to be believed.
+      secrets = [ "${namespace}/${secret}" ];
+
+      resources = {
+        "${secret}-generator" = {
+          inherit (generatorRef) apiVersion kind;
+          metadata = {
+            name = secret;
+            inherit namespace;
+          }
+          // managed;
+          spec = {
+            inherit
+              length
+              digits
+              symbols
+              symbolCharacters
+              allowRepeat
+              noUpper
+              ;
+          };
+        };
+
+        "${secret}-external-secret" = {
+          apiVersion = "external-secrets.io/v1beta1";
+          kind = "ExternalSecret";
+          metadata = {
+            name = secret;
+            inherit namespace;
+          }
+          // managed;
+          spec = {
+            # Zero, not a schedule. A generator runs again on every refresh,
+            # so anything else replaces the value underneath whatever already
+            # read it.
+            refreshInterval = "0";
+
+            target = {
+              name = secret;
+              creationPolicy = "Owner";
+            }
+            // lib.optionalAttrs usesTemplate {
+              template = {
+                engineVersion = "v2";
+                data = {
+                  ${key} = if encoding == "base64" then "{{ .password | b64enc }}" else "{{ .password }}";
+                }
+                // extraData;
+              };
+            };
+
+            dataFrom = [
+              (
+                {
+                  sourceRef = { inherit generatorRef; };
+                }
+                # A template already names the key and reads `.password`, so
+                # renaming the generator's output would leave it with nothing
+                # to read. Only the plain, no-literals path needs the rewrite.
+                // lib.optionalAttrs (!usesTemplate && key != "password") {
+                  rewrite = [
+                    {
+                      regexp = {
+                        source = "^password$";
+                        target = key;
+                      };
+                    }
+                  ];
+                }
+              )
+            ];
+          };
+        };
+      };
+
+      # The key, not the Secret. external-secrets creates the Secret before it
+      # has anything to put in it, so waiting on the object alone lets a
+      # consumer start against an empty one.
+      ready = {
+        kind = "jsonpath";
+        resource = "secret/${secret}";
+        inherit namespace;
+        jsonpath = "{.data.${key}}";
+        timeout = "5m";
+      };
     };
 
   mkHelmChart =
@@ -201,9 +449,79 @@ rec {
     {
       bundles ? { },
       backs ? { },
+      network ? { },
+      imagesComplete ? false,
+      assertions ? [ ],
+      warnings ? [ ],
+      drift ? [ ],
     }:
     {
-      inherit bundles backs;
+      inherit
+        bundles
+        backs
+        imagesComplete
+        assertions
+        warnings
+        ;
+
+      network = mkNetwork network;
+      drift = map mkDrift drift;
+    };
+
+  mkNetwork =
+    {
+      declared ? false,
+      serves ? { },
+      reaches ? [ ],
+      egress ? { },
+    }:
+    {
+      inherit declared reaches;
+
+      serves = lib.mapAttrs (_: s: {
+        inherit (s) port;
+        protocol = s.protocol or "TCP";
+        fromExternal = s.fromExternal or false;
+        fromApiServer = s.fromApiServer or false;
+      }) serves;
+
+      egress = {
+        internet.ports = map mkPort (egress.internet.ports or [ ]);
+        cidrs = map (c: {
+          inherit (c) cidr;
+          except = c.except or [ ];
+          ports = map mkPort (c.ports or [ ]);
+        }) (egress.cidrs or [ ]);
+      };
+    };
+
+  mkPort =
+    p:
+    if lib.isInt p || lib.isString p then
+      {
+        port = p;
+        protocol = "TCP";
+      }
+    else
+      {
+        inherit (p) port;
+        protocol = p.protocol or "TCP";
+      };
+
+  mkDrift =
+    {
+      reason,
+      group ? "",
+      kinds ? [ ],
+      managedBy ? [ ],
+    }:
+    {
+      inherit
+        reason
+        group
+        kinds
+        managedBy
+        ;
     };
 
   # ---- the monoid --------------------------------------------------------
@@ -211,6 +529,11 @@ rec {
   empty = {
     bundles = { };
     backs = { };
+    network = { };
+    imagesComplete = { };
+    assertions = [ ];
+    warnings = [ ];
+    drift = [ ];
   };
 
   # Qualify a unit's component before joining: every bundle key becomes
@@ -219,9 +542,11 @@ rec {
   #
   # This is what makes the join total. Two floes cannot produce the same key,
   # so `//` is disjoint union — associative, with `empty` as a two-sided
-  # identity, and commutative on disjoint domains. `old-floe`'s `fold.nix` can
-  # state none of those about itself, because it returns an unrealised
-  # `mkMerge` and delegates the join to the module system.
+  # identity, and commutative on disjoint domains.
+  #
+  # The design this replaced could state none of those about itself: it
+  # returned an unrealised `mkMerge` and delegated the join to the module
+  # system, so there was no function to reason about.
   qualify =
     unit: c:
     let
@@ -243,11 +568,29 @@ rec {
       # key is qualified too. The elaborator looks one up as
       # `backs."${providerUnit}/${instance}"`.
       backs = lib.mapAttrs' (n: bs: lib.nameValuePair (key n) (map key bs)) c.backs;
+
+      # `network` and `imagesComplete` are per-floe facts, so they key on the
+      # unit rather than merging: two floes' netpol declarations are two
+      # declarations, and the cluster reads them side by side.
+      network.${unit} = c.network;
+      imagesComplete.${unit} = c.imagesComplete;
+
+      # A failure has to name the floe that objected, which is exactly what a
+      # flat list at the cluster cannot do.
+      assertions = map (a: a // { message = "floe '${unit}': ${a.message}"; }) c.assertions;
+      warnings = map (w: "floe '${unit}': ${w}") c.warnings;
+
+      drift = map (d: d // { declaredBy = unit; }) c.drift;
     };
 
   join = a: b: {
     bundles = a.bundles // b.bundles;
     backs = a.backs // b.backs;
+    network = a.network // b.network;
+    imagesComplete = a.imagesComplete // b.imagesComplete;
+    assertions = a.assertions ++ b.assertions;
+    warnings = a.warnings ++ b.warnings;
+    drift = a.drift ++ b.drift;
   };
 
   joinAll = lib.foldl' join empty;

@@ -1,0 +1,2 @@
+[001] destroy-cluster name=destroy-cluster-core cluster=core params.name=core params.provisioner=k3d params.skipIfMissing=true
+[002] remove-network name=remove-network

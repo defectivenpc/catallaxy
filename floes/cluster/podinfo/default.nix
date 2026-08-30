@@ -15,6 +15,7 @@
   floe,
   sigs,
   kinds,
+  ...
 }:
 
 floe.mkFloe {
@@ -58,6 +59,13 @@ floe.mkFloe {
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
+
+  # What the gateway collects. The old `floes.custom` wrote its hostname into
+  # `floes.gateway.internalHostnames`; providing it instead means the gateway
+  # learns the same fact through an edge the linker checks, and this floe
+  # still names nothing of the gateway's.
+  provides.route = sigs.ROUTE_REQUEST;
+
   out.component = kinds.component;
 
   modules = [
@@ -69,11 +77,52 @@ floe.mkFloe {
 
         selector."app.kubernetes.io/name" = "podinfo";
         host = "podinfo.${gateway.baseDomain}";
+
+        # The image arrives as one string because that is how a deployer thinks
+        # of it, and the image set wants it in parts. Split here, from the same
+        # binding the container uses, so the declaration and what is deployed
+        # cannot name different things.
+        #
+        # Digest-pinned refs are not handled: nothing here passes one, and
+        # guessing at `@sha256:` would put a wrong tag in the declaration
+        # rather than fail.
+        imageParts =
+          let
+            slash = lib.splitString "/" inputs.image;
+            registry = lib.head slash;
+            rest = lib.concatStringsSep "/" (lib.tail slash);
+            colon = lib.splitString ":" rest;
+          in
+          {
+            inherit registry;
+            repository = lib.head colon;
+            tag = if lib.length colon > 1 then lib.last colon else null;
+          };
       in
       {
+        config.floe.provides.route = {
+          hostname = host;
+          tier = "public";
+        };
+
         config.floe.out.component = kinds.mkComponent {
+          # One container, and it is the one below.
+          imagesComplete = true;
+
+          # Reached by the gateway and nothing else. It dials nothing, which
+          # is stated rather than left blank so it reads as reviewed.
+          network = {
+            declared = true;
+            serves.http.port = inputs.port;
+          };
+
           bundles.podinfo = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
+
+            images.podinfo = {
+              inherit (imageParts) registry repository tag;
+              digest = null;
+            };
 
             ready = {
               kind = "condition";

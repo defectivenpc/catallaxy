@@ -3,6 +3,9 @@
 {
   imports = [
     ./types.nix
+    ./secrets.nix
+    ./host
+    ./e2e.nix
     ./plan.nix
     ./out.nix
   ];

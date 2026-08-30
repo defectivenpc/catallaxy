@@ -40,8 +40,29 @@ let
       "ClusterSecretStore"
     ];
   isExternalSecret = r: resKind r == "ExternalSecret";
+  isPushSecret = r: resKind r == "PushSecret";
 
   resourcesOf = bundle: attrValues (bundle.resources or { });
+
+  secretRefs = import ./secret-refs.nix { inherit lib; };
+
+  # What a bundle causes to exist, and what it reads. Both are the union of
+  # what eval can see in `resources` and what the bundle had to say out loud
+  # because a chart or a Helm value hides it — the same split `crds` already
+  # makes for kinds a chart installs.
+  secretsMadeBy =
+    bundle:
+    unique (
+      lib.concatMap secretRefs.secretsCreatedBy (resourcesOf bundle)
+      ++ (bundle.secrets or [ ])
+      ++ (bundle.externalSecrets or [ ])
+    );
+
+  secretsReadBy =
+    bundle:
+    unique (
+      lib.concatMap secretRefs.secretsUsedBy (resourcesOf bundle) ++ (bundle.needsSecrets or [ ])
+    );
 
   # One provider per name, not one per declarer. Several bundles list the same
   # namespace in `createNamespaces`, and if each of them provided it, any two
@@ -106,9 +127,17 @@ let
         )
       );
 
+      # `ExternalSecret` names one store in `secretStoreRef`; `PushSecret`
+      # names a list in `secretStoreRefs`. Reading only the singular form is
+      # why the parked design had to write the publication bundle's edge to
+      # its store out by hand — and a publication that applies before its
+      # store is rejected by the admission webhook rather than retried.
       consumedStores = unique (
         filter (n: n != null) (
           map (r: r.spec.secretStoreRef.name or null) (filter isExternalSecret resources)
+          ++ lib.concatMap (r: map (s: s.name or null) (r.spec.secretStoreRefs or [ ])) (
+            filter isPushSecret resources
+          )
         )
       );
     in
@@ -137,6 +166,7 @@ let
       namespaces = namespaceProviders { inherit bundles namespaceAggregate; };
       stores = secretStoreProviders bundles;
       crds = crdProviders bundles;
+      secrets = indexBy bundles secretsMadeBy;
     in
     mapAttrs (
       name: bundle:
@@ -148,9 +178,17 @@ let
           ++ lib.optional (bundle.declaredBy != "cluster") "floe:${bundle.declaredBy}"
           ++ namesProvidedBy namespaces name "namespace"
           ++ namesProvidedBy stores name "secretstore"
+          ++ namesProvidedBy secrets name "secret"
           ++ namesProvidedBy crds name "kind"
         );
-        after = unique ((bundle.after or [ ]) ++ (autoAfter bundle));
+        after = unique (
+          (bundle.after or [ ])
+          ++ (autoAfter bundle)
+
+          # A bundle that both makes and reads a Secret is self-satisfied:
+          # they apply together, and an edge to itself is a cycle.
+          ++ map (s: "optional:secret:${s}") (lib.subtractLists (secretsMadeBy bundle) (secretsReadBy bundle))
+        );
         requires = unique ((bundle.requires or [ ]) ++ (autoRequires coreKinds bundle));
       }
     ) bundles;
@@ -164,5 +202,7 @@ in
     crdProviders
     autoAfter
     autoRequires
+    secretsMadeBy
+    secretsReadBy
     ;
 }

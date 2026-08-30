@@ -10,6 +10,8 @@
   packages,
   treefmtEval,
   labDefs,
+  mkLab,
+  e2eLabs,
 }:
 
 {
@@ -19,3 +21,26 @@
 }
 // import ./lib-tests.nix { inherit lib pkgs; }
 // import ./lab-manifests.nix { inherit lib pkgs labDefs; }
+// import ./self-contained.nix { inherit lib pkgs e2eLabs; }
+// import ./lab-checks.nix {
+  inherit
+    lib
+    pkgs
+    packages
+    labDefs
+    ;
+  snapshotDir = ../../examples/labs/tests/plan-snapshots;
+  digestDir = ../../examples/labs/tests/manifest-digests;
+}
+// import ./floe-gates.nix {
+  inherit lib pkgs labDefs;
+  floeSet = (import ../../floes).cluster;
+}
+// import ./secret-sharing.nix {
+  inherit
+    lib
+    pkgs
+    labDefs
+    mkLab
+    ;
+}

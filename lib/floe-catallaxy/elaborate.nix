@@ -19,6 +19,12 @@ let
   # that both name a namespace do not end up waiting on each other.
   namespaceAggregate = "namespaces";
 
+  # A Secret the lab projects gets a bundle that renders nothing and provides
+  # it, so a consumer's `secret:` edge resolves against something in the
+  # graph. The prefix is a CLI contract, not a naming choice: `cata` finds the
+  # projections to inject by scanning wave keys for it.
+  projectionPrefix = "projection/";
+
   # Namespaces every cluster already has. A resource in one of these is not
   # missing a creator.
   builtinNamespaces = [
@@ -43,13 +49,35 @@ let
   };
 in
 {
-  inherit namespaceAggregate builtinNamespaces;
+  inherit namespaceAggregate projectionPrefix builtinNamespaces;
 
   # elaborateCluster :: { linkResult; coreKinds; defaultOwner } -> clusterMetadata
   elaborateCluster =
     {
       linkResult,
       coreKinds ? { },
+
+      # Secrets the lab lands in this cluster from its own stores, as
+      # `<projection name> -> <namespace>`. The projection's name is the
+      # Secret's name; `inject_projections` renders `metadata.name` from it.
+      #
+      # One pseudo-bundle each, not one aggregate: the CLI finds the work by
+      # scanning the wave layout for bundles keyed `projection/<name>`
+      # (`cli/src/io/ssa/mod.rs:212`) and injects each at the wave it appears
+      # in. An aggregate matches nothing and silently applies no Secret.
+      projectedSecrets ? { },
+
+      # Bundles the lab owns rather than any floe. Cross-cluster secret
+      # sharing is the case this exists for: which cluster publishes what and
+      # who subscribes is wiring *between* clusters, which a floe-core link
+      # cannot express because it only ever sees one cluster's units.
+      #
+      # Bundle-shaped, and joined before the cross-floe pass, so they get the
+      # same derived edges and the same coherence checks as anything a floe
+      # contributed. `declaredBy = "cluster"` is what keeps them out of the
+      # per-floe ordering lookup.
+      extraBundles ? { },
+
       defaultOwner ? {
         bootstrap = "install-target";
         steady = "imperative";
@@ -64,7 +92,7 @@ in
         lib.mapAttrsToList (unit: c: componentLib.qualify unit c) components
       );
 
-      bundles = joined.bundles;
+      bundles = joined.bundles // extraBundles;
       backs = joined.backs;
 
       # ---- 2. cross-floe edges --------------------------------------------
@@ -75,25 +103,33 @@ in
       # entry the answer is all of them: coarse, but correct, and a floe that
       # never writes `backs` still orders.
 
-      bundlesOfUnit = unit: lib.attrNames (lib.filterAttrs (_: b: b.declaredBy == unit) bundles);
+      # Over the joined bundles, not `bundles`: only a floe's bundles belong
+      # to a unit. Lab-owned bundles carry `declaredBy = "cluster"` as the
+      # "no floe wrote this" sentinel, and a lab is free to *name* a unit
+      # `cluster` — the example labs do, for the k3d floe. Reading the merged
+      # set here handed every floe requiring KUBERNETES_CLUSTER an upstream
+      # edge to every lab-owned bundle, and the lab bundles depend on the
+      # floes, so the whole graph became one cycle.
+      bundlesOfUnit = unit: lib.attrNames (lib.filterAttrs (_: b: b.declaredBy == unit) joined.bundles);
 
-      # unit -> the qualified bundle names its requirements must follow
+      # unit -> the qualified bundle names its requirements must follow.
+      #
+      # Exactly-one holes only. A fan-in hole runs the other way: the
+      # collector is what has to exist before the collected attach to it, so
+      # ordering a gateway after its own routes would be backwards, and a
+      # cycle wherever the routes also depend on the gateway — which they
+      # always do, because that is what they attach to.
       upstreamOf =
         unit:
         lib.unique (
           lib.concatLists (
-            lib.concatLists (
-              lib.mapAttrsToList (
-                _hole: providers:
-                map (
-                  p:
-                  if p.unit == unit then
-                    [ ] # a floe resolving its own provide orders nothing
-                  else
-                    backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)
-                ) providers
-              ) (linkResult.wiring.${unit} or { })
-            )
+            lib.mapAttrsToList (
+              _hole: p:
+              if p.unit == unit then
+                [ ] # a floe resolving its own provide orders nothing
+              else
+                backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)
+            ) (linkResult.wiring.one.${unit} or { })
           )
         );
 
@@ -130,6 +166,21 @@ in
           else
             b.ready;
 
+      # `*/<name>` means every namespace this cluster has. Expanded here
+      # because the namespace set is a fact the cluster holds and the floe
+      # that declared the wildcard does not — a trust-manager Bundle with an
+      # empty `namespaceSelector` genuinely cannot name them.
+      expandSecretWildcards = lib.concatMap (
+        s:
+        let
+          parts = lib.splitString "/" s;
+        in
+        if lib.head parts == "*" then
+          map (ns: "${ns}/${lib.concatStringsSep "/" (lib.tail parts)}") known
+        else
+          [ s ]
+      );
+
       rawBundles = lib.mapAttrs (name: b: {
         # `needs` is intra-floe and already qualified; requires is `READY`,
         # after is sequence-only. A sibling this bundle names must be ready,
@@ -144,7 +195,11 @@ in
           createNamespaces
           declaredBy
           awaitRollout
+          needsSecrets
           ;
+
+        secrets = expandSecretWildcards b.secrets;
+        externalSecrets = expandSecretWildcards b.externalSecrets;
 
         helmCharts = lib.mapAttrs (_: h: { inherit (h) namespace; }) b.helmCharts;
 
@@ -171,11 +226,40 @@ in
           resourceCount = 0;
           hasReadyProbe = false;
           readyProbe = null;
+          secrets = [ ];
+          needsSecrets = [ ];
+          externalSecrets = [ ];
         };
       };
 
+      projectionsBundle = lib.mapAttrs' (
+        name: namespace:
+        lib.nameValuePair "${projectionPrefix}${name}" {
+          requires = [ ];
+
+          # The Secret has to land after the namespace holding it exists, and
+          # before anything reading it. The first is an edge; the second falls
+          # out of the `secret:` token below.
+          after = [ "optional:namespace:${namespace}" ];
+          provides = [ ];
+          conflicts = [ ];
+          resources = { };
+          helmCharts = { };
+          createNamespaces = [ ];
+          declaredBy = "cluster";
+          awaitRollout = true;
+          kinds = [ ];
+          resourceCount = 0;
+          hasReadyProbe = false;
+          readyProbe = null;
+          secrets = [ "${namespace}/${name}" ];
+          needsSecrets = [ ];
+          externalSecrets = [ ];
+        }
+      ) projectedSecrets;
+
       graphBundles = autoedges.deriveAutoEdges {
-        bundles = rawBundles // namespacesBundle;
+        bundles = rawBundles // namespacesBundle // projectionsBundle;
         namespaceAggregate = if hasNamespaceContent then namespaceAggregate else null;
         inherit coreKinds;
       };
@@ -222,6 +306,28 @@ in
             lib.filter (ns: !(lib.elem ns known)) (namespacesNamedBy b)
           )
         ) bundles
+      );
+
+      # ---- secrets ---------------------------------------------------------
+      #
+      # Same shape of problem as a namespace with no creator, same place to
+      # catch it. A floe reading a Secret is usually not the floe that makes
+      # one, so this is only answerable once the components are joined.
+
+      secretsMade = lib.unique (
+        lib.mapAttrsToList (name: namespace: "${namespace}/${name}") projectedSecrets
+        ++ lib.concatMap (b: expandSecretWildcards (autoedges.secretsMadeBy b)) (
+          lib.attrValues withCrossFloeEdges
+        )
+      );
+
+      danglingSecrets = lib.concatLists (
+        lib.mapAttrsToList (
+          name: b:
+          map (s: "bundle '${name}' reads Secret '${s}', which nothing in this cluster creates") (
+            lib.filter (s: !(lib.elem s secretsMade)) (autoedges.secretsReadBy b)
+          )
+        ) withCrossFloeEdges
       );
 
       # ---- exposed hosts ---------------------------------------------------
@@ -279,6 +385,25 @@ in
         to some bundle's `createNamespaces`, or install into one the cluster
         already has (${lib.concatStringsSep ", " builtinNamespaces}).
       ''
+    else if danglingSecrets != [ ] then
+      throw ''
+        cluster elaboration: ${toString (lib.length danglingSecrets)} Secret(s) with no creator.
+
+        ${lib.concatStringsSep "\n        " danglingSecrets}
+
+        A Secret that nothing creates is not a missing edge, it is a workload
+        that will never start, and nothing before apply says so. The floe that
+        reads one is rarely the floe that makes it, so this is only answerable
+        once the components are joined.
+
+        Whichever is true, say it on the bundle:
+          `secrets`         — a chart or a controller here makes it, and eval
+                              cannot see that.
+          `externalSecrets` — it arrives from outside the manifests: a plan
+                              step, an operator, or a human.
+          `needsSecrets`    — the reference is real and some other floe or a
+                              projection should be supplying it.
+      ''
     else
       {
         inherit
@@ -291,8 +416,30 @@ in
 
         graphBundles = graphBundles;
         namespaces = created;
+
+        # Secrets that reach the cluster from outside the manifest stream.
+        # `cata lab lint`'s dangling-reference rule takes its escape hatch
+        # from this, so the CLI and the elaborator agree on what is allowed to
+        # be missing rather than each keeping its own list.
+        runtimeMaterialised = lib.unique (lib.concatMap (b: b.externalSecrets) (lib.attrValues bundles));
         lint = liftChannel "lint";
         verify = liftChannel "verify";
+
+        # Per-floe facts, keyed by unit rather than merged: two floes' netpol
+        # declarations are two declarations, and the policy synthesiser reads
+        # them side by side.
+        inherit (joined)
+          network
+          imagesComplete
+          assertions
+          warnings
+          drift
+          ;
+
+        # A floe that says nothing about its network is not the same as one
+        # that needs nothing, and the difference is why `declared` exists.
+        # Naming them is all this does; refusing them is a lab's decision.
+        undeclaredNetwork = lib.attrNames (lib.filterAttrs (_: n: !(n.declared or false)) joined.network);
 
         images = lib.foldl' lib.mergeAttrs { } (
           lib.mapAttrsToList (
