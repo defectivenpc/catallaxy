@@ -105,6 +105,25 @@ rec {
     name = "deferred ${inner.name}";
   };
 
+  # A NixOS module type, used as a checker.
+  #
+  # The rule everywhere else here is that a kind schema holds pure data: the
+  # linker's scan walks every output recursively and `nix eval --json` has to
+  # serialise it. That rule is about **values**. A schema is only ever an
+  # argument to `checkValue` (`link.nix`) and is never itself serialised or
+  # walked, so it may hold a function — and `lib.evalModules` returns a plain
+  # attrset, so the value stays as pure as the rule requires.
+  #
+  # What it buys is defaults and per-field types for a surface too irregular
+  # for `record`. `steps` is the case: it was `attrsOf any`, normalised at the
+  # lab through the same submodule, which meant a malformed step named the lab
+  # rather than the floe that wrote it.
+  moduleType = inner: {
+    tag = "moduleType";
+    inherit inner;
+    name = "module type ${inner.description or "<anonymous>"}";
+  };
+
   # A record: all declared fields must be present and well-typed.
   # Checking a record also *restricts* to the declared fields (opaque sealing).
   record = fields: {
@@ -147,6 +166,25 @@ rec {
           fail "expected ${ty.name}, got ${typeOf v}"
         else
           lib.mapAttrs (n: x: checkValue (path ++ [ n ]) ty.inner x) v
+      )
+    else if ty.tag == "moduleType" then
+      # `_file` so a type error names the floe's path rather than
+      # `<unknown-file>`, and `deepSeq` so it surfaces here — with this
+      # `where` in the message — rather than wherever the value is first read.
+      (
+        let
+          evaluated =
+            (lib.evalModules {
+              modules = [
+                { options.value = lib.mkOption { type = ty.inner; }; }
+                {
+                  value = v;
+                  _file = where;
+                }
+              ];
+            }).config.value;
+        in
+        builtins.deepSeq evaluated evaluated
       )
     else if ty.tag == "record" then
       (

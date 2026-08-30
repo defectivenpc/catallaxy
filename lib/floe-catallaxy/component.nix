@@ -6,6 +6,8 @@
 let
   T = floe.T;
 
+  stepType = import ../eval/step-type.nix { inherit lib; };
+
   # Store paths, not derivations. A kind schema must hold pure data: the
   # linker's scan walks every output recursively, `nix eval --json` has to
   # serialise it, and a derivation is a self-referential attrset that defeats
@@ -270,11 +272,13 @@ let
     # records before the cluster goes, a CNI that must land before any node is
     # Ready, a handover to a CD tool.
     #
-    # Free-form here and typed at the lab, where `modules/lab/planner/types.nix`
-    # declares the shape. A kind schema holds pure data and cannot hold a
-    # module type, and the alternative — restating the step type in the floe
-    # type language — is a second spelling that can disagree with the first.
-    steps = T.attrsOf T.any;
+    # The same module type the lab uses for its own `lab.steps`, so there is
+    # one spelling of what a step is. This was `attrsOf any`, normalised at the
+    # lab, on the belief that a kind schema could not hold a module type — but
+    # that rule is about values, and a schema is never serialised. The cost of
+    # the belief was that a malformed step named the lab rather than the floe
+    # that wrote it.
+    steps = T.attrsOf (T.moduleType stepType.declaredStepType);
   };
 
   # A verify `reject` key is a JMESPath, and the two halves have to be

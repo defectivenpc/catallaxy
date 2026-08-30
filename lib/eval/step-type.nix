@@ -1,5 +1,11 @@
 # What a step is, before and after the sort.
 #
+# In `lib/` rather than beside the planner because both sides of the contract
+# read it: `modules/lab/planner` types the lab's own `lab.steps`, and
+# `lib/floe-catallaxy/component.nix` types the `steps` a floe contributes, via
+# `T.moduleType`. One spelling, so the two cannot disagree about what a step
+# is.
+#
 # A step declares what it needs rather than where it goes. `after`/`before`
 # name anchors — a token something publishes, a kind, or `optional:` either —
 # and the planner resolves them into an order. That indirection is the whole
