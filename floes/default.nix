@@ -11,6 +11,7 @@
   cluster = {
     cert-manager = ./cluster/cert-manager;
     cnpg = ./cluster/cnpg;
+    custom = ./cluster/custom;
     delivery = ./cluster/delivery;
     external-secrets = ./cluster/external-secrets;
     gateway = ./cluster/gateway;

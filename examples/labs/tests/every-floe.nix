@@ -74,6 +74,59 @@
     };
     podinfo = floes.podinfo { };
 
+    # The escape hatch, instantiated once per app the way a lab would.
+    hello = floes.custom {
+      name = "hello";
+      namespace = "hello";
+      servicePort = 5678;
+      images.echo = {
+        registry = "docker.io";
+        repository = "hashicorp/http-echo";
+        tag = "1.0";
+        digest = null;
+      };
+      resources.deployment = {
+        apiVersion = "apps/v1";
+        kind = "Deployment";
+        metadata = {
+          name = "hello";
+          namespace = "hello";
+        };
+        spec = {
+          replicas = 1;
+          selector.matchLabels."app.kubernetes.io/name" = "hello";
+          template = {
+            metadata.labels."app.kubernetes.io/name" = "hello";
+            spec.containers = [
+              {
+                name = "hello";
+                image = "docker.io/hashicorp/http-echo:1.0";
+                args = [ "-text=hello" ];
+                ports = [ { containerPort = 5678; } ];
+              }
+            ];
+          };
+        };
+      };
+      resources.service = {
+        apiVersion = "v1";
+        kind = "Service";
+        metadata = {
+          name = "hello";
+          namespace = "hello";
+        };
+        spec = {
+          selector."app.kubernetes.io/name" = "hello";
+          ports = [
+            {
+              port = 5678;
+              targetPort = 5678;
+            }
+          ];
+        };
+      };
+    };
+
     # ---- operators ------------------------------------------------------
     cnpg = floes.cnpg { chart = "${cataCharts.cnpg.chart}"; };
     kaniop = floes.kaniop { chart = "${cataCharts.kaniop.chart}"; };

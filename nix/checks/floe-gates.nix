@@ -15,6 +15,15 @@
   pkgs,
   labDefs,
   floeSet,
+
+  # Floes that cannot answer for their own images, and say so.
+  #
+  # An entry here is a claim that the floe *cannot know*, not that nobody got
+  # round to it. `custom` is handed arbitrary resources and an optional chart
+  # by whoever instantiates it; enumerating what those pull is not something
+  # it can do, and claiming completeness would put a false claim in front of
+  # the one gate that checks them.
+  cannotKnowItsImages ? [ ],
 }:
 
 let
@@ -146,7 +155,7 @@ perClaim
       "A floe nobody's lab renders is a floe whose image declarations nothing checks, and its images are still images someone downstream has to mirror. `examples/labs/tests/every-floe.nix` exists for exactly the floes no example lab uses."
       (
         map (f: "floe '${f}' never claims imagesComplete in any lab") (
-          lib.subtractLists claimingImages shipped
+          lib.subtractLists (claimingImages ++ cannotKnowItsImages) shipped
         )
       );
 

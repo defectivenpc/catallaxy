@@ -35,6 +35,7 @@
 // import ./floe-gates.nix {
   inherit lib pkgs labDefs;
   floeSet = (import ../../floes).cluster;
+  cannotKnowItsImages = [ "custom" ];
 }
 // import ./secret-sharing.nix {
   inherit
