@@ -227,6 +227,17 @@ let
     warnings = T.listOf T.str;
 
     drift = T.listOf driftSchema;
+
+    # Plan steps this floe contributes: work that is neither applying a
+    # manifest nor provisioning a cluster. A teardown that has to drain
+    # records before the cluster goes, a CNI that must land before any node is
+    # Ready, a handover to a CD tool.
+    #
+    # Free-form here and typed at the lab, where `modules/lab/planner/types.nix`
+    # declares the shape. A kind schema holds pure data and cannot hold a
+    # module type, and the alternative — restating the step type in the floe
+    # type language — is a second spelling that can disagree with the first.
+    steps = T.attrsOf T.any;
   };
 
   # A verify `reject` key is a JMESPath, and the two halves have to be
@@ -454,6 +465,7 @@ rec {
       assertions ? [ ],
       warnings ? [ ],
       drift ? [ ],
+      steps ? { },
     }:
     {
       inherit
@@ -462,6 +474,7 @@ rec {
         imagesComplete
         assertions
         warnings
+        steps
         ;
 
       network = mkNetwork network;
@@ -534,6 +547,7 @@ rec {
     assertions = [ ];
     warnings = [ ];
     drift = [ ];
+    steps = { };
   };
 
   # Qualify a unit's component before joining: every bundle key becomes
@@ -575,6 +589,11 @@ rec {
       network.${unit} = c.network;
       imagesComplete.${unit} = c.imagesComplete;
 
+      # Keyed by unit, like `network`: the planner stamps each step with the
+      # floe that declared it, so an anchor naming nothing can say which floe
+      # to open.
+      steps.${unit} = c.steps;
+
       # A failure has to name the floe that objected, which is exactly what a
       # flat list at the cluster cannot do.
       assertions = map (a: a // { message = "floe '${unit}': ${a.message}"; }) c.assertions;
@@ -588,6 +607,7 @@ rec {
     backs = a.backs // b.backs;
     network = a.network // b.network;
     imagesComplete = a.imagesComplete // b.imagesComplete;
+    steps = a.steps // b.steps;
     assertions = a.assertions ++ b.assertions;
     warnings = a.warnings ++ b.warnings;
     drift = a.drift ++ b.drift;

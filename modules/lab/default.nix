@@ -6,6 +6,7 @@
     ./secrets.nix
     ./host
     ./e2e.nix
+    ./planner
     ./plan.nix
     ./out.nix
   ];

@@ -430,6 +430,7 @@ in
         # them side by side.
         inherit (joined)
           network
+          steps
           imagesComplete
           assertions
           warnings

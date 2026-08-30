@@ -176,11 +176,8 @@ let
           echo "Step order, the step set and every param are pinned here, because" >&2
           echo "a derived plan changing is exactly what nobody notices." >&2
           echo "" >&2
-          echo "If intended, refresh it:" >&2
-          echo "  cata --flake . lab plan ${name} --stable ${
-            lib.optionalString (direction == "teardown") "--teardown "
-          }\\" >&2
-          echo "    > ${builtins.toString snapshotDir}/${name}.${direction}.expected.txt" >&2
+          echo "If intended, refresh every snapshot and read the diff:" >&2
+          echo "  nix run .#refresh-plans" >&2
           exit 1
         fi
         touch $out

@@ -126,6 +126,7 @@
             e2e
             e2e-all
             refresh-digests
+            refresh-plans
             ;
         };
 
@@ -149,6 +150,11 @@
         apps.refresh-digests = {
           type = "app";
           program = "${packages'.refresh-digests}/bin/refresh-digests";
+        };
+
+        apps.refresh-plans = {
+          type = "app";
+          program = "${packages'.refresh-plans}/bin/refresh-plans";
         };
 
         devShells.default = import ./nix/devshell.nix {

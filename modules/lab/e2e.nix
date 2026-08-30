@@ -48,11 +48,19 @@ let
 
   quote = lib.concatStringsSep ", ";
 
-  # Two of the parked reasons are not computable yet and are deliberately
-  # absent rather than stubbed: a cluster that `provisions` others (there is no
-  # such option), and a step with `policy.interactive` (the plan is a
-  # hand-written list and carries only `retry`). Both come back with the
-  # features that introduce the fields, and until then no lab can trip them.
+  # Read off both plans, not just the deployment one: a lab whose *teardown*
+  # needs a human is no more runnable unattended than one whose deployment
+  # does, and it is the worse of the two — the failure leaves the lab up.
+  interactiveSteps = map (step: "${step.name} (${step.origin})") (
+    lib.filter (step: step.policy.interactive) (
+      config.lab.out.deploymentPlan ++ config.lab.out.teardownPlan
+    )
+  );
+
+  # One parked reason is still not computable and is deliberately absent
+  # rather than stubbed: a cluster that `provisions` others, for which there
+  # is no option yet. It comes back with the feature that introduces it, and
+  # until then no lab can trip it.
   reasons =
     lib.optional (clusters == { }) "the lab declares no clusters"
     ++ lib.optional (unproven != [ ]) (
@@ -65,6 +73,10 @@ let
     ++ lib.optional (envSecretsWithNoFile != [ ]) (
       "${quote envSecretsWithNoFile} take their values from the environment, and the lab names no "
       + "file that sets them, so point lab.secrets.envFile at one, as a path relative to the flake root"
+    )
+    ++ lib.optional (interactiveSteps != [ ]) (
+      "${quote interactiveSteps} needs someone at the terminal, and an unattended run has nobody to "
+      + "answer it, so the step will time out rather than fail fast"
     );
 in
 {
