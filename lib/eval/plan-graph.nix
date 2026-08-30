@@ -146,6 +146,42 @@ let
     in
     map (name: steps.${name} // { inherit name; }) order;
 
+  # Steps that asked for ordering and got none.
+  #
+  # A soft anchor matching nothing is ordinary and is the point of `optional:`
+  # — `registry-setup` wants the lab CA, and a lab with TLS off has none. What
+  # is not ordinary is *every* anchor on a step missing, because the step is
+  # then wholly unconstrained rather than merely unordered against the thing
+  # that is absent, and the sort is free to put it anywhere.
+  #
+  # That is not hypothetical: `ensure-secrets` had one anchor, `before (wants
+  # lab/services)`, and in a lab with no lab-level services it sorted *last* —
+  # after both clusters were created and their manifests applied, which is the
+  # exact failure its own comment says it exists to prevent. A plan snapshot
+  # caught it. Nothing else would have.
+  #
+  # A step with no anchors at all is not reported: declaring none is a
+  # decision, and `dns-teardown` makes it.
+  floatingSteps =
+    { steps }:
+    let
+      providesIdx = buildProvidesIdx steps;
+
+      anchorsOf = s: (s.after or [ ]) ++ (s.before or [ ]) ++ (s.requires or [ ]);
+
+      missed =
+        name: s:
+        let
+          anchors = anchorsOf s;
+          matched = concatMap (a: matchAnchor steps providesIdx (parseAnchor a).body) anchors;
+        in
+        anchors != [ ] && matched == [ ];
+    in
+    lib.mapAttrsToList (
+      name: s:
+      "step '${name}' (${originOf steps name}) declares ${toString (length (anchorsOf s))} ordering anchor(s) and not one of them matches anything in this plan, so nothing constrains where it runs: ${concatStringsSep ", " (anchorsOf s)}"
+    ) (filterAttrs missed steps);
+
 in
 {
   inherit
@@ -156,5 +192,6 @@ in
     conflictErrors
     kahnSort
     topoSort
+    floatingSteps
     ;
 }

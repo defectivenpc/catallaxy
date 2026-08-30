@@ -6,6 +6,35 @@ let
   floe = import ../floe-core { inherit lib; };
   fixture = import ./support/floe-core { inherit lib floe; };
 
+  T = floe.T;
+  SELF = floe.mkSig {
+    name = "SELF";
+    fields.v = T.str;
+  };
+
+  # One floe, one signature, and a switch for whether it also asks for it.
+  selfLink =
+    { asksForIt }:
+    let
+      u = floe.mkFloe (
+        {
+          name = "narcissus";
+          provides.it = SELF;
+          modules = [
+            {
+              config.floe.provides.it = {
+                v = "mine";
+              };
+            }
+          ];
+        }
+        // lib.optionalAttrs asksForIt { requires.it2 = SELF; }
+      );
+    in
+    floe.link { units.narcissus = u.instantiate { }; };
+
+  fails = expr: !(builtins.tryEval (builtins.deepSeq expr "evaluated")).success;
+
   deployment = fixture.deployment;
 
   # Edges are compared as sorted strings: the linker's list order follows
@@ -78,6 +107,25 @@ lib.runTests {
     expr = deployment.provides.grafana.observer.dashboards;
     expected = {
       myapp.url = "https://grafana.lab.example.com/d/app-myapp";
+    };
+  };
+
+  # `providersOf` scans every unit including the requester, so this used to
+  # resolve to itself: no error, and no second provider to disambiguate
+  # against. The failures are quiet — an otel-collector providing TRACE_INGEST
+  # would have exported into its own receiver.
+  testAFloeDoesNotSatisfyItsOwnHole = {
+    expr = fails (selfLink { asksForIt = true; }).provides;
+    expected = true;
+  };
+
+  # The paired positive. Without it the refusal above could pass because the
+  # fixture fails to link for some unrelated reason, which is how five
+  # refusals in nix/checks/secret-sharing.nix once passed for the wrong one.
+  testTheSameFloeLinksFineWhenItOnlyProvides = {
+    expr = (selfLink { asksForIt = false; }).provides.narcissus.it;
+    expected = {
+      v = "mine";
     };
   };
 

@@ -46,6 +46,42 @@
 
       describeProviders = ps: lib.concatMapStringsSep ", " (p: "'${p.unit}' (as ${p.instance})") ps;
 
+      # A unit does not satisfy its own hole.
+      #
+      # `providersOf` scans every unit, the requester included, so a floe that
+      # provides and requires one signature resolves to itself — no error, no
+      # second provider to disambiguate against, just a value it hands itself.
+      # The failures are quiet: an otel-collector providing TRACE_INGEST would
+      # have exported into its own receiver, and the elaborator carries a
+      # branch dropping the ordering edge for exactly this case, which is a
+      # workaround for a shape nothing should produce.
+      #
+      # Computed over every hole rather than thrown from inside the resolution
+      # — that is lazy, and a floe that declares the hole and never reads it
+      # would link fine and fail later, if ever. This is an invariant of the
+      # link, so it holds whether or not anything looks.
+      #
+      # Refused rather than filtered, because a floe wanting its own provide
+      # already has it: it is `config.floe.provides.<name>`, in scope, with no
+      # link involved.
+      selfResolutions = lib.concatMap (
+        u:
+        let
+          inst = getInstance u;
+          holesOf =
+            label: decl:
+            lib.concatLists (
+              lib.mapAttrsToList (
+                hole: sig:
+                map (
+                  p: "unit '${u}' ${label} '${sig.name}' as hole '${hole}' and also provides it (as ${p.instance})"
+                ) (lib.filter (p: p.unit == u) (providersOf sig.name))
+              ) decl
+            );
+        in
+        holesOf "requires" inst.def.requires ++ holesOf "optionally requires" inst.def.requiresOptional
+      ) unitNames;
+
       wiringOne = lib.mapAttrs (
         u: inst:
         lib.mapAttrs (
@@ -259,7 +295,17 @@
 
       violations = lib.concatMap (p: p result) policies;
     in
-    if violations != [ ] then
+    # Before the policies, because this is core's own invariant rather than a
+    # distribution's rule, and because a self-resolved hole makes every policy
+    # downstream reason about a link that should not exist.
+    if selfResolutions != [ ] then
+      throw (
+        "floe link error: a unit does not satisfy its own hole.\n  - "
+        + lib.concatStringsSep "\n  - " selfResolutions
+        + "\n\nRead `config.floe.provides.<instance>` directly; it is in scope "
+        + "and needs no link."
+      )
+    else if violations != [ ] then
       throw ("floe policy violation(s):\n  - " + lib.concatStringsSep "\n  - " violations)
     else
       result;

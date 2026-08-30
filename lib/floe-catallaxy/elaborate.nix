@@ -132,13 +132,12 @@ in
         in
         lib.unique (
           lib.concatLists (
-            lib.mapAttrsToList (
-              _hole: p:
-              if p.unit == unit then
-                [ ] # a floe resolving its own provide orders nothing
-              else
-                backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)
-            ) holes
+            # No self-resolution case to handle: `lib/floe-core/link.nix`
+            # refuses a unit that satisfies its own hole outright, so `p.unit`
+            # is never `unit`. This used to carry a branch dropping the edge
+            # for that shape, which was a workaround for something the linker
+            # should not have permitted.
+            lib.mapAttrsToList (_hole: p: backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)) holes
           )
         );
 

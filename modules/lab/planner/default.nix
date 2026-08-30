@@ -212,6 +212,16 @@ in
     inherit message;
   }) (unknownKinds ++ wrongDirection);
 
+  # A warning and not an assertion. A step every one of whose anchors misses
+  # is almost always a bug — it is the `ensure-secrets` shape — but "almost"
+  # is doing real work: a lab may legitimately hold a step whose every
+  # dependency is absent in that particular lab, and refusing it outright
+  # would make a floe's optional step unusable in the labs that do not have
+  # what it wants.
+  config.lab.warnings =
+    planGraph.floatingSteps { steps = toGraph (inDirection "deploy"); }
+    ++ planGraph.floatingSteps { steps = toGraph (inDirection "teardown"); };
+
   # `topoSort` hands back the graph records with their names; the payload the
   # CLI reads comes from the declaration, not from the lowering the sort saw.
   config.lab.out.deploymentPlan = map (s: lower s.name) (ordered "deploy");
