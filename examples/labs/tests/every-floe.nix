@@ -175,6 +175,11 @@
     kaniop = floes.kaniop { chart = "${cataCharts.kaniop.chart}"; };
     redis-operator = floes.redis-operator { chart = "${cataCharts.redis-operator.chart}"; };
     reloader = floes.reloader { chart = "${cataCharts.reloader.chart}"; };
+    # The runtime store's server. `lab.secrets.stores.runtime.vault` above
+    # names the same address, which is the wiring this floe's VAULT_SERVER
+    # exists to make checkable rather than coincidental.
+    openbao = floes.openbao { chart = "${cataCharts.openbao.chart}"; };
+
     external-secrets = floes.external-secrets {
       chart = "${cataCharts.external-secrets.chart}";
       crds = "${cataCharts.external-secrets.crds}";

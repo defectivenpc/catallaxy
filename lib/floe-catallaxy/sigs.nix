@@ -237,6 +237,45 @@ in
     };
   };
 
+  # A vault-compatible KV server the lab can use as a runtime secret store.
+  #
+  # Distinct from SECRET_STORE, which says the external-secrets controller has
+  # a store *configured* — this says where the values actually live and how to
+  # authenticate to it, which is what `lab.secrets.stores.<n>.vault` needs.
+  #
+  # `tokenSecret` is a reference and not a token: a signature is data that
+  # ends up in the rendered plan, and a credential in there is a credential in
+  # the store. What mints it is a Job, so the value does not exist at eval.
+  VAULT_SERVER = floe.mkSig {
+    name = "VAULT_SERVER";
+    fields = {
+      readyToken = T.str;
+
+      # In-cluster. A different cluster reading this store needs an address
+      # that resolves outside, which is a route and therefore a lab decision.
+      address = T.str;
+
+      kvPath = T.str;
+      kvVersion = T.enum [
+        "v1"
+        "v2"
+      ];
+
+      tokenSecret = T.record {
+        namespace = T.k8sName;
+        name = T.k8sName;
+        key = T.str;
+      };
+
+      # Whether it comes back from a restart on its own. A shamir-sealed
+      # vault does not: it needs somebody to unseal it, and a consumer that
+      # waits for it to answer waits forever rather than failing. Saying so
+      # is the difference between a lab that reports why it is stuck and one
+      # that times out.
+      autoUnseals = T.bool;
+    };
+  };
+
   # Workload reload on Secret/ConfigMap rotation. The two annotation keys are
   # the interface; the old floe also exported a `mkPatches` *function*, which
   # a signature cannot carry and which `lib/k8s-annotations.nix` replaces.

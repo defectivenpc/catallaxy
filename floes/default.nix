@@ -21,6 +21,7 @@
     kaniop = ./cluster/kaniop;
     lab-dns = ./cluster/lab-dns;
     loki = ./cluster/loki;
+    openbao = ./cluster/openbao;
     openebs = ./cluster/openebs;
     otel-collector = ./cluster/otel-collector;
     podinfo = ./cluster/podinfo;
