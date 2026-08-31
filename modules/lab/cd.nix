@@ -1,0 +1,180 @@
+# How the lab's manifests reach its clusters.
+#
+# `lab.out.cd` was three hardcoded values in `out.nix` — `kapp`,
+# `kubectl-ssa`, no git — which was right while nothing could say otherwise.
+# `DELIVERY_POLICY` says otherwise: a floe that installs a CD tool answers
+# with the strategy it implements, and the lab reads it rather than being told
+# twice.
+#
+# The steps below are the other half. A gitops lab cannot deploy the ordinary
+# way: `cata` applies Argo, publishes the tree Argo reads, and then stops
+# applying. Each of those is a step kind the CLI already implements; what was
+# missing was anything declaring them.
+{
+  config,
+  lib,
+  ...
+}:
+
+let
+  t = import ../../lib/plan-tokens.nix { inherit lib; };
+  inherit (t) needs wants;
+
+  clusters = config.lab.clusters;
+  clusterNames = lib.attrNames clusters;
+
+  # Every provide of a signature, across every cluster, as
+  # `{ cluster; unit; value; }`. The same shape `modules/lab/cluster.nix` uses
+  # to find SECRET_STOREs: ask what a floe *promised*, off its definition,
+  # rather than guessing from what it rendered.
+  providesOf =
+    sigName:
+    lib.concatLists (
+      lib.mapAttrsToList (
+        clusterName: cluster:
+        lib.concatLists (
+          lib.mapAttrsToList (
+            unit: inst:
+            lib.mapAttrsToList (instName: _: {
+              cluster = clusterName;
+              inherit unit;
+              value = cluster.link.provides.${unit}.${instName};
+            }) (lib.filterAttrs (_: sig: sig.name == sigName) inst.def.provides)
+          ) cluster.floes
+        )
+      ) clusters
+    );
+
+  policies = providesOf "DELIVERY_POLICY";
+  repos = providesOf "GIT_REPOSITORY";
+
+  # A lab-wide decision made per cluster. Two clusters delivering differently
+  # is a real thing to want and not a thing `cliConfig.cd` can express — it is
+  # one object — so it is refused here rather than silently taking the first.
+  distinct = lib.unique (map (p: p.value.strategy) policies);
+
+  policy =
+    if policies == [ ] then
+      # Nothing said otherwise. `cata` applies, which is what every lab did
+      # before a floe could answer.
+      {
+        strategy = "kapp";
+        bootstrap = "kubectl-ssa";
+      }
+    else
+      {
+        strategy = (lib.head policies).value.strategy;
+        bootstrap = (lib.head policies).value.bootstrapTool;
+      };
+
+  gitops = policy.strategy == "argocd";
+
+  # Where the tree is published. `internalUrl`, because the thing that reads
+  # it is Argo, inside the cluster — the publish itself runs from the host and
+  # goes through the routed name, which is what `externalUrl` is.
+  repo = if repos == [ ] then null else (lib.head repos).value;
+
+  # The cluster Argo runs on. Taken from where the DELIVERY_POLICY came from,
+  # so a lab does not name it a second time.
+  cdCluster = if policies == [ ] then null else (lib.head policies).cluster;
+in
+{
+  config.lab.assertions =
+    lib.optional (lib.length distinct > 1) {
+      assertion = false;
+      message =
+        "clusters in this lab deliver differently (${lib.concatStringsSep ", " distinct}), and "
+        + "`cd` is one object for the whole lab — the CLI has nowhere to put a second strategy";
+    }
+    ++ lib.optional (gitops && repo == null) {
+      assertion = false;
+      message =
+        "delivery is argocd and nothing in this lab provides GIT_REPOSITORY, so there is nowhere "
+        + "to publish the manifests Argo is supposed to read — it would come up with an empty "
+        + "repository and report everything as synced";
+    };
+
+  options.lab.out.cd = lib.mkOption {
+    type = lib.types.attrs;
+    internal = true;
+    readOnly = true;
+    description = "What `cliConfig.cd` is lowered from.";
+  };
+
+  config.lab.out.cd = {
+    inherit (policy) strategy bootstrap;
+
+    git = lib.optionalAttrs (gitops && repo != null) {
+      repo = repo.externalUrl;
+      branch = "main";
+      path = "manifests";
+      provider = "forgejo";
+      credentialFromKubeSecret = lib.mkIf (repo.credentials != null) {
+        context = clusters.${cdCluster}.spec.kubeContext;
+        inherit (repo.credentials) namespace name;
+        key = repo.credentials.passwordKey;
+        username = repo.credentials.usernameKey;
+      };
+    };
+  };
+
+  # ---- the gitops steps -------------------------------------------------
+  #
+  # Only when something took delivery over. A kapp lab's `deploy-manifests`
+  # step does the whole job and none of these have anything to do.
+  config.lab.steps = lib.optionalAttrs (gitops && repo != null) {
+    bootstrap-argocd = {
+      kind = "bootstrap-argocd-kubectl-ssa";
+      description = "Apply Argo CD itself, before it can apply anything else";
+      cluster = cdCluster;
+      provides = [ t.lab.cdBootstrapped ];
+
+      # Something has to apply Argo, and it cannot be Argo.
+      after = [ (needs (t.cluster cdCluster).created) ];
+      params = {
+        target = cdCluster;
+
+        # `bootstrap/`, not `manifests/`. The bootstrap tree is what a
+        # server-side apply reads — it carries `.wave-meta` — and it is the
+        # only part of the lab `cata` still applies once Argo is running.
+        manifestRoot = "bootstrap/${cdCluster}";
+      };
+    };
+
+    bootstrap-repos = {
+      kind = "bootstrap-forgejo-repos";
+      description = "Create the repository Argo clones from";
+      cluster = cdCluster;
+      provides = [ t.lab.gitReady ];
+
+      # After the manifests, not just after Argo. The git server is a
+      # workload in this cluster, and creating a repository on a Forgejo that
+      # is not running yet fails on connection refused — the plan put this
+      # before `deploy-manifests` until the dependency was stated.
+      after = [
+        (needs t.lab.cdBootstrapped)
+        (needs (t.cluster cdCluster).deployed)
+      ];
+      params.target = cdCluster;
+    };
+
+    publish-manifests = {
+      kind = "publish-manifests";
+      description = "Push the rendered manifests into the lab's own git server";
+      provides = [ t.lab.manifestsPushed ];
+      after = [ (needs t.lab.gitReady) ];
+    };
+
+    apply-root-application = {
+      kind = "apply-root-application";
+      description = "Point Argo at the published tree and hand the cluster over";
+      cluster = cdCluster;
+      provides = [ t.lab.cdHandedOver ];
+
+      # Last. Everything before it exists so that this one has something true
+      # to point at: Argo running, a repository, and a tree in it.
+      after = [ (needs t.lab.manifestsPushed) ];
+      params.target = cdCluster;
+    };
+  };
+}

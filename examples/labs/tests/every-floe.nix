@@ -246,7 +246,11 @@
 
     # ---- policy ---------------------------------------------------------
     # Installs nothing; it is here so something reads its signature.
-    delivery = floes.delivery { };
+    # No `delivery` floe here. It answers DELIVERY_POLICY with "kapp
+    # applies", which is what a lab gets when nothing provides the signature
+    # at all — and `argocd` above answers the same signature with a real CD
+    # tool behind it. Two answers to one question is what `modules/lab/cd.nix`
+    # refuses, and it refused this.
   };
 
   # Every floe the set ships is instantiated above. When one is added and

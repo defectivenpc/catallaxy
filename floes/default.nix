@@ -14,7 +14,6 @@
     cilium = ./cluster/cilium;
     cnpg = ./cluster/cnpg;
     custom = ./cluster/custom;
-    delivery = ./cluster/delivery;
     external-dns = ./cluster/external-dns;
     external-secrets = ./cluster/external-secrets;
     grafana = ./cluster/grafana;

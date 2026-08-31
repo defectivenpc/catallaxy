@@ -178,11 +178,9 @@ in
 
       # `kapp` picks the `manifests/<cluster>` subdir; `kubectl-ssa` routes
       # the apply through the server-side applier that reads `.wave-meta`.
-      cd = {
-        strategy = "kapp";
-        bootstrap = "kubectl-ssa";
-        git = { };
-      };
+      # Which of those a lab gets is `modules/lab/cd.nix`'s answer now, read
+      # off whatever provides DELIVERY_POLICY rather than fixed here.
+      inherit (config.lab.out) cd;
 
       inherit (config.lab.out) deploymentPlan teardownPlan;
 
