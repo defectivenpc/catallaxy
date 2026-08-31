@@ -389,6 +389,13 @@ in
         T.record {
           name = T.k8sName;
           namespace = T.k8sName;
+
+          # Which keys, not just which Secret. A consumer that knows the
+          # Secret and guesses the keys fails at pull time with a 401, which
+          # is the same "finding out too late" the field above exists to
+          # prevent — and every registry spells them differently.
+          usernameKey = T.str;
+          passwordKey = T.str;
         }
       );
     };

@@ -110,6 +110,11 @@
     # fan-in and nothing here lists them.
     kanidm = floes.kanidm { domain = "idm.${config.lab.dns.zone}"; };
 
+    harbor = floes.harbor {
+      chart = "${cataCharts.harbor.chart}";
+      oidc = true;
+    };
+
     gateway-api = floes.gateway-api-crds {
       manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
       version = "v1.2.1";

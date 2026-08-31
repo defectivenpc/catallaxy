@@ -19,6 +19,7 @@
     grafana = ./cluster/grafana;
     gateway = ./cluster/gateway;
     gateway-api-crds = ./cluster/gateway-api-crds;
+    harbor = ./cluster/harbor;
     kanidm = ./cluster/kanidm;
     kaniop = ./cluster/kaniop;
     lab-dns = ./cluster/lab-dns;
