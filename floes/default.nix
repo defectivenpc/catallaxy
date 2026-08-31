@@ -17,6 +17,7 @@
     external-dns = ./cluster/external-dns;
     external-secrets = ./cluster/external-secrets;
     grafana = ./cluster/grafana;
+    forgejo = ./cluster/forgejo;
     gateway = ./cluster/gateway;
     gateway-api-crds = ./cluster/gateway-api-crds;
     harbor = ./cluster/harbor;

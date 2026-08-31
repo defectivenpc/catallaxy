@@ -110,6 +110,11 @@
     # fan-in and nothing here lists them.
     kanidm = floes.kanidm { domain = "idm.${config.lab.dns.zone}"; };
 
+    forgejo = floes.forgejo {
+      chart = "${cataCharts.forgejo.chart}";
+      oidc = true;
+    };
+
     harbor = floes.harbor {
       chart = "${cataCharts.harbor.chart}";
       oidc = true;

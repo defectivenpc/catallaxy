@@ -321,6 +321,40 @@ in
     };
   };
 
+  # Somewhere to push and clone git over HTTP.
+  #
+  # Two URLs, because they are read by different things and only one of them
+  # resolves in both places. A CD tool running *in* the cluster clones over the
+  # Service address; a human, and anything outside, needs the routed one. The
+  # parked tree had a single `gitRepo` and consumers picked whichever happened
+  # to work where they were tested.
+  GIT_REPOSITORY = floe.mkSig {
+    name = "GIT_REPOSITORY";
+    fields = {
+      readyToken = T.str;
+
+      # `http://forgejo-http.forgejo.svc.cluster.local:3000`. No TLS: the
+      # certificate is on the gateway, and an in-cluster client dialling the
+      # Service directly would be dialling past it.
+      internalUrl = T.str;
+
+      # `https://git.lab.test`. What a clone URL in a manifest should say,
+      # because a manifest is also read by people.
+      externalUrl = T.str;
+
+      # Which keys, not just which Secret — the same reason OCI_REGISTRY
+      # carries them. Null when the server takes anonymous reads.
+      credentials = T.nullOr (
+        T.record {
+          name = T.k8sName;
+          namespace = T.k8sName;
+          usernameKey = T.str;
+          passwordKey = T.str;
+        }
+      );
+    };
+  };
+
   # Workload reload on Secret/ConfigMap rotation. The two annotation keys are
   # the interface; the old floe also exported a `mkPatches` *function*, which
   # a signature cannot carry and which `lib/k8s-annotations.nix` replaces.
