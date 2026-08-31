@@ -42,6 +42,10 @@ lib.runTests {
     expected = {
       name = "forgejo-admin";
       namespace = "forgejo";
+      # The username itself as well as the key holding it. What pushes needs
+      # it as a literal — it goes into a URL, not a Secret lookup — and
+      # passing the key name there authenticated as a user called "username".
+      username = "forgejo-admin";
       usernameKey = "username";
       passwordKey = "password";
     };

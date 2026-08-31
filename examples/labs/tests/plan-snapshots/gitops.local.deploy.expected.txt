@@ -8,4 +8,4 @@
 [008] deploy-manifests name=deploy-manifests-app cluster=app params.kubeContext=k3d-gitops-local-app params.target=app
 [009] bootstrap-forgejo-repos name=bootstrap-repos cluster=app params.kubeContext=k3d-gitops-local-app params.target=app
 [010] publish-manifests name=publish-manifests
-[011] apply-root-application name=apply-root-application cluster=app params.kubeContext=k3d-gitops-local-app params.target=app
+[011] apply-root-application name=apply-root-application cluster=app params.kubeContext=k3d-gitops-local-app params.manifestPath=cd/root-application.yaml params.target=app

@@ -104,6 +104,7 @@ let
         credentials = {
           name = "forgejo-admin";
           namespace = "forgejo";
+          username = "stub-admin";
           usernameKey = "username";
           passwordKey = "password";
         };

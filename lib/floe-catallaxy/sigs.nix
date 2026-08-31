@@ -357,6 +357,12 @@ in
         T.record {
           name = T.k8sName;
           namespace = T.k8sName;
+          # The username itself, not just where to read it. A username is not
+          # a secret, and the thing that pushes needs it as a literal — it
+          # goes into a URL, not into a Secret lookup. Passing `usernameKey`
+          # here authenticated as a user called "username".
+          username = T.str;
+
           usernameKey = T.str;
           passwordKey = T.str;
         }

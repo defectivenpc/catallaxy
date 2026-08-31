@@ -1,0 +1,4 @@
+{ ... }:
+{
+  lab.name = "gitops.local";
+}

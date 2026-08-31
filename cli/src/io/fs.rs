@@ -58,8 +58,19 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64
 /// If `cp` cannot be spawned, or exits non-zero because the source is missing
 /// or the target is not writable.
 pub fn copy_tree_dereferencing(source: &str, target: &Path) -> Result<()> {
+    // `--no-preserve=mode`, because the source is always the Nix store and the
+    // target is always somewhere that has to be written to afterwards.
+    //
+    // Without it `cp -r` reproduces the store's `r-xr-xr-x` on every directory
+    // it creates, and the next write into one fails with EACCES. `lab publish`
+    // hit exactly that: it copied the manifest tree, then tried to put
+    // `metadata.json` beside it and could not.
+    //
+    // Fixed here rather than at the call site: copying out of the store into a
+    // writable tree is what this function is for, and a read-only result is
+    // never what a caller wants.
     let status = std::process::Command::new("cp")
-        .args(["-rL"])
+        .args(["-rL", "--no-preserve=mode"])
         .arg(source)
         .arg(target)
         .status()

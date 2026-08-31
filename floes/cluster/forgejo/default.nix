@@ -137,6 +137,7 @@ floe.mkFloe {
           credentials = {
             name = adminSecret;
             namespace = ns;
+            username = inputs.adminUser;
             usernameKey = "username";
             passwordKey = "password";
           };

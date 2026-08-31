@@ -37,6 +37,15 @@ let
       eligible = true;
       mentions = [ ];
     };
+
+    # The gitops lab: `cata` applies Argo CD and the git server, publishes the
+    # rendered tree into that server, and hands the cluster over. Nothing in
+    # it needs a human or a credential from outside, so it stands up
+    # unattended like the rest.
+    "gitops.local" = {
+      eligible = true;
+      mentions = [ ];
+    };
   };
 
   known = lib.filter (n: e2eLabs ? ${n}) (lib.attrNames expected);

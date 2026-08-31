@@ -78,6 +78,51 @@ let
   # so a lab does not name it a second time.
   cdCluster = if policies == [ ] then null else (lib.head policies).cluster;
 
+  # The root Application, as a file in the lab package rather than a bundle
+  # resource.
+  #
+  # It cannot be a bundle: bundles are applied at `deploy-manifests`, which
+  # runs *before* the tree is published, so an Application pointing at an
+  # empty repository would sync nothing and report success. `cata` applies
+  # this one by path, last, once there is something for it to point at.
+  #
+  # An app-of-apps in the plainest form: one Application whose source is the
+  # published directory, so everything under it is Argo's from then on.
+  rootApplication = lib.optionalAttrs (gitops && repo != null) {
+    apiVersion = "argoproj.io/v1alpha1";
+    kind = "Application";
+    metadata = {
+      name = "root";
+      namespace = "argocd";
+      # Without it, deleting the Application orphans everything it created,
+      # and a `lab destroy` that leaves the cluster full is not a destroy.
+      finalizers = [ "resources-finalizer.argocd.argoproj.io" ];
+    };
+    spec = {
+      project = "default";
+      source = {
+        repoURL = lib.replaceStrings [ repo.externalUrl ] [ repo.internalUrl ] repo.cloneUrl;
+        targetRevision = "main";
+        path = "manifests/${cdCluster}";
+        directory.recurse = true;
+      };
+      destination = {
+        server = "https://kubernetes.default.svc";
+        namespace = "default";
+      };
+      syncPolicy = {
+        automated = {
+          # Both, deliberately. `prune` off leaves a resource removed from git
+          # running forever; `selfHeal` off means a hand edit in the cluster
+          # wins over what is committed, which is the opposite of the point.
+          prune = true;
+          selfHeal = true;
+        };
+        syncOptions = [ "CreateNamespace=true" ];
+      };
+    };
+  };
+
   # Every one of these addresses the cluster by context, and none of them can
   # derive it — the plan is what resolves it, and a step that omits it is told
   # so at run time rather than at eval. `deploy-manifests` has always passed
@@ -100,12 +145,21 @@ in
         + "repository and report everything as synced";
     };
 
+  options.lab.out.rootApplication = lib.mkOption {
+    type = lib.types.attrs;
+    internal = true;
+    readOnly = true;
+    description = "The Argo Application `apply-root-application` applies, or `{ }`.";
+  };
+
   options.lab.out.cd = lib.mkOption {
     type = lib.types.attrs;
     internal = true;
     readOnly = true;
     description = "What `cliConfig.cd` is lowered from.";
   };
+
+  config.lab.out.rootApplication = rootApplication;
 
   config.lab.out.cd = {
     inherit (policy) strategy bootstrap;
@@ -127,7 +181,7 @@ in
           context = clusters.${cdCluster}.spec.kubeContext;
           inherit (repo.credentials) namespace name;
           key = repo.credentials.passwordKey;
-          username = repo.credentials.usernameKey;
+          inherit (repo.credentials) username;
         };
       };
   };
@@ -196,6 +250,7 @@ in
       params = {
         target = cdCluster;
         inherit kubeContext;
+        manifestPath = "cd/root-application.yaml";
       };
     };
   };

@@ -281,6 +281,11 @@ in
 
           jq . "$metadataTextPath" > $out/metadata.json
 
+          ${lib.optionalString (config.lab.out.rootApplication != { }) ''
+            mkdir -p $out/cd
+            cp ${pkgs.writeText "root-application.yaml" (builtins.toJSON config.lab.out.rootApplication)} $out/cd/root-application.yaml
+          ''}
+
           ${lib.concatStringsSep "\n" verifyCopies}
           ${lib.optionalString (lintChecks != { }) "mkdir -p $out/lint"}
           ${lib.concatStringsSep "\n" lintCopies}

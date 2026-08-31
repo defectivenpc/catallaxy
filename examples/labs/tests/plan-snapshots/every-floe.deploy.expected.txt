@@ -5,4 +5,4 @@
 [005] deploy-manifests name=deploy-manifests-core cluster=core params.kubeContext=k3d-every-floe-core params.target=core
 [006] bootstrap-forgejo-repos name=bootstrap-repos cluster=core params.kubeContext=k3d-every-floe-core params.target=core
 [007] publish-manifests name=publish-manifests
-[008] apply-root-application name=apply-root-application cluster=core params.kubeContext=k3d-every-floe-core params.target=core
+[008] apply-root-application name=apply-root-application cluster=core params.kubeContext=k3d-every-floe-core params.manifestPath=cd/root-application.yaml params.target=core

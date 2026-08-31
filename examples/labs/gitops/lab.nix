@@ -1,12 +1,4 @@
 # One cluster that reconciles itself.
-#
-# A fixture, not an e2e lab, and the reason is recorded rather than assumed.
-# It now gets to step 10 of 11: Argo CD comes up, the forgejo bootstrap Job
-# creates the repository, and `publish-manifests` clones it successfully —
-# then fails copying the rendered tree in with `Permission denied (os error
-# 13)`. The manifests come out of the Nix store read-only and the copy
-# preserves their mode, so the second `lab up` cannot overwrite what the
-# first wrote. That is a CLI fix, in `publish-manifests`.
 
 #
 # The lab Round 4 exists for, and the first that hands delivery over: `cata`
@@ -30,8 +22,8 @@ let
   instanceOf = clusterName: "${lib.replaceStrings [ "." ] [ "-" ] config.lab.name}-${clusterName}";
 in
 {
-  lab.name = "gitops.local";
-  lab.dns.zone = "gitops.test";
+  lab.name = lib.mkDefault "gitops.local";
+  lab.dns.zone = lib.mkDefault "gitops.test";
 
   # Its own subnet and ports, so it stands up beside the minimal labs rather
   # than fighting them for the network.
@@ -42,7 +34,7 @@ in
   lab.registry.port = 5054;
   lab.egress.port = 3131;
 
-  lab.registry.enable = true;
+  lab.registry.enable = lib.mkDefault true;
 
   # Argo clones over TLS from a certificate the lab mints, and Forgejo's own
   # routed URL has to be reachable for a human to look at it.
