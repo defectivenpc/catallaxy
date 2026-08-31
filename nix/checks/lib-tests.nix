@@ -43,6 +43,8 @@ let
     # back with `lab.images`, and `drift` covers the argocd lowering.
     util-network = testsDir + "/util-network.nix";
     util-duration = testsDir + "/util-duration.nix";
+    util-hcl = testsDir + "/util-hcl.nix";
+    util-idempotent-job = testsDir + "/util-idempotent-job.nix";
     util-wait = testsDir + "/util-wait.nix";
     manifest-graph = testsDir + "/manifest-graph.nix";
     manifest-autoedges = testsDir + "/manifest-autoedges.nix";
