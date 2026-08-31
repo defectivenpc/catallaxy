@@ -196,7 +196,10 @@ floe.mkFloe {
                     # cluster, and the routed name resolves through the
                     # gateway — which is a longer path to the same server, and
                     # one that needs the lab's CA to verify.
-                    url = git.internalUrl;
+                    # The repository, over the in-cluster address. Argo needs
+                    # a repository like anything else that clones, and the
+                    # server address alone answers 503.
+                    url = lib.replaceStrings [ git.externalUrl ] [ git.internalUrl ] git.cloneUrl;
 
                     inherit (inputs) project;
                   }

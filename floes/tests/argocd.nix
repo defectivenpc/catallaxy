@@ -15,9 +15,13 @@ lib.runTests {
   # The whole reason GIT_REPOSITORY carries two URLs. Argo clones from inside
   # the cluster, so the repository Secret gets the Service address — the
   # routed name is a longer path to the same server and needs the lab's CA.
-  testItClonesOverTheInternalUrl = {
+  # The *repository*, over the in-cluster address. Both halves matter and
+  # each was wrong once: pointing at `externalUrl` sent Argo through the
+  # gateway, and pointing at the server rather than the repository got a 503
+  # from an ingress with nothing at its root.
+  testItClonesTheRepositoryOverTheInternalUrl = {
     expr = repo.stringData.url;
-    expected = support.stubs.gitRepository.value.internalUrl;
+    expected = "http://forgejo-http.forgejo.svc.cluster.local:3000/stub-admin/lab.git";
   };
 
   # A Secret with this label is how Argo finds a repository; there is no CRD

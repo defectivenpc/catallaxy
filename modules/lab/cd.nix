@@ -112,7 +112,7 @@ in
 
     git =
       lib.optionalAttrs (gitops && repo != null) {
-        repo = repo.externalUrl;
+        repo = repo.cloneUrl;
         branch = "main";
         path = "manifests";
         provider = "forgejo";

@@ -1,11 +1,13 @@
 # One cluster that reconciles itself.
 #
-# A fixture, not a runnable lab, and the reason is recorded rather than
-# assumed: it gets as far as Argo CD being fully up and fails at
-# `bootstrap-forgejo-repos`, which waits for a Job labelled
-# `app.kubernetes.io/component=forgejo-bootstrap` that the forgejo floe does
-# not render. Until it does, this renders and snapshots and does not run —
-# the same standing as `every-floe`.
+# A fixture, not an e2e lab, and the reason is recorded rather than assumed.
+# It now gets to step 10 of 11: Argo CD comes up, the forgejo bootstrap Job
+# creates the repository, and `publish-manifests` clones it successfully —
+# then fails copying the rendered tree in with `Permission denied (os error
+# 13)`. The manifests come out of the Nix store read-only and the copy
+# preserves their mode, so the second `lab up` cannot overwrite what the
+# first wrote. That is a CLI fix, in `publish-manifests`.
+
 #
 # The lab Round 4 exists for, and the first that hands delivery over: `cata`
 # applies Argo CD and the git server, publishes the rendered tree into that

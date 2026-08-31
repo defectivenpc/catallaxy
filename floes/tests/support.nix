@@ -100,6 +100,7 @@ let
         readyToken = "stub/git/ready";
         internalUrl = "http://forgejo-http.forgejo.svc.cluster.local:3000";
         externalUrl = "https://git.stub.test";
+        cloneUrl = "https://git.stub.test/stub-admin/lab.git";
         credentials = {
           name = "forgejo-admin";
           namespace = "forgejo";

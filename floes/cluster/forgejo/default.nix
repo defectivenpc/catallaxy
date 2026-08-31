@@ -8,6 +8,7 @@
 # a repository outside the lab — Round 4's argocd clones from here.
 {
   lib,
+  pkgs,
   floe,
   sigs,
   kinds,
@@ -52,6 +53,17 @@ floe.mkFloe {
       default = false;
       description = "Add the lab's issuer as a login source.";
     };
+
+    repository = lib.mkOption {
+      type = lib.types.str;
+      default = "lab";
+      description = ''
+        Repository the bootstrap Job creates for a CD tool to clone.
+
+        `cata`'s `bootstrap-forgejo-repos` step waits for that Job by label,
+        so a lab publishing manifests here needs it to exist and to finish.
+      '';
+    };
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
@@ -76,6 +88,7 @@ floe.mkFloe {
         host = "git.${gateway.baseDomain}";
 
         adminSecret = "forgejo-admin";
+        idempotent = import ../../../lib/util/idempotent-job.nix { inherit lib; };
 
         # `extraData` for the username, the same shape grafana and harbor use:
         # a consumer cloning from here needs both, and a username is not a
@@ -119,6 +132,7 @@ floe.mkFloe {
           # dialling past it.
           internalUrl = "http://forgejo-http.${ns}.svc.cluster.local:3000";
           externalUrl = "https://${host}";
+          cloneUrl = "https://${host}/${inputs.adminUser}/${inputs.repository}.git";
 
           credentials = {
             name = adminSecret;
@@ -167,6 +181,13 @@ floe.mkFloe {
                   namespace = ns;
                   service = "forgejo-http";
                   port = 3000;
+
+                  # Explicit, because `mkRoute` defaults the hostname from
+                  # `name` and this floe is called forgejo while it answers on
+                  # `git.`. Left to the default it served `forgejo.<zone>` and
+                  # every clone of `git.<zone>` got a 503 from the ingress —
+                  # a route that exists and a host nothing serves.
+                  hostname = host;
                 };
               };
 
@@ -255,6 +276,79 @@ floe.mkFloe {
                 ];
               };
             };
+          };
+
+          # Its own bundle, because `cata`'s `bootstrap-forgejo-repos` step
+          # waits on this Job by label and a bundle is what orders it after the
+          # server. Wrapped in `mkIdempotentJob` so a re-render does not run it
+          # again: creating a repository twice is a 409, and a Job that fails
+          # on its second `lab up` fails the deploy.
+          bundles.bootstrap = kinds.mkBundle {
+            needs = [ "forgejo" ];
+
+            images.bootstrap = {
+              registry = "docker.io";
+              repository = "curlimages/curl";
+              tag = "8.11.1";
+              digest = null;
+            };
+
+            resources =
+              (idempotent.mkIdempotentJob {
+                name = "forgejo-bootstrap";
+                namespace = ns;
+
+                # What it was asked to make. Not the image and not the script.
+                contentInputs = {
+                  inherit (inputs) repository adminUser;
+                };
+
+                podSpec = {
+                  restartPolicy = "OnFailure";
+                  containers = [
+                    {
+                      name = "bootstrap";
+                      image = "docker.io/curlimages/curl:8.11.1";
+                      command = [
+                        "sh"
+                        "-c"
+                      ];
+                      args = [ (builtins.readFile ./scripts/bootstrap.sh) ];
+                      env = [
+                        {
+                          name = "API";
+                          value = "http://forgejo-http.${ns}.svc.cluster.local:3000";
+                        }
+                        {
+                          name = "REPO";
+                          value = inputs.repository;
+                        }
+                        {
+                          name = "USERNAME";
+                          valueFrom.secretKeyRef = {
+                            name = adminSecret;
+                            key = "username";
+                          };
+                        }
+                        {
+                          name = "PASSWORD";
+                          valueFrom.secretKeyRef = {
+                            name = adminSecret;
+                            key = "password";
+                          };
+                        }
+                      ];
+                    }
+                  ];
+                };
+              }).resources
+              // { };
+
+            # The label `cata` selects on. Set through the constructor's
+            # `extraLabels` would be tidier; this Job's own component label is
+            # already its name, which is what the step's default selector
+            # matches.
+            awaitRollout = false;
           };
         };
       }

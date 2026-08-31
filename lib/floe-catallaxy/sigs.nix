@@ -342,6 +342,15 @@ in
       # because a manifest is also read by people.
       externalUrl = T.str;
 
+      # The repository itself, not the server: `https://git.lab.test/owner/lab.git`.
+      #
+      # Both of the above address the *server*, and everything that clones
+      # needs a repository. `publish-manifests` was handed `externalUrl` and
+      # cloned `https://git.gitops.test/`, which the ingress answered with a
+      # 503 — there is no repository at the root. Only the floe knows what it
+      # bootstrapped, so only the floe can say.
+      cloneUrl = T.str;
+
       # Which keys, not just which Secret — the same reason OCI_REGISTRY
       # carries them. Null when the server takes anonymous reads.
       credentials = T.nullOr (
