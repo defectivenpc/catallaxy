@@ -215,6 +215,13 @@
         ttl = "168h";
       };
     };
+    # All three backends and the issuer are in this lab, so grafana gets three
+    # datasources and OIDC login — the full width of both optional holes.
+    grafana = floes.grafana {
+      chart = "${cataCharts.grafana.chart}";
+      oidc = true;
+    };
+
     loki = floes.loki { chart = "${cataCharts.loki.chart}"; };
     tempo = floes.tempo { chart = "${cataCharts.tempo.chart}"; };
 

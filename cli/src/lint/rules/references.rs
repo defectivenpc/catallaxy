@@ -26,6 +26,25 @@ impl CheckRule for References {
     }
 }
 
+/// Whether something outside the manifest stream promises this name.
+///
+/// `runtimeMaterialised` is `<namespace>/<name>`, the same spelling the Nix
+/// side uses for a Secret everywhere else — the coherence check, `secrets`,
+/// `needsSecrets`. This compared bare names, which excused a reference in *any*
+/// namespace as soon as one namespace declared that name.
+///
+/// The bare form is still accepted, because a declaration that cannot know its
+/// consumer's namespace has nothing else to say.
+fn is_materialised(materialised: &HashSet<&str>, namespace: Option<&str>, name: &str) -> bool {
+    if materialised.contains(name) {
+        return true;
+    }
+    match namespace {
+        Some(ns) => materialised.contains(format!("{ns}/{name}").as_str()),
+        None => false,
+    }
+}
+
 fn promised_by_custom_resources(resources: &[K8sResource]) -> HashSet<(Option<&str>, String)> {
     let mut promised = HashSet::new();
     for r in resources {
@@ -89,7 +108,7 @@ fn check(
             if configmaps.contains(&(r.namespace.as_deref(), cm_ref.as_str())) {
                 continue;
             }
-            if runtime_materialised.contains(cm_ref.as_str()) {
+            if is_materialised(runtime_materialised, r.namespace.as_deref(), cm_ref) {
                 continue;
             }
             if promised.contains(&(r.namespace.as_deref(), cm_ref.clone()))
@@ -113,7 +132,7 @@ fn check(
             if projection_names.contains(secret_ref.as_str()) {
                 continue;
             }
-            if runtime_materialised.contains(secret_ref.as_str()) {
+            if is_materialised(runtime_materialised, r.namespace.as_deref(), secret_ref) {
                 continue;
             }
             if promised.contains(&(r.namespace.as_deref(), secret_ref.clone()))

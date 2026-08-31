@@ -16,6 +16,7 @@
     delivery = ./cluster/delivery;
     external-dns = ./cluster/external-dns;
     external-secrets = ./cluster/external-secrets;
+    grafana = ./cluster/grafana;
     gateway = ./cluster/gateway;
     gateway-api-crds = ./cluster/gateway-api-crds;
     kanidm = ./cluster/kanidm;
