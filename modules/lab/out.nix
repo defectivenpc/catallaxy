@@ -259,6 +259,28 @@ in
             yq -N '${imageUtil.scrapeExpr}' "$f" 2>/dev/null >> images-raw.txt || true
           done
         '') clusters;
+
+        # Auto-deploy manifests, copied into the package.
+        #
+        # `provisionerConfig.k3d.autoDeployManifests[].path` is a store path
+        # that reaches the CLI as a plain string in `metadata.json`. Nothing in
+        # this derivation's inputs referenced it — the rendered manifests do
+        # not, and `builtins.toJSON` through `passAsFile` drops string context
+        # — so Nix never realised it and k3d found no file to mount. Copying it
+        # here makes the package depend on it by construction.
+        #
+        # `autodeploy/<cluster>/<name>.yaml` is the layout
+        # `cli/src/provision/mod.rs` already looks in before falling back to
+        # the declared path, so nothing on the CLI side changes.
+        autoDeployCopies = lib.concatLists (
+          lib.mapAttrsToList (
+            clusterName: c:
+            map (m: ''
+              mkdir -p $out/autodeploy/${clusterName}
+              cp ${m.path} $out/autodeploy/${clusterName}/${m.name}.yaml
+            '') c.spec.provisionerConfig.k3d.autoDeployManifests
+          ) clusters
+        );
       in
       pkgs.runCommand "lab-${config.lab.name}"
         {
@@ -280,6 +302,8 @@ in
           ln -s $out/manifests $out/bootstrap
 
           jq . "$metadataTextPath" > $out/metadata.json
+
+          ${lib.concatStringsSep "\n" autoDeployCopies}
 
           ${lib.optionalString (config.lab.out.rootApplication != { }) ''
             mkdir -p $out/cd

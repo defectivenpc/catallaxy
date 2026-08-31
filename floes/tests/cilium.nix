@@ -93,15 +93,20 @@ lib.runTests {
 
   # ---- the release ------------------------------------------------------
 
-  # The operator can be Available on a cluster whose agents are all
-  # crash-looping, and the agent is what actually carries traffic.
-  testReadinessIsTheAgentNotTheOperator = {
+  # No readiness probe at all, and that is the point. A DaemonSet has no
+  # conditions, so `--for=condition=Ready daemonset/cilium` waits out its
+  # whole timeout and then fails — which it did, on the first cluster that
+  # booted on cilium, *after* cilium had already brought the nodes up.
+  # `awaitRollout` asks the right question for a DaemonSet: every node has the
+  # agent, not some quorum of them.
+  testItLeavesReadinessToTheRollout = {
     expr = {
-      inherit (r.bundles.cilium.ready) resource condition;
+      probe = r.bundles.cilium.ready;
+      rollout = r.bundles.cilium.awaitRollout;
     };
     expected = {
-      resource = "daemonset/cilium";
-      condition = "Ready";
+      probe = null;
+      rollout = true;
     };
   };
 

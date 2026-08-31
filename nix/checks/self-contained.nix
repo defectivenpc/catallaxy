@@ -38,6 +38,14 @@ let
       mentions = [ ];
     };
 
+    # Boots on cilium rather than flannel. Nothing about it needs a human: the
+    # CNI arriving through the provisioner rather than through a floe is a
+    # rendering detail, not an eligibility one.
+    "minimal.cilium" = {
+      eligible = true;
+      mentions = [ ];
+    };
+
     # The gitops lab: `cata` applies Argo CD and the git server, publishes the
     # rendered tree into that server, and hands the cluster over. Nothing in
     # it needs a human or a credential from outside, so it stands up

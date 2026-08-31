@@ -163,16 +163,17 @@ let
                 digest = "sha256:377c78c13d2731f3720f931721ee309159e782d882251709cb0fac3b42c03f4b";
               };
 
-              # The DaemonSet, not the operator: the operator can be Available
-              # on a cluster whose agents are all crash-looping, and the agent
-              # is what actually carries traffic.
-              ready = {
-                kind = "condition";
-                resource = "daemonset/cilium";
-                namespace = "kube-system";
-                condition = "Ready";
-                timeout = "5m";
-              };
+              # No `ready` probe, and the reason is the same one otel-collector
+              # already records: a DaemonSet has no conditions, so
+              # `--for=condition=Ready daemonset/cilium` waits out its whole
+              # timeout and then fails. It did, on this lab's first boot —
+              # after cilium had already brought the nodes up.
+              #
+              # `awaitRollout` is the right question for a DaemonSet anyway:
+              # every node has the agent, not some quorum of them. The
+              # operator is deliberately not the thing waited on — it can be
+              # Available on a cluster whose agents are all crash-looping, and
+              # the agent is what carries traffic.
 
               ops.network = {
                 status = kinds.mkOpsCommand {
