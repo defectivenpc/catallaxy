@@ -67,10 +67,25 @@
   };
 
   lab.clusters.core.floes = {
+    # Both halves of cilium, which is the point of having it here: the
+    # bootstrap manifest is a derivation the lab hands to the provisioner, and
+    # the floe below installs the same chart as a release that takes ownership
+    # once the cluster is up. One `cataCharts.cilium.chart` feeds both, so the
+    # two cannot disagree about what is running.
     cluster = floes.k3d-cluster {
       name = "core";
       instanceName = "every-floe-core";
+
+      disableFlannel = true;
+      autoDeployManifests = [
+        {
+          name = "cilium";
+          path = "${floes.cilium.mkBootstrapManifest { chart = "${cataCharts.cilium.chart}"; }}";
+        }
+      ];
     };
+
+    cilium = floes.cilium { chart = "${cataCharts.cilium.chart}"; };
 
     # ---- trust ----------------------------------------------------------
     cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };

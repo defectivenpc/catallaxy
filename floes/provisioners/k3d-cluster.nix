@@ -52,6 +52,54 @@ floe.mkFloe {
       '';
     };
 
+    disableFlannel = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Start the cluster with no CNI at all.
+
+        The nodes then stay NotReady until something provides one, which is
+        the point: a cluster carrying both flannel and a replacement is a
+        manifest set that could never work, and the two would each write their
+        own datapath rules over the other's.
+
+        Set this alongside an `autoDeployManifests` entry that installs the
+        replacement. Setting it alone produces a cluster that never comes up.
+      '';
+    };
+
+    autoDeployManifests = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Filename k3s sees it under, without the extension.";
+            };
+            path = lib.mkOption {
+              type = lib.types.str;
+              description = "Store path of the manifest to mount.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = ''
+        Manifests k3s applies at startup, before the node is Ready.
+
+        For the one case a floe cannot cover: something the cluster needs in
+        order to finish starting. A CNI is the whole of that case today — a
+        floe's bundles are applied to a cluster that is already up, so a floe
+        providing the network would have to require the cluster that cannot
+        start without it.
+
+        Anything that can wait for a running cluster belongs in a floe, where
+        it gets ordering, readiness and drift handling. This gets none of
+        those: k3s applies it once and nothing manages it afterwards, which is
+        why `floes.cilium` also installs itself as an ordinary release.
+      '';
+    };
+
     serviceSubnet = lib.mkOption {
       type = lib.types.str;
       default = "10.96.0.0/12";
@@ -121,13 +169,19 @@ floe.mkFloe {
             # needs Cilium or OpenEBS turns the conflicting one off itself.
             noTraefik = true;
             noServiceLB = false;
-            noFlannel = false;
             noLocalStorage = false;
+
+            # The lab's call, not this floe's. It used to be hardcoded false
+            # with a comment saying a floe that needs Cilium turns it off
+            # itself — which described a writeback from floe to cluster that
+            # the link graph has no direction for, and which is what kept
+            # cilium unmigrated.
+            noFlannel = inputs.disableFlannel;
 
             ports = [ ];
             extraApiServerArgs = [ ];
             extraVolumes = [ ];
-            autoDeployManifests = [ ];
+            inherit (inputs) autoDeployManifests;
           };
         };
       }

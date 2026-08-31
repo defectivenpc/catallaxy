@@ -98,8 +98,19 @@ let
   completenessCheck =
     c:
     let
+      # `@<digest>` when the declaration pins one, because that is what the
+      # rendered ref looks like and the two are compared as strings.
+      #
+      # This used to drop `digest` on the floor. Every chart migrated before
+      # cilium's pinned by tag alone, so the declared and rendered sides
+      # happened to agree and nothing noticed — but a floe installing a
+      # digest-pinning chart could not have satisfied this gate at all, no
+      # matter what it declared. `imageSchema` has carried the field the whole
+      # time.
       declared = lib.mapAttrsToList (
-        _: img: "${img.registry}/${img.repository}:${if img.tag == null then "" else img.tag}"
+        _: img:
+        "${img.registry}/${img.repository}:${if img.tag == null then "" else img.tag}"
+        + lib.optionalString (img.digest != null) "@${img.digest}"
       ) (lib.filterAttrs (key: _: lib.hasPrefix "${c.unit}/" key) c.cluster.out.images);
     in
     pkgs.runCommand "images-complete-${c.labName}-${c.clusterName}-${c.unit}"

@@ -10,6 +10,7 @@
 {
   cluster = {
     cert-manager = ./cluster/cert-manager;
+    cilium = ./cluster/cilium;
     cnpg = ./cluster/cnpg;
     custom = ./cluster/custom;
     delivery = ./cluster/delivery;
