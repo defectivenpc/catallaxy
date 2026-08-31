@@ -77,6 +77,12 @@ let
   # The cluster Argo runs on. Taken from where the DELIVERY_POLICY came from,
   # so a lab does not name it a second time.
   cdCluster = if policies == [ ] then null else (lib.head policies).cluster;
+
+  # Every one of these addresses the cluster by context, and none of them can
+  # derive it — the plan is what resolves it, and a step that omits it is told
+  # so at run time rather than at eval. `deploy-manifests` has always passed
+  # it; these four were written without it and step 7 failed on the first run.
+  kubeContext = if cdCluster == null then null else clusters.${cdCluster}.spec.kubeContext;
 in
 {
   config.lab.assertions =
@@ -104,18 +110,26 @@ in
   config.lab.out.cd = {
     inherit (policy) strategy bootstrap;
 
-    git = lib.optionalAttrs (gitops && repo != null) {
-      repo = repo.externalUrl;
-      branch = "main";
-      path = "manifests";
-      provider = "forgejo";
-      credentialFromKubeSecret = lib.mkIf (repo.credentials != null) {
-        context = clusters.${cdCluster}.spec.kubeContext;
-        inherit (repo.credentials) namespace name;
-        key = repo.credentials.passwordKey;
-        username = repo.credentials.usernameKey;
+    git =
+      lib.optionalAttrs (gitops && repo != null) {
+        repo = repo.externalUrl;
+        branch = "main";
+        path = "manifests";
+        provider = "forgejo";
+      }
+      // lib.optionalAttrs (gitops && repo != null && repo.credentials != null) {
+        # `optionalAttrs` on the attribute, not `mkIf` on the value. `lab.out.cd`
+        # is `types.attrs`, so nothing processes a `mkIf` inside it — the
+        # wrapper reaches the CLI as the value and `lab up` fails parsing the
+        # config with "missing field `context`". Same shape as the
+        # `optionalAttrs`-on-a-bundle bug in otel-collector.
+        credentialFromKubeSecret = {
+          context = clusters.${cdCluster}.spec.kubeContext;
+          inherit (repo.credentials) namespace name;
+          key = repo.credentials.passwordKey;
+          username = repo.credentials.usernameKey;
+        };
       };
-    };
   };
 
   # ---- the gitops steps -------------------------------------------------
@@ -138,6 +152,8 @@ in
         # server-side apply reads — it carries `.wave-meta` — and it is the
         # only part of the lab `cata` still applies once Argo is running.
         manifestRoot = "bootstrap/${cdCluster}";
+
+        inherit kubeContext;
       };
     };
 
@@ -155,7 +171,10 @@ in
         (needs t.lab.cdBootstrapped)
         (needs (t.cluster cdCluster).deployed)
       ];
-      params.target = cdCluster;
+      params = {
+        target = cdCluster;
+        inherit kubeContext;
+      };
     };
 
     publish-manifests = {
@@ -174,7 +193,10 @@ in
       # Last. Everything before it exists so that this one has something true
       # to point at: Argo running, a repository, and a tree in it.
       after = [ (needs t.lab.manifestsPushed) ];
-      params.target = cdCluster;
+      params = {
+        target = cdCluster;
+        inherit kubeContext;
+      };
     };
   };
 }

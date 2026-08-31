@@ -95,6 +95,25 @@ floe.mkFloe {
           extraData.username = "admin";
         };
 
+        # `argocd-redis` holds the password four workloads authenticate to
+        # Redis with, and the Redis pod itself reads the same key to set
+        # `--requirepass` — so minting it here gives both halves one value.
+        #
+        # The chart creates it from a `post-install` hook, and a hook is not a
+        # rendered manifest: this renders with `helm template`, so the Job
+        # never exists and the Secret never appears. Declaring it as "arrives
+        # later" satisfied the lint and nothing else. Four workloads sat in
+        # CreateContainerConfigError for the full ten minutes, which is how
+        # `gitops.local` found it on its first real run — and is exactly what
+        # a lab that only renders cannot tell you.
+        redis = kinds.mkGeneratedSecret {
+          namespace = ns;
+          secret = "argocd-redis";
+          key = "auth";
+          length = 32;
+          symbols = 0;
+        };
+
         client =
           if oidcProvider == null then
             { }
@@ -156,6 +175,7 @@ floe.mkFloe {
 
             resources =
               admin.resources
+              // redis.resources
               // lib.optionalAttrs (client != { }) { oauth2-client = client.resource; }
               // {
                 # How Argo finds the repository. A Secret with this label is
@@ -192,25 +212,14 @@ floe.mkFloe {
                 };
               };
 
-            inherit (admin) secrets;
+            secrets = admin.secrets ++ redis.secrets;
             # The repository Secret above names it but does not carry it, and
             # nothing here creates it — the git server does.
             needsSecrets = lib.optional (
               git.credentials != null
             ) "${git.credentials.namespace}/${git.credentials.name}";
 
-            # `argocd-redis` holds the password four workloads authenticate to
-            # Redis with. The chart creates it from a `post-install` hook Job,
-            # and a hook is not a rendered manifest — it renders zero Jobs
-            # here, which is why every reader of that Secret looked dangling.
-            #
-            # Nothing in this repo should mint it: the chart's own Job writes
-            # it *and* configures Redis with it, so a value from anywhere else
-            # would be a password Redis does not know.
-            externalSecrets = [
-              "${ns}/argocd-redis"
-            ]
-            ++ lib.optional (client != { }) "${ns}/${client.secret.name}";
+            externalSecrets = lib.optional (client != { }) "${ns}/${client.secret.name}";
 
             helmCharts.argocd = {
               inherit (inputs) chart;

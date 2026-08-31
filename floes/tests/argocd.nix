@@ -33,12 +33,25 @@ lib.runTests {
     expected = [ "forgejo/forgejo-admin" ];
   };
 
-  # The chart writes `argocd-redis` from a `post-install` hook, and a hook is
-  # not a rendered manifest — it renders zero Jobs here. Four workloads read
-  # that Secret, so without this declaration every one of them looks dangling.
-  testTheRedisSecretIsDeclaredAsArrivingLater = {
-    expr = lib.elem "argocd/argocd-redis" r.bundles.argocd.externalSecrets;
+  # `argocd-redis` is minted here, not left to the chart. The chart creates
+  # it from a `post-install` hook, and a hook is not a rendered manifest —
+  # this renders with `helm template`, so the Job never exists and the Secret
+  # never appears.
+  #
+  # It was first declared as `externalSecrets`, which satisfied the lint and
+  # nothing else: four workloads sat in CreateContainerConfigError for the
+  # full ten minutes on `gitops.local`'s first real run. That is the failure
+  # a lab which only renders cannot report.
+  testTheRedisPasswordIsMintedNotAwaited = {
+    expr = lib.elem "argocd/argocd-redis" r.bundles.argocd.secrets;
     expected = true;
+  };
+
+  # The Redis pod reads the same key to set `--requirepass` as its four
+  # clients read to authenticate, so one minted value serves both halves.
+  testItIsTheKeyBothHalvesRead = {
+    expr = r.bundles.argocd.resources.argocd-redis-generator.spec.length;
+    expected = 32;
   };
 
   # Handing the cluster over is the point: `cata` stops applying and Argo
