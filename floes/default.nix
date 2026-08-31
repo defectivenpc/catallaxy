@@ -9,6 +9,7 @@
 # organised on disk, not a namespace a lab has to spell.
 {
   cluster = {
+    argocd = ./cluster/argocd;
     cert-manager = ./cluster/cert-manager;
     cilium = ./cluster/cilium;
     cnpg = ./cluster/cnpg;

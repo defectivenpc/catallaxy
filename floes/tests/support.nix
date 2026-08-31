@@ -94,6 +94,21 @@ let
       };
     };
 
+    gitRepository = {
+      sig = sigs.GIT_REPOSITORY;
+      value = {
+        readyToken = "stub/git/ready";
+        internalUrl = "http://forgejo-http.forgejo.svc.cluster.local:3000";
+        externalUrl = "https://git.stub.test";
+        credentials = {
+          name = "forgejo-admin";
+          namespace = "forgejo";
+          usernameKey = "username";
+          passwordKey = "password";
+        };
+      };
+    };
+
     oidcProvider = {
       sig = sigs.OIDC_PROVIDER;
       value = {

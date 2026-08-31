@@ -1,0 +1,280 @@
+# Argo CD: the cluster reconciling itself from a git repository.
+#
+# The first consumer of GIT_REPOSITORY, and the reason that signature carries
+# two URLs. Argo clones from *inside* the cluster, so the repository secret
+# gets the Service address; a human opening the Application in the UI needs
+# the routed one, and only one of those resolves in each place.
+#
+# 280 lines against the parked 917. What is dropped is the option surface —
+# HA, dex, per-repo TLS knobs, and an `oidc` block that duplicated the one
+# every other consumer now builds with `kinds.mkOAuth2Client`.
+{
+  lib,
+  floe,
+  sigs,
+  kinds,
+  ...
+}:
+
+floe.mkFloe {
+  name = "argocd";
+
+  inputs = {
+    chart = lib.mkOption {
+      type = lib.types.str;
+      description = "Store path of the Argo CD Helm chart. Required.";
+    };
+
+    namespace = lib.mkOption {
+      type = lib.types.str;
+      default = "argocd";
+      description = "Namespace Argo CD runs in.";
+    };
+
+    project = lib.mkOption {
+      type = lib.types.str;
+      default = "default";
+      description = "Argo project the repository is registered under.";
+    };
+
+    insecureRepo = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Skip TLS verification when cloning.
+
+        True by default, and only defensible because the repository this
+        clones is inside the same cluster: `internalUrl` is a Service address
+        over plain HTTP, so there is no certificate to verify in the first
+        place. A lab pointing Argo at a repository outside itself should turn
+        this off and give it a CA.
+      '';
+    };
+  };
+
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
+  requires.gateway = sigs.API_GATEWAY;
+  requires.generation = sigs.SECRET_GENERATION;
+
+  # What it reconciles from. Exactly-one and not optional: an Argo CD with no
+  # repository is a controller with nothing to do, and a lab that installed it
+  # meant to hand the cluster over to something.
+  requires.git = sigs.GIT_REPOSITORY;
+
+  requiresOptional.oidc = sigs.OIDC_PROVIDER;
+
+  provides.delivery = sigs.DELIVERY_POLICY;
+
+  out.component = kinds.component;
+
+  modules = [
+    (
+      { config, ... }:
+      let
+        inputs = config.floe.inputs;
+        gateway = config.floe.requires.gateway;
+        git = config.floe.requires.git;
+        oidcProvider = config.floe.requires.oidc or null;
+
+        ns = inputs.namespace;
+        host = "argocd.${gateway.baseDomain}";
+
+        adminSecret = "argocd-admin";
+
+        # The chart's own `configs.secret.argocdServerAdminPassword` is a
+        # bcrypt hash it expects in the values — so a lab either commits a hash
+        # or lets the chart generate one at render time. Minted in-cluster
+        # instead, and the server reads it from the Secret the chart already
+        # looks for.
+        admin = kinds.mkGeneratedSecret {
+          namespace = ns;
+          secret = adminSecret;
+          key = "password";
+          length = 24;
+          symbols = 0;
+          extraData.username = "admin";
+        };
+
+        client =
+          if oidcProvider == null then
+            { }
+          else
+            kinds.mkOAuth2Client {
+              provider = oidcProvider;
+              name = "argocd";
+              namespace = ns;
+              origin = "https://${host}";
+              redirectUrls = [ "https://${host}/auth/callback" ];
+            };
+      in
+      {
+        # Argo is what applies things now, so the cluster's manifests are for
+        # it to read rather than for `cata` to push. `bootstrapTool` stays
+        # `kubectl-ssa`: something has to apply Argo itself, and it cannot be
+        # Argo.
+        config.floe.provides.delivery = {
+          strategy = "argocd";
+          bootstrapTool = "kubectl-ssa";
+          appliedByKapp = false;
+        };
+
+        config.floe.out.component = kinds.mkComponent {
+          imagesComplete = true;
+
+          network = {
+            declared = true;
+            serves.http = {
+              port = 8080;
+              protocol = "TCP";
+              fromExternal = false;
+              fromApiServer = false;
+            };
+            # It clones from the git server and talks to the apiserver. The
+            # first is nameable only as a unit, not as a `<unit>/<label>`.
+            reaches = [ ];
+          };
+
+          bundles.argocd = kinds.mkBundle {
+            createNamespaces = [ ns ];
+
+            images.argocd = {
+              registry = "quay.io";
+              repository = "argoproj/argocd";
+              # The chart's appVersion. v3.2.5 was a guess.
+              tag = "v3.0.1";
+              digest = null;
+            };
+            # The chart pulls Redis from ECR, not Docker Hub, and the
+            # repository path carries `docker/` in front of `library/`. Both
+            # halves were wrong in the first draft and the gate named the ref.
+            images.redis = {
+              registry = "public.ecr.aws";
+              repository = "docker/library/redis";
+              tag = "7.2.8-alpine";
+              digest = null;
+            };
+
+            resources =
+              admin.resources
+              // lib.optionalAttrs (client != { }) { oauth2-client = client.resource; }
+              // {
+                # How Argo finds the repository. A Secret with this label is
+                # what Argo watches for; there is no CRD for a repository.
+                argocd-repo = {
+                  apiVersion = "v1";
+                  kind = "Secret";
+                  metadata = {
+                    name = "argocd-repo-lab";
+                    namespace = ns;
+                    labels."argocd.argoproj.io/secret-type" = "repository";
+                  };
+                  type = "Opaque";
+                  stringData = {
+                    type = "git";
+
+                    # The in-cluster address. Argo clones from inside the
+                    # cluster, and the routed name resolves through the
+                    # gateway — which is a longer path to the same server, and
+                    # one that needs the lab's CA to verify.
+                    url = git.internalUrl;
+
+                    inherit (inputs) project;
+                  }
+                  // lib.optionalAttrs inputs.insecureRepo { insecure = "true"; };
+                };
+
+                argocd-route = kinds.mkRoute {
+                  inherit gateway;
+                  name = "argocd";
+                  namespace = ns;
+                  service = "argocd-server";
+                  port = 80;
+                };
+              };
+
+            inherit (admin) secrets;
+            # The repository Secret above names it but does not carry it, and
+            # nothing here creates it — the git server does.
+            needsSecrets = lib.optional (
+              git.credentials != null
+            ) "${git.credentials.namespace}/${git.credentials.name}";
+
+            # `argocd-redis` holds the password four workloads authenticate to
+            # Redis with. The chart creates it from a `post-install` hook Job,
+            # and a hook is not a rendered manifest — it renders zero Jobs
+            # here, which is why every reader of that Secret looked dangling.
+            #
+            # Nothing in this repo should mint it: the chart's own Job writes
+            # it *and* configures Redis with it, so a value from anywhere else
+            # would be a password Redis does not know.
+            externalSecrets = [
+              "${ns}/argocd-redis"
+            ]
+            ++ lib.optional (client != { }) "${ns}/${client.secret.name}";
+
+            helmCharts.argocd = {
+              inherit (inputs) chart;
+              releaseName = "argocd";
+              namespace = ns;
+              values = {
+                # One of each. The chart's defaults are an HA topology with a
+                # Redis cluster, which is three more workloads than a lab
+                # reconciling one repository needs.
+                redis-ha.enabled = false;
+                controller.replicas = 1;
+                repoServer.replicas = 1;
+                server.replicas = 1;
+                applicationSet.enabled = false;
+
+                # Its own OIDC is `dex`, a second identity provider inside the
+                # cluster that already has one. Argo talks to the issuer
+                # directly instead.
+                dex.enabled = false;
+
+                configs = {
+                  params."server.insecure" = true;
+
+                  cm = {
+                    url = "https://${host}";
+                  }
+                  // lib.optionalAttrs (client != { }) {
+                    "oidc.config" = ''
+                      name: Kanidm
+                      issuer: ${oidcProvider.issuer}
+                      clientID: $${adminSecret}:oidc-client-id
+                      clientSecret: $${${client.secret.name}}:${client.secret.secretKey}
+                      requestedScopes: ["openid", "profile", "email", "groups"]
+                    '';
+                  };
+                };
+              };
+            };
+
+            ready = {
+              kind = "condition";
+              resource = "deployment/argocd-server";
+              namespace = ns;
+              condition = "Available";
+              timeout = "10m";
+            };
+
+            ops.cd = {
+              apps = kinds.mkOpsCommand {
+                description = "Every Application and its sync status";
+                command = [
+                  "kubectl"
+                  "-n"
+                  ns
+                  "get"
+                  "applications.argoproj.io"
+                  "-o"
+                  "custom-columns=NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status"
+                ];
+              };
+            };
+          };
+        };
+      }
+    )
+  ];
+}

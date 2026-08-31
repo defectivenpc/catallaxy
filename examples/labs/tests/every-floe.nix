@@ -110,6 +110,10 @@
     # fan-in and nothing here lists them.
     kanidm = floes.kanidm { domain = "idm.${config.lab.dns.zone}"; };
 
+    # The first consumer of GIT_REPOSITORY, and the reason it carries two
+    # URLs: argo clones from inside the cluster, over forgejo's Service.
+    argocd = floes.argocd { chart = "${cataCharts.argocd.chart}"; };
+
     forgejo = floes.forgejo {
       chart = "${cataCharts.forgejo.chart}";
       oidc = true;
