@@ -106,6 +106,10 @@
       tsigSecretRef = "external-dns/externaldns-tsig";
       defaultTargets = [ config.lab.network.gateway ];
     };
+    # The issuer. Its clients are rendered by whoever needs one — there is no
+    # fan-in and nothing here lists them.
+    kanidm = floes.kanidm { domain = "idm.${config.lab.dns.zone}"; };
+
     gateway-api = floes.gateway-api-crds {
       manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
       version = "v1.2.1";
@@ -122,6 +126,11 @@
       name = "hello";
       namespace = "hello";
       servicePort = 5678;
+
+      # The whole of the OIDC redesign, from a consumer's side. `hello`
+      # renders its own client into its own namespace; kanidm collects
+      # nothing and does not know this app exists.
+      oidc = true;
       images.echo = {
         registry = "docker.io";
         repository = "hashicorp/http-echo";

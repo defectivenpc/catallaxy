@@ -18,6 +18,7 @@
     external-secrets = ./cluster/external-secrets;
     gateway = ./cluster/gateway;
     gateway-api-crds = ./cluster/gateway-api-crds;
+    kanidm = ./cluster/kanidm;
     kaniop = ./cluster/kaniop;
     lab-dns = ./cluster/lab-dns;
     loki = ./cluster/loki;

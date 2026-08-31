@@ -276,6 +276,51 @@ in
     };
   };
 
+  # An OIDC issuer, and how to register a client with it.
+  #
+  # Two halves, and the split is not cosmetic. `issuer` and `scopes` are
+  # generic — any OIDC provider answers them, and a consumer configures its
+  # own login with nothing more. `clientCrd` and `ref` are how a *client* gets
+  # created, and that is provider-specific: here it is kaniop's
+  # `KanidmOAuth2Client`, reconciled by an operator watching for it.
+  #
+  # There is deliberately no fan-in. kaniop registers the CRD, so a client is
+  # an ordinary namespaced resource and the consumer renders its own with
+  # `kinds.mkOAuth2Client` — the same shape as a route through the gateway.
+  # The provider does not collect requests, because a registered CRD is a
+  # primitive anyone may use.
+  #
+  # A second provider — Keycloak, Dex — would answer `issuer` and `scopes`
+  # identically and would need `mkOAuth2Client` to grow a branch on
+  # `clientCrd`. That is the honest limit of how swappable this is, and it is
+  # not worth abstracting until there is a second one.
+  OIDC_PROVIDER = floe.mkSig {
+    name = "OIDC_PROVIDER";
+    fields = {
+      readyToken = T.str;
+
+      # Base issuer. A client's own discovery document hangs off it, per
+      # client, which is why this is the base and not a full URL.
+      issuer = T.str;
+
+      # `group/Kind` of the client resource, so a consumer's bundle picks up a
+      # derived `kind:` edge and is ordered after whatever installs it.
+      clientCrd = T.str;
+
+      # What a client's `kanidmRef` points at.
+      ref = T.record {
+        name = T.k8sName;
+        namespace = T.k8sName;
+      };
+
+      # Whether the server reconciles clients outside its own namespace. False
+      # means a consumer's client in the consumer's namespace is silently
+      # ignored — it is admitted, stored, and never reconciled — so a consumer
+      # has to be told rather than left to find out.
+      clientsAnyNamespace = T.bool;
+    };
+  };
+
   # Workload reload on Secret/ConfigMap rotation. The two annotation keys are
   # the interface; the old floe also exported a `mkPatches` *function*, which
   # a signature cannot carry and which `lib/k8s-annotations.nix` replaces.

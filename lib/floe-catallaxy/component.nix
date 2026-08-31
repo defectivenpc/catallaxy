@@ -481,6 +481,81 @@ rec {
         };
       };
 
+  # An OAuth2 client, registered with whatever provides OIDC_PROVIDER.
+  #
+  # Returns both halves a consumer needs: the resource to put in its own
+  # bundle, and the reference to read the credentials back out of. The
+  # operator writes the Secret once it has reconciled the client, so the
+  # consumer never sees the value at eval — which is what keeps a client
+  # secret out of the rendered manifests.
+  #
+  # `secretName` is set rather than defaulted, because a consumer that has to
+  # guess what the operator called the Secret is a consumer that breaks when
+  # the convention changes.
+  mkOAuth2Client =
+    {
+      provider,
+      name,
+      namespace,
+      # Where the app lives. The default redirect is the one nearly every
+      # OIDC library uses; a consumer whose library differs says so.
+      origin,
+      redirectUrls ? [ "${origin}/oauth2/callback" ],
+      displayName ? name,
+      scopeMap ? [ ],
+      # A public client is one that cannot keep a secret — a SPA or a CLI.
+      # The operator writes no Secret for one, so there is nothing to read.
+      public ? false,
+    }:
+    let
+      secretName = "${name}-oidc";
+    in
+    if !provider.clientsAnyNamespace && namespace != provider.ref.namespace then
+      # Admitted, stored, and never reconciled: the consumer waits on a Secret
+      # that is not coming. Refused here, where the trace names the floe that
+      # asked, rather than at whatever timeout notices later.
+      throw ''
+        OAuth2 client '${name}' is in namespace '${namespace}', and the OIDC
+        provider only reconciles clients in its own ('${provider.ref.namespace}').
+
+        Nothing would report this: the resource is admitted and then ignored,
+        and the Secret it should produce never appears.
+      ''
+    else
+      {
+        resource = {
+          apiVersion = "${lib.head (lib.splitString "/" provider.clientCrd)}/v1beta1";
+          kind = lib.last (lib.splitString "/" provider.clientCrd);
+          metadata = {
+            inherit name namespace;
+            labels."app.kubernetes.io/managed-by" = "catallaxy";
+          };
+          spec = {
+            kanidmRef = provider.ref;
+            displayname = displayName;
+            inherit origin;
+            redirectUrl = redirectUrls;
+            inherit secretName;
+          }
+          // lib.optionalAttrs public { public = true; }
+          // lib.optionalAttrs (scopeMap != [ ]) { inherit scopeMap; };
+        };
+
+        # Canonical keys, always present on a confidential client. Null for a
+        # public one, because the operator writes no Secret at all and a
+        # reference to it would be a reference to nothing.
+        secret =
+          if public then
+            null
+          else
+            {
+              inherit namespace;
+              name = secretName;
+              idKey = "CLIENT_ID";
+              secretKey = "CLIENT_SECRET";
+            };
+      };
+
   # A credential the floe mints for itself: an external-secrets `Password`
   # generator and the ExternalSecret that lands its output in a Secret.
   #

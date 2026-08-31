@@ -94,6 +94,28 @@ let
       };
     };
 
+    oidcProvider = {
+      sig = sigs.OIDC_PROVIDER;
+      value = {
+        readyToken = "stub/oidc/ready";
+        issuer = "https://idm.stub.test";
+        clientCrd = "kaniop.rs/KanidmOAuth2Client";
+        ref = {
+          name = "stub-kanidm";
+          namespace = "kanidm";
+        };
+        clientsAnyNamespace = true;
+      };
+    };
+
+    identityOperator = {
+      sig = sigs.IDENTITY_OPERATOR;
+      value = {
+        readyToken = "stub/kaniop/ready";
+        crdsEstablished = "stub/kaniop/crds";
+      };
+    };
+
     logIngest = {
       sig = sigs.LOG_INGEST;
       value = {

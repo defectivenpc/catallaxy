@@ -44,6 +44,19 @@ floe.mkFloe {
       description = "Namespace it installs into. The floe creates this. Required.";
     };
 
+    oidc = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Register an OAuth2 client for this app with the lab's issuer.
+
+        The client resource lands in this app's own namespace and the operator
+        writes its credentials to `<name>-oidc` beside it. What the app does
+        with them is the app's business: this floe renders no configuration,
+        because a `custom` app's config is whatever its `resources` say.
+      '';
+    };
+
     hostname = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -122,6 +135,11 @@ floe.mkFloe {
   requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
+  # Optional, because most apps do not log anyone in and a lab may have no
+  # issuer at all. `oidc = true` with nothing providing one is refused below
+  # rather than rendering a client resource of an unknown kind.
+  requiresOptional.oidc = sigs.OIDC_PROVIDER;
+
   out.component = kinds.component;
 
   modules = [
@@ -133,6 +151,33 @@ floe.mkFloe {
 
         service = if inputs.serviceName == null then inputs.name else inputs.serviceName;
         host = if inputs.hostname != null then inputs.hostname else "${inputs.name}.${gateway.baseDomain}";
+
+        oidc = config.floe.requires.oidc or null;
+
+        # The provider's own constructor. It returns the resource to render
+        # and the reference to read the credentials back from — the operator
+        # writes the Secret once it has reconciled the client, so the value
+        # never exists at eval and never reaches a manifest.
+        client =
+          if inputs.oidc && oidc == null then
+            # Not silently skipped. A lab that asks for a client and gets none
+            # has an app whose login is simply off, with nothing anywhere
+            # saying why — and the app is usually the last place anyone looks.
+            throw ''
+              app '${inputs.name}' asks for an OAuth2 client, and nothing in
+              this cluster provides OIDC_PROVIDER.
+
+              Add an issuer to the cluster, or set `oidc = false`.
+            ''
+          else
+            lib.optionalAttrs inputs.oidc (
+              kinds.mkOAuth2Client {
+                provider = oidc;
+                name = inputs.name;
+                inherit (inputs) namespace;
+                origin = "https://${host}";
+              }
+            );
       in
       {
 
@@ -151,19 +196,22 @@ floe.mkFloe {
             createNamespaces = [ inputs.namespace ];
             inherit (inputs) yamls images ready;
 
-            resources = inputs.resources // {
-              # The gateway's own constructor. It takes `parentRef` off the
-              # sealed value, so this floe never spells the gateway's name,
-              # its namespace or its listener — and it refuses a hostname
-              # outside the zone at construction, naming this floe.
-              route = kinds.mkRoute {
-                inherit gateway service;
-                name = inputs.name;
-                inherit (inputs) namespace path;
-                hostname = host;
-                port = inputs.servicePort;
+            resources =
+              inputs.resources
+              // lib.optionalAttrs (client != { }) { oauth2-client = client.resource; }
+              // {
+                # The gateway's own constructor. It takes `parentRef` off the
+                # sealed value, so this floe never spells the gateway's name,
+                # its namespace or its listener — and it refuses a hostname
+                # outside the zone at construction, naming this floe.
+                route = kinds.mkRoute {
+                  inherit gateway service;
+                  name = inputs.name;
+                  inherit (inputs) namespace path;
+                  hostname = host;
+                  port = inputs.servicePort;
+                };
               };
-            };
           };
         };
       }

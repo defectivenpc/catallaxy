@@ -37,7 +37,16 @@
 // import ./floe-gates.nix {
   inherit lib pkgs labDefs;
   floeSet = (import ../../floes).cluster;
-  cannotKnowItsImages = [ "custom" ];
+  cannotKnowItsImages = [
+    # Handed arbitrary resources and an optional chart by whoever
+    # instantiates it. Enumerating what those pull is not something it can do.
+    "custom"
+
+    # Renders a `Kanidm` CR, not a workload. kaniop picks the image from
+    # `spec.version`, and what it picks is not visible at eval — a claim here
+    # would be a claim about someone else's decision.
+    "kanidm"
+  ];
 }
 // import ./secret-sharing.nix {
   inherit

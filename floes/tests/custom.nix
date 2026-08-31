@@ -90,6 +90,65 @@ lib.runTests {
     expected = false;
   };
 
+  # ---- OIDC, from the consumer's side ----------------------------------
+
+  # The redesign, in one assertion: the app renders its own client, into its
+  # own namespace, and the provider collects nothing.
+  testItRegistersItsOwnClient =
+    let
+      c =
+        (support.evalFloe {
+          name = "custom";
+          inputs = {
+            name = "app";
+            namespace = "app";
+            oidc = true;
+          };
+        }).bundles.app.resources.oauth2-client;
+    in
+    {
+      expr = {
+        inherit (c.spec) kanidmRef origin secretName;
+        ns = c.metadata.namespace;
+      };
+      expected = {
+        kanidmRef = support.stubs.oidcProvider.value.ref;
+        origin = "https://app.stub.test";
+        secretName = "app-oidc";
+        ns = "app";
+      };
+    };
+
+  # Optional: most apps log nobody in, and a lab may have no issuer at all.
+  testNoClientUnlessAsked = {
+    expr =
+      (support.evalFloe {
+        name = "custom";
+        inputs = {
+          name = "app";
+          namespace = "app";
+        };
+      }).bundles.app.resources ? oauth2-client;
+    expected = false;
+  };
+
+  # Asking for one where nothing provides an issuer renders a resource of a
+  # kind the cluster does not have. Refused instead.
+  testAskingWithNoIssuerIsRefused = {
+    expr =
+      support.fails
+        (support.evalFloe {
+          name = "custom";
+          inputs = {
+            name = "app";
+            namespace = "app";
+            oidc = true;
+          };
+          without = [ "oidcProvider" ];
+        }).bundles;
+    expected = true;
+  };
+
   testDeclaresItsNetwork = {
     expr = r.component.network.declared;
     expected = true;
