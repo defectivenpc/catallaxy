@@ -315,27 +315,28 @@ lib.runTests {
     expected = true;
   };
 
-  testJobsAndCronJobsToo = {
+  # The short alias too, because a floe writes whichever it is used to.
+  testTheShortNameIsRefusedAsWell = {
     expr =
-      map
-        (
-          r:
-          wait.conditionOnConditionless {
-            kind = "condition";
-            resource = r;
-            condition = "Complete";
-          } != ""
-        )
-        [
-          "job/init"
-          "cronjob/rotate"
-          "ds/agent"
-        ];
-    expected = [
-      true
-      true
-      true
-    ];
+      wait.conditionOnConditionless {
+        kind = "condition";
+        resource = "ds/agent";
+        condition = "Ready";
+      } != "";
+    expected = true;
+  };
+
+  # A Job carries `Complete` and `Failed`, and waiting on one is the standard
+  # pattern — openbao's init bundle does exactly that. The first draft of this
+  # list had Jobs on it, and this check caught that on its very first run,
+  # which is the whole argument for it being a check and not a comment.
+  testAJobIsFine = {
+    expr = wait.conditionOnConditionless {
+      kind = "condition";
+      resource = "job/openbao-init";
+      condition = "Complete";
+    };
+    expected = "";
   };
 
   # The paired positive, and it is not decorative: a Deployment *does* carry

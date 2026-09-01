@@ -271,14 +271,21 @@ let
   # written, by the same person. `awaitRollout` is the answer for all of them —
   # for a DaemonSet it asks the better question anyway, since what matters is
   # that every node has the pod rather than that some quorum does.
+  # DaemonSets only, and the exclusions matter as much as the entry.
+  #
+  # A Job *does* carry conditions — `Complete` and `Failed` — and
+  # `--for=condition=Complete job/x` is the standard way to wait on one;
+  # openbao's init bundle does exactly that. Listing Jobs here was a guess
+  # that this check itself caught on the first run, which is the argument for
+  # it being a check rather than a comment.
+  #
+  # StatefulSets and Deployments carry conditions too. A DaemonSet is the odd
+  # one: its status is counters (`numberReady`, `desiredNumberScheduled`) and
+  # nothing else, so there is no condition for a wait to match.
   conditionlessKinds = [
     "daemonset"
     "daemonsets"
     "ds"
-    "job"
-    "jobs"
-    "cronjob"
-    "cronjobs"
   ];
 
   # `""` when the probe is fine, otherwise why it is not.
