@@ -9,18 +9,61 @@ The format is based on
 
 ### Added
 
-- **Every image a lab pulls comes from a registry its cache mirrors, checked.**
-  `lab.registry.upstreams` is both the zot sync sources and the `mirrors:`
-  entries in the `registries.yaml` every node mounts, and its own docstring
-  says "add one when a floe pulls from an upstream not listed here" — which
-  nothing enforced. An image from a registry with no entry is not merely
-  uncached: containerd goes to the public registry directly and has to resolve
-  the name itself, which a node cannot do once the lab runs its own DNS, so
-  the pull fails on a name that resolves perfectly well from the host.
-  `<lab>-images-are-cacheable` reads `images.txt` — the same list `warm-cache`
-  iterates, so it includes what was scraped out of charts no floe declared —
-  and refuses any registry the lab does not mirror. Every lab passes today;
-  it exists for the floe that adds a registry and not the entry.
+- **netbird's control plane, and a lab that runs it.**
+  `floes/cluster/netbird` is management, signal, relay and dashboard — 1,112
+  lines against the parked floe's 4,890, with a 370-line isolation suite.
+  `homelab.mesh` stands it up:
+  `up in 312s, verified, idempotent, destroyed clean`.
+
+  Three layers of the parked floe are **not** here, and the floe header
+  names each with what blocks it rather than leaving them as omissions. The
+  operator (`netbird.io/Group`, `netbird.io/SetupKey`) authenticates to
+  netbird's API with a token minted by a bootstrap Job that first
+  authenticates _to kanidm_ with a service-account credential — and the new
+  kanidm floe mints no service accounts, so that chain has a missing first
+  link. The agent needs a setup key, so it needs the operator; routing needs
+  the agent. What ships is a mesh you log into and register a peer with by
+  hand, which is a real thing to have and is what the lab checks.
+
+  Two credentials — the relay authenticator and the datastore encryption key
+  — are minted in-cluster and neither may reach a manifest, so the ConfigMap
+  carries a template with `@NAME@` placeholders and an init container
+  substitutes them into an in-memory volume.
+  `lab ops -- mesh core-netbird-config` asks the running server whether any
+  placeholder survived, because one that did is a server that starts and
+  refuses every peer.
+
+  `OIDC_PROVIDER` grew `authorizationEndpoint` and `tokenEndpoint`, and
+  `mkOAuth2Client` now returns the per-client `issuer`, `jwksUri` and
+  `discoveryUrl`. netbird validates tokens itself rather than delegating to
+  a library that reads a discovery document, and the parked floe got all of
+  this by reading `floes.kanidm.exports` — the by-name dependency the
+  signature exists to remove. `MESH_NETWORK` is new and carries both ways to
+  reach management, for the operator and agent that will need them.
+
+### Fixed
+
+- **One hostname across several backends was probed at whichever rule came
+  first.** netbird fans `netbird.<zone>` out to five backends by path, and
+  its first rule is `/api` — where a bare GET is a 404, which is also what a
+  gateway with _no_ route answers. `lab verify` could not tell the two apart
+  and reported a working mesh as broken. `ExposedHost::probe_path` prefers
+  the root where the route has one, and a host that genuinely serves only a
+  prefix still says so by having no `/` rule.
+
+- **Every image a lab pulls comes from a registry its cache mirrors,
+  checked.** `lab.registry.upstreams` is both the zot sync sources and the
+  `mirrors:` entries in the `registries.yaml` every node mounts, and its own
+  docstring says "add one when a floe pulls from an upstream not listed
+  here" — which nothing enforced. An image from a registry with no entry is
+  not merely uncached: containerd goes to the public registry directly and
+  has to resolve the name itself, which a node cannot do once the lab runs
+  its own DNS, so the pull fails on a name that resolves perfectly well from
+  the host. `<lab>-images-are-cacheable` reads `images.txt` — the same list
+  `warm-cache` iterates, so it includes what was scraped out of charts no
+  floe declared — and refuses any registry the lab does not mirror. Every
+  lab passes today; it exists for the floe that adds a registry and not the
+  entry.
 
 - **A lab can say it is mid-migration, and the check knows the difference.**
   `lab.unstable` is a string or null: why this lab is not expected to stand

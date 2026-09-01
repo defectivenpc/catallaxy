@@ -117,6 +117,11 @@
     # fan-in and nothing here lists them.
     kanidm = floes.kanidm { domain = "idm.${config.lab.dns.zone}"; };
 
+    # The mesh control plane. Its OIDC client is public and PKCE-based, which
+    # is the third shape of consumer kanidm has here — beside harbor's
+    # confidential client and forgejo's.
+    netbird = floes.netbird { };
+
     # The first consumer of GIT_REPOSITORY, and the reason it carries two
     # URLs: argo clones from inside the cluster, over forgejo's Service.
     argocd = floes.argocd { chart = "${cataCharts.argocd.chart}"; };

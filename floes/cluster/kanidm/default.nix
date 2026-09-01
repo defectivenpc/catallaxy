@@ -123,6 +123,12 @@ floe.mkFloe {
           # https, always. See `requires.issuance`.
           issuer = "https://${inputs.domain}";
 
+          # kanidm's own paths, stated once here so no consumer has to know
+          # them. `/ui/oauth2` is the browser-facing consent screen and not an
+          # API path, which is the one a reader guesses wrong.
+          authorizationEndpoint = "https://${inputs.domain}/ui/oauth2";
+          tokenEndpoint = "https://${inputs.domain}/oauth2/token";
+
           clientCrd = "kaniop.rs/KanidmOAuth2Client";
           ref = {
             inherit name;

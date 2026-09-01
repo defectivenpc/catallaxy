@@ -269,7 +269,24 @@ pub struct ExposedHost {
 }
 
 impl ExposedHost {
+    /// Where to ask this host whether it is serving.
+    ///
+    /// The root when the route has a rule for it, and the first rule's prefix
+    /// otherwise. Taking the first unconditionally reads whichever rule the
+    /// floe happened to write first, which is fine for the single-rule routes
+    /// every floe had until netbird — and wrong for a route that fans one
+    /// hostname out across several backends by path. netbird's first rule is
+    /// `/api`, and a bare GET of an API's prefix is a 404: not "the gateway
+    /// has no route", which is what the probe is trying to detect, but "there
+    /// is no page there", which it cannot tell apart.
+    ///
+    /// The root is the honest place to ask, because a host that serves
+    /// anything at all usually serves something there — and where it does
+    /// not, the route says so by having no `/` rule.
     pub fn probe_path(&self) -> &str {
+        if self.paths.iter().any(|p| p == "/") {
+            return "/";
+        }
         self.paths.first().map_or("/", |p| p.as_str())
     }
 }
@@ -381,6 +398,39 @@ pub(crate) mod tests {
             ClusterSpec::from_value(json).is_err(),
             "kubeContext is always emitted; its absence means the contract broke"
         );
+    }
+
+    fn exposed(paths: &[&str]) -> ExposedHost {
+        ExposedHost {
+            host: "netbird.homelab.test".into(),
+            namespace: "netbird".into(),
+            bundle: "netbird/server".into(),
+            tier: "public".into(),
+            paths: paths.iter().map(|p| (*p).into()).collect(),
+        }
+    }
+
+    /// netbird fans one hostname across five backends and writes `/api`
+    /// first. Probing that answers 404, which is also what a gateway with no
+    /// route answers — so the check cannot tell "no page here" from "no route
+    /// at all", and reported a working mesh as broken.
+    #[test]
+    fn a_multi_rule_route_is_probed_at_its_root() {
+        let host = exposed(&["/api", "/management.ManagementService/", "/relay", "/"]);
+        assert_eq!(host.probe_path(), "/");
+    }
+
+    /// A host that genuinely serves only a prefix says so by having no `/`
+    /// rule, and is probed where it does serve.
+    #[test]
+    fn a_route_with_no_root_is_probed_where_it_answers() {
+        assert_eq!(exposed(&["/api"]).probe_path(), "/api");
+    }
+
+    /// The single-rule case every other floe renders.
+    #[test]
+    fn a_route_with_no_paths_at_all_is_probed_at_the_root() {
+        assert_eq!(exposed(&[]).probe_path(), "/");
     }
 
     #[test]

@@ -120,6 +120,8 @@ let
       value = {
         readyToken = "stub/oidc/ready";
         issuer = "https://idm.stub.test";
+        authorizationEndpoint = "https://idm.stub.test/ui/oauth2";
+        tokenEndpoint = "https://idm.stub.test/oauth2/token";
         clientCrd = "kaniop.rs/KanidmOAuth2Client";
         ref = {
           name = "stub-kanidm";

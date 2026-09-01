@@ -25,6 +25,7 @@
     kaniop = ./cluster/kaniop;
     lab-dns = ./cluster/lab-dns;
     loki = ./cluster/loki;
+    netbird = ./cluster/netbird;
     openbao = ./cluster/openbao;
     openebs = ./cluster/openebs;
     otel-collector = ./cluster/otel-collector;

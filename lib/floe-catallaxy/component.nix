@@ -552,6 +552,23 @@ rec {
           // lib.optionalAttrs (scopeMap != [ ]) { inherit scopeMap; };
         };
 
+        # An OIDC client is its own issuer under kanidm: tokens for this
+        # client carry `<issuer>/oauth2/openid/<client>` and its keys are
+        # published beneath that. A consumer validating a token itself — as
+        # netbird's management does, rather than delegating to a library that
+        # reads a discovery document — needs both.
+        #
+        # kanidm's path scheme, like the Secret's name above, and here for the
+        # same reason: one place, next to the resource whose server decides
+        # it, rather than a string every consumer rebuilds.
+        oidc = {
+          clientId = name;
+          issuer = "${provider.issuer}/oauth2/openid/${name}";
+          jwksUri = "${provider.issuer}/oauth2/openid/${name}/public_key.jwk";
+          discoveryUrl = "${provider.issuer}/oauth2/openid/${name}/.well-known/openid-configuration";
+          inherit (provider) authorizationEndpoint tokenEndpoint;
+        };
+
         # Canonical keys, always present on a confidential client. Null for a
         # public one, because the operator writes no Secret at all and a
         # reference to it would be a reference to nothing.

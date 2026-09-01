@@ -73,6 +73,14 @@ let
       eligible = true;
       mentions = [ ];
     };
+
+    # The same lab plus a mesh control plane. Nothing about netbird needs a
+    # credential from outside: the two it runs on are minted in-cluster and
+    # its identities come from the kanidm already in `core`.
+    "homelab.mesh" = {
+      eligible = true;
+      mentions = [ ];
+    };
   };
 
   known = lib.filter (n: e2eLabs ? ${n}) (lib.attrNames expected);

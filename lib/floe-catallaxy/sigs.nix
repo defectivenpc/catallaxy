@@ -303,6 +303,22 @@ in
       # client, which is why this is the base and not a full URL.
       issuer = T.str;
 
+      # Where a browser is sent to log in, and where a code is exchanged.
+      #
+      # Both are account-level rather than per-client, which is why they are
+      # here and not on what `mkOAuth2Client` returns. A consumer that does
+      # its own OAuth dance rather than handing off to a library needs them
+      # spelled out: netbird's management config carries an
+      # `AuthorizationEndpoint` and a `TokenEndpoint` and does not read a
+      # discovery document for them.
+      #
+      # The parked netbird floe read these off `floes.kanidm.exports`, which
+      # is the by-name dependency this signature exists to remove — and it is
+      # the reason they are declared even though only one consumer has ever
+      # wanted them.
+      authorizationEndpoint = T.str;
+      tokenEndpoint = T.str;
+
       # `group/Kind` of the client resource, so a consumer's bundle picks up a
       # derived `kind:` edge and is ordered after whatever installs it.
       clientCrd = T.str;
@@ -485,6 +501,34 @@ in
       queryUrl = T.str;
       otlpGrpc = T.str;
       otlpHttp = T.str;
+    };
+  };
+
+  # An overlay network peers join, and the control plane that admits them.
+  #
+  # Two URLs for the same server, as `GIT_REPOSITORY` has: a peer outside the
+  # cluster registers over the routed name, and an in-cluster consumer — the
+  # operator that manages mesh state, the agent that joins the cluster to it —
+  # dials the Service, because the routed name leaves the cluster and comes
+  # back through the ingress to reach a pod one hop away.
+  #
+  # What is deliberately absent is anything about *joining*: no setup key, no
+  # group. Those are the operator's, and the operator is the layer of this
+  # floe that is not built yet — so the fields would be promises with nothing
+  # behind them.
+  MESH_NETWORK = floe.mkSig {
+    name = "MESH_NETWORK";
+    fields = {
+      readyToken = T.str;
+      namespace = T.k8sName;
+
+      managementUrl = T.str;
+      managementInternalUrl = T.str;
+
+      # The UI, which is the same origin as the API: netbird routes all of it
+      # by path off one hostname. A field of its own anyway, because a mesh
+      # implementation that split them would still have to answer this.
+      dashboardUrl = T.str;
     };
   };
 
