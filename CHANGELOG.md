@@ -7,6 +7,34 @@ The format is based on
 
 ## [Unreleased]
 
+### Changed
+
+- **RFC 0005 says what the tree does.** Its §1 opened "A lab is a floe. So is
+  a cluster", and `modules/lab/types.nix` opens "A lab is a NixOS module, not
+  a floe". The implementation's argument wins and the RFC is amended to it:
+  containment is `environment → lab module → cluster → component floes`, and
+  only the innermost depth is the floe mechanism. §1.1 gives the reason — you
+  want hiding and exactly-one resolution *between* components and
+  merge-everything *within* a lab, and those are different mechanisms — and
+  §2.1, §3.1 and §3.2 name what it costs: an appliance is an option surface
+  rather than a signature, a link is per-cluster with no outer scope, and
+  configuration does not cross between clusters even though secrets do. The
+  examples in §1–§4 are now the shipped tree rather than a sketch.
+
+  `staging/` is gone. Nothing imported it, and its README listed as "still
+  missing" four things that have shipped since. `nix/devshell.nix` advertised
+  `nix build .#staging-cluster-manifests`, an output the flake does not have.
+
+### Fixed
+
+- **Two floes had no isolation suite, and nothing could say so.**
+  `nix/checks/lib-tests.nix` discovers `floes/tests/*.nix` rather than listing
+  them, which catches a suite nothing runs and misses a floe nothing tests.
+  `lab-dns` and `k3d-cluster` had sat unchecked since they were written. Both
+  now have one, and the check asserts the two sets are equal in both
+  directions. `support.nix` flattens the floe set the way `lib/lab.nix` does,
+  so a provisioner floe can be named by a suite at all.
+
 ### Added
 
 - **A floe interface prototype, and one cluster built on it.**

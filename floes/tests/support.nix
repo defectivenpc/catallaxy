@@ -9,7 +9,11 @@ let
   catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
   inherit (catallaxy) floe sigs kinds;
 
-  floeSet = import ../../floes;
+  # Flattened across `cluster` and `provisioners`, the same way `lib/lab.nix`
+  # flattens it: the split is how the set is organised on disk, not a
+  # namespace anything has to spell. A suite naming a provisioner floe would
+  # otherwise be told the floe does not exist.
+  floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
 
   # A stub for every signature a floe might ask for, so a check supplies only
   # the floe under test. The values are shaped like real ones and are not
@@ -198,7 +202,7 @@ in
       without ? [ ],
     }:
     let
-      def = import floeSet.cluster.${name} {
+      def = import floeSet.${name} {
         inherit
           lib
           pkgs

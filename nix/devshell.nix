@@ -24,7 +24,8 @@ pkgs.mkShell {
     echo "  bacon                # watch + rebuild on change"
     echo "  nix run .#cata       # the released CLI, built from a clean tree"
     echo ""
-    echo "  nix build .#staging-cluster-manifests   # the RFC-0001 cluster"
-    echo "  nix flake check                         # the gate"
+    echo "  nix build .#labPackages.\"minimal.local\"  # a lab's rendered tree"
+    echo "  nix run .#e2e                            # stand a lab up for real"
+    echo "  nix flake check                          # the gate"
   '';
 }
