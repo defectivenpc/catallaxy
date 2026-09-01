@@ -20,6 +20,8 @@
 }:
 
 let
+  # `unstable` defaults to false and is stated only where it is true, so the
+  # table reads as a list of labs that work with the exceptions called out.
   expected = {
     "minimal.local" = {
       eligible = true;
@@ -63,6 +65,14 @@ let
       eligible = true;
       mentions = [ ];
     };
+
+    # The same lab plus a DNS controller. Its TSIG key is env-backed and the
+    # env file is committed, which is what keeps it eligible — the key
+    # authorises updates to a throwaway zone on loopback and guards nothing.
+    "homelab.dns" = {
+      eligible = true;
+      mentions = [ ];
+    };
   };
 
   known = lib.filter (n: e2eLabs ? ${n}) (lib.attrNames expected);
@@ -91,6 +101,25 @@ let
     # nothing to print about why.
     ++ map (n: "${n} is ineligible and says nothing about why") (
       lib.filter (n: !e2eLabs.${n}.eligible && e2eLabs.${n}.reasons == [ ]) known
+    )
+
+    # Held out because it is mid-migration, or held out because of something
+    # about this machine? Both are ineligible and only one is work left to do,
+    # so the table states which and this refuses a lab that quietly becomes
+    # the other. A lab that starts working and keeps its marker is the failure
+    # mode worth naming: nothing else would ever notice.
+    ++ map (
+      n:
+      "${n}: expected unstable=${lib.boolToString (expected.${n}.unstable or false)}, got "
+      + "${lib.boolToString (e2eLabs.${n}.unstable != null)}"
+      + lib.optionalString (e2eLabs.${n}.unstable != null) " (${e2eLabs.${n}.unstable})"
+    ) (lib.filter (n: (e2eLabs.${n}.unstable != null) != (expected.${n}.unstable or false)) known)
+
+    # `lab.unstable` exists to keep a lab out of the matrix. One that is
+    # marked and eligible anyway means the marker stopped being wired to
+    # anything, which reads as green while testing a lab nobody vouches for.
+    ++ map (n: "${n} is marked unstable and is in the e2e matrix anyway") (
+      lib.filter (n: e2eLabs.${n}.unstable != null && e2eLabs.${n}.eligible) known
     )
 
     # A reason that stopped mentioning what it used to is a check that stopped

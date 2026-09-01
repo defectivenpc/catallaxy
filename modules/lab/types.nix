@@ -87,6 +87,33 @@ in
       '';
     };
 
+    unstable = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "netbird's setup key has to be fetched by hand; see floes/cluster/netbird.";
+      description = ''
+        Why this lab is not expected to stand up, or null when it is.
+
+        The migration off the parked floe set moves faster than every lab can
+        be made to run, and a lab that renders but does not deploy is worth
+        having in the tree: it renders, it lints, its plan is snapshotted, and
+        its digest is pinned, so the ninety-odd checks that do not need a
+        cluster all apply to it. What it must not do is fail in CI as though
+        someone had broken it.
+
+        A string rather than a bool, because "unstable" with no reason is a
+        note to nobody. It joins `lab.out.selfContained.reasons`, so the e2e
+        runner skips the lab and prints this, and `nix/checks/self-contained.nix`
+        pins it — a lab going unstable, becoming stable, or quietly staying
+        unstable forever is a diff in that table either way.
+
+        This is the one declared entry among derived ones. Everything else in
+        `selfContained` is read off the lab; this cannot be, because "the
+        operator races on a fresh install" is not a fact any expression here
+        can compute.
+      '';
+    };
+
     assertions = mkOption {
       type = types.listOf assertionType;
       default = [ ];

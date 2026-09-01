@@ -383,6 +383,86 @@ let
     ) labDefs
   );
 
+  # ---- a value the lab holds twice -----------------------------------------
+  #
+  # A lab has no way to project a value out of its own configuration: every
+  # path into `lab.secrets.managed` reads from a store. Where a floe needs one
+  # anyway — external-dns and the TSIG key Knot is configured with — the lab
+  # writes it in the env file as well, and the two have to agree.
+  #
+  # Nothing at runtime would say they do not. The controller starts, every
+  # update comes back NOTAUTH, and it logs that below the default level.
+  #
+  # Parsed rather than templated: the env file is what `cata` actually reads,
+  # so comparing against anything else would compare against a copy.
+  tsigKeyClashes = lib.concatLists (
+    lib.mapAttrsToList (
+      labName: lab:
+      let
+        c = lab.config.lab;
+
+        # Only labs that route the key into a cluster. One with no such
+        # projection holds the key in a single place and has nothing to
+        # disagree with.
+        projected = lib.concatLists (
+          lib.mapAttrsToList (
+            clusterName: cluster:
+            lib.mapAttrsToList (_name: p: { inherit clusterName; }) (
+              lib.filterAttrs (_: p: p.source == "externaldns-tsig") cluster.secrets.project
+            )
+          ) c.clusters
+        );
+
+        envFile = if c.secrets.envFile == null then null else ../../. + "/${c.secrets.envFile}";
+
+        # `NAME='value'` or `NAME=value`, last assignment wins, comments and
+        # blank lines skipped — which is as much of a shell env file as `cata`
+        # itself reads.
+        valueIn =
+          path: varName:
+          let
+            lines = lib.filter (l: lib.hasPrefix "${varName}=" (lib.removePrefix " " l)) (
+              lib.splitString "\n" (builtins.readFile path)
+            );
+          in
+          if lines == [ ] then
+            null
+          else
+            lib.removeSuffix "'" (lib.removePrefix "'" (lib.removePrefix "${varName}=" (lib.last lines)));
+
+        # The variable name is derived from the store the secret sits in, and
+        # the two labs that hold this key put it in different stores. Both
+        # names are tried rather than the store being restated here, where it
+        # would be a third copy of the same fact.
+        varNames = [
+          "CATA_SECRET_AUTHORED__EXTERNALDNS_TSIG__TSIG_SECRET"
+          "CATA_SECRET_KNOT__EXTERNALDNS_TSIG__TSIG_SECRET"
+        ];
+
+        found =
+          if envFile == null then
+            null
+          else
+            lib.findFirst (v: v != null) null (map (valueIn envFile) varNames);
+      in
+      lib.optionals (projected != [ ]) (
+        lib.optional (
+          envFile == null
+        ) "${labName} projects the external-dns TSIG key and names no lab.secrets.envFile to take it from"
+        ++ lib.optional (envFile != null && found == null) (
+          "${labName}'s env file sets no TSIG key "
+          + "under any name derived from a store it could be in, so the projected Secret is "
+          + "empty and every RFC2136 update is refused"
+        )
+        ++ lib.optional (found != null && found != c.dns.tsigSecret) (
+          "${labName}: the TSIG key in ${c.secrets.envFile} is not the one Knot is configured with "
+          + "at lab.dns.tsigSecret — external-dns will authenticate against a key the server "
+          + "does not have"
+        )
+      )
+    ) labDefs
+  );
+
   refuse =
     checkName: what: findings:
     pkgs.runCommand checkName { } ''
@@ -416,6 +496,11 @@ lib.foldl' lib.mergeAttrs { } perLab
     refuse "lab-cluster-ranges"
       "Two clusters on one docker network need ranges that do not overlap, and neither one can overlap the network itself. An address plan is a decision written down (RFC 0005 §5); nothing derives these, so nothing catches them but this."
       rangeClashes;
+
+  lab-tsig-key-agrees =
+    refuse "lab-tsig-key-agrees"
+      "The lab holds this key twice — once for Knot, once for the Secret external-dns reads — because a lab cannot project a value out of its own configuration. Nothing at runtime reports a mismatch: the controller starts, every update is refused, and it says so below the default log level."
+      tsigKeyClashes;
 
   lab-routed-hosts-are-unique =
     refuse "lab-routed-hosts-are-unique"

@@ -1,5 +1,5 @@
 [001] docker-network-create name=docker-network-create params.gateway=172.30.0.1 params.name=every-floe params.subnet=172.30.0.0/16
-[002] ensure-secrets name=ensure-secrets params.stores=["authored"]
+[002] ensure-secrets name=ensure-secrets params.stores=["authored","knot"]
 [003] create-cluster name=create-cluster-core cluster=core params.name=core params.provisioner=k3d
 [004] bootstrap-argocd-kubectl-ssa name=bootstrap-argocd cluster=core params.kubeContext=k3d-every-floe-core params.manifestRoot=bootstrap/core params.target=core
 [005] deploy-manifests name=deploy-manifests-core cluster=core params.kubeContext=k3d-every-floe-core params.target=core

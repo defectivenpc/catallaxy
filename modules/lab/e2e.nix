@@ -62,7 +62,12 @@ let
   # is no option yet. It comes back with the feature that introduces it, and
   # until then no lab can trip it.
   reasons =
-    lib.optional (clusters == { }) "the lab declares no clusters"
+    # First, because it is the one that subsumes the rest: a lab nobody
+    # claims works is not made runnable by having tidy secrets.
+    lib.optional (config.lab.unstable != null) (
+      "this lab is mid-migration and is not expected to stand up: ${config.lab.unstable}"
+    )
+    ++ lib.optional (clusters == { }) "the lab declares no clusters"
     ++ lib.optional (unproven != [ ]) (
       "${quote unproven} uses a provisioner CI has not been shown to complete a lab on unattended"
     )
@@ -100,6 +105,19 @@ in
             root. Null when the lab needs nothing from the environment.
           '';
         };
+
+        unstable = mkOption {
+          type = types.nullOr types.str;
+          description = ''
+            `lab.unstable`, carried through so a reader can tell the two kinds
+            of ineligible apart.
+
+            A lab held out because its secrets live in sops is a lab that
+            works and is not runnable *here*. A lab held out because it is
+            mid-migration is a lab nobody claims works at all. Both are
+            ineligible and only one is a thing to finish.
+          '';
+        };
       };
     };
     description = ''
@@ -116,5 +134,6 @@ in
     eligible = reasons == [ ];
     inherit reasons;
     inherit (config.lab.secrets) envFile;
+    inherit (config.lab) unstable;
   };
 }

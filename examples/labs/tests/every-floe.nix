@@ -53,12 +53,18 @@
   # not create either. Same shape as the vault token, and the reason the floe
   # takes a reference rather than the value: a key in a Helm value renders
   # into the Deployment's argv.
+  #
+  # Authored, not generated. It was generated here for as long as this was the
+  # only lab rendering external-dns, and a generated key cannot be the one
+  # Knot was configured with — so the controller would have been refused every
+  # update it ever made. Nothing caught it because a fixture never runs;
+  # `lab-tsig-key-agrees` does now.
+  lab.secrets.stores.knot.backend = "env";
+  lab.secrets.envFile = "examples/labs/tests/every-floe.env";
+
   lab.secrets.managed.externaldns-tsig = {
-    store = "authored";
-    keys.tsig-secret = {
-      generator = "base64";
-      length = 32;
-    };
+    store = "knot";
+    keys.tsig-secret.generator = null;
   };
 
   lab.clusters.core.secrets.project.externaldns-tsig = {
