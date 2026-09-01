@@ -23,6 +23,27 @@ let
   imageUtil = import ../../lib/render/images.nix { inherit lib; };
   chainsaw = import ../../lib/render/chainsaw.nix { inherit lib pkgs; };
   lintRender = import ../../lib/render/lint.nix { inherit lib pkgs; };
+  # The lab's own vault, if it has exactly one.
+  #
+  # Exactly one or none: two vaults is not something a single `vault`
+  # store can point at, and taking the first would be choosing on the
+  # lab's behalf. A lab with two says which it means, per store.
+  vaultServers = lib.concatLists (
+    lib.mapAttrsToList (
+      _: cluster:
+      lib.concatLists (
+        lib.mapAttrsToList (
+          unit: inst:
+          lib.mapAttrsToList (instName: _: cluster.link.provides.${unit}.${instName}) (
+            lib.filterAttrs (_: sig: sig.name == "VAULT_SERVER") inst.def.provides
+          )
+        ) cluster.floes
+      )
+    ) clusters
+  );
+
+  vaultServer = if lib.length vaultServers == 1 then lib.head vaultServers else null;
+
   opsRender = import ../../lib/render/ops.nix { inherit lib pkgs; };
 
   inherit (lintRender) sanitize;
@@ -220,7 +241,28 @@ in
         stores = lib.mapAttrs (_: store: {
           inherit (store) backend direction;
           writerCommand = store.writer.command;
-          inherit (store) vault;
+
+          # A `vault` store's server, mount and version filled in from
+          # whatever provides VAULT_SERVER, for the fields the lab left unset.
+          #
+          # Done here rather than as option defaults on the store itself,
+          # which is where it belongs and where it cannot go: deriving them
+          # needs to know *which* stores are `backend = "vault"`, and reading
+          # `lab.secrets.stores` to write `lab.secrets.stores` is infinite
+          # recursion. This reads the option and writes somewhere else.
+          #
+          # The lab still wins. openbao knows its own address and a lab that
+          # names one is pointing at a vault outside itself, which is a
+          # different and equally real thing.
+          vault =
+            if store.backend != "vault" || vaultServer == null then
+              store.vault
+            else
+              {
+                server = if store.vault.server != null then store.vault.server else vaultServer.address;
+                path = if store.vault.path != "secret" then store.vault.path else vaultServer.kvPath;
+                version = if store.vault.version != "v2" then store.vault.version else vaultServer.kvVersion;
+              };
         }) config.lab.secrets.stores;
 
         managed = lib.mapAttrs (_: sec: {

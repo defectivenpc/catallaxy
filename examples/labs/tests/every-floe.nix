@@ -29,10 +29,11 @@
   # sops and projected in, which is the shape the floe's docstring describes
   # and what keeps the cluster's coherence check satisfiable.
   lab.secrets.stores.authored.backend = "sops";
-  lab.secrets.stores.runtime = {
-    backend = "vault";
-    vault.server = "https://vault.every-floe.test";
-  };
+  # No `vault.server`. openbao is in this cluster and knows its own address;
+  # naming one here would be a second place for it, and the two disagree
+  # silently because nothing dials the URL until something reads a secret.
+  # `modules/lab/out.nix` fills it from whatever provides VAULT_SERVER.
+  lab.secrets.stores.runtime.backend = "vault";
 
   lab.secrets.managed.vault-credential = {
     store = "authored";
