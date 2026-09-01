@@ -163,7 +163,9 @@ in
           let
             missing = waitUtil.missingFields b.ready;
           in
-          if missing != [ ] then
+          if waitUtil.conditionOnConditionless b.ready != "" then
+            throw "bundle '${name}': ${waitUtil.conditionOnConditionless b.ready}"
+          else if missing != [ ] then
             throw ''
               bundle '${name}' has a `ready` probe of kind '${b.ready.kind or "?"}' with no ${lib.concatStringsSep " or " missing}.
 

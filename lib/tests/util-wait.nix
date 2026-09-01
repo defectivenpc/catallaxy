@@ -293,4 +293,70 @@ lib.runTests {
       cName = "wait";
     };
   };
+
+  # ---- probes that cannot ever match -----------------------------------
+  #
+  # `kubectl wait --for=condition=X` on a workload with no `.status.conditions`
+  # does not fail fast. It polls until the timeout and *then* says the
+  # condition was never met, so the bundle reads as a slow deploy rather than a
+  # broken probe. cilium cost ten minutes that way on a cluster it had already
+  # brought up, and otel-collector's agent the same before it.
+  #
+  # A comment on each floe was the first attempt at preventing this, and it did
+  # not work: the same mistake was made three floes after the comment was
+  # written, by the same person who wrote it.
+  testAConditionOnADaemonSetIsRefused = {
+    expr =
+      wait.conditionOnConditionless {
+        kind = "condition";
+        resource = "daemonset/cilium";
+        condition = "Ready";
+      } != "";
+    expected = true;
+  };
+
+  testJobsAndCronJobsToo = {
+    expr =
+      map
+        (
+          r:
+          wait.conditionOnConditionless {
+            kind = "condition";
+            resource = r;
+            condition = "Complete";
+          } != ""
+        )
+        [
+          "job/init"
+          "cronjob/rotate"
+          "ds/agent"
+        ];
+    expected = [
+      true
+      true
+      true
+    ];
+  };
+
+  # The paired positive, and it is not decorative: a Deployment *does* carry
+  # conditions, and refusing that would break every floe that waits on one.
+  testADeploymentIsFine = {
+    expr = wait.conditionOnConditionless {
+      kind = "condition";
+      resource = "deployment/grafana";
+      condition = "Available";
+    };
+    expected = "";
+  };
+
+  # Only `condition` probes. A jsonpath probe reads `.status` directly and is
+  # the right way to wait on a DaemonSet if a probe is wanted at all.
+  testOtherProbeKindsAreUntouched = {
+    expr = wait.conditionOnConditionless {
+      kind = "jsonpath";
+      resource = "daemonset/cilium";
+      jsonpath = "{.status.numberReady}";
+    };
+    expected = "";
+  };
 }

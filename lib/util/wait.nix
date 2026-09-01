@@ -258,6 +258,49 @@ let
   missingFields =
     probe: builtins.filter (f: (probe.${f} or null) == null) (requiredBy.${probe.kind} or [ ]);
 
+  # Workload kinds that carry no `.status.conditions` at all.
+  #
+  # `kubectl wait --for=condition=X` on one of these does not fail fast: it
+  # polls until the timeout and *then* reports the condition was never met, so
+  # a bundle looks like a slow deploy rather than a malformed probe. That cost
+  # cilium ten minutes on a cluster it had already brought up successfully,
+  # and otel-collector's agent the same before it.
+  #
+  # A comment on each floe was the first attempt at preventing this, and it
+  # did not: the same mistake was made three floes after the comment was
+  # written, by the same person. `awaitRollout` is the answer for all of them —
+  # for a DaemonSet it asks the better question anyway, since what matters is
+  # that every node has the pod rather than that some quorum does.
+  conditionlessKinds = [
+    "daemonset"
+    "daemonsets"
+    "ds"
+    "job"
+    "jobs"
+    "cronjob"
+    "cronjobs"
+  ];
+
+  # `""` when the probe is fine, otherwise why it is not.
+  conditionOnConditionless =
+    probe:
+    let
+      kind = lib.toLower (lib.head (lib.splitString "/" (probe.resource or "")));
+    in
+    if (probe.kind or "") == "condition" && lib.elem kind conditionlessKinds then
+      ''
+        probe waits on '${probe.resource}' with `kind = "condition"`, and a ${kind} has no
+        `.status.conditions` for one to match.
+
+        `kubectl wait` does not refuse this — it polls until the timeout and
+        then reports the condition was never met, so the bundle reads as a slow
+        deploy rather than a broken probe.
+
+        Drop the probe and let `awaitRollout` do it.
+      ''
+    else
+      "";
+
   renderProbe =
     probe:
     let
@@ -282,7 +325,12 @@ let
 
 in
 {
-  inherit renderProbe caBundleVolumeName missingFields;
+  inherit
+    renderProbe
+    caBundleVolumeName
+    missingFields
+    conditionOnConditionless
+    ;
 
   mkWaitInitContainer =
     {
