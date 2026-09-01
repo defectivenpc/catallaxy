@@ -108,13 +108,18 @@ lib.runTests {
     in
     {
       expr = {
-        inherit (c.spec) kanidmRef origin secretName;
+        inherit (c.spec) kanidmRef origin;
+
+        # Not a field the CRD has, and a client carrying one is rejected
+        # whole — so the Secret's name is the operator's convention and this
+        # asserts the spec stays out of it.
+        secretName = c.spec.secretName or "absent";
         ns = c.metadata.namespace;
       };
       expected = {
         kanidmRef = support.stubs.oidcProvider.value.ref;
         origin = "https://app.stub.test";
-        secretName = "app-oidc";
+        secretName = "absent";
         ns = "app";
       };
     };

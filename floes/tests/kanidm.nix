@@ -85,10 +85,37 @@ lib.runTests {
     expected = "kanidm/kanidm";
   };
 
-  # The operator picks the image from `spec.version`, and what it picks is not
-  # visible at eval. A claim here would be a claim about someone else's choice.
-  testItDoesNotClaimImagesItCannotSee = {
-    expr = r.component.imagesComplete;
-    expected = false;
+  # The field the CRD actually has. `spec.version` is not one of them, and a
+  # `Kanidm` carrying it is refused whole by the API server — which is a floe
+  # that installs nothing, discovered only by applying it. `homelab.local` was
+  # the first lab to run kanidm and it failed here on its first attempt.
+  testTheServerImageIsPinnedOnTheFieldTheCrdDeclares = {
+    expr = {
+      inherit (r.bundles.server.resources.kanidm.spec) image;
+      version = r.bundles.server.resources.kanidm.spec.version or "absent";
+    };
+    expected = {
+      image = "docker.io/kanidm/server:1.6.4";
+      version = "absent";
+    };
+  };
+
+  # And because this floe picks the image rather than the operator picking it
+  # from a version string, it can say so. A `Kanidm` is a CR and not a
+  # workload, so nothing scraping manifests for `image:` would find it.
+  testItNamesTheImageItRuns = {
+    expr = {
+      inherit (r.component) imagesComplete;
+      images = r.cluster.images;
+    };
+    expected = {
+      imagesComplete = true;
+      images."kanidm/server/server" = {
+        registry = "docker.io";
+        repository = "kanidm/server";
+        tag = "1.6.4";
+        digest = null;
+      };
+    };
   };
 }

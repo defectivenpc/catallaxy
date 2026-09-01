@@ -110,7 +110,7 @@ lib.runTests {
   testTheyComeFromTheSecretKaniopWrites = {
     expr = values.envValueFrom.GF_OAUTH_CLIENT_SECRET.secretKeyRef;
     expected = {
-      name = "grafana-oidc";
+      name = "grafana-kanidm-oauth2-credentials";
       key = "CLIENT_SECRET";
     };
   };
@@ -132,7 +132,7 @@ lib.runTests {
     };
     expected = {
       secrets = [ "monitoring/grafana-admin" ];
-      externalSecrets = [ "monitoring/grafana-oidc" ];
+      externalSecrets = [ "monitoring/grafana-kanidm-oauth2-credentials" ];
     };
   };
 

@@ -54,6 +54,15 @@ let
       eligible = true;
       mentions = [ ];
     };
+
+    # Two clusters rather than one, and that is the only thing that makes it
+    # different here: both are k3d, neither needs a credential, and the host
+    # services in front of them are the same three. A lab does not become
+    # less self-contained by having a second cluster in it.
+    "homelab.local" = {
+      eligible = true;
+      mentions = [ ];
+    };
   };
 
   known = lib.filter (n: e2eLabs ? ${n}) (lib.attrNames expected);

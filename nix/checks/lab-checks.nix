@@ -140,7 +140,7 @@ let
       touch $out
     '';
 
-  # The 12 lint rules, over the *rendered* tree — Helm output included.
+  # Every lint rule, over the *rendered* tree — Helm output included.
   lintCheck =
     name: lab:
     pkgs.runCommand "${name}-lint" { nativeBuildInputs = [ cata ]; } ''
@@ -285,6 +285,104 @@ let
     ) labDefs
   );
 
+  # ---- between clusters, inside one lab ----------------------------------
+  #
+  # RFC 0005 §5 names both of these as lab-level checks and neither existed
+  # while every runnable lab had one cluster. `homelab` has two, and both
+  # failures are silent: the first at runtime with routing that half works,
+  # the second with a 503 from a backend nobody meant to reach.
+
+  # Every range a cluster claims, with something to call it in a message.
+  # `out.cluster` is the descriptor the provisioner emitted, so this is the
+  # range the cluster is actually created with rather than the input someone
+  # meant to pass.
+  rangesOf =
+    labName: clusterName: cluster:
+    lib.concatLists (
+      lib.mapAttrsToList (_unit: descriptor: [
+        {
+          what = "${clusterName}'s pod range";
+          cidr = descriptor.network.podSubnet;
+        }
+        {
+          what = "${clusterName}'s service range";
+          cidr = descriptor.network.serviceSubnet;
+        }
+      ]) cluster.out.cluster
+    );
+
+  # Cross-cluster only, and every combination of the two kinds: on one docker
+  # network a pod address from `core` and a service address from `obs` are as
+  # capable of colliding as two pod ranges. Within one cluster the distribution
+  # refuses the overlap itself.
+  rangeClashes = lib.concatLists (
+    lib.mapAttrsToList (
+      labName: lab:
+      let
+        byCluster = lib.mapAttrs (rangesOf labName) lab.config.lab.clusters;
+
+        pairs = lib.concatLists (
+          lib.mapAttrsToList (
+            a: rangesA:
+            lib.concatLists (
+              lib.mapAttrsToList (
+                b: rangesB:
+                lib.optionals (a < b) (
+                  lib.concatMap (
+                    ra: map (rb: { inherit ra rb; }) (lib.filter (rb: net.cidrsOverlap ra.cidr rb.cidr) rangesB)
+                  ) rangesA
+                )
+              ) byCluster
+            )
+          ) byCluster
+        );
+
+        # The lab's own docker network is the third party every cluster shares,
+        # and a cluster whose range covers the bridge cannot reach its own
+        # gateway.
+        vsDocker = lib.concatLists (
+          lib.mapAttrsToList (
+            _: ranges:
+            map (r: "${labName}: ${r.what} (${r.cidr}) overlaps the lab's docker network (${subnetOf lab})") (
+              lib.filter (r: net.cidrsOverlap r.cidr (subnetOf lab)) ranges
+            )
+          ) byCluster
+        );
+      in
+      map (p: "${labName}: ${p.ra.what} (${p.ra.cidr}) overlaps ${p.rb.what} (${p.rb.cidr})") pairs
+      ++ vsDocker
+    ) labDefs
+  );
+
+  # One hostname, two clusters. HAProxy emits a `use_backend` line per exposed
+  # host and the first match wins, so the second cluster's route is
+  # unreachable and nothing anywhere says so.
+  hostClashes = lib.concatLists (
+    lib.mapAttrsToList (
+      labName: lab:
+      let
+        claimsHere = lib.concatLists (
+          lib.mapAttrsToList (
+            clusterName: c:
+            map (h: {
+              inherit clusterName;
+              inherit (h) host;
+            }) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+          ) lab.config.lab.clusters
+        );
+      in
+      lib.concatMap (
+        host:
+        let
+          holders = lib.unique (map (c: c.clusterName) (lib.filter (c: c.host == host) claimsHere));
+        in
+        lib.optional (lib.length holders > 1) (
+          "${labName}: '${host}' is routed by ${lib.concatStringsSep " and " holders}"
+        )
+      ) (lib.unique (map (c: c.host) claimsHere))
+    ) labDefs
+  );
+
   refuse =
     checkName: what: findings:
     pkgs.runCommand checkName { } ''
@@ -313,4 +411,14 @@ lib.foldl' lib.mergeAttrs { } perLab
     refuse "lab-routed-hosts-are-proxied"
       "A public route the proxy has no backend for reaches its default backend and returns 503. The proxy builds its host map from what the clusters expose, so a hostname named anywhere else is invisible to it."
       unproxiedHosts;
+
+  lab-cluster-ranges =
+    refuse "lab-cluster-ranges"
+      "Two clusters on one docker network need ranges that do not overlap, and neither one can overlap the network itself. An address plan is a decision written down (RFC 0005 §5); nothing derives these, so nothing catches them but this."
+      rangeClashes;
+
+  lab-routed-hosts-are-unique =
+    refuse "lab-routed-hosts-are-unique"
+      "Two clusters routing one hostname is not a choice the ingress can make. It emits a `use_backend` per exposed host and the first match wins, so the second cluster's route is unreachable and nothing reports it."
+      hostClashes;
 }

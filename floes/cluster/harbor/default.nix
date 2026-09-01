@@ -101,11 +101,28 @@ floe.mkFloe {
           symbols = 0;
           extraData.harbor-user = "admin";
         };
+        # Three of these are named `harbor-<component>-secret` rather than
+        # `harbor-<component>`, and the suffix is load-bearing. The chart
+        # renders its own Secrets called `harbor-core`, `harbor-jobservice`
+        # and `harbor-registry`, carrying keys that have nothing to do with
+        # the ones here — `POSTGRESQL_PASSWORD` and
+        # `REGISTRY_CREDENTIAL_PASSWORD` among them. An ExternalSecret
+        # targeting one of those names takes ownership of it and rewrites its
+        # contents to just the generated key, so the chart's keys are silently
+        # deleted after the apply succeeds.
+        #
+        # What that looked like: harbor-core in CrashLoopBackOff with
+        # `password authentication failed for user "postgres"`, because the
+        # password the chart put in `harbor-core` was gone by the time core
+        # read it. Nothing before the pod logs said anything.
+        #
+        # `existingSecret` takes any name, so the collision was never
+        # necessary.
         secretKey = gen "harbor-secret-key" "secretKey" 16;
-        core = gen "harbor-core" "secret" 16;
+        core = gen "harbor-core-secret" "secret" 16;
         xsrf = gen "harbor-xsrf" "CSRF_KEY" 32;
-        jobservice = gen "harbor-jobservice" "JOBSERVICE_SECRET" 16;
-        registryHttp = gen "harbor-registry" "REGISTRY_HTTP_SECRET" 16;
+        jobservice = gen "harbor-jobservice-secret" "JOBSERVICE_SECRET" 16;
+        registryHttp = gen "harbor-registry-http-secret" "REGISTRY_HTTP_SECRET" 16;
 
         generated = [
           admin
@@ -265,16 +282,16 @@ floe.mkFloe {
                 existingSecretSecretKey = "harbor-secret-key";
 
                 core = {
-                  existingSecret = "harbor-core";
+                  existingSecret = "harbor-core-secret";
                   existingXsrfSecret = "harbor-xsrf";
                   existingXsrfSecretKey = "CSRF_KEY";
                 };
                 jobservice = {
-                  existingSecret = "harbor-jobservice";
+                  existingSecret = "harbor-jobservice-secret";
                   existingSecretKey = "JOBSERVICE_SECRET";
                 };
                 registry = {
-                  existingSecret = "harbor-registry";
+                  existingSecret = "harbor-registry-http-secret";
                   existingSecretKey = "REGISTRY_HTTP_SECRET";
                 };
 

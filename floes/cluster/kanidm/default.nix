@@ -42,7 +42,29 @@ floe.mkFloe {
     version = lib.mkOption {
       type = lib.types.str;
       default = "1.6.4";
-      description = "Kanidm version the operator runs.";
+      description = ''
+        Kanidm version the operator runs, as the tag of `registry/repository`.
+
+        Not `spec.version` on the CR: kaniop v1beta1 has no such field, and a
+        `Kanidm` carrying one is refused by the API server with
+        `.spec.version: field not declared in schema` — under server-side
+        apply the whole object is rejected, so the floe installs nothing at
+        all. What the CRD takes is `spec.image`, whose own default is
+        `kanidm/server:latest`, which a lab that means to be reproducible
+        cannot use.
+      '';
+    };
+
+    registry = lib.mkOption {
+      type = lib.types.str;
+      default = "docker.io";
+      description = "Registry the server image is pulled from.";
+    };
+
+    repository = lib.mkOption {
+      type = lib.types.str;
+      default = "kanidm/server";
+      description = "Repository the server image lives in.";
     };
 
     storage = lib.mkOption {
@@ -91,6 +113,8 @@ floe.mkFloe {
 
         name = "kanidm";
         tlsSecret = "kanidm-tls";
+
+        image = "${inputs.registry}/${inputs.repository}:${inputs.version}";
       in
       {
         config.floe.provides.oidc = {
@@ -108,10 +132,12 @@ floe.mkFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
-          # Nothing here names an image: the operator decides what to run from
-          # `spec.version`, and the tag it picks is not visible at eval. The
-          # claim would be a claim about someone else's decision.
-          imagesComplete = false;
+          # One image, and this floe picks it. It used to be `false` on the
+          # grounds that the operator chose the tag from `spec.version` and
+          # the choice was not visible at eval — true of a field the CRD does
+          # not have. `spec.image` is the field it does have, so the decision
+          # is this floe's and the claim is one it can make.
+          imagesComplete = true;
 
           network = {
             declared = true;
@@ -126,6 +152,15 @@ floe.mkFloe {
 
           bundles.server = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
+
+            # So the lab's pull-through cache warms it and `cata images` can
+            # see it. A `Kanidm` is a CR rather than a workload, so nothing
+            # scraping the manifests for `image:` keys would find this.
+            images.server = {
+              inherit (inputs) registry repository;
+              tag = inputs.version;
+              digest = null;
+            };
 
             # The CR is meaningless until the kind exists and something is
             # watching for it.
@@ -155,7 +190,8 @@ floe.mkFloe {
                   labels."app.kubernetes.io/managed-by" = "catallaxy";
                 };
                 spec = {
-                  inherit (inputs) domain version;
+                  inherit (inputs) domain;
+                  inherit image;
                   origin = "https://${inputs.domain}";
 
                   # `replicaGroups`, not `replicas`: kaniop deploys each group

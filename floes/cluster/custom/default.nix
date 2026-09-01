@@ -51,7 +51,8 @@ floe.mkFloe {
         Register an OAuth2 client for this app with the lab's issuer.
 
         The client resource lands in this app's own namespace and the operator
-        writes its credentials to `<name>-oidc` beside it. What the app does
+        writes its credentials to `<name>-kanidm-oauth2-credentials` beside
+        it — the operator's own naming, which nothing can override. What the app does
         with them is the app's business: this floe renders no configuration,
         because a `custom` app's config is whatever its `resources` say.
       '';

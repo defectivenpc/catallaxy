@@ -1,4 +1,4 @@
-d1c878dc8f4449a6f013e4d935fc68f1dec16fdb6cc04041800a82943b003c91  bin/minimal.local-ops
+ec0b27adfeb5b7ec81615052eb41c1f5fb1ebe6dcacd12aefccece040d99dc8e  bin/minimal.local-ops
 3d8b402a8622c5defc492ba541f94f00a193ee13b03bb58148602a464d2e5677  bootstrap/app/.declared-bundles
 bf2703997e78f2951e34cacda8f0609e22b6a1b876f6c2876338fb5c743b1843  bootstrap/app/.deploy-config
 d2900852f84309cea42158328d247e2d1b563a5954c8b8529f7085b0fe01a9aa  bootstrap/app/.wave-meta

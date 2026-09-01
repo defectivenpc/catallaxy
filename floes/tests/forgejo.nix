@@ -107,7 +107,7 @@ lib.runTests {
 
   testTheClientSecretIsExternal = {
     expr = r.bundles.forgejo.externalSecrets;
-    expected = [ "forgejo/forgejo-oidc" ];
+    expected = [ "forgejo/forgejo-kanidm-oauth2-credentials" ];
   };
 
   testAskingWithNoIssuerIsRefused = {

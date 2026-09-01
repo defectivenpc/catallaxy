@@ -54,14 +54,31 @@ let
   # what is left is joining the clusters. Ops are the only channel that has to
   # merge rather than stay keyed by cluster, because the invocation
   # `<lab>-ops <category> <name>` has no room for a cluster.
+  #
+  # So the cluster goes in the name. Every command is `<cluster>-<name>`,
+  # unconditionally — the identity of an ops command is which cluster it acts
+  # on as much as which floe declared it, and two clusters running the same
+  # floe are two different commands against two different kubecontexts.
+  #
+  # Unconditionally, rather than only when two clusters collide: a name that
+  # changes when a second cluster is added is a name an operator's notes and
+  # scripts stop matching, and the lab that adds the cluster is not the one
+  # that finds out.
 
-  opsByCluster = lib.mapAttrs (_: c: c.out.ops) clusters;
+  opsByCluster = lib.mapAttrs (
+    clusterName: c:
+    lib.mapAttrs (
+      _category: cmds: lib.mapAttrs' (n: v: lib.nameValuePair "${clusterName}-${n}" v) cmds
+    ) c.out.ops
+  ) clusters;
 
   opsCategories = lib.zipAttrsWith (_category: perCluster: perCluster) (lib.attrValues opsByCluster);
 
-  # Two clusters contributing the same `<category> <name>` is refused rather
-  # than resolved: whichever won would be arbitrary, and the operator would
-  # have no way to ask for the other one.
+  # A backstop now rather than the main line of defence: qualifying by cluster
+  # makes the ordinary collision impossible, and what is left is a cluster
+  # named so that its prefix reproduces another's — `core` with a command
+  # `x-y` against a cluster `core-x` with `y`. Contrived, and silent if it
+  # happened, so it stays checked.
   opsCollisions = lib.concatLists (
     lib.mapAttrsToList (
       category: perCluster:

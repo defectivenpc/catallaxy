@@ -48,6 +48,11 @@ pub(super) fn crd_key(api_version: &str, kind: &str) -> String {
     format!("{api_version}/{kind}")
 }
 
+/// Present on every object, declared by almost no CRD's `openAPIV3Schema`,
+/// and never pruned. Reporting them as undeclared would fire on every custom
+/// resource in the tree, which is how a rule gets turned off.
+const API_SERVER_OWNED_FIELDS: [&str; 3] = ["apiVersion", "kind", "metadata"];
+
 #[derive(Debug)]
 pub(super) struct SchemaNode {
     schema_type: Option<String>,
@@ -56,6 +61,11 @@ pub(super) struct SchemaNode {
     items: Option<Box<SchemaNode>>,
     enum_values: Vec<String>,
     additional_properties: Option<Box<SchemaNode>>,
+
+    /// `x-kubernetes-preserve-unknown-fields`. Where it is set, a field the
+    /// schema does not declare is kept rather than pruned, so an unknown one
+    /// is not an error and must not be reported as one.
+    preserve_unknown: bool,
 }
 
 pub(super) fn extract_crd_schemas(resources: &[K8sResource]) -> HashMap<String, SchemaNode> {
@@ -154,6 +164,7 @@ fn parse_schema_node(value: &Value) -> SchemaNode {
                 items: None,
                 enum_values: Vec::new(),
                 additional_properties: None,
+                preserve_unknown: false,
             };
         }
     };
@@ -208,6 +219,11 @@ fn parse_schema_node(value: &Value) -> SchemaNode {
             }
         });
 
+    let preserve_unknown = mapping
+        .get(Value::String("x-kubernetes-preserve-unknown-fields".into()))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
     SchemaNode {
         schema_type,
         required,
@@ -215,6 +231,7 @@ fn parse_schema_node(value: &Value) -> SchemaNode {
         items,
         enum_values,
         additional_properties,
+        preserve_unknown,
     }
 }
 
@@ -300,6 +317,38 @@ fn validate_object(
                     validate_object(v, prop_schema, &child_path, resource, cluster, diags);
                 } else if let Some(ref ap) = schema.additional_properties {
                     validate_object(v, ap, &child_path, resource, cluster, diags);
+                } else if schema.preserve_unknown
+                    || schema.properties.is_empty()
+                    || (path.is_empty() && API_SERVER_OWNED_FIELDS.contains(&key))
+                {
+                    // Nothing to say. `preserve_unknown` means the API server
+                    // keeps whatever is here; an empty `properties` means the
+                    // CRD declared no shape at this level — `metadata` is
+                    // usually the latter — and a schema that describes nothing
+                    // cannot be violated. At the root, the three fields the
+                    // API machinery supplies are present on every object and
+                    // declared by almost no CRD.
+                } else {
+                    // A closed object, and this key is not in it. The API
+                    // server prunes it under a normal apply and *rejects* the
+                    // whole object under server-side apply, with
+                    // "field not declared in schema" — which is a failed
+                    // deploy, not a warning. This branch used to be absent, so
+                    // the one error class this rule most obviously exists for
+                    // was the one it stayed silent about.
+                    diags.push(Diagnostic {
+                        severity: Severity::Error,
+                        check: "crd-schema",
+                        cluster: cluster.to_string(),
+                        file: resource.source_file.clone(),
+                        resource: resource.display_id(),
+                        message: format!(
+                            "{}: field '{}' is not declared in the CRD schema (known: {})",
+                            field_path(path),
+                            key,
+                            known_fields(schema)
+                        ),
+                    });
                 }
             }
         }
@@ -328,6 +377,15 @@ fn yaml_type_name(value: &Value) -> &'static str {
 
 fn field_path(path: &str) -> &str {
     if path.is_empty() { "(root)" } else { path }
+}
+
+/// What the schema does declare here, so the diagnostic names the near miss
+/// rather than only the wrong word. `version` against a CRD offering `image`
+/// is the case this was written for.
+fn known_fields(schema: &SchemaNode) -> String {
+    let mut names: Vec<&str> = schema.properties.keys().map(String::as_str).collect();
+    names.sort_unstable();
+    names.join(", ")
 }
 #[cfg(test)]
 mod tests {
@@ -555,5 +613,143 @@ spec:
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].severity, Severity::Warning);
         assert!(diags[0].message.contains("expected type 'integer'"));
+    }
+
+    /// The case this rule most obviously exists for, and the one it was
+    /// silent about. `homelab.local` renders a `Kanidm` with `spec.version`
+    /// against a kaniop CRD that declares `image`; lint said "all checks
+    /// passed" and the apply died on
+    /// `.spec.version: field not declared in schema`, thirty times over three
+    /// minutes, before failing the deploy.
+    #[test]
+    fn a_field_the_crd_does_not_declare_is_an_error() {
+        let crd = make_resource(
+            r#"
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.io
+spec:
+  group: example.io
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                image:
+                  type: string
+"#,
+        );
+
+        let resource = make_resource(
+            r#"
+apiVersion: example.io/v1
+kind: Widget
+metadata:
+  name: test-widget
+spec:
+  version: "1.6.4"
+"#,
+        );
+
+        let diags = check(&[crd, resource], "test-cluster");
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].severity, Severity::Error);
+        assert!(diags[0].message.contains("'version' is not declared"));
+        // And it names what the schema does have, so the near miss is visible
+        // without opening the CRD.
+        assert!(diags[0].message.contains("known: image"));
+    }
+
+    /// A schema that keeps what it does not declare is not violated by an
+    /// undeclared field, and saying otherwise would make the rule unusable
+    /// against every CRD carrying free-form configuration.
+    #[test]
+    fn preserve_unknown_fields_admits_anything() {
+        let crd = make_resource(
+            r#"
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.io
+spec:
+  group: example.io
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+              properties:
+                image:
+                  type: string
+"#,
+        );
+
+        let resource = make_resource(
+            r#"
+apiVersion: example.io/v1
+kind: Widget
+metadata:
+  name: test-widget
+spec:
+  anythingAtAll: yes
+"#,
+        );
+
+        assert!(check(&[crd, resource], "test-cluster").is_empty());
+    }
+
+    /// A CRD that declares no shape at a level cannot be violated at it.
+    /// `metadata` is almost always this, and reporting every label and
+    /// annotation as undeclared would drown the rule.
+    #[test]
+    fn a_level_the_crd_describes_nothing_about_is_not_checked() {
+        let crd = make_resource(
+            r#"
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.io
+spec:
+  group: example.io
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+"#,
+        );
+
+        let resource = make_resource(
+            r#"
+apiVersion: example.io/v1
+kind: Widget
+metadata:
+  name: test-widget
+  labels:
+    anything: here
+spec:
+  whatever: true
+"#,
+        );
+
+        assert!(check(&[crd, resource], "test-cluster").is_empty());
     }
 }

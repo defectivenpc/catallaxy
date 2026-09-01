@@ -489,9 +489,21 @@ rec {
   # consumer never sees the value at eval — which is what keeps a client
   # secret out of the rendered manifests.
   #
-  # `secretName` is set rather than defaulted, because a consumer that has to
-  # guess what the operator called the Secret is a consumer that breaks when
-  # the convention changes.
+  # The Secret's name is the operator's convention and not a field: kaniop's
+  # `KanidmOAuth2Client` has no `spec.secretName`, and a client carrying one
+  # is rejected whole under server-side apply with
+  # `field not declared in schema` — so setting it produced no client, no
+  # Secret, and a consumer waiting forever on both.
+  #
+  # `<client>-kanidm-oauth2-credentials`, verified against kaniop 0.11.1 by
+  # applying a client and reading back what appeared. The `kanidm` in the
+  # middle is a literal rather than the instance's name: the Secret carries
+  # `app.kubernetes.io/name: kanidm` alongside `instance: <client>`, so it is
+  # the product and not the reference.
+  #
+  # Written here once, which is the whole mitigation available. A consumer
+  # guessing it for itself would be N places to change; this is one, and it is
+  # next to the resource whose operator decides it.
   mkOAuth2Client =
     {
       provider,
@@ -508,7 +520,7 @@ rec {
       public ? false,
     }:
     let
-      secretName = "${name}-oidc";
+      secretName = "${name}-kanidm-oauth2-credentials";
     in
     if !provider.clientsAnyNamespace && namespace != provider.ref.namespace then
       # Admitted, stored, and never reconciled: the consumer waits on a Secret
@@ -535,7 +547,6 @@ rec {
             displayname = displayName;
             inherit origin;
             redirectUrl = redirectUrls;
-            inherit secretName;
           }
           // lib.optionalAttrs public { public = true; }
           // lib.optionalAttrs (scopeMap != [ ]) { inherit scopeMap; };

@@ -32,13 +32,20 @@ in
 lib.runTests {
 
   # Six, not five and not four. Each `existingSecret` below points at one.
+  #
+  # Three carry a `-secret`/`-http-secret` suffix rather than reading as the
+  # obvious name, and that is the fix for a real failure: the chart renders
+  # its own `harbor-core`, `harbor-jobservice` and `harbor-registry`, and an
+  # ExternalSecret targeting one takes it over and drops every key the chart
+  # put there. `secret-ownership` in the CLI now refuses the collision; this
+  # pins the names that avoid it.
   testEverySecretIsMintedInCluster = {
     expr = lib.sort (a: b: a < b) r.bundles.harbor.secrets;
     expected = [
       "harbor/harbor-admin"
-      "harbor/harbor-core"
-      "harbor/harbor-jobservice"
-      "harbor/harbor-registry"
+      "harbor/harbor-core-secret"
+      "harbor/harbor-jobservice-secret"
+      "harbor/harbor-registry-http-secret"
       "harbor/harbor-secret-key"
       "harbor/harbor-xsrf"
     ];
@@ -58,10 +65,10 @@ lib.runTests {
     expected = {
       admin = "harbor-admin";
       secretKey = "harbor-secret-key";
-      core = "harbor-core";
+      core = "harbor-core-secret";
       xsrf = "harbor-xsrf";
-      jobservice = "harbor-jobservice";
-      registry = "harbor-registry";
+      jobservice = "harbor-jobservice-secret";
+      registry = "harbor-registry-http-secret";
     };
   };
 
@@ -118,7 +125,7 @@ lib.runTests {
   # creates them and nothing should look for a creator.
   testTheClientSecretIsExternal = {
     expr = r.bundles.harbor.externalSecrets;
-    expected = [ "harbor/harbor-oidc" ];
+    expected = [ "harbor/harbor-kanidm-oauth2-credentials" ];
   };
 
   testAskingWithNoIssuerIsRefused = {

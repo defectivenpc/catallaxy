@@ -37,6 +37,14 @@ let
     cluster = floes.k3d-cluster {
       name = clusterName;
       instanceName = "secret-sharing-${clusterName}";
+
+      # Distinct ranges, because the two clusters share a docker network. Both
+      # took the defaults until `lab-cluster-ranges` was written and said so —
+      # invisible here, since a fixture renders and never runs, and the same
+      # mistake in a lab that does run is two clusters handing out the same
+      # pod addresses.
+      podSubnet = if clusterName == "core" then "10.244.0.0/16" else "10.245.0.0/16";
+      serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
     };
 
     external-secrets = floes.external-secrets {

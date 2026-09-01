@@ -7,33 +7,108 @@ The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- **A lab with two clusters, and it stands up.** `examples/labs/homelab` is
+  `core` — identity, source control, a registry, trust, routing, backups —
+  and `obs` — metrics, logs, traces and a dashboard over them. It is the
+  first runnable lab with more than one cluster and the first with an
+  identity provider in it, so one docker network in front of two gateways,
+  two kubeconfigs, a plan interleaving both clusters' waves, and kanidm
+  minting clients that forgejo and harbor each render for themselves are all
+  exercised for real rather than only rendered.
+  `up in 307s, verified, idempotent, destroyed clean`.
+
+  What it deliberately does not do is written in the lab file, with the
+  reason for each: no cross-cluster telemetry and no OIDC on `obs`'s
+  Grafana, because a link is per-cluster (RFC 0005 §3.1) and configuration
+  does not cross between clusters even though secrets do; no Argo, because
+  delivery is a lab-wide decision and a two-cluster gitops lab is a shape
+  nobody has run.
+
+- **Two lab-scope checks RFC 0005 §5 named and nothing had.**
+  `lab-cluster-ranges` refuses two clusters on one docker network whose pod
+  or service ranges overlap, or either overlapping the network itself.
+  `lab-routed-hosts-are-unique` refuses two clusters routing one hostname —
+  the ingress emits a `use_backend` per exposed host and the first match
+  wins, so the second cluster's route is unreachable and nothing reports it.
+  Neither could fire while every runnable lab had one cluster. The first one
+  written immediately found `secret-sharing`'s two clusters both taking the
+  default pod and service ranges.
+
 ### Changed
 
-- **RFC 0005 says what the tree does.** Its §1 opened "A lab is a floe. So is
-  a cluster", and `modules/lab/types.nix` opens "A lab is a NixOS module, not
-  a floe". The implementation's argument wins and the RFC is amended to it:
-  containment is `environment → lab module → cluster → component floes`, and
-  only the innermost depth is the floe mechanism. §1.1 gives the reason — you
-  want hiding and exactly-one resolution *between* components and
-  merge-everything *within* a lab, and those are different mechanisms — and
+- **RFC 0005 says what the tree does.** Its §1 opened "A lab is a floe. So
+  is a cluster", and `modules/lab/types.nix` opens "A lab is a NixOS module,
+  not a floe". The implementation's argument wins and the RFC is amended to
+  it: containment is `environment → lab module → cluster → component floes`,
+  and only the innermost depth is the floe mechanism. §1.1 gives the reason
+  — you want hiding and exactly-one resolution _between_ components and
+  merge-everything _within_ a lab, and those are different mechanisms — and
   §2.1, §3.1 and §3.2 name what it costs: an appliance is an option surface
   rather than a signature, a link is per-cluster with no outer scope, and
   configuration does not cross between clusters even though secrets do. The
   examples in §1–§4 are now the shipped tree rather than a sketch.
 
   `staging/` is gone. Nothing imported it, and its README listed as "still
-  missing" four things that have shipped since. `nix/devshell.nix` advertised
-  `nix build .#staging-cluster-manifests`, an output the flake does not have.
+  missing" four things that have shipped since. `nix/devshell.nix`
+  advertised `nix build .#staging-cluster-manifests`, an output the flake
+  does not have.
 
 ### Fixed
 
+- **Three floes were wrong in ways only applying them could show, and the
+  two lints that should have caught them were silent.** `homelab.local` is
+  the first runnable lab with kanidm and harbor in it, and it found all five
+  on its first run.
+
+  `kanidm` rendered `spec.version` on its `Kanidm` CR. kaniop v1beta1 has no
+  such field; under server-side apply the whole object is rejected with
+  `.spec.version: field not declared in schema`, so the floe installed
+  nothing, thirty times over three minutes. It sets `spec.image` now, which
+  is the field the CRD has — and because this floe picks the image rather
+  than an operator picking it from a version string, `imagesComplete` is
+  true and the image is declared, so the cache warms it.
+
+  `mkOAuth2Client` set `spec.secretName` on every `KanidmOAuth2Client`,
+  which is not a field either, for the same reason and with the same result.
+  The Secret's name is the operator's convention —
+  `<client>-kanidm-oauth2-credentials`, verified against kaniop 0.11.1 by
+  applying a client and reading back what appeared — and is now written in
+  one place.
+
+  `harbor` targeted three of its six generated Secrets at names the chart
+  also renders. external-secrets defaults to `creationPolicy: Owner`, which
+  replaces a Secret's contents rather than merging, so `POSTGRESQL_PASSWORD`
+  and `REGISTRY_CREDENTIAL_PASSWORD` were deleted after an apply that
+  reported success — and harbor-core crash-looped on
+  `password authentication failed for user "postgres"` with nothing upstream
+  of the pod logs saying why.
+
+  `crd-schema` walked every field of a custom resource and silently skipped
+  any the CRD did not declare, which is the one error class it most
+  obviously exists for. It reports them now, naming what the schema does
+  have, and knows about `x-kubernetes-preserve-unknown-fields` and the
+  fields the API server owns so it says nothing where there is nothing to
+  say. `secret-ownership` is new and refuses an ExternalSecret whose target
+  — explicit or defaulted from its own name — is a Secret something else in
+  the same manifest set renders.
+
+- **A second cluster running the same floe was refused outright.** Ops
+  commands merge across clusters because `<lab>-ops <category> <name>` has
+  no room for a cluster, so two clusters with a gateway each collided on
+  `gateway-controller-listeners` and the lab failed to evaluate. The cluster
+  goes in the name now — `core-gateway-controller-listeners` — for every
+  lab, not only the ones with two: a name that changes when a cluster is
+  added is a name an operator's notes stop matching.
+
 - **Two floes had no isolation suite, and nothing could say so.**
-  `nix/checks/lib-tests.nix` discovers `floes/tests/*.nix` rather than listing
-  them, which catches a suite nothing runs and misses a floe nothing tests.
-  `lab-dns` and `k3d-cluster` had sat unchecked since they were written. Both
-  now have one, and the check asserts the two sets are equal in both
-  directions. `support.nix` flattens the floe set the way `lib/lab.nix` does,
-  so a provisioner floe can be named by a suite at all.
+  `nix/checks/lib-tests.nix` discovers `floes/tests/*.nix` rather than
+  listing them, which catches a suite nothing runs and misses a floe nothing
+  tests. `lab-dns` and `k3d-cluster` had sat unchecked since they were
+  written. Both now have one, and the check asserts the two sets are equal
+  in both directions. `support.nix` flattens the floe set the way
+  `lib/lab.nix` does, so a provisioner floe can be named by a suite at all.
 
 ### Added
 

@@ -17,6 +17,7 @@ pub mod prefix;
 pub mod ready_probe;
 pub mod references;
 pub mod schema;
+pub mod secret_ownership;
 pub mod selector;
 
 pub struct CheckContext<'a> {
@@ -48,6 +49,7 @@ pub fn cluster_rules() -> Vec<Box<dyn CheckRule>> {
         Box::new(missing_crd::MissingCrd),
         Box::new(ready_probe::ReadyProbeTargets),
         Box::new(network_policy::NetworkPolicies),
+        Box::new(secret_ownership::SecretOwnership),
         Box::new(assertions::Assertions),
     ]
 }
