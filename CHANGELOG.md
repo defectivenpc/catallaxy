@@ -9,25 +9,38 @@ The format is based on
 
 ### Added
 
+- **Every image a lab pulls comes from a registry its cache mirrors, checked.**
+  `lab.registry.upstreams` is both the zot sync sources and the `mirrors:`
+  entries in the `registries.yaml` every node mounts, and its own docstring
+  says "add one when a floe pulls from an upstream not listed here" — which
+  nothing enforced. An image from a registry with no entry is not merely
+  uncached: containerd goes to the public registry directly and has to resolve
+  the name itself, which a node cannot do once the lab runs its own DNS, so
+  the pull fails on a name that resolves perfectly well from the host.
+  `<lab>-images-are-cacheable` reads `images.txt` — the same list `warm-cache`
+  iterates, so it includes what was scraped out of charts no floe declared —
+  and refuses any registry the lab does not mirror. Every lab passes today;
+  it exists for the floe that adds a registry and not the entry.
+
 - **A lab can say it is mid-migration, and the check knows the difference.**
   `lab.unstable` is a string or null: why this lab is not expected to stand
-  up, or nothing. It joins `lab.out.selfContained.reasons`, so the e2e runner
-  skips the lab and prints it, while every check that does not need a cluster
-  — render, lint, digest, plan snapshot — still applies. A string rather than
-  a bool, because "unstable" with no reason is a note to nobody.
+  up, or nothing. It joins `lab.out.selfContained.reasons`, so the e2e
+  runner skips the lab and prints it, while every check that does not need a
+  cluster — render, lint, digest, plan snapshot — still applies. A string
+  rather than a bool, because "unstable" with no reason is a note to nobody.
 
-  `nix/checks/self-contained.nix` pins it, and distinguishes the two kinds of
-  ineligible: a lab held out because its secrets live in sops works and is not
-  runnable *here*; a lab held out because it is mid-migration is one nobody
-  claims works at all. It also refuses a lab that is marked unstable and
-  eligible anyway, which is what a marker wired to nothing looks like.
+  `nix/checks/self-contained.nix` pins it, and distinguishes the two kinds
+  of ineligible: a lab held out because its secrets live in sops works and
+  is not runnable _here_; a lab held out because it is mid-migration is one
+  nobody claims works at all. It also refuses a lab that is marked unstable
+  and eligible anyway, which is what a marker wired to nothing looks like.
 
 - **`external-dns` has a lab.** `homelab.dns` is `homelab.local` plus a DNS
-  controller publishing into the lab's own Knot: `up in 430s, verified,
-  idempotent, destroyed clean`. Until now the floe was rendered only by
-  `every-floe`, which never runs — and rendered there with a *generated* TSIG
-  key, which cannot be the one Knot was configured with, so the controller
-  would have been refused every update it ever made.
+  controller publishing into the lab's own Knot:
+  `up in 430s, verified, idempotent, destroyed clean`. Until now the floe
+  was rendered only by `every-floe`, which never runs — and rendered there
+  with a _generated_ TSIG key, which cannot be the one Knot was configured
+  with, so the controller would have been refused every update it ever made.
 
   The key is held twice, because a lab has no way to project a value out of
   its own configuration: `lab.secrets.managed` reads from a store, and this
@@ -35,8 +48,8 @@ The format is based on
   against `lab.dns.tsigSecret` so the pair that would otherwise fail with a
   bare NOTAUTH — which external-dns logs below its default level — fails at
   `nix flake check` instead. The fix is a way to project a value the lab
-  holds; that is a design question and the wart is checked rather than hidden
-  until it is answered.
+  holds; that is a design question and the wart is checked rather than
+  hidden until it is answered.
 
 - **A lab with two clusters, and it stands up.** `examples/labs/homelab` is
   `core` — identity, source control, a registry, trust, routing, backups —

@@ -183,17 +183,72 @@ let
         touch $out
       '';
 
-  perLab = lib.concatLists (
-    lib.mapAttrsToList (name: lab: [
-      { "${name}-eval" = evalCheck name lab; }
-      { "manifest-digest-${name}" = digestCheck name lab; }
-      { "${name}-declared-bundles" = declaredBundlesCheck name lab; }
-      { "${name}-renders-no-secret-material" = secretMaterialCheck name lab; }
-      { "${name}-lint" = lintCheck name lab; }
-      { "plan-deploy-${name}" = planSnapshotCheck name lab "deploy"; }
-      { "plan-teardown-${name}" = planSnapshotCheck name lab "teardown"; }
-    ]) labDefs
-  );
+  # Every image the lab pulls comes from a registry the cache sits in front of.
+  #
+  # `lab.registry.upstreams` is both the zot sync sources and the `mirrors:`
+  # entries in the `registries.yaml` every node mounts. An image from a
+  # registry with no entry is not merely uncached: containerd goes to the
+  # public registry directly and has to resolve the name itself, which a node
+  # cannot do once the lab runs its own DNS — that server is authoritative for
+  # the zone and answers REFUSED for everything else, which a resolver treats
+  # as an answer rather than a reason to ask elsewhere. The pull fails on a
+  # name that resolves perfectly well from the host.
+  #
+  # `lab.registry.upstreams` says "add one when a floe pulls from an upstream
+  # not listed here" and nothing enforced it. Every lab passes today; this
+  # exists for the floe that adds a registry and not the entry.
+  #
+  # Reads `images.txt` from the built package rather than the component
+  # channel, because that file is what `warm-cache` iterates and it includes
+  # the images scraped out of charts that no floe declared.
+  imageUpstreamCheck =
+    name: lab:
+    let
+      hosts = map (u: u.host) lab.config.lab.registry.upstreams;
+    in
+    pkgs.runCommand "${name}-images-are-cacheable" { nativeBuildInputs = [ pkgs.gawk ]; } ''
+      # A first path component is a registry only where it looks like a host —
+      # a dot, a port, or `localhost`. Everything else is a Docker Hub
+      # namespace and the image is implicitly `docker.io/...`, which is how
+      # `chrislusf/seaweedfs` and `velero/velero` reach the mirror.
+      awk -F/ '{ if (NF > 1 && ($1 ~ /[.:]/ || $1 == "localhost")) print $1; else print "docker.io" }' \
+        ${lab.config.lab.out.package}/images.txt | LC_ALL=C sort -u > $TMPDIR/used
+
+      printf '%s\n' ${lib.escapeShellArgs hosts} | LC_ALL=C sort -u > $TMPDIR/mirrored
+
+      if ! missing=$(comm -23 $TMPDIR/used $TMPDIR/mirrored) || [ -n "$missing" ]; then
+        echo "${name} pulls from registries the lab's cache does not mirror:" >&2
+        echo "$missing" | sed 's/^/  /' >&2
+        echo "" >&2
+        echo "Each becomes a direct pull, and a node that resolves through the" >&2
+        echo "lab's own DNS cannot resolve the name — that server is authoritative" >&2
+        echo "for the zone and answers REFUSED for everything else. Add an entry to" >&2
+        echo "lab.registry.upstreams for each." >&2
+        exit 1
+      fi
+      touch $out
+    '';
+
+  perLab =
+    lib.concatLists (
+      lib.mapAttrsToList (
+        name: lab:
+        lib.optional lab.config.lab.registry.enable {
+          "${name}-images-are-cacheable" = imageUpstreamCheck name lab;
+        }
+      ) labDefs
+    )
+    ++ lib.concatLists (
+      lib.mapAttrsToList (name: lab: [
+        { "${name}-eval" = evalCheck name lab; }
+        { "manifest-digest-${name}" = digestCheck name lab; }
+        { "${name}-declared-bundles" = declaredBundlesCheck name lab; }
+        { "${name}-renders-no-secret-material" = secretMaterialCheck name lab; }
+        { "${name}-lint" = lintCheck name lab; }
+        { "plan-deploy-${name}" = planSnapshotCheck name lab "deploy"; }
+        { "plan-teardown-${name}" = planSnapshotCheck name lab "teardown"; }
+      ]) labDefs
+    );
 
   # ---- between labs ------------------------------------------------------
   #
