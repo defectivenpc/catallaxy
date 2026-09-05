@@ -205,12 +205,22 @@ floe.mkFloe {
         # the account and the API token and rotates it, which is why this is a
         # CR and not a Job: an expiring credential owned by an operator is a
         # credential that heals.
+        #
+        # `netbird-operator`, not `netbird`: kanidm has one name namespace
+        # across every principal kind and the OAuth2 client above already
+        # holds that name. Both being `netbird` produced a 500 from kanidm
+        # whose only honest reading was in kanidm's own log —
+        # `AttrUnique("duplicate value detected") ... conflicting_with:
+        # netbird@idm.<zone>` — while kaniop reported "Service account is not
+        # present" and the Job waiting on the token said the token was
+        # missing. Three components, none naming the cause.
+        # `kanidmPrincipalsAreUnique` refuses it at eval now.
         serviceAccount = kinds.mkServiceAccount {
           provider = oidcProvider;
-          name = "netbird";
+          name = "netbird-operator";
           namespace = ns;
           tokenSecret = "netbird-kanidm-token";
-          displayName = "netbird";
+          displayName = "netbird-operator";
         };
 
         relaySecret = kinds.mkGeneratedSecret {

@@ -707,6 +707,7 @@ types.submodule (
             catallaxy.policies.componentsTargetTheCluster
             catallaxy.policies.needsNameSiblings
             catallaxy.policies.backsNameOwnBundles
+            catallaxy.policies.kanidmPrincipalsAreUnique
           ];
         };
 

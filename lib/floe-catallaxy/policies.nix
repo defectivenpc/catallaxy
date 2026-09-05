@@ -29,6 +29,64 @@ in
         + "Assembling several is a lab, which is not built yet."
       );
 
+  # kanidm has one name namespace across every kind of principal.
+  #
+  # An OAuth2 client, a service account, a person and a group all become
+  # entries with a `name` and an SPN, and two of them cannot share one. A
+  # consumer cannot see this: it renders its own resource in its own namespace
+  # and has no idea what another floe called its own.
+  #
+  # What it looks like when it happens is a 500 from kanidm and, in kaniop, a
+  # `failed to create <name>` that repeats forever. The reason is only in
+  # kanidm's log — `AttrUnique("duplicate value detected")` — and the resource
+  # that lost is left with an empty status, so whatever was waiting on its
+  # token waits for good. netbird hit exactly this: its client and its service
+  # account were both called `netbird`.
+  kanidmPrincipalsAreUnique =
+    result:
+    let
+      principalKinds = [
+        "KanidmOAuth2Client"
+        "KanidmServiceAccount"
+        "KanidmPersonAccount"
+        "KanidmGroup"
+      ];
+
+      # The entry's name is `metadata.name` for every one of these kinds:
+      # kaniop derives the principal from the resource's own name.
+      claims = lib.concatLists (
+        lib.mapAttrsToList (
+          unit: component:
+          lib.concatLists (
+            lib.mapAttrsToList (
+              bundleName: bundle:
+              lib.concatMap (
+                r:
+                lib.optional (lib.elem (r.kind or "") principalKinds) {
+                  inherit unit;
+                  kind = r.kind;
+                  name = r.metadata.name;
+                }
+              ) (lib.attrValues bundle.resources)
+            ) component.bundles
+          )
+        ) (componentsIn result)
+      );
+    in
+    lib.concatMap (
+      name:
+      let
+        holders = lib.filter (c: c.name == name) claims;
+      in
+      lib.optional (lib.length holders > 1) (
+        "kanidm principal '${name}' is claimed by "
+        + lib.concatMapStringsSep " and " (h: "${h.unit}'s ${h.kind}") holders
+        + ". kanidm has one name namespace across clients, service accounts, "
+        + "people and groups; the second to reconcile gets a 500 and an empty "
+        + "status, and whatever waits on it waits forever."
+      )
+    ) (lib.unique (map (c: c.name) claims));
+
   # A unit that *installs* into the cluster has to have said so. The eval edge
   # exists because it resolved KUBERNETES_CLUSTER; a unit rendering bundles
   # with no such edge is reading cluster facts from somewhere it should not,

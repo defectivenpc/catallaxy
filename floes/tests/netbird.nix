@@ -368,6 +368,21 @@ lib.runTests {
     };
   };
 
+  # Named apart from the OAuth2 client on purpose: kanidm has one name
+  # namespace across every principal kind, and both being `netbird` produced a
+  # 500 whose only honest reading was in kanidm's own log.
+  # `kanidmPrincipalsAreUnique` refuses that at eval now.
+  testTheAccountAndTheClientDoNotShareAName = {
+    expr = {
+      client = creds.resources.netbird-oauth2-client.metadata.name;
+      account = auto.resources.netbird-service-account.metadata.name;
+    };
+    expected = {
+      client = "netbird";
+      account = "netbird-operator";
+    };
+  };
+
   # The token step waits on the *key*, not the object: kaniop creates the
   # Secret and issues the token in two round trips, so a consumer that waited
   # on the Secret alone would exchange an empty string.
@@ -377,7 +392,7 @@ lib.runTests {
       kind = "jsonpath";
       resource = "secret/netbird-kanidm-token";
       namespace = "netbird";
-      jsonpath = "{.data.netbird}";
+      jsonpath = "{.data.netbird-operator}";
       timeout = "5m";
     };
   };
