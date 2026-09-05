@@ -23,6 +23,25 @@
 {
   lab.name = "homelab.mesh";
 
+  lab.unstable = ''
+    The gateway cannot complete the TLS hop to kanidm, so every OIDC flow in
+    this lab — including netbird's token exchange — gets a 500.
+
+    kanidm has no plaintext mode, so the hop from the gateway to it is HTTPS
+    and the gateway has to validate what signed it. Traefik validates against
+    the *pod IP* rather than the hostname
+    (`x509: cannot validate certificate for 10.244.0.x because it doesn't
+    contain any IP SANs`), and the `BackendTLSPolicy` that would tell it the
+    hostname does not exist: kaniop renders one from `Kanidm.spec.gateway`,
+    but `BackendTLSPolicy` is `gateway.networking.k8s.io/v1alpha3` and lives
+    in Gateway API's *experimental* channel, while `gateway-api-crds` installs
+    the standard one.
+
+    So the next step is the CRD channel, not netbird. Everything up to it
+    works: the service account reconciles, kaniop mints and rotates its token,
+    the token step reads it and reaches the exchange endpoint.
+  '';
+
   # Its own everything, so it renders and runs beside the other two.
   lab.network.subnet = "172.36.0.0/16";
   lab.proxy.httpPort = 8086;

@@ -74,12 +74,14 @@ let
       mentions = [ ];
     };
 
-    # The same lab plus a mesh control plane. Nothing about netbird needs a
-    # credential from outside: the two it runs on are minted in-cluster and
-    # its identities come from the kanidm already in `core`.
+    # The same lab plus a mesh control plane. Held out until the gateway can complete its TLS hop to kanidm. See
+    # `lab.unstable` in the environment: the `BackendTLSPolicy` that would
+    # tell traefik which hostname to validate is in Gateway API's
+    # experimental channel and the CRD floe installs the standard one.
     "homelab.mesh" = {
-      eligible = true;
-      mentions = [ ];
+      eligible = false;
+      unstable = true;
+      mentions = [ "BackendTLSPolicy" ];
     };
   };
 
