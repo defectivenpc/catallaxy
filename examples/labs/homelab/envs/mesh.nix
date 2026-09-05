@@ -19,7 +19,7 @@
 # plane up and stops there, which is a real thing to have: the dashboard is
 # reachable, an operator logs in with their kanidm identity, and a peer can be
 # registered by hand.
-{ floes, ... }:
+{ cataCharts, floes, ... }:
 {
   lab.name = "homelab.mesh";
 
@@ -34,5 +34,7 @@
   # One line. `reloader` is already on `core` from the base lab and declaring
   # it again is a conflicting definition rather than a merge — a floe instance
   # is an opaque value and the module system has no merge for two of them.
-  lab.clusters.core.floes.netbird = floes.netbird { };
+  lab.clusters.core.floes.netbird = floes.netbird {
+    operatorChart = "${cataCharts.netbird-operator.chart}";
+  };
 }

@@ -120,7 +120,9 @@
     # The mesh control plane. Its OIDC client is public and PKCE-based, which
     # is the third shape of consumer kanidm has here — beside harbor's
     # confidential client and forgejo's.
-    netbird = floes.netbird { };
+    netbird = floes.netbird {
+      operatorChart = "${cataCharts.netbird-operator.chart}";
+    };
 
     # The first consumer of GIT_REPOSITORY, and the reason it carries two
     # URLs: argo clones from inside the cluster, over forgejo's Service.

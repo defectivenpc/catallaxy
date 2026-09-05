@@ -590,6 +590,99 @@ rec {
             };
       };
 
+  # A machine identity: an account no human logs into, with an API token a
+  # workload authenticates as.
+  #
+  # This is the piece that turns "click a setup key in the dashboard" into
+  # something a lab declares. A controller that has to call an API on the
+  # lab's behalf needs an identity, and until this the only way to give it one
+  # was to make it by hand and paste the result into a Secret — which is not a
+  # deployment, it is a runbook.
+  #
+  # kaniop mints both the account and the token, and rotates the token on a
+  # period. That is the whole reason this is a CR rather than a Job: an
+  # expiring credential that something else owns is a credential that heals.
+  #
+  # `secretName` on a token is settable, so unlike the OAuth2 client's Secret
+  # there is no operator convention to encode here — the floe says where it
+  # wants the token and reads it back from the same place.
+  mkServiceAccount =
+    {
+      provider,
+      name,
+      namespace,
+      tokenSecret,
+      displayName ? name,
+      # `readwrite`, because the point of one of these is to change something.
+      # A read-only identity is a legitimate thing to want and says so.
+      purpose ? "readwrite",
+      rotationDays ? 30,
+
+      # Who may administer this account. Required by the CRD and not
+      # defaultable to something clever: kanidm's built-in admin group is the
+      # only principal a freshly-bootstrapped lab is guaranteed to have, and a
+      # lab that delegates the account elsewhere says so.
+      managedBy ? "idm_admins",
+    }:
+    let
+      group = lib.head (lib.splitString "/" provider.clientCrd);
+    in
+    {
+      resource = {
+        apiVersion = "${group}/v1beta1";
+        kind = "KanidmServiceAccount";
+        metadata = {
+          inherit name namespace;
+          labels."app.kubernetes.io/managed-by" = "catallaxy";
+        };
+        spec = {
+          kanidmRef = provider.ref;
+          serviceAccountAttributes = {
+            displayname = displayName;
+            entryManagedBy = managedBy;
+          };
+
+          apiTokens = [
+            {
+              label = displayName;
+              inherit purpose;
+              secretName = tokenSecret;
+            }
+          ];
+
+          # Rotated by the operator that issued it. A consumer re-reads the
+          # Secret; anything holding the old value gets a 401 and is expected
+          # to look again, which is why the things that read one are also the
+          # things that heal.
+          apiTokenRotation = {
+            enabled = true;
+            periodDays = rotationDays;
+          };
+        };
+      };
+
+      # Where the token lands. The key is kaniop's, not ours — see the
+      # `tokenKey` note: it is the token's label, which is why the label and
+      # the account name are deliberately the same string by default.
+      token = {
+        inherit namespace;
+        name = tokenSecret;
+        key = displayName;
+      };
+
+      # The Secret exists only once kaniop has reconciled the account *and*
+      # issued the token, which is two round trips after the CR is applied.
+      # Waiting on the object alone would let a consumer start against an
+      # empty one.
+      ready = {
+        kind = "jsonpath";
+        resource = "secret/${tokenSecret}";
+        inherit namespace;
+        jsonpath = "{.data.${displayName}}";
+        timeout = "5m";
+      };
+    };
+
   # A credential the floe mints for itself: an external-secrets `Password`
   # generator and the ExternalSecret that lands its output in a Secret.
   #

@@ -8,11 +8,16 @@
 
 let
   support = import ./support.nix { inherit lib pkgs; };
-  r = support.evalFloe { name = "netbird"; };
+  r = support.evalFloe {
+    name = "netbird";
+    inputs.operatorChart = "/nix/store/fake-netbird-operator-chart";
+  };
 
   server = r.bundles.server;
   creds = r.bundles.credentials;
   dash = r.bundles.dashboard;
+  auto = r.bundles.automation;
+  op = r.bundles.operator;
 
   mgmt = server.resources.netbird-management;
 
@@ -339,6 +344,123 @@ lib.runTests {
     };
   };
 
+  # ---- the one credential nobody owns --------------------------------------
+
+  # The identity is a CR, not a runbook step. kaniop mints the account and the
+  # token and rotates it — which is the difference between a credential that
+  # expires into an outage and one that expires into a reconcile.
+  testTheMachineIdentityIsDeclaredAndRotated = {
+    expr =
+      let
+        sa = auto.resources.netbird-service-account;
+      in
+      {
+        inherit (sa) kind;
+        rotation = sa.spec.apiTokenRotation.enabled;
+        tokenSecret = (lib.head sa.spec.apiTokens).secretName;
+        purpose = (lib.head sa.spec.apiTokens).purpose;
+      };
+    expected = {
+      kind = "KanidmServiceAccount";
+      rotation = true;
+      tokenSecret = "netbird-kanidm-token";
+      purpose = "readwrite";
+    };
+  };
+
+  # The token step waits on the *key*, not the object: kaniop creates the
+  # Secret and issues the token in two round trips, so a consumer that waited
+  # on the Secret alone would exchange an empty string.
+  testTheTokenStepWaitsForTheTokenNotTheSecret = {
+    expr = auto.ready;
+    expected = {
+      kind = "jsonpath";
+      resource = "secret/netbird-kanidm-token";
+      namespace = "netbird";
+      jsonpath = "{.data.netbird}";
+      timeout = "5m";
+    };
+  };
+
+  # Neither Secret is in the manifest stream — one is written by kaniop, the
+  # other by the Job — so both are declared as arriving from outside. Without
+  # that the reference rule calls them dangling, which is true of the
+  # manifests and false of the cluster.
+  testWhatArrivesFromOutsideIsDeclared = {
+    expr = lib.sort (a: b: a < b) auto.externalSecrets;
+    expected = [
+      "netbird/netbird-api-token"
+      "netbird/netbird-kanidm-token"
+    ];
+  };
+
+  # The heal is the same script on a schedule, not a second implementation of
+  # the same idea. Two of those drift, and the one that runs hourly is the one
+  # nobody reads.
+  testTheHealRunsTheSameScriptAsTheBootstrap = {
+    expr =
+      let
+        cron = auto.resources.netbird-pat-heal;
+        cronSpec = cron.spec.jobTemplate.spec.template.spec;
+        job = lib.head (lib.attrValues (lib.filterAttrs (_: r: (r.kind or "") == "Job") auto.resources));
+      in
+      {
+        sameCommand =
+          (lib.head cronSpec.containers).command == (lib.head job.spec.template.spec.containers).command;
+        # A slow run against an unreachable management must not stack up
+        # behind itself.
+        concurrency = cron.spec.concurrencyPolicy;
+      };
+    expected = {
+      sameCommand = true;
+      concurrency = "Forbid";
+    };
+  };
+
+  # It talks to management over the Service. The routed name would leave the
+  # cluster and come back through the ingress to reach a pod one hop away —
+  # which works until the ingress is the thing being replaced.
+  testTheTokenStepDialsTheServiceNotTheIngress = {
+    expr =
+      let
+        env = lib.listToAttrs (
+          map (
+            e: lib.nameValuePair e.name e.value
+          ) (lib.head auto.resources.netbird-pat-heal.spec.jobTemplate.spec.template.spec.containers).env
+        );
+      in
+      {
+        url = env.NB_URL;
+        ca = env.CA_FILE;
+      };
+    expected = {
+      url = "http://netbird-management.netbird.svc.cluster.local:80";
+      ca = "/etc/netbird-ca/lab-ca.crt";
+    };
+  };
+
+  # The operator reads the token the step wrote, and nothing else mints one.
+  testTheOperatorSpendsTheTokenTheStepMinted = {
+    expr = op.helmCharts.netbird-operator.values.netbirdAPI.keyFromSecret;
+    expected = {
+      name = "netbird-api-token";
+      key = "token";
+    };
+  };
+
+  # Ordering, stated once: the token step needs a running management to ask,
+  # and the operator cannot start without the answer.
+  testTheChainIsOrderedByWhatItNeeds = {
+    expr = {
+      automation = auto.needs;
+      operator = op.needs;
+    };
+    expected = {
+      automation = [ "server" ];
+      operator = [ "automation" ];
+    };
+  };
+
   # ---- claims about itself ------------------------------------------------
 
   testItNamesEveryImageItRuns = {
@@ -349,7 +471,9 @@ lib.runTests {
     expected = {
       imagesComplete = true;
       images = [
+        "netbird/automation/tools"
         "netbird/dashboard/dashboard"
+        "netbird/operator/operator"
         "netbird/server/management"
         "netbird/server/relay"
         "netbird/server/signal"

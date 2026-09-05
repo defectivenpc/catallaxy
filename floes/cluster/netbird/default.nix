@@ -108,6 +108,18 @@ floe.mkFloe {
       description = "Registry every netbird image is pulled from.";
     };
 
+    operatorChart = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Store path of the netbird-operator chart. Required.
+
+        The operator is what makes mesh state declarative: groups, setup keys,
+        routers and the Services exposed on the mesh are all CRs it
+        reconciles. Without it a lab is back to clicking a setup key into the
+        dashboard and hoping nothing drifts.
+      '';
+    };
+
     storage = lib.mkOption {
       type = lib.types.str;
       default = "1Gi";
@@ -147,6 +159,13 @@ floe.mkFloe {
   # that has to verify a peer inside the lab, and it found that out.
   requires.trust = sigs.TRUST_BUNDLE;
 
+  # The `KanidmServiceAccount` below is inert without something reconciling
+  # it, and inert here means the bootstrap Job waits forever on a Secret that
+  # is never written. Required rather than assumed: the floe that installs the
+  # operator and the floe that installs the issuer are different floes, and a
+  # lab can have the second without the first.
+  requires.identity = sigs.IDENTITY_OPERATOR;
+
   provides.mesh = sigs.MESH_NETWORK;
 
   out.component = kinds.component;
@@ -180,6 +199,18 @@ floe.mkFloe {
             "https://${apiDomain}/peers"
             "https://${apiDomain}/add-peers"
           ];
+        };
+
+        # The machine identity the token step authenticates as. kaniop mints
+        # the account and the API token and rotates it, which is why this is a
+        # CR and not a Job: an expiring credential owned by an operator is a
+        # credential that heals.
+        serviceAccount = kinds.mkServiceAccount {
+          provider = oidcProvider;
+          name = "netbird";
+          namespace = ns;
+          tokenSecret = "netbird-kanidm-token";
+          displayName = "netbird";
         };
 
         relaySecret = kinds.mkGeneratedSecret {
@@ -238,18 +269,41 @@ floe.mkFloe {
             "https://${apiDomain}/add-peers"
           ];
 
+          patSecret = "netbird-api-token";
+          patKey = "token";
+
+          serviceAccount = serviceAccount;
+
+          # Written once here and read by the provide, the operator's chart
+          # values and the token step. Three readers of one string is exactly
+          # the shape that drifts when it is spelled three times.
+          managementInternalUrl = "http://netbird-management.${ns}.svc.cluster.local:80";
+
           images = {
             management = image "netbirdio/management" inputs.version;
             signal = image "netbirdio/signal" inputs.version;
             relay = image "netbirdio/relay" inputs.version;
             dashboard = image "netbirdio/dashboard" inputs.dashboardVersion;
             wait = image "busybox" "1.36";
+
+            # kubectl, curl and jq in one image, which is what the token step
+            # needs: it reads a Secret, talks to two HTTP APIs, and writes a
+            # Secret back.
+            tools = image "alpine/k8s" "1.32.4";
           };
         };
 
         k8s = import ./k8s.nix { inherit lib nb; };
         management = import ./management.nix { inherit lib k8s nb; };
         workloads = import ./workloads.nix { inherit lib k8s nb; };
+        automation = import ./automation.nix {
+          inherit
+            lib
+            k8s
+            nb
+            kinds
+            ;
+        };
 
         # One hostname, five rules. Written out rather than built with
         # `kinds.mkRoute`, which makes a single-backend route — the shape
@@ -329,7 +383,7 @@ floe.mkFloe {
           # What something inside this cluster dials. A peer outside uses the
           # routed name; the operator and the agent are in here with it, and
           # the routed name would leave the cluster and come back.
-          managementInternalUrl = "http://${nb.managementHost}:80";
+          inherit (nb) managementInternalUrl;
 
           # One name, so the UI and the API are the same origin.
           dashboardUrl = "https://${apiDomain}";
@@ -466,6 +520,70 @@ floe.mkFloe {
               ready = {
                 kind = "condition";
                 resource = "deployment/netbird-dashboard";
+                namespace = ns;
+                condition = "Available";
+                timeout = "5m";
+              };
+            };
+
+            # The identity, and the one token nobody else owns.
+            #
+            # After the server, because it asks netbird a question before it
+            # does anything — and before the operator, which cannot start
+            # without the answer.
+            automation = kinds.mkBundle {
+              needs = [ "server" ];
+
+              resources = automation.resources;
+
+              images.tools = imageParts "alpine/k8s" "1.32.4";
+
+              # Written by the Job, so nothing in the manifest stream creates
+              # it and the reference rule would call it dangling. The
+              # distinction is who to talk to when it is missing: this one is
+              # a lab that has not finished starting, not a bug in the tree.
+              externalSecrets = [
+                "${ns}/${nb.patSecret}"
+                "${nb.serviceAccount.token.namespace}/${nb.serviceAccount.token.name}"
+              ];
+
+              # kaniop has to have issued the service account's token before
+              # the Job can exchange it. Waiting on the CR would report ready
+              # while the token was still being minted.
+              ready = nb.serviceAccount.ready;
+            };
+
+            operator = kinds.mkBundle {
+              needs = [ "automation" ];
+
+              helmCharts = (automation.operator { chart = inputs.operatorChart; }).helmCharts;
+
+              needsSecrets = [ "${ns}/${nb.patSecret}" ];
+
+              # The chart's own image, declared because the chart is opaque
+              # until apply and an operator mirroring this lab into an airgap
+              # gets what was declared and nothing else.
+              images.operator = {
+                registry = "ghcr.io";
+                repository = "netbirdio/netbird-operator";
+                tag = "v0.7.0";
+                digest = null;
+              };
+
+              # The CRDs come from the chart, so a CR of these kinds is
+              # ordered after it by the derived `kind:` edge rather than by
+              # anything written here.
+              crds = [
+                "netbird.io/Group"
+                "netbird.io/SetupKey"
+                "netbird.io/NetworkRouter"
+                "netbird.io/NetworkResource"
+                "netbird.io/NBPolicy"
+              ];
+
+              ready = {
+                kind = "condition";
+                resource = "deployment/netbird-operator";
                 namespace = ns;
                 condition = "Available";
                 timeout = "5m";
