@@ -35,6 +35,69 @@ let
 
   fails = expr: !(builtins.tryEval (builtins.deepSeq expr "evaluated")).success;
 
+  # ---- externals: a hole answered from outside this link -------------------
+  #
+  # One floe requiring INGRESS and nothing in the link providing it, so the
+  # only thing that can answer is the `external` argument. Everything the
+  # tests below assert is about *that* seam.
+  # It provides an echo of what it resolved, which is what makes these tests
+  # bite: a floe that only *declares* a hole forces nothing when its provides
+  # are read, so a link that silently failed to resolve would pass. Three of
+  # these tests passed for exactly that reason before the echo existed.
+  ECHO = floe.mkSig {
+    name = "ECHO";
+    fields.v = T.str;
+  };
+
+  consumer = floe.mkFloe {
+    name = "consumer";
+    requires.ingress = fixture.sigs.INGRESS;
+    provides.echo = ECHO;
+    modules = [
+      (
+        { config, ... }:
+        {
+          config.floe.provides.echo.v = config.floe.requires.ingress.baseDomain;
+        }
+      )
+    ];
+  };
+
+  # The fixture's INGRESS does not cross; this is the same shape marked as one
+  # that does, so the happy-path tests exercise resolution rather than the
+  # refusal below.
+  CROSSING_INGRESS = floe.mkSig {
+    name = "INGRESS";
+    crossCluster = true;
+    inherit (fixture.sigs.INGRESS) fields;
+  };
+
+  externalIngress = {
+    sig = CROSSING_INGRESS;
+    origin = "cluster 'mgmt'";
+    value = {
+      baseDomain = "elsewhere.example.com";
+      className = "nginx";
+      # The token shape `mkDeferred` produces, written out: the constructor
+      # is bound to a unit of the link, and this value comes from outside one.
+      address = {
+        __deferred = true;
+        source = "mgmt/ingress";
+        path = [ "address" ];
+        phase = "post-apply";
+      };
+    };
+  };
+
+  withExternal =
+    ext:
+    floe.link {
+      units.consumer = consumer.instantiate { };
+      external = ext;
+    };
+
+  linkedExternally = withExternal { ingress = externalIngress; };
+
   deployment = fixture.deployment;
 
   # Edges are compared as sorted strings: the linker's list order follows
@@ -135,6 +198,95 @@ lib.runTests {
       "catallaxy.meta"
       "k8s.manifests"
     ];
+  };
+
+  # ---- externals ----------------------------------------------------------
+
+  # The whole point: a hole nothing in this link provides, answered anyway.
+  # Without `external` this link is a "no provider for signature" throw.
+  # The whole point, read through the body: the value crossed the boundary,
+  # was sealed, reached `config.floe.requires`, and came back out.
+  testAnExternalProvideAnswersAHole = {
+    expr = linkedExternally.provides.consumer.echo.v;
+    expected = "elsewhere.example.com";
+  };
+
+  # A link with the hole and no external is still the error it always was.
+  # The paired negative, so the test above cannot pass for the wrong reason.
+  testWithoutTheExternalTheHoleIsUnfilled = {
+    expr = fails (withExternal { }).provides.consumer.echo.v;
+    expected = true;
+  };
+
+  # Sealed like any other provide. A value assembled outside this link is the
+  # least likely place for a wrong shape to be noticed, and a body reading a
+  # field that is not there fails far from the cause.
+  testAnExternalIsSealedAgainstItsSignature = {
+    expr =
+      fails
+        (withExternal {
+          ingress = externalIngress // {
+            value = removeAttrs externalIngress.value [ "className" ];
+          };
+        }).provides.consumer.echo.v;
+    expected = true;
+  };
+
+  # Exactly-one holds across the boundary too: a unit provider and an external
+  # one are two providers, and picking either would be arbitrary.
+  testAnExternalCompetesWithALocalProvider = {
+    expr =
+      fails
+        (floe.link {
+          units = {
+            consumer = consumer.instantiate { };
+            ingress = fixture.floes.nginxIngress.instantiate { baseDomain = "lab.example.com"; };
+          };
+          external.ingress = externalIngress;
+        }).provides.consumer.echo.v;
+    expected = true;
+  };
+
+  # An external is not a node, so it is not in the graph and orders nothing.
+  # Whatever backs it is applied by a different pass entirely, and an edge
+  # here would be an edge to a node that does not exist.
+  testAnExternalAddsNoEdgeAndNoNode = {
+    expr = {
+      nodes = linkedExternally.graph.nodes;
+      edges = linkedExternally.graph.edges;
+    };
+    expected = {
+      nodes = [ "consumer" ];
+      edges = [ ];
+    };
+  };
+
+  # `wiring.one` is what every existing reader walks to derive order, so an
+  # externally-resolved hole must not appear in it. It appears in `external`
+  # instead, which is how a reader that *does* care can ask.
+  testExternalHolesAreReportedApartFromLocalOnes = {
+    expr = {
+      one = linkedExternally.wiring.one.consumer;
+      external = linkedExternally.wiring.external.consumer;
+    };
+    expected = {
+      one = { };
+      external.ingress.external = "ingress";
+    };
+  };
+
+  # The one thing a link can check about a value crossing a boundary. It
+  # cannot see which field a consumer reads, but it can see whether the
+  # promise was ever meant to travel — and "the controller is running" is not.
+  testASignatureThatDoesNotCrossIsRefusedAsAnExternal = {
+    expr =
+      fails
+        (withExternal {
+          ingress = externalIngress // {
+            sig = fixture.sigs.INGRESS;
+          };
+        }).provides.consumer.echo.v;
+    expected = true;
   };
 
   # Collection is keyed by unit and disjoint by construction: no merge.

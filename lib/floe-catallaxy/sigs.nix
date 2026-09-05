@@ -518,6 +518,13 @@ in
   # behind them.
   MESH_NETWORK = floe.mkSig {
     name = "MESH_NETWORK";
+
+    # The point of a mesh is that it spans clusters, so this is the first
+    # signature to cross a link boundary. `managementUrl` is what makes it
+    # legitimate: a consumer in another cluster reaches the control plane over
+    # the routed name, exactly as a peer on a laptop does.
+    crossCluster = true;
+
     fields = {
       readyToken = T.str;
       namespace = T.k8sName;

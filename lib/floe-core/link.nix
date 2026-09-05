@@ -12,9 +12,33 @@
     {
       units,
       policies ? [ ],
+
+      # Provides resolved outside this link, as `<name> -> { sig; value; origin; }`.
+      #
+      # A link is one graph, and a deployment is often more than one — two
+      # clusters in a lab, each linked on its own, where a floe in the second
+      # legitimately depends on something the first provides. Without this the
+      # only way to express that is for the consumer to rebuild the producer's
+      # value from a naming convention, which is a dependency with nothing
+      # checking it.
+      #
+      # `sig` is what the value claims to satisfy, and it is sealed here like
+      # any other provide: a value crossing a boundary is exactly where a
+      # wrong shape is least likely to be noticed. `origin` is opaque to core
+      # and travels only so an error can say where the value came from.
+      #
+      # What an external provider does *not* do is create an ordering edge.
+      # There is no node in this graph to order against, and the thing it
+      # names is applied by a different pass entirely — so `wiring.one` and
+      # `wiring.optional` stay unit-only, and externals are reported
+      # separately in `wiring.external`.
+      external ? { },
     }:
     let
       unitNames = lib.attrNames units;
+      externalNames = lib.attrNames external;
+
+      isExternal = p: p ? external;
 
       getInstance =
         u:
@@ -42,9 +66,22 @@
               instance = instName;
             }
           ) (lib.attrNames provs)
-        ) unitNames;
+        ) unitNames
+        ++ lib.concatMap (
+          n: lib.optional (external.${n}.sig.name == sigName) { external = n; }
+        ) externalNames;
 
-      describeProviders = ps: lib.concatMapStringsSep ", " (p: "'${p.unit}' (as ${p.instance})") ps;
+      describeProviders =
+        ps:
+        lib.concatMapStringsSep ", " (
+          p:
+          if isExternal p then
+            "'${p.external}' (from outside this link${
+              lib.optionalString (external.${p.external} ? origin) ": ${external.${p.external}.origin}"
+            })"
+          else
+            "'${p.unit}' (as ${p.instance})"
+        ) ps;
 
       # A unit does not satisfy its own hole.
       #
@@ -75,7 +112,7 @@
                 hole: sig:
                 map (
                   p: "unit '${u}' ${label} '${sig.name}' as hole '${hole}' and also provides it (as ${p.instance})"
-                ) (lib.filter (p: p.unit == u) (providersOf sig.name))
+                ) (lib.filter (p: !(isExternal p) && p.unit == u) (providersOf sig.name))
               ) decl
             );
         in
@@ -128,6 +165,12 @@
         ) inst.def.requiresOptional
       ) (lib.genAttrs unitNames getInstance);
 
+      # Holes answered by a unit of this link, and holes answered from
+      # outside. Everything that reasons about *order* wants the first;
+      # everything that reasons about *what a floe got* wants both.
+      localOnly = lib.filterAttrs (_hole: p: p != null && !(isExternal p));
+      externalOnly = lib.filterAttrs (_hole: p: p != null && isExternal p);
+
       # ---- Evaluation fixpoint ---------------------------------------------
 
       sealSig =
@@ -138,17 +181,35 @@
           name = "signature ${sig.name}";
         } v;
 
+      # An external provide, sealed against the signature it claims. Sealed
+      # here rather than trusted from the caller: whoever assembled it did so
+      # outside this link, which is the least likely place for a wrong shape
+      # to be noticed, and a link that accepted one would hand it to a body
+      # that reads a field which is not there.
+      sealedExternal = lib.mapAttrs (n: entry: sealSig [ "external" n ] entry.sig entry.value) external;
+
+      # A promise that was never meant to leave its own graph.
+      #
+      # Checked eagerly rather than where the value is read: an external of
+      # the wrong signature usually resolves a hole *successfully* and hands
+      # over an address that resolves nowhere, so there is no later point at
+      # which anything notices.
+      uncrossable = lib.filter (n: !(external.${n}.sig.crossCluster or false)) externalNames;
+
       fixed = lib.fix (
         self:
         lib.genAttrs unitNames (
           u:
           let
             inst = getInstance u;
+
+            valueOf =
+              p:
+              if isExternal p then sealedExternal.${p.external} else self.${p.unit}.sealedProvides.${p.instance};
+
             resolved =
-              lib.mapAttrs (_hole: p: self.${p.unit}.sealedProvides.${p.instance}) wiringOne.${u}
-              // lib.mapAttrs (
-                _hole: p: if p == null then null else self.${p.unit}.sealedProvides.${p.instance}
-              ) wiringOptional.${u};
+              lib.mapAttrs (_hole: valueOf) wiringOne.${u}
+              // lib.mapAttrs (_hole: p: if p == null then null else valueOf p) wiringOptional.${u};
           in
           rec {
             evaluated = floeLib.evalFloe {
@@ -189,6 +250,9 @@
         else
           [ ];
 
+      # Only holes that resolved *inside* this link. An external provider is
+      # not a node here, and what backs it is applied by a different pass —
+      # so there is nothing in this graph for an edge to point at.
       evalEdges = lib.concatMap (
         u:
         lib.mapAttrsToList (hole: p: {
@@ -196,7 +260,7 @@
           to = p.unit;
           via = hole;
           kind = "eval";
-        }) wiringOne.${u}
+        }) (localOnly wiringOne.${u})
         ++ lib.concatLists (
           lib.mapAttrsToList (
             hole: p:
@@ -206,7 +270,7 @@
               via = hole;
               kind = "eval";
             }
-          ) wiringOptional.${u}
+          ) (localOnly wiringOptional.${u})
         )
       ) unitNames;
 
@@ -287,9 +351,19 @@
         # general — a collector consuming its backends has to follow them —
         # and it cost the ordering edge for every case that was not routes.
         # `requiresOptional` has no such ambiguity.
+        #
+        # Both carry only holes a *unit of this link* answered. A hole
+        # resolved from outside is in `external` instead, and is absent from
+        # these two — which is what keeps every existing reader correct
+        # without knowing externals exist: they all walk these to derive
+        # order, and there is no order to derive against another graph.
         wiring = {
-          one = wiringOne;
-          optional = wiringOptional;
+          one = lib.mapAttrs (_u: localOnly) wiringOne;
+          optional = lib.mapAttrs (_u: localOnly) wiringOptional;
+
+          external = lib.mapAttrs (
+            u: _: (externalOnly wiringOne.${u}) // (externalOnly wiringOptional.${u})
+          ) (lib.genAttrs unitNames getInstance);
         };
       };
 
@@ -298,7 +372,23 @@
     # Before the policies, because this is core's own invariant rather than a
     # distribution's rule, and because a self-resolved hole makes every policy
     # downstream reason about a link that should not exist.
-    if selfResolutions != [ ] then
+    if uncrossable != [ ] then
+      throw (
+        "floe link error: these provides were offered to this link from outside it, and "
+        + "their signatures do not cross a link boundary:\n  - "
+        + lib.concatMapStringsSep "\n  - " (
+          n:
+          "'${n}' (signature '${external.${n}.sig.name}'"
+          + lib.optionalString (external.${n} ? origin) ", from ${external.${n}.origin}"
+          + ")"
+        ) uncrossable
+        + "\n\nA signature carries `crossCluster = true` when what it promises is still "
+        + "true for a consumer somewhere else — a routed address, an issuer, a registry. "
+        + "Most promise that something is running *here*, and resolving one of those from "
+        + "another graph yields a value that reads correctly and describes a controller "
+        + "that is not present."
+      )
+    else if selfResolutions != [ ] then
       throw (
         "floe link error: a unit does not satisfy its own hole.\n  - "
         + lib.concatStringsSep "\n  - " selfResolutions

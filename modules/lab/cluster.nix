@@ -333,6 +333,33 @@ types.submodule (
         description = "Runtime values this cluster reads from another cluster in the lab.";
       };
 
+      exports = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        example = [ "netbird" ];
+        description = ''
+          Units in this cluster whose provides the rest of the lab may resolve.
+
+          A link is per-cluster: `requires.mesh = MESH_NETWORK` finds only what
+          is in the same cluster, which is right for almost everything and
+          wrong for the few things a lab genuinely has one of. Naming a unit
+          here makes each of its provides a candidate in every *other*
+          cluster's link — a real hole resolution, sealed and refused when two
+          clusters offer the same signature, rather than the consumer
+          rebuilding the producer's value from a naming convention.
+
+          Opt-in per unit rather than automatic. A cluster's floes provide
+          plenty that is meaningless elsewhere — an in-cluster Service address,
+          a webhook only its own API server calls — and exporting everything
+          would make those resolvable by accident.
+
+          What crosses must be *usable* where it lands. A signature carrying
+          both a routed and an in-cluster address is fine; one carrying only
+          the second is not, and `lib/floe-catallaxy/policies.nix` refuses it
+          rather than letting a consumer dial a name that resolves nowhere.
+        '';
+      };
+
       assertions = mkOption {
         type = types.listOf types.attrs;
         default = [ ];
@@ -384,6 +411,47 @@ types.submodule (
 
     config =
       let
+        # ---- cross-cluster interfaces --------------------------------------
+        #
+        # Every provide that another cluster exported, as floe-core's
+        # `external` argument: `<cluster>/<unit>/<instance> -> { sig; value;
+        # origin; }`.
+        #
+        # Reading a sibling cluster is the same move `publicationFor` below
+        # makes, and terminates for the same reason: a producer's link never
+        # reads a consumer's, so the fixpoint is a DAG. What is new is reading
+        # a sibling's *link result* rather than a plain option — which is what
+        # `modules/lab/out.nix` and `cd.nix` already do when they fold
+        # `cluster.link.provides` across the lab to find the vault and the
+        # delivery policy.
+        #
+        # Keyed by cluster and unit, so a link error naming a duplicate
+        # provider says which cluster it came from without carrying `origin`
+        # into the message.
+        importedProvides = lib.foldl' lib.mergeAttrs { } (
+          lib.mapAttrsToList (
+            otherName: other:
+            lib.foldl' lib.mergeAttrs { } (
+              map (
+                unit:
+                let
+                  inst =
+                    other.floes.${unit}
+                      or (throw "cluster '${otherName}' exports unit '${unit}', which it does not declare");
+                in
+                lib.mapAttrs' (
+                  instName: sig:
+                  lib.nameValuePair "${otherName}/${unit}/${instName}" {
+                    inherit sig;
+                    value = other.link.provides.${unit}.${instName};
+                    origin = "cluster '${otherName}', unit '${unit}'";
+                  }
+                ) inst.def.provides
+              ) other.exports
+            )
+          ) (lib.filterAttrs (n: _: n != name) lab.clusters)
+        );
+
         # ---- cross-cluster secret sharing ----------------------------------
 
         # The SECRET_STORE provides in this cluster, read off the instantiated
@@ -633,6 +701,7 @@ types.submodule (
       {
         link = catallaxy.floe.link {
           units = config.floes;
+          external = importedProvides;
           policies = [
             catallaxy.policies.oneCluster
             catallaxy.policies.componentsTargetTheCluster
