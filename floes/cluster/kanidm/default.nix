@@ -77,13 +77,20 @@ floe.mkFloe {
       type = lib.types.bool;
       default = true;
       description = ''
-        Reconcile `KanidmOAuth2Client` resources in any namespace.
+        Reconcile the resources consumers render — OAuth2 clients, service
+        accounts and groups — in any namespace.
 
-        On, because a consumer renders its own client and a consumer lives in
-        its own namespace. Off, kaniop looks only in this one: a client
-        elsewhere is admitted, stored, and never reconciled, and the consumer
-        waits for a Secret that is not coming. `kinds.mkOAuth2Client` refuses
-        that combination rather than letting it render.
+        On, because a consumer renders its own and a consumer lives in its own
+        namespace. Off, kaniop looks only in this one: a resource elsewhere is
+        admitted, stored, and never reconciled, and the consumer waits for a
+        Secret that is not coming. `kinds.mkOAuth2Client` and
+        `kinds.mkServiceAccount` refuse that combination rather than letting
+        it render.
+
+        Named for clients because that is what the `OIDC_PROVIDER` field is
+        called and the signature is contract, but it has never been only about
+        clients — it was only ever *set* for them, which is how netbird's
+        service account came to sit unreconciled with an empty status.
       '';
     };
   };
@@ -222,9 +229,19 @@ floe.mkFloe {
                 }
                 // lib.optionalAttrs inputs.clientsAnyNamespace {
                   # An empty selector is "every namespace", which is what a
-                  # consumer rendering its own client needs. Absent, kaniop
-                  # looks only in this one.
+                  # consumer rendering its own kanidm resources needs. Absent,
+                  # kaniop looks only in this one — and a resource outside it
+                  # is admitted, stored, and never reconciled, which has no
+                  # symptom beyond a consumer waiting forever.
+                  #
+                  # All three, not just the client. Only the OAuth2 selector
+                  # was set, so netbird's `KanidmServiceAccount` sat with an
+                  # empty status while the Job that needed its token
+                  # crash-looped saying the token was missing — which was true
+                  # and pointed one step short of the cause.
                   oauth2ClientNamespaceSelector = { };
+                  serviceAccountNamespaceSelector = { };
+                  groupNamespaceSelector = { };
                 };
               };
             };

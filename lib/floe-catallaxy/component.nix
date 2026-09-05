@@ -627,61 +627,74 @@ rec {
     let
       group = lib.head (lib.splitString "/" provider.clientCrd);
     in
-    {
-      resource = {
-        apiVersion = "${group}/v1beta1";
-        kind = "KanidmServiceAccount";
-        metadata = {
-          inherit name namespace;
-          labels."app.kubernetes.io/managed-by" = "catallaxy";
-        };
-        spec = {
-          kanidmRef = provider.ref;
-          serviceAccountAttributes = {
-            displayname = displayName;
-            entryManagedBy = managedBy;
+    if !provider.clientsAnyNamespace && namespace != provider.ref.namespace then
+      # The same refusal `mkOAuth2Client` makes, for the same reason and with
+      # the same symptom: admitted, stored, never reconciled, and a consumer
+      # waiting on a token that is not coming.
+      throw ''
+        service account '${name}' is in namespace '${namespace}', and the
+        identity provider only reconciles accounts in its own
+        ('${provider.ref.namespace}').
+
+        Nothing would report this: the resource is admitted and then ignored,
+        its status stays empty, and the token it should mint never appears.
+      ''
+    else
+      {
+        resource = {
+          apiVersion = "${group}/v1beta1";
+          kind = "KanidmServiceAccount";
+          metadata = {
+            inherit name namespace;
+            labels."app.kubernetes.io/managed-by" = "catallaxy";
           };
+          spec = {
+            kanidmRef = provider.ref;
+            serviceAccountAttributes = {
+              displayname = displayName;
+              entryManagedBy = managedBy;
+            };
 
-          apiTokens = [
-            {
-              label = displayName;
-              inherit purpose;
-              secretName = tokenSecret;
-            }
-          ];
+            apiTokens = [
+              {
+                label = displayName;
+                inherit purpose;
+                secretName = tokenSecret;
+              }
+            ];
 
-          # Rotated by the operator that issued it. A consumer re-reads the
-          # Secret; anything holding the old value gets a 401 and is expected
-          # to look again, which is why the things that read one are also the
-          # things that heal.
-          apiTokenRotation = {
-            enabled = true;
-            periodDays = rotationDays;
+            # Rotated by the operator that issued it. A consumer re-reads the
+            # Secret; anything holding the old value gets a 401 and is expected
+            # to look again, which is why the things that read one are also the
+            # things that heal.
+            apiTokenRotation = {
+              enabled = true;
+              periodDays = rotationDays;
+            };
           };
         };
-      };
 
-      # Where the token lands. The key is kaniop's, not ours — see the
-      # `tokenKey` note: it is the token's label, which is why the label and
-      # the account name are deliberately the same string by default.
-      token = {
-        inherit namespace;
-        name = tokenSecret;
-        key = displayName;
-      };
+        # Where the token lands. The key is kaniop's, not ours — see the
+        # `tokenKey` note: it is the token's label, which is why the label and
+        # the account name are deliberately the same string by default.
+        token = {
+          inherit namespace;
+          name = tokenSecret;
+          key = displayName;
+        };
 
-      # The Secret exists only once kaniop has reconciled the account *and*
-      # issued the token, which is two round trips after the CR is applied.
-      # Waiting on the object alone would let a consumer start against an
-      # empty one.
-      ready = {
-        kind = "jsonpath";
-        resource = "secret/${tokenSecret}";
-        inherit namespace;
-        jsonpath = "{.data.${displayName}}";
-        timeout = "5m";
+        # The Secret exists only once kaniop has reconciled the account *and*
+        # issued the token, which is two round trips after the CR is applied.
+        # Waiting on the object alone would let a consumer start against an
+        # empty one.
+        ready = {
+          kind = "jsonpath";
+          resource = "secret/${tokenSecret}";
+          inherit namespace;
+          jsonpath = "{.data.${displayName}}";
+          timeout = "5m";
+        };
       };
-    };
 
   # A credential the floe mints for itself: an external-secrets `Password`
   # generator and the ExternalSecret that lands its output in a Secret.
