@@ -171,6 +171,18 @@ floe.mkFloe {
             # a namespace-qualified name can express it.
             secrets = lib.optionals (source != null) [ "*/${secretBundleName}" ];
 
+            # The ConfigMap half, declared for the same reason and until now
+            # not declared at all: this is the target a consumer actually
+            # mounts, and nothing said it would exist. The first floe to mount
+            # it — netbird, verifying the issuer it was handed — was reported
+            # as referencing a ConfigMap that does not exist, which was true
+            # of the manifest stream and false of the cluster.
+            #
+            # Bare, with no namespace: it lands in all of them, and a
+            # declaration that cannot know its consumer's namespace has
+            # nothing else to say.
+            externalSecrets = lib.optionals (source != null) [ inputs.bundleName ];
+
             resources = lib.optionalAttrs (source != null) {
               ca-bundle = {
                 apiVersion = "trust.cert-manager.io/v1alpha1";

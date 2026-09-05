@@ -89,6 +89,18 @@ let
       rootFromLab = true;
     };
 
+    # The other half of one root: cert-manager signs from the lab CA, and
+    # this puts that CA in a ConfigMap in every namespace so a workload can
+    # *verify* something the lab signed.
+    #
+    # Both clusters, and not only where something visibly needs it. A floe
+    # that dials an in-lab HTTPS endpoint — netbird fetching the issuer's
+    # signing keys is the first — fails x509 verification without it, and the
+    # error names a certificate rather than the thing that is missing.
+    trust-manager = floes.trust-manager {
+      chart = "${cataCharts.trust-manager.chart}";
+    };
+
     # So a pod resolves `*.${zone}` too. Its resolver is the cluster's
     # CoreDNS, which has never heard of the lab.
     lab-dns = floes.lab-dns {

@@ -151,10 +151,16 @@ let
     # chart values, so nothing in its rendered resources names them.
     needsSecrets = T.listOf T.str;
 
-    # Secrets that arrive from outside the manifest stream: a plan step, an
-    # operator, a human. These satisfy the cluster's coherence check the same
-    # way `secrets` does, and are additionally reported to `cata lab lint` as
-    # `runtimeMaterialised` so its dangling-reference rule agrees with ours.
+    # Objects that arrive from outside the manifest stream: a plan step, an
+    # operator, a human. Secrets mostly, and ConfigMaps too — trust-manager's
+    # CA bundle is written into every namespace by a controller, and the lint
+    # checks both kinds against the same list. The name has stayed
+    # `externalSecrets` because that is what every caller declares; what it
+    # lowers to, `runtimeMaterialised`, has always been kind-neutral.
+    #
+    # These satisfy the cluster's coherence check the same way `secrets` does,
+    # and are additionally reported to `cata lab lint` as `runtimeMaterialised`
+    # so its dangling-reference rule agrees with ours.
     #
     # The distinction from `secrets` is who to talk to when it is missing, and
     # that is worth keeping separate: one is a bug in this repo, the other is

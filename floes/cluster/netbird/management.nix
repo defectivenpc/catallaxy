@@ -278,6 +278,16 @@ in
                   "--dns-domain"
                   apiDomain
                 ];
+
+                # Appended to the system roots, not replacing them. netbird
+                # reaches public addresses too, and a container told to trust
+                # only the lab CA stops trusting everything else.
+                env = [
+                  {
+                    name = "SSL_CERT_DIR";
+                    value = nb.caBundle.certDir;
+                  }
+                ];
                 ports = [
                   {
                     name = "http";
@@ -296,6 +306,11 @@ in
                   {
                     name = "management";
                     mountPath = "/var/lib/netbird";
+                  }
+                  {
+                    name = nb.caBundle.volumeName;
+                    mountPath = nb.caBundle.mountPath;
+                    readOnly = true;
                   }
                 ];
               }
@@ -323,6 +338,23 @@ in
               {
                 name = "datastore-key";
                 secret.secretName = nb.datastoreKeySecret;
+              }
+
+              # trust-manager writes this ConfigMap into every namespace, so
+              # it is here without netbird asking for it in particular — but
+              # the *key* it lands under is the distributor's decision, which
+              # is why it comes off the signature rather than being spelled.
+              {
+                name = nb.caBundle.volumeName;
+                configMap = {
+                  inherit (nb.caBundle) name;
+                  items = [
+                    {
+                      inherit (nb.caBundle) key;
+                      path = nb.caBundle.filename;
+                    }
+                  ];
+                };
               }
             ];
           };

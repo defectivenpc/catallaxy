@@ -301,6 +301,44 @@ lib.runTests {
     expected = true;
   };
 
+  # ---- trust ---------------------------------------------------------------
+
+  # The failure this exists for: management validates every token by fetching
+  # the issuer's signing keys over HTTPS, and in a lab that issuer is served
+  # from the lab's own CA. Without the bundle the fetch fails x509
+  # verification and *every* login is refused, with an error about a
+  # certificate from a component nobody was watching.
+  #
+  # `SSL_CERT_DIR` appends rather than replaces: netbird reaches public
+  # addresses too, and a container told to trust only the lab CA stops
+  # trusting everything else.
+  testItTrustsTheLabCaWithoutLosingThePublicRoots = {
+    expr = {
+      certDir = (lib.findFirst (e: e.name == "SSL_CERT_DIR") null container.env).value;
+      mounted = lib.any (m: m.mountPath == "/etc/netbird-ca") container.volumeMounts;
+    };
+    expected = {
+      certDir = "/etc/ssl/certs:/etc/netbird-ca";
+      mounted = true;
+    };
+  };
+
+  # The ConfigMap and the key both come off TRUST_BUNDLE. trust-manager
+  # decides what it calls them, and a floe that spelled `lab-ca-bundle` for
+  # itself would break the day the distributor changed its mind.
+  testTheBundleComesOffTheSignature = {
+    expr = (lib.findFirst (v: v.name == "lab-ca") null mgmt.spec.template.spec.volumes).configMap;
+    expected = {
+      name = "lab-ca-bundle";
+      items = [
+        {
+          key = "ca.crt";
+          path = "lab-ca.crt";
+        }
+      ];
+    };
+  };
+
   # ---- claims about itself ------------------------------------------------
 
   testItNamesEveryImageItRuns = {

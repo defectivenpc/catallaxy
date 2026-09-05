@@ -131,6 +131,23 @@ let
       };
     };
 
+    trust = {
+      sig = sigs.TRUST_BUNDLE;
+      value = {
+        readyToken = "stub/trust/ready";
+        namespace = "cert-manager";
+        secretTargets = true;
+        caBundle = {
+          name = "lab-ca-bundle";
+          key = "ca.crt";
+        };
+        caBundleSecret = {
+          name = "lab-ca-bundle-secret";
+          key = "ca.crt";
+        };
+      };
+    };
+
     identityOperator = {
       sig = sigs.IDENTITY_OPERATOR;
       value = {

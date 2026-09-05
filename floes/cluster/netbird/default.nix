@@ -135,6 +135,18 @@ floe.mkFloe {
   # including the operator that would configure it.
   requires.oidc = sigs.OIDC_PROVIDER;
 
+  # Management validates every token by fetching the issuer's signing keys
+  # over HTTPS, and in a lab that issuer is served from the lab's own CA. A
+  # container trusts public roots and nothing else, so without the bundle the
+  # fetch fails x509 verification and *every* login is refused — with an error
+  # about a certificate, from a component nobody was looking at.
+  #
+  # This is why the whole floe requires it. Nothing else in the tree required
+  # TRUST_BUNDLE at all: trust-manager provided it and had no consumer, so the
+  # lab distributed a CA that nothing was mounting. netbird is the first floe
+  # that has to verify a peer inside the lab, and it found that out.
+  requires.trust = sigs.TRUST_BUNDLE;
+
   provides.mesh = sigs.MESH_NETWORK;
 
   out.component = kinds.component;
@@ -146,6 +158,7 @@ floe.mkFloe {
         inputs = config.floe.inputs;
         gateway = config.floe.requires.gateway;
         oidcProvider = config.floe.requires.oidc;
+        trust = config.floe.requires.trust;
 
         ns = inputs.namespace;
         zone = gateway.baseDomain;
@@ -204,6 +217,18 @@ floe.mkFloe {
           datastoreKeyKey = "key";
 
           inherit (client) oidc;
+
+          # Mounted into anything that dials an in-lab HTTPS endpoint, and
+          # appended to the system roots rather than replacing them: netbird
+          # also reaches public addresses, and a container told to trust only
+          # the lab CA stops trusting everything else.
+          caBundle = {
+            inherit (trust.caBundle) name key;
+            mountPath = "/etc/netbird-ca";
+            filename = "lab-ca.crt";
+            certDir = "/etc/ssl/certs:/etc/netbird-ca";
+            volumeName = "lab-ca";
+          };
 
           # Where a browser comes back to after logging in. The dashboard's
           # own paths; the CLI's `http://localhost:<port>/` callbacks belong
