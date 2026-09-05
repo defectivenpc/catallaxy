@@ -239,6 +239,7 @@ in
           secrets = [ ];
           needsSecrets = [ ];
           externalSecrets = [ ];
+          routedHosts = [ ];
         };
       };
 
@@ -265,6 +266,7 @@ in
           secrets = [ "${namespace}/${name}" ];
           needsSecrets = [ ];
           externalSecrets = [ ];
+          routedHosts = [ ];
         }
       ) projectedSecrets;
 
@@ -395,27 +397,45 @@ in
           ) (r.spec.rules or [ ])
         );
 
-      exposedHosts = lib.concatLists (
-        lib.mapAttrsToList (
-          name: b:
-          lib.concatMap (
-            r:
-            if lib.elem (r.kind or "") routeKinds then
-              map (host: {
-                inherit host;
-                namespace = r.metadata.namespace or "default";
-                bundle = name;
-                # Every route is public until there is an internal tier to
-                # put one behind. Saying "public" when we cannot tell would
-                # be a lie; there is currently only one tier.
-                tier = "public";
-                paths = routePaths r;
-              }) (lib.filter (h: !(lib.hasInfix "*" h)) (r.spec.hostnames or [ ]))
-            else
-              [ ]
-          ) (lib.attrValues b.resources)
-        ) bundles
-      );
+      exposedHosts =
+        lib.concatLists (
+          lib.mapAttrsToList (
+            name: b:
+            lib.concatMap (
+              r:
+              if lib.elem (r.kind or "") routeKinds then
+                map (host: {
+                  inherit host;
+                  namespace = r.metadata.namespace or "default";
+                  bundle = name;
+                  # Every route is public until there is an internal tier to
+                  # put one behind. Saying "public" when we cannot tell would
+                  # be a lie; there is currently only one tier.
+                  tier = "public";
+                  paths = routePaths r;
+                }) (lib.filter (h: !(lib.hasInfix "*" h)) (r.spec.hostnames or [ ]))
+              else
+                [ ]
+            ) (lib.attrValues b.resources)
+          ) bundles
+        )
+        ++ lib.concatLists (
+          # Hosts an operator routes on the bundle's behalf. Nothing in
+          # `resources` names them, so the walk above finds nothing — and the
+          # lab's ingress builds its host map from this list, so a host missing
+          # here is one the proxy answers 503 for while the cluster serves it
+          # perfectly well.
+          lib.mapAttrsToList (
+            name: b:
+            map (host: {
+              inherit host;
+              bundle = name;
+              namespace = "default";
+              tier = "public";
+              paths = [ "/" ];
+            }) b.routedHosts
+          ) bundles
+        );
     in
     if orphaned != [ ] then
       throw ''

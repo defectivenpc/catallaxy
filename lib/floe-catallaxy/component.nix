@@ -167,6 +167,20 @@ let
     # a lab that was not set up.
     externalSecrets = T.listOf T.str;
 
+    # Hostnames this bundle causes to be routed by something it installs,
+    # rather than by an HTTPRoute in its own manifests.
+    #
+    # The elaborator reads routes off `resources` to build `exposedHosts`,
+    # which is what the lab's ingress builds its host map from. An operator
+    # that renders the route instead — kaniop does, from `Kanidm.spec.gateway`
+    # — leaves nothing for that walk to find, so the host is unreachable from
+    # outside the cluster and unroutable inside it.
+    #
+    # Same shape of gap as `externalSecrets`, and here for the same reason: a
+    # chart or a controller's output is opaque until apply, so the floe says
+    # what it knows.
+    routedHosts = T.listOf T.str;
+
     # readiness — RFC 0002 §4. Free-form because the fields a probe needs
     # depend on its `kind`; `lib/util/wait.nix:requiredBy` is the table that
     # says which, and the elaborator checks against it.
@@ -318,6 +332,7 @@ rec {
       secrets ? [ ],
       needsSecrets ? [ ],
       externalSecrets ? [ ],
+      routedHosts ? [ ],
       ready ? null,
       awaitRollout ? true,
       needs ? [ ],
@@ -343,6 +358,7 @@ rec {
         secrets
         needsSecrets
         externalSecrets
+        routedHosts
         ready
         awaitRollout
         needs

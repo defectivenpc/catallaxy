@@ -97,6 +97,21 @@ floe.mkFloe {
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
 
+  # An issuer nobody can reach is not an issuer.
+  #
+  # This floe promised `https://<domain>` and rendered no route to it, so every
+  # consumer in the tree — forgejo, harbor, argocd, grafana, netbird — was
+  # configured against a hostname the lab answered with a 503 from its
+  # ingress. Nothing caught it because no lab had ever logged in: the OIDC
+  # path is the one thing an e2e that never opens a browser does not touch.
+  requires.gateway = sigs.API_GATEWAY;
+
+  # The gateway validates kanidm's certificate, which is signed by the lab CA.
+  # Without the bundle the route attaches and every request through it fails
+  # the backend handshake — the same class of failure as netbird's, one hop
+  # earlier.
+  requires.trust = sigs.TRUST_BUNDLE;
+
   # The CRD and something reconciling it. Without both, the CR below is a
   # resource of an unknown kind or a resource nothing acts on.
   requires.operator = sigs.IDENTITY_OPERATOR;
@@ -117,6 +132,8 @@ floe.mkFloe {
         inputs = config.floe.inputs;
         operator = config.floe.requires.operator;
         issuance = config.floe.requires.issuance;
+        gateway = config.floe.requires.gateway;
+        trust = config.floe.requires.trust;
 
         name = "kanidm";
         tlsSecret = "kanidm-tls";
@@ -221,6 +238,34 @@ floe.mkFloe {
                     }
                   ];
 
+                  # kaniop renders the HTTPRoute and the BackendTLSPolicy from
+                  # this, so the route is the operator's to own rather than a
+                  # second resource this floe writes beside the CR and has to
+                  # keep in step with it.
+                  #
+                  # `parentRef` comes off the signature: the gateway hands out
+                  # its own attachment point, and a floe spelling the
+                  # gateway's name and listener for itself is the by-name
+                  # coupling `API_GATEWAY` exists to remove.
+                  gateway = {
+                    parentRefs = [ gateway.parentRef ];
+                    hostnames = [ inputs.domain ];
+
+                    # kanidm has no plaintext mode, so the hop from the
+                    # gateway to it is HTTPS and the gateway has to trust what
+                    # signed it.
+                    backendTlsPolicy.validation = {
+                      hostname = inputs.domain;
+                      caCertificateRefs = [
+                        {
+                          group = "";
+                          kind = "ConfigMap";
+                          name = trust.caBundle.name;
+                        }
+                      ];
+                    };
+                  };
+
                   tlsSecretName = tlsSecret;
                   storage.volumeClaimTemplate.spec = {
                     accessModes = [ "ReadWriteOnce" ];
@@ -245,6 +290,11 @@ floe.mkFloe {
                 };
               };
             };
+
+            # kaniop renders the HTTPRoute from `spec.gateway`, so nothing
+            # here is a route the elaborator's walk can find — and the lab's
+            # ingress builds its host map from that walk.
+            routedHosts = [ inputs.domain ];
 
             # cert-manager writes it once the Certificate is issued, and the
             # operator mounts it. Nothing in these manifests reads it, so the

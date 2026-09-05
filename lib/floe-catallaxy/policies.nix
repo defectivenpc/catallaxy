@@ -29,6 +29,90 @@ in
         + "Assembling several is a lab, which is not built yet."
       );
 
+  # A promise naming a hostname in the gateway's zone has to be served.
+  #
+  # kanidm promised `https://idm.<zone>` as its issuer and rendered no route
+  # to it for the whole life of this tree. Every OIDC consumer — forgejo,
+  # harbor, argocd, grafana, netbird — was configured against a name the lab
+  # answered with a 503, and nothing caught it: `lab-routed-hosts-are-proxied`
+  # checks the other direction, that a *route* has a backend, and an e2e that
+  # never opens a browser never asks.
+  #
+  # So this is the missing half. A provide is a promise, and a promise
+  # carrying an address inside the zone the gateway serves is a claim that
+  # something routes it.
+  #
+  # Only hostnames in the zone: a signature may legitimately carry an address
+  # somewhere else entirely — an upstream registry, a public issuer — and that
+  # is not this cluster's to serve.
+  promisedHostsAreRouted =
+    result:
+    let
+      gateways = lib.filter (g: g != null) (
+        lib.concatLists (
+          lib.mapAttrsToList (
+            _unit: provs: lib.mapAttrsToList (_n: v: if v ? baseDomain && v ? parentRef then v else null) provs
+          ) result.provides
+        )
+      );
+    in
+    lib.optionals (gateways != [ ]) (
+      let
+        zone = (lib.head gateways).baseDomain;
+
+        # Every `https://host...` and `http://host...` any unit promised.
+        hostsIn =
+          v:
+          if builtins.isString v then
+            let
+              m = builtins.match "https?://([^/:]+).*" v;
+            in
+            lib.optional (m != null) (lib.head m)
+          else if builtins.isAttrs v then
+            lib.concatMap hostsIn (lib.attrValues v)
+          else if builtins.isList v then
+            lib.concatMap hostsIn v
+          else
+            [ ];
+
+        promised = lib.concatLists (
+          lib.mapAttrsToList (
+            unit: provs:
+            map (h: {
+              inherit unit;
+              host = h;
+            }) (lib.concatMap hostsIn (lib.attrValues provs))
+          ) result.provides
+        );
+
+        inZone = lib.filter (p: lib.hasSuffix ".${zone}" p.host) promised;
+
+        routed = lib.concatLists (
+          lib.mapAttrsToList (
+            _unit: component:
+            lib.concatLists (
+              lib.mapAttrsToList (
+                _b: bundle:
+                lib.concatMap (r: lib.optionals ((r.kind or "") == "HTTPRoute") (r.spec.hostnames or [ ])) (
+                  lib.attrValues bundle.resources
+                )
+                # Plus what an operator routes on the bundle's behalf, which
+                # nothing in `resources` names.
+                ++ bundle.routedHosts
+              ) component.bundles
+            )
+          ) (componentsIn result)
+        );
+      in
+      map (
+        p:
+        "unit '${p.unit}' promises '${p.host}', which is inside the gateway's zone "
+        + "'${zone}', and nothing in this cluster routes it. Whatever reads that "
+        + "promise reaches the lab's ingress and is answered 503 — by a component "
+        + "that is running and healthy, which is why nothing reports it."
+      ) (lib.filter (p: !(lib.elem p.host routed)) (lib.unique inZone))
+    );
+
   # kanidm has one name namespace across every kind of principal.
   #
   # An OAuth2 client, a service account, a person and a group all become
