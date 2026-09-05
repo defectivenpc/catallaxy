@@ -674,13 +674,19 @@ rec {
           };
         };
 
-        # Where the token lands. The key is kaniop's, not ours — see the
-        # `tokenKey` note: it is the token's label, which is why the label and
-        # the account name are deliberately the same string by default.
+        # Where the token lands. The Secret's name is ours — `secretName` is
+        # a field on the token — and the key is kaniop's: a flat `token`,
+        # established by applying one and reading the Secret back, because the
+        # CRD documents the Secret's name and says nothing about what is in
+        # it. It was guessed as the token's label first, and the guess cost a
+        # deploy.
+        #
+        # One token per Secret follows: two `apiTokens` sharing a `secretName`
+        # would write the same key twice and the second would win silently.
         token = {
           inherit namespace;
           name = tokenSecret;
-          key = displayName;
+          key = "token";
         };
 
         # The Secret exists only once kaniop has reconciled the account *and*
@@ -691,7 +697,7 @@ rec {
           kind = "jsonpath";
           resource = "secret/${tokenSecret}";
           inherit namespace;
-          jsonpath = "{.data.${displayName}}";
+          jsonpath = "{.data.token}";
           timeout = "5m";
         };
       };

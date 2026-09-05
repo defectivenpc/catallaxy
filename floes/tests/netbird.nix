@@ -392,7 +392,7 @@ lib.runTests {
       kind = "jsonpath";
       resource = "secret/netbird-kanidm-token";
       namespace = "netbird";
-      jsonpath = "{.data.netbird-operator}";
+      jsonpath = "{.data.token}";
       timeout = "5m";
     };
   };
