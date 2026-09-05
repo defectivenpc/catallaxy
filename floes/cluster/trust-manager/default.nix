@@ -56,7 +56,6 @@ floe.mkFloe {
       let
         inputs = config.floe.inputs;
         issuance = config.floe.requires.issuance;
-        readyToken = "trust-manager/bundles/ready";
 
         source = issuance.caSecret;
 
@@ -68,7 +67,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.distribution = {
-          inherit readyToken;
           inherit (inputs) namespace;
           secretTargets = true;
           caBundle = {

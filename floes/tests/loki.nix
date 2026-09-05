@@ -10,11 +10,6 @@ let
 in
 lib.runTests {
 
-  testProvidesItsSignature = {
-    expr = r.provides.logs.readyToken;
-    expected = "loki/read/ready";
-  };
-
   # A floe that renders nothing has nothing to install, and every consumer's
   # ordering edge into it would resolve to an empty set.
   testRendersSomething = {

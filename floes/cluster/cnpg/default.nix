@@ -36,11 +36,9 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        readyToken = "cnpg/operator/ready";
       in
       {
         config.floe.provides.operator = {
-          inherit readyToken;
           crdKinds = [
             "postgresql.cnpg.io/Cluster"
             "postgresql.cnpg.io/Pooler"

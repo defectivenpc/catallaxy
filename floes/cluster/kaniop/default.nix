@@ -37,7 +37,6 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        readyToken = "kaniop/operator/ready";
         crdsEstablished = "kaniop/crds/established";
 
         # The chart ships its CRDs as a file rather than as templates, so they
@@ -49,7 +48,7 @@ floe.mkFloe {
       in
       {
         config.floe.provides.operator = {
-          inherit readyToken crdsEstablished;
+          inherit crdsEstablished;
         };
 
         config.floe.out.component = kinds.mkComponent {

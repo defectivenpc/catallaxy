@@ -97,13 +97,11 @@ floe.mkFloe {
       in
       {
         config.floe.provides.webhook = {
-          readyToken = webhookReady;
           inherit (inputs) namespace;
           inherit crdKinds;
         };
 
         config.floe.provides.issuance = {
-          readyToken = issuerReady;
 
           # A lab CA is not in any public trust store, and a consumer that
           # cares — an OIDC client checking an issuer's certificate, say —

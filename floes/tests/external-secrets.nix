@@ -13,11 +13,6 @@ let
 in
 lib.runTests {
 
-  testProvidesItsSignature = {
-    expr = r.provides.generation.readyToken;
-    expected = "external-secrets/webhook/ready";
-  };
-
   # A `sourceRef.generatorRef` naming the wrong API version is admitted and
   # then never reconciles, so the version is part of the capability rather
   # than something a consumer guesses.

@@ -49,7 +49,6 @@ floe.mkFloe {
         # here exactly-one-provider says it, and a second provider of
         # STORAGE_CLASS is a link error naming both.
         config.floe.provides.storage = {
-          readyToken = "openebs/storage/ready";
           inherit (inputs) className;
           isDefault = true;
         };

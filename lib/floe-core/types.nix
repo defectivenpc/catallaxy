@@ -105,6 +105,33 @@ rec {
     name = "deferred ${inner.name}";
   };
 
+  # A value that means something only inside the link that produced it.
+  #
+  # The sibling of `deferred`, on a different axis: `deferred` says *when* a
+  # value is usable — not until after apply — and this says *where*. A Service
+  # address, a namespace, a CRD installed here, a reference to a Secret in this
+  # cluster, an annotation only this cluster's controller watches.
+  #
+  # Not "looks like an address". `CONFIG_RELOAD`'s annotation keys are ordinary
+  # strings and are local, because writing them on a workload somewhere else
+  # does nothing at all — the reloader that reads them is not there.
+  #
+  # Inside its own link this is exactly `inner`; `checkValue` passes straight
+  # through. It bites in one place: `link` seals a provide arriving from
+  # another link by replacing every local field with a throw, so reading one
+  # across a boundary is an error naming the field and where it came from, and
+  # not reading it is fine. That is the granularity a per-signature flag cannot
+  # reach — every signature here is a mix, and `GIT_REPOSITORY` carried the
+  # distinction in prose ("only one of them resolves in both places") for want
+  # of a type to put it in.
+  local = inner: {
+    tag = "local";
+    inherit inner;
+    name = "link-local ${inner.name}";
+  };
+
+  isLocal = ty: (ty.tag or "") == "local";
+
   # A NixOS module type, used as a checker.
   #
   # The rule everywhere else here is that a kind schema holds pure data: the
@@ -144,6 +171,11 @@ rec {
     in
     if ty.tag == "any" then
       v
+    else if ty.tag == "local" then
+      # Transparent here. Locality is about which *link* is reading, which a
+      # type check has no way to know — so it is enforced where that is known,
+      # at the one seam where a value crosses (`link.nix`).
+      checkValue path ty.inner v
     else if ty.tag == "deferred" then
       (if isDeferredToken v then v else checkValue path ty.inner v)
     else if isDeferredToken v then

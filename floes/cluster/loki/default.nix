@@ -41,7 +41,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.logs = {
-          readyToken = "loki/read/ready";
           pushUrl = "${base}/loki/api/v1/push";
           queryUrl = base;
           otlpUrl = "${base}/otlp";

@@ -42,7 +42,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.store = {
-          readyToken = "seaweedfs/s3/ready";
           inherit (inputs) namespace;
           s3Endpoint = "http://seaweedfs-s3.${inputs.namespace}.svc.cluster.local:8333";
 

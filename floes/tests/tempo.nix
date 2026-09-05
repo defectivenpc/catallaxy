@@ -10,11 +10,6 @@ let
 in
 lib.runTests {
 
-  testProvidesItsSignature = {
-    expr = r.provides.traces.readyToken;
-    expected = "tempo/write/ready";
-  };
-
   # A floe that renders nothing has nothing to install, and every consumer's
   # ordering edge into it would resolve to an empty set.
   testRendersSomething = {

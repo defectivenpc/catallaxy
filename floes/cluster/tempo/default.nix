@@ -39,7 +39,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.traces = {
-          readyToken = "tempo/write/ready";
           queryUrl = "http://${host}:3100";
           otlpGrpc = "${host}:4317";
           otlpHttp = "http://${host}:4318";

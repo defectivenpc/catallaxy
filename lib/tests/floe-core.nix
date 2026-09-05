@@ -49,31 +49,52 @@ let
     fields.v = T.str;
   };
 
-  consumer = floe.mkFloe {
+  # Two consumers of one signature: one reads a portable field, one reads a
+  # local one. That pair is the point of typing locality per field rather than
+  # per signature — the same external is correct for the first and an error
+  # for the second.
+  mkConsumer =
+    { name, field }:
+    floe.mkFloe {
+      inherit name;
+      requires.ingress = MIXED_INGRESS;
+      provides.echo = ECHO;
+      modules = [
+        (
+          { config, ... }:
+          {
+            config.floe.provides.echo.v = config.floe.requires.ingress.${field};
+          }
+        )
+      ];
+    };
+
+  consumer = mkConsumer {
     name = "consumer";
-    requires.ingress = fixture.sigs.INGRESS;
-    provides.echo = ECHO;
-    modules = [
-      (
-        { config, ... }:
-        {
-          config.floe.provides.echo.v = config.floe.requires.ingress.baseDomain;
-        }
-      )
-    ];
+    field = "baseDomain";
+  };
+  localConsumer = mkConsumer {
+    name = "local-consumer";
+    field = "className";
   };
 
-  # The fixture's INGRESS does not cross; this is the same shape marked as one
-  # that does, so the happy-path tests exercise resolution rather than the
-  # refusal below.
-  CROSSING_INGRESS = floe.mkSig {
+  # `baseDomain` travels. `className` is an ingress class registered in the
+  # cluster that provided it and means nothing anywhere else.
+  MIXED_INGRESS = floe.mkSig {
     name = "INGRESS";
-    crossCluster = true;
-    inherit (fixture.sigs.INGRESS) fields;
+    fields = fixture.sigs.INGRESS.fields // {
+      className = T.local T.str;
+    };
+  };
+
+  # Every field local, so nothing in it would be readable here.
+  ALL_LOCAL = floe.mkSig {
+    name = "ALL_LOCAL";
+    fields.crdKinds = T.local (T.listOf T.str);
   };
 
   externalIngress = {
-    sig = CROSSING_INGRESS;
+    sig = MIXED_INGRESS;
     origin = "cluster 'mgmt'";
     value = {
       baseDomain = "elsewhere.example.com";
@@ -275,17 +296,64 @@ lib.runTests {
     };
   };
 
-  # The one thing a link can check about a value crossing a boundary. It
-  # cannot see which field a consumer reads, but it can see whether the
-  # promise was ever meant to travel — and "the controller is running" is not.
-  testASignatureThatDoesNotCrossIsRefusedAsAnExternal = {
+  # ---- locality ------------------------------------------------------------
+
+  # A local field is ordinary inside the link that produced it. Locality is
+  # about which link is *reading*, so it can never be a check on the value.
+  testALocalFieldIsOrdinaryAtHome = {
+    expr =
+      (floe.link {
+        units = {
+          ingress = fixture.floes.nginxIngress.instantiate { baseDomain = "lab.example.com"; };
+          local-consumer = localConsumer.instantiate { };
+        };
+      }).provides.local-consumer.echo.v;
+    expected = "nginx";
+  };
+
+  # And an error the moment it is read through an external, because there is
+  # no value that would be right — not because this one failed a check.
+  testReadingALocalFieldAcrossALinkIsAnError = {
     expr =
       fails
-        (withExternal {
-          ingress = externalIngress // {
-            sig = fixture.sigs.INGRESS;
+        (floe.link {
+          units.local-consumer = localConsumer.instantiate { };
+          external.ingress = externalIngress;
+        }).provides.local-consumer.echo.v;
+    expected = true;
+  };
+
+  # The paired positive, and the reason this is per field: the *same* external
+  # read for something that does travel is correct. Without it the throw above
+  # could be any failure at all.
+  testAPortableFieldOnTheSameExternalStillReads = {
+    expr = linkedExternally.provides.consumer.echo.v;
+    expected = "elsewhere.example.com";
+  };
+
+  # Nothing portable in it, so a hole resolved against it resolves to nothing
+  # usable. Refused up front rather than at whichever field is touched first,
+  # and derived from the fields — so a signature that gains a routed address
+  # starts crossing without anyone remembering to say so.
+  #
+  # The consumer's own hole is filled here on purpose. Without that, this link
+  # fails for "no provider for INGRESS" and the test passes whatever the
+  # refusal does — which is how five refusals in `nix/checks/secret-sharing.nix`
+  # once passed for the wrong reason.
+  testAnAllLocalSignatureIsRefusedAsAnExternal = {
+    expr =
+      fails
+        (floe.link {
+          units.consumer = consumer.instantiate { };
+          external = {
+            ingress = externalIngress;
+            other = {
+              sig = ALL_LOCAL;
+              origin = "cluster 'mgmt'";
+              value.crdKinds = [ "kind:example.io/Widget" ];
+            };
           };
-        }).provides.consumer.echo.v;
+        }).provides;
     expected = true;
   };
 

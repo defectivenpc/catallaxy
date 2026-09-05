@@ -142,7 +142,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.oidc = {
-          readyToken = "server";
 
           # https, always. See `requires.issuance`.
           issuer = "https://${inputs.domain}";

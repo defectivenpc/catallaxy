@@ -186,15 +186,61 @@
       # outside this link, which is the least likely place for a wrong shape
       # to be noticed, and a link that accepted one would hand it to a body
       # that reads a field which is not there.
-      sealedExternal = lib.mapAttrs (n: entry: sealSig [ "external" n ] entry.sig entry.value) external;
-
-      # A promise that was never meant to leave its own graph.
+      # Sealed like any other provide, and then narrowed to what still means
+      # something here.
       #
-      # Checked eagerly rather than where the value is read: an external of
-      # the wrong signature usually resolves a hole *successfully* and hands
-      # over an address that resolves nowhere, so there is no later point at
-      # which anything notices.
-      uncrossable = lib.filter (n: !(external.${n}.sig.crossCluster or false)) externalNames;
+      # A field typed `T.local` describes a place in the link that produced it
+      # — a Service address, a namespace, a CRD installed there. Read from
+      # here it is not wrong-looking, it is wrong: a string that resolves
+      # nowhere, or a namespace in somebody else's cluster. So it is replaced
+      # by a throw rather than checked, because there is no value that would
+      # be correct.
+      #
+      # Lazily, which is the whole point of doing this per field: a consumer
+      # that reads only the portable half of a signature is not doing anything
+      # wrong and must not be refused. `OIDC_PROVIDER` is the case — from
+      # another link you can validate a token against the issuer and you
+      # cannot render a client, and both halves of that are true at once.
+      sealedExternal = lib.mapAttrs (
+        n: entry:
+        let
+          sealed = sealSig [ "external" n ] entry.sig entry.value;
+        in
+        lib.mapAttrs (
+          field: value:
+          if types.isLocal entry.sig.fields.${field} then
+            throw (
+              "floe link error: '${entry.sig.name}.${field}' is local to the link that "
+              + "provided it${lib.optionalString (entry ? origin) " (${entry.origin})"}, and this "
+              + "is a different one. It names something that exists there — a Service "
+              + "address, a namespace, a CRD — and there is no value for it here.\n\n"
+              + "Fields of '${entry.sig.name}' that do travel: "
+              + (
+                let
+                  portable = lib.attrNames (lib.filterAttrs (_: t: !(types.isLocal t)) entry.sig.fields);
+                in
+                if portable == [ ] then "none." else lib.concatStringsSep ", " portable + "."
+              )
+            )
+          else
+            value
+        ) sealed
+      ) external;
+
+      # A promise with nothing portable in it at all.
+      #
+      # Derived rather than declared: if every field is local then every read
+      # throws, and a hole "resolved" that way is one that resolves to nothing
+      # usable. That is certainly a mistake, so it is refused up front rather
+      # than at whichever field the consumer happens to touch first.
+      #
+      # This is what a per-signature flag was approximating, and it falls out
+      # of the fields instead of being asserted beside them — so a signature
+      # that gains a routed address starts crossing without anyone
+      # remembering to say so.
+      uncrossable = lib.filter (
+        n: lib.all (t: types.isLocal t) (lib.attrValues external.${n}.sig.fields)
+      ) externalNames;
 
       fixed = lib.fix (
         self:
@@ -375,18 +421,17 @@
     if uncrossable != [ ] then
       throw (
         "floe link error: these provides were offered to this link from outside it, and "
-        + "their signatures do not cross a link boundary:\n  - "
+        + "every field of their signatures is link-local:\n  - "
         + lib.concatMapStringsSep "\n  - " (
           n:
           "'${n}' (signature '${external.${n}.sig.name}'"
           + lib.optionalString (external.${n} ? origin) ", from ${external.${n}.origin}"
           + ")"
         ) uncrossable
-        + "\n\nA signature carries `crossCluster = true` when what it promises is still "
-        + "true for a consumer somewhere else — a routed address, an issuer, a registry. "
-        + "Most promise that something is running *here*, and resolving one of those from "
-        + "another graph yields a value that reads correctly and describes a controller "
-        + "that is not present."
+        + "\n\nNothing in them would be readable here, so resolving a hole against one "
+        + "leaves the consumer with a value it cannot use. These are the promises that "
+        + "something is running *in a particular place* — a controller, a webhook, a "
+        + "storage class — and the place is not this one."
       )
     else if selfResolutions != [ ] then
       throw (

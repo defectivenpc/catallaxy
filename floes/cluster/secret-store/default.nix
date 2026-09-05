@@ -157,11 +157,10 @@ floe.mkFloe {
         # One binding, two projections: the rendered object and the provide.
         storeName = address.storeResourceName inputs.labStore;
 
-        readyToken = "secret-store/${inputs.labStore}/ready";
       in
       {
         config.floe.provides.store = {
-          inherit readyToken storeName;
+          inherit storeName;
           storeKind = "ClusterSecretStore";
           inherit (inputs) writable;
         };

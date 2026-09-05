@@ -129,7 +129,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.metrics = {
-          readyToken = scrapeReady;
           inherit crdsEstablished crdKinds;
           queryUrl = base;
 

@@ -67,8 +67,6 @@ floe.mkFloe {
       let
         inputs = config.floe.inputs;
 
-        readyToken = "zot/registry/ready";
-
         # One binding, three projections: the URL something dials, the
         # reference an image carries, and the Service the chart names.
         host = "zot.${inputs.namespace}.svc.cluster.local";
@@ -76,7 +74,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.registry = {
-          inherit readyToken;
           inherit (inputs) namespace;
           url = "http://${hostPort}";
 

@@ -12,18 +12,6 @@ let
   };
 in
 lib.runTests {
-  testProvidesItsSignature = {
-    expr = r.provides.metrics.readyToken;
-    expected = "prometheus/scrape/ready";
-  };
-
-  # Two tokens, not one. A floe emitting a ServiceMonitor needs the kind to
-  # exist; a floe writing metrics needs the receiver up. They become true at
-  # different times and gate different things.
-  testTheCrdTokenIsSeparateFromReadiness = {
-    expr = r.provides.metrics.crdsEstablished != r.provides.metrics.readyToken;
-    expected = true;
-  };
 
   # `enableRemoteWriteReceiver` is what makes this address answer at all;
   # without it the endpoint 404s and a writer retries forever against a

@@ -68,7 +68,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.generation = {
-          readyToken = "external-secrets/webhook/ready";
           inherit (inputs) namespace;
           inherit crdKinds;
           generatorApiVersion = "generators.external-secrets.io/v1alpha1";

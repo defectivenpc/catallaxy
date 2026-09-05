@@ -35,7 +35,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.operator = {
-          readyToken = "redis-operator/ready";
           crdKinds = [
             "redis.redis.opstreelabs.in/Redis"
             "redis.redis.opstreelabs.in/RedisCluster"

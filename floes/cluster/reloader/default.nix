@@ -40,11 +40,9 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        readyToken = "reloader/watching";
       in
       {
         config.floe.provides.reload = {
-          inherit readyToken;
           secretAnnotation = "secret.reloader.stakater.com/reload";
           configMapAnnotation = "configmap.reloader.stakater.com/reload";
         };

@@ -154,7 +154,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.registry = {
-          readyToken = "harbor";
           namespace = ns;
           url = "https://${host}";
 

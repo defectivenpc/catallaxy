@@ -11,10 +11,6 @@ let
   values = r.bundles.zot.helmCharts.zot.values;
 in
 lib.runTests {
-  testProvidesItsSignature = {
-    expr = r.provides.registry.readyToken;
-    expected = "zot/registry/ready";
-  };
 
   # An image reference is not a URL. A consumer handed only one of these would
   # have to build the other by stripping a scheme, and would eventually get it

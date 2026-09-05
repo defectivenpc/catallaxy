@@ -385,7 +385,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.mesh = {
-          readyToken = "server";
 
           namespace = ns;
           managementUrl = "https://${apiDomain}";

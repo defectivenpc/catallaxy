@@ -125,7 +125,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.git = {
-          readyToken = "forgejo";
 
           # The chart's HTTP Service. No TLS on it: the certificate is on the
           # gateway, and an in-cluster client dialling this directly is

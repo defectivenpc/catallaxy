@@ -258,7 +258,6 @@ floe.mkFloe {
       in
       {
         config.floe.provides.vault = {
-          readyToken = "server";
           inherit address;
           inherit (inputs) kvPath kvVersion;
           tokenSecret = {

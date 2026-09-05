@@ -7,6 +7,47 @@ The format is based on
 
 ## [Unreleased]
 
+### Changed
+
+- **Locality is a field type, not a flag on the signature.** Cross-cluster
+  resolution shipped with `mkSig { crossCluster = true; }`, which was wrong
+  three ways: it named a Kubernetes concept in a layer whose premise is that
+  it has none, it sat beside `fields` as a second kind of thing in what is
+  otherwise a record type, and it measured a per-field property at signature
+  granularity. Every signature in the distribution is a mix, so the claim
+  was false in both directions — `MESH_NETWORK` was marked as travelling
+  while carrying `managementInternalUrl`, and `GIT_REPOSITORY` had been
+  carrying the distinction in prose ("only one of them resolves in both
+  places") for want of a type to put it in.
+
+  `T.local` is the sibling of `T.deferred` on a different axis: `deferred`
+  says _when_ a value is usable, this says _where_. Inside its own link it
+  is transparent; a provide arriving from another link has its local fields
+  replaced by a throw naming the field and its origin. Reading one is the
+  error and not reading it is fine, which is the granularity a flag cannot
+  reach — `OIDC_PROVIDER` now lets a floe in another cluster validate a
+  token against the issuer while refusing to let it render a client there,
+  and both halves are true at once.
+
+  The refusal is derived rather than declared: a signature whose fields are
+  _all_ local promises nothing readable elsewhere, so `link` refuses it as
+  an external outright. `TRUST_BUNDLE`, `GATEWAY_API`, `STORAGE_CLASS`,
+  `SECRET_GENERATION` and the three operator signatures fall out that way
+  without anyone setting a flag — and one that gains a routed address starts
+  crossing without anyone remembering to.
+
+### Removed
+
+- **`readyToken`, from 20 of the 21 signatures.** Declared everywhere and
+  read by nobody: every occurrence in the tree was a provider defining its
+  own. The ordering it was meant to express is derived instead, from
+  `upstreamOf` crossed with `backs`. Dead surface of the worst kind, because
+  it reads as meaningful and each new signature copied it.
+
+  The proof it ordered nothing is that `refresh-plans` and `refresh-digests`
+  produce **no diff at all** across ten labs — every wave, every step and
+  every rendered byte identical.
+
 ### Added
 
 - **netbird's control plane, and a lab that runs it.**

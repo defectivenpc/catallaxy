@@ -56,7 +56,6 @@ let
       sig = sigs.X509_WEBHOOK;
       value = {
         namespace = "cert-manager";
-        readyToken = "stub/webhook/ready";
         crdKinds = [ "cert-manager.io/Certificate" ];
       };
     };
@@ -65,7 +64,6 @@ let
       sig = sigs.OBJECT_STORE;
       value = {
         namespace = "stub-store";
-        readyToken = "stub/store/ready";
         s3Endpoint = "http://stub-s3.stub-store.svc.cluster.local:8333";
         credentials = null;
       };
@@ -75,7 +73,6 @@ let
       sig = sigs.SECRET_GENERATION;
       value = {
         namespace = "external-secrets";
-        readyToken = "stub/generation/ready";
         crdKinds = [ "external-secrets.io/ExternalSecret" ];
         generatorApiVersion = "generators.external-secrets.io/v1alpha1";
       };
@@ -84,7 +81,6 @@ let
     issuance = {
       sig = sigs.X509_ISSUANCE;
       value = {
-        readyToken = "stub/issuer/ready";
         publicIssuer = false;
         issuerRef = {
           name = "stub-ca";
@@ -101,7 +97,6 @@ let
     gitRepository = {
       sig = sigs.GIT_REPOSITORY;
       value = {
-        readyToken = "stub/git/ready";
         internalUrl = "http://forgejo-http.forgejo.svc.cluster.local:3000";
         externalUrl = "https://git.stub.test";
         cloneUrl = "https://git.stub.test/stub-admin/lab.git";
@@ -118,7 +113,6 @@ let
     oidcProvider = {
       sig = sigs.OIDC_PROVIDER;
       value = {
-        readyToken = "stub/oidc/ready";
         issuer = "https://idm.stub.test";
         authorizationEndpoint = "https://idm.stub.test/ui/oauth2";
         tokenEndpoint = "https://idm.stub.test/oauth2/token";
@@ -134,7 +128,6 @@ let
     trust = {
       sig = sigs.TRUST_BUNDLE;
       value = {
-        readyToken = "stub/trust/ready";
         namespace = "cert-manager";
         secretTargets = true;
         caBundle = {
@@ -151,7 +144,6 @@ let
     identityOperator = {
       sig = sigs.IDENTITY_OPERATOR;
       value = {
-        readyToken = "stub/kaniop/ready";
         crdsEstablished = "stub/kaniop/crds";
       };
     };
@@ -159,7 +151,6 @@ let
     logIngest = {
       sig = sigs.LOG_INGEST;
       value = {
-        readyToken = "stub/logs/ready";
         pushUrl = "http://stub-loki:3100/loki/api/v1/push";
         queryUrl = "http://stub-loki:3100";
         otlpUrl = "http://stub-loki:3100/otlp";
@@ -169,7 +160,6 @@ let
     traceIngest = {
       sig = sigs.TRACE_INGEST;
       value = {
-        readyToken = "stub/traces/ready";
         queryUrl = "http://stub-tempo:3100";
         otlpGrpc = "stub-tempo:4317";
         otlpHttp = "http://stub-tempo:4318";
@@ -179,7 +169,6 @@ let
     metricsIngest = {
       sig = sigs.METRICS_INGEST;
       value = {
-        readyToken = "stub/metrics/ready";
         crdsEstablished = "stub/metrics/crds";
         crdKinds = [ "kind:monitoring.coreos.com/ServiceMonitor" ];
         queryUrl = "http://stub-prometheus:9090";
