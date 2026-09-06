@@ -16,13 +16,13 @@ the manifests it emits, and the conditions it needs, and the install order
 is _derived_ from those declarations rather than typed as a sequence of
 numbers.
 
-> **Re-architecture in progress.** The floe interface is being rebuilt on
-> [RFC 0001](docs/rfcs/0001-floes.md) (`lib/floe-core/`). The two earlier
-> implementations and everything written against them are parked in
-> [`old-floes/`](old-floes/). One lab runs on the new one —
-> `cata --flake .#minimal.local lab up` — with a gateway and one service
-> behind it. Host DNS, the registry, the proxy and secrets are not rebuilt
-> yet. The CLI is unchanged.
+> **Rebuilt on RFC 0001.** The floe interface is
+> [RFC 0001](docs/rfcs/0001-floes.md) (`lib/floe-core/`), and the shipped
+> tree runs on it: eight example labs, thirty-three floes, host DNS, the
+> registry, the proxy and secrets. Cloud provisioning — `cluster-api`,
+> `crossplane`, Talos — is the one feature family not yet rebuilt. Two
+> earlier implementations preceded this one; what they cost is recorded in
+> [`docs/prior-implementations.md`](docs/prior-implementations.md).
 
 **[Documentation](https://onepunchtech.github.io/catallaxy)**
 

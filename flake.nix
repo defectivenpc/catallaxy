@@ -2,9 +2,8 @@
   description = "catallaxy: declarative Kubernetes platform management";
 
   # The platform is built on the floe interface of RFC 0001 (`lib/floe-core`).
-  # The two earlier floe implementations and everything written against them
-  # are parked in `old-floes/`, which nothing here imports and which is not
-  # expected to evaluate. See `old-floes/README.md`.
+  # Two earlier implementations preceded it; what they cost is recorded in
+  # `docs/prior-implementations.md`, and the code is in git.
   #
   # `labs` and `labPackages` are the two attribute paths `cata` resolves. The
   # CLI is untouched and its contract is unchanged.

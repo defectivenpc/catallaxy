@@ -1,6 +1,6 @@
 # `lib.runTests` suites, run as derivations.
 #
-# The suites over the lab system are parked in `old-floes/lib/tests/`, with the
+# The suites over the lab system went with the implementation they tested, with the
 # hand-written `pure`/`withPkgs` tables and the `unrunTests` assertion that
 # kept them honest. Both come back with the platform.
 { lib, pkgs }:

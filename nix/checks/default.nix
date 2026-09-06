@@ -1,8 +1,7 @@
 # Checks over the RFC-0001 floe implementation.
 #
-# The lab system's checks are parked in `old-floes/nix/checks/` along with the
-# floe implementation they test; they come back as the platform is rebuilt on
-# `lib/floe-core`.
+# The lab system's checks went with the floe implementation they tested; these
+# are what has been written back against `lib/floe-core`.
 {
   lib,
   pkgs,

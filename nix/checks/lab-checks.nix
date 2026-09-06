@@ -4,7 +4,7 @@
 # `lab-manifests` pins that one lab reaches the ground. These pin every lab,
 # file by file, and the properties that only exist between labs.
 #
-# Adapted rather than copied from `old-floes/lib/lab-checks.nix`: the option
+# Adapted rather than copied from the previous `lib/lab-checks.nix`: the option
 # paths moved (`lab.network.dockerSubnet` → `lab.network.subnet`) and two
 # families wait on features that are not back (`lab-mesh-ports` needs netbird,
 # and the Talos half of the subnet check needs that provisioner).

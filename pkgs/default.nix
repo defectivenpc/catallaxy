@@ -1,7 +1,7 @@
 # The CLI, the tools it shells out to, and the runners that test a whole lab.
 #
 # The option-docs generator and the book build are still parked in
-# `old-floes/lib/docs/`; they come back with the book.
+# the previous `lib/docs/`; they come back with the book.
 {
   lib,
   pkgs,

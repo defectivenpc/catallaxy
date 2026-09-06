@@ -7,6 +7,29 @@ The format is based on
 
 ## [Unreleased]
 
+### Removed
+
+- **`old-floes/` is gone.** 454 files, two superseded floe implementations
+  and everything written against them. The shipped tree runs on RFC 0001 and
+  has for a while: eight example labs, thirty-three floes, 282 checks, and
+  six of seven e2e-eligible labs verified up-verified-idempotent-destroyed
+  on this branch. Nothing outside the directory imported it; the nine
+  references were all prose.
+
+  What was worth keeping is in `docs/prior-implementations.md` — the two
+  structural failures (a `length == 1` filter that silently dropped a
+  contested capability, and a `collectChannel` that returned an `mkMerge`
+  rather than a value), the `submoduleWith`/specialArgs trap that makes
+  `importApply` the only workable extension point, and what was carried
+  forward unchanged. The code is in git.
+
+  That file also carries what the deletion does _not_ resolve. Cloud
+  provisioning — `cluster-api`, `crossplane`, the `infra` lab, Talos — was
+  never rebuilt, and `modules/lab/planner/kinds/` still ships nine step
+  kinds with no producer anywhere in the tree. The CLI implements them. That
+  is a claim the tree makes and cannot currently honour, and it is written
+  down rather than left to be rediscovered.
+
 ### Fixed
 
 - **kanidm is reachable through the gateway, for the first time.** Its route

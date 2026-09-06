@@ -3,7 +3,7 @@
 # Both halves are needed and they are not symmetric. A `Certificate` names a
 # Secret in `spec.secretName` and *creates* it; a Pod names one in
 # `volumes[].secret.secretName` and *reads* it. The parked walker
-# (`old-floes/lib/eval/manifest-projections.nix:16-19`) matched `secretName`
+# (the previous `lib/eval/manifest-projections.nix`) matched `secretName`
 # anywhere in the tree and so counted cert-manager's own output as a
 # consumption — which is why this is kind-aware rather than a blanket scan.
 #
