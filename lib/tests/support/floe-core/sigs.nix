@@ -2,7 +2,11 @@
 { floe }:
 
 let
-  T = floe.T;
+  # A pretend distribution, so it extends the prelude the way a real one does
+  # rather than expecting core to carry its domain's types.
+  T = floe.T // {
+    k8sName = floe.T.str;
+  };
 in
 {
   INGRESS = floe.mkSig {

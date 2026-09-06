@@ -74,14 +74,13 @@ let
       mentions = [ ];
     };
 
-    # The same lab plus a mesh control plane. Held out until the gateway can complete its TLS hop to kanidm. See
-    # `lab.unstable` in the environment: the `BackendTLSPolicy` that would
-    # tell traefik which hostname to validate is in Gateway API's
-    # experimental channel and the CRD floe installs the standard one.
+    # The same lab plus a mesh control plane. Held out because netbird's first
+    # identity cannot be minted without a browser — see `lab.unstable` in the
+    # environment for which grants kanidm does and does not have.
     "homelab.mesh" = {
       eligible = false;
       unstable = true;
-      mentions = [ "BackendTLSPolicy" ];
+      mentions = [ "client_credentials" ];
     };
   };
 

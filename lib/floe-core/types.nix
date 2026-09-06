@@ -17,7 +17,6 @@ let
     match
     elem
     hasAttr
-    stringLength
     ;
 
   short =
@@ -71,11 +70,12 @@ rec {
     check = v: isString v && match "[a-z0-9]([-a-z0-9.]*[a-z0-9])?" v != null;
   };
 
-  k8sName = {
-    tag = "k8sName";
-    name = "kubernetes name (DNS-1123 label)";
-    check = v: isString v && stringLength v <= 63 && match "[a-z0-9]([-a-z0-9]*[a-z0-9])?" v != null;
-  };
+  # `k8sName` used to be here, and it was the one thing in this file that made
+  # the header's claim false. A distribution extends the prelude with the
+  # types its domain has — `lib/floe-catallaxy/default.nix` adds that one —
+  # and core carries only what any domain would recognise.
+  #
+  # `dnsName` stays: DNS is not Kubernetes.
 
   enum = values: {
     tag = "enum";

@@ -54,11 +54,24 @@ modifying or reimplementing the module system.
 ### Concepts
 
 **Signature.** A named record schema over data. Field types come from a
-small prelude of domain types (`str`, `port`, `url`, `dnsName`, `k8sName`,
-`enum`, `attrsOf`, `submodule`, `nullOr`, `deferred t`, `template holes t`).
+small prelude of types (`str`, `port`, `url`, `dnsName`, `enum`, `attrsOf`,
+`submodule`, `nullOr`, `deferred t`, `local t`, `template holes t`).
 Signatures contain no functions and no abstract types. Because they are pure
 data, they serialize, and they can be compiled into NixOS option
 declarations.
+
+**A distribution extends the prelude** with the types its domain has, and
+core carries only what any domain would recognise. `k8sName` was listed here
+and implemented in core, which made the claim below — that floe core
+contains no Kubernetes — false; it lives in `lib/floe-catallaxy/prelude.nix`
+now.
+
+Two of the constructors say where and when a value may be used rather than
+what it is. `deferred t` is a value that does not exist until after apply.
+`local t` is a value that means something only inside the link that produced
+it — a service address, a namespace, a reference to something installed here
+— and a link seals it away when the value is offered to another link (§ RFC
+0005 §3.2).
 
 ```nix
 OBSERVER = mkSig {

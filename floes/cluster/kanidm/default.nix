@@ -210,6 +210,51 @@ floe.mkFloe {
                 };
               };
 
+              # The gateway's hop to kanidm is HTTPS — kanidm has no plaintext
+              # mode at all — so the gateway has to be told what signed the
+              # certificate and which name to check it against.
+              #
+              # Without this traefik validates against the pod IP and every
+              # request through the route fails
+              # `x509: cannot validate certificate for 10.244.0.x because it
+              # doesn't contain any IP SANs`, which reads as a certificate
+              # problem in a component that is running and healthy.
+              #
+              # `kaniop.rs/Kanidm` has a `spec.gateway.backendTlsPolicy` field
+              # that accepts exactly this and produces nothing: the CRD
+              # declares it, the value validates, and no policy object is ever
+              # created. Rendered here instead, where its absence is visible.
+              kanidm-backend-tls = {
+                apiVersion = "gateway.networking.k8s.io/v1alpha3";
+                kind = "BackendTLSPolicy";
+                metadata = {
+                  name = "kanidm";
+                  namespace = inputs.namespace;
+                  labels."app.kubernetes.io/managed-by" = "catallaxy";
+                };
+                spec = {
+                  targetRefs = [
+                    {
+                      group = "";
+                      kind = "Service";
+                      inherit name;
+                    }
+                  ];
+                  validation = {
+                    # The name on the certificate, not the Service's — this is
+                    # what the gateway checks the presented cert against.
+                    hostname = inputs.domain;
+                    caCertificateRefs = [
+                      {
+                        group = "";
+                        kind = "ConfigMap";
+                        name = trust.caBundle.name;
+                      }
+                    ];
+                  };
+                };
+              };
+
               kanidm = {
                 apiVersion = "kaniop.rs/v1beta1";
                 kind = "Kanidm";
@@ -246,23 +291,13 @@ floe.mkFloe {
                   # its own attachment point, and a floe spelling the
                   # gateway's name and listener for itself is the by-name
                   # coupling `API_GATEWAY` exists to remove.
+                  # kaniop renders the HTTPRoute from this. It does *not*
+                  # render `backendTlsPolicy`, whatever the CRD's schema
+                  # accepts — the field validates and nothing appears — so the
+                  # policy is a resource of this floe's own, below.
                   gateway = {
                     parentRefs = [ gateway.parentRef ];
                     hostnames = [ inputs.domain ];
-
-                    # kanidm has no plaintext mode, so the hop from the
-                    # gateway to it is HTTPS and the gateway has to trust what
-                    # signed it.
-                    backendTlsPolicy.validation = {
-                      hostname = inputs.domain;
-                      caCertificateRefs = [
-                        {
-                          group = "";
-                          kind = "ConfigMap";
-                          name = trust.caBundle.name;
-                        }
-                      ];
-                    };
                   };
 
                   tlsSecretName = tlsSecret;

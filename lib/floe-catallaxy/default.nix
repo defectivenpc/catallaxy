@@ -4,7 +4,8 @@
 { lib, pkgs }:
 
 let
-  floe = import ../floe-core { inherit lib; };
+  # Core plus this domain's own types; see ./prelude.nix.
+  floe = import ./prelude.nix { inherit lib; };
 in
 {
   inherit floe;

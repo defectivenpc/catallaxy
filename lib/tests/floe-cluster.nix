@@ -12,7 +12,9 @@
 { lib }:
 
 let
-  floe = import ../floe-core { inherit lib; };
+  # The distribution's prelude, not core's: `component.nix` is a
+  # distribution module and speaks its domain's types.
+  floe = import ../floe-catallaxy/prelude.nix { inherit lib; };
   kinds = import ../floe-catallaxy/component.nix { inherit lib floe; };
   sigs = import ../floe-catallaxy/sigs.nix { inherit floe; };
   policies = import ../floe-catallaxy/policies.nix { inherit lib; };
