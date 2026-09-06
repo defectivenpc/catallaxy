@@ -152,6 +152,29 @@ let
       };
     };
 
+    # The control plane, as a peer sees it. `managementInternalUrl` is here
+    # and `T.local`, so a floe reading it in isolation succeeds and the same
+    # floe reading it across a lab scope throws — which is why a check that
+    # cares has to assert on which one was used, not merely that one was.
+    mesh = {
+      sig = sigs.MESH_NETWORK;
+      value = {
+        namespace = "netbird";
+        managementUrl = "https://netbird.stub.test";
+        managementInternalUrl = "http://netbird-management.netbird.svc.cluster.local:80";
+        dashboardUrl = "https://netbird.stub.test";
+      };
+    };
+
+    meshAdmin = {
+      sig = sigs.MESH_ADMIN;
+      value.tokenSecret = {
+        namespace = "netbird";
+        name = "netbird-api-token";
+        key = "token";
+      };
+    };
+
     identityOperator = {
       sig = sigs.IDENTITY_OPERATOR;
       value = {

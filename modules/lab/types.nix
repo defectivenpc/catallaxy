@@ -52,6 +52,9 @@ let
       ) instances
     );
 
+  # The lab offers everything its own floes promise. A floe here exists only
+  # to answer a signature — it renders nothing and has no cluster to be local
+  # to — so there is no second kind of promise for it to hold back.
   labOwn = entriesOf {
     prefix = "lab";
     origin = "the lab";
@@ -59,18 +62,45 @@ let
     provideOf = unit: instName: labLink.provides.${unit}.${instName};
   };
 
+  # A cluster offers named promises, `<unit>/<provide>`, so a floe holding one
+  # that travels and one that cannot is not all-or-nothing.
+  offerEntry =
+    clusterName: cluster: spec:
+    let
+      parts = lib.splitString "/" spec;
+      bad =
+        reason:
+        throw (
+          "cluster '${clusterName}' offers '${spec}' to the lab, ${reason}.\n"
+          + "An offer names one promise as '<unit>/<provide>'."
+        );
+      unit = lib.elemAt parts 0;
+      instName = lib.elemAt parts 1;
+      inst = cluster.floes.${unit} or (bad "and declares no unit '${unit}'");
+      sig = inst.def.provides.${instName} or (bad "and its unit '${unit}' provides no '${instName}'");
+    in
+    if lib.length parts != 2 then
+      bad "which is not one of those"
+    else if catallaxy.floe.isUncrossable sig then
+      # `link` refuses this too, when a cluster is handed such an entry. Here
+      # is earlier and better placed: it names the offer rather than whichever
+      # sibling first resolved against it, it says so to whoever wrote the
+      # line, and it fires in a lab that has one cluster — where there is no
+      # sibling to be handed anything.
+      bad (
+        "and every field of '${sig.name}' is link-local. These are the "
+        + "promises that something is running *in a particular place* — a "
+        + "controller, a webhook, a Secret — and no other cluster is that place"
+      )
+    else
+      lib.nameValuePair "${clusterName}/${unit}/${instName}" {
+        inherit sig;
+        value = cluster.link.provides.${unit}.${instName};
+        origin = "cluster '${clusterName}', unit '${unit}'";
+      };
+
   offered = lib.mapAttrs (
-    clusterName: cluster:
-    entriesOf {
-      prefix = clusterName;
-      origin = "cluster '${clusterName}'";
-      instances = lib.genAttrs cluster.provides (
-        unit:
-        cluster.floes.${unit}
-          or (throw "cluster '${clusterName}' offers unit '${unit}' to the lab, which it does not declare")
-      );
-      provideOf = unit: instName: cluster.link.provides.${unit}.${instName};
-    }
+    clusterName: cluster: lib.listToAttrs (map (offerEntry clusterName cluster) cluster.provides)
   ) config.lab.clusters;
 
   # Its own offers are excluded, and that is what breaks the evaluation cycle

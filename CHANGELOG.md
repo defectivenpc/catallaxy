@@ -25,7 +25,57 @@ The format is based on
   API's experimental CRD channel was missing — was wrong. That channel is
   what `gateway-api-crds` installs.
 
+### Added
+
+- **netbird's operator is a floe of its own, and it runs in both clusters.**
+  It was a bundle inside `floes/cluster/netbird`, which made "which cluster
+  runs the control plane" and "which clusters are on the mesh" the same
+  question — the one thing a mesh exists to make different. A mesh has one
+  control plane and as many operators as it has member clusters, and a floe
+  cannot be instantiated twice in one link.
+
+  `homelab.mesh` now runs `netbird` on `core` and `netbird-operator` on
+  both. `core` offers one promise, `netbird/mesh`; `obs` has no control
+  plane, so its operator's `MESH_NETWORK` hole finds nothing local and
+  resolves from the lab scope. Both render the identical chart, dialling
+  `https://netbird.homelab.test`.
+
+  That identity is the design and not a simplification.
+  `managementInternalUrl` is a Service address and would be one hop shorter
+  on `core`, and the floe cannot ask for it: it is `T.local`, so it is a
+  value in one instantiation and a throw in the next, and **nothing tells a
+  floe body which link it is in** — deliberately, because a floe that could
+  ask would start branching on it. Proven by pointing the chart at the
+  internal URL, which fails with
+  `'MESH_NETWORK.managementInternalUrl' is local to the link that provided it (cluster 'core', unit 'netbird') ... Fields that do travel: dashboardUrl, managementUrl.`
+
 ### Changed
+
+- **A cluster offers promises, not units.** `lab.clusters.<c>.provides` was
+  a list of unit names and is now `<unit>/<provide>`. netbird is the case
+  that forced it: it promises `MESH_NETWORK`, which is the mesh and spans
+  clusters, and `MESH_ADMIN`, which is a reference to the Secret holding the
+  token that administers it and can never mean anything anywhere else.
+  Offering the unit offered both, and `link` was right to refuse.
+
+  The refusal also moved to where the line is written. `floe.isUncrossable`
+  is one predicate in floe-core now, used by `link` when it is handed a
+  scope and by the lab when it assembles one — so an un-offerable promise is
+  refused at the offer, in a lab with one cluster, instead of at whichever
+  sibling first resolved against it.
+
+- **The token crosses as a value, not as configuration.** `MESH_ADMIN` is
+  where netbird put the personal access token; `netbird-operator` resolves
+  it for free beside the control plane and takes `tokenSecret` as a lab
+  input everywhere else, while the token itself travels through
+  `lab.secrets.{publish,subscribe}` as every value does. Two mechanisms, and
+  the split is the rule that no floe carries secret material: a signature
+  carries an address, a subscription carries content.
+
+  The floe refuses both answers at once and neither, rather than picking:
+  naming the Secret beside the control plane is a second place to be wrong,
+  and naming it nowhere in a second cluster is an operator that never
+  starts.
 
 - **The lab is a scope, and provides into it.** A cluster's link is given
   the lab's provides plus every other cluster's offered ones, resolved

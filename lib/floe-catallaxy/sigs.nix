@@ -582,6 +582,57 @@ in
     };
   };
 
+  # Who may administer the mesh, as a reference to the credential.
+  #
+  # Separate from MESH_NETWORK because the two have opposite reach. The mesh
+  # itself is the thing that spans clusters; the token that configures it is a
+  # Secret in one namespace of one cluster, and a reference to it means nothing
+  # anywhere else. Offering them as one — which is what a unit-level offer
+  # would do — is offering a lie with the truth.
+  #
+  # A reference and not the value: a floe never carries secret material, and
+  # the *value* crosses a cluster boundary the way every other secret does,
+  # through `lab.secrets.{publish,subscribe}`.
+  MESH_ADMIN = floe.mkSig {
+    name = "MESH_ADMIN";
+    fields = {
+      tokenSecret = T.local (
+        T.record {
+          namespace = T.k8sName;
+          name = T.k8sName;
+          key = T.str;
+        }
+      );
+    };
+  };
+
+  # Something in *this* cluster reconciling mesh CRs.
+  #
+  # The counterpart to MESH_NETWORK, and local for the reason every operator
+  # signature is: a CR applied where no controller watches it is admitted by
+  # the API server and then nothing happens. A floe putting its Service on the
+  # mesh needs both — the network to join, and an operator here to do it.
+  MESH_OPERATOR = floe.mkSig {
+    name = "MESH_OPERATOR";
+    fields = {
+      namespace = T.local T.k8sName;
+      crdKinds = T.local (T.listOf T.str);
+
+      # The router every NetworkResource attaches to, which is what makes a
+      # Service reachable from the mesh rather than merely declared on it.
+      # Null until the cluster runs a routing peer, so a consumer can say
+      # "declared but not routed" instead of rendering a dangling reference.
+      routerRef = T.local (
+        T.nullOr (
+          T.record {
+            name = T.k8sName;
+            namespace = T.k8sName;
+          }
+        )
+      );
+    };
+  };
+
   # How the cluster's manifests reach it. A policy value rather than a
   # component: nothing installs it, and the floes that read it are choosing
   # between rendering for a CD tool and rendering for a direct apply.

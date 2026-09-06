@@ -115,8 +115,13 @@
     # The mesh control plane. Its OIDC client is public and PKCE-based, which
     # is the third shape of consumer kanidm has here — beside harbor's
     # confidential client and forgejo's.
-    netbird = floes.netbird {
-      operatorChart = "${cataCharts.netbird-operator.chart}";
+    netbird = floes.netbird { };
+
+    # Beside the control plane, so it resolves both `MESH_NETWORK` and
+    # `MESH_ADMIN` locally and the lab says nothing about either. In
+    # `homelab.mesh` the same floe runs in a second cluster with neither.
+    netbird-operator = floes.netbird-operator {
+      chart = "${cataCharts.netbird-operator.chart}";
     };
 
     # The first consumer of GIT_REPOSITORY, and the reason it carries two

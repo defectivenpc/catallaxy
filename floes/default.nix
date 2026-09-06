@@ -26,6 +26,7 @@
     lab-dns = ./cluster/lab-dns;
     loki = ./cluster/loki;
     netbird = ./cluster/netbird;
+    netbird-operator = ./cluster/netbird-operator;
     openbao = ./cluster/openbao;
     openebs = ./cluster/openebs;
     otel-collector = ./cluster/otel-collector;

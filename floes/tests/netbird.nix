@@ -10,14 +10,12 @@ let
   support = import ./support.nix { inherit lib pkgs; };
   r = support.evalFloe {
     name = "netbird";
-    inputs.operatorChart = "/nix/store/fake-netbird-operator-chart";
   };
 
   server = r.bundles.server;
   creds = r.bundles.credentials;
   dash = r.bundles.dashboard;
   auto = r.bundles.automation;
-  op = r.bundles.operator;
 
   mgmt = server.resources.netbird-management;
 
@@ -454,26 +452,24 @@ lib.runTests {
     };
   };
 
-  # The operator reads the token the step wrote, and nothing else mints one.
-  testTheOperatorSpendsTheTokenTheStepMinted = {
-    expr = op.helmCharts.netbird-operator.values.netbirdAPI.keyFromSecret;
+  # Where the token landed, said once, by whoever chose the name. The operator
+  # is `floes/cluster/netbird-operator` now and may be in another cluster
+  # entirely; what stays here is minting the token and promising its address.
+  testItPromisesWhereTheTokenLanded = {
+    expr = r.provides.admin.tokenSecret;
     expected = {
+      namespace = "netbird";
       name = "netbird-api-token";
       key = "token";
     };
   };
 
-  # Ordering, stated once: the token step needs a running management to ask,
-  # and the operator cannot start without the answer.
+  # Ordering, stated once: the token step needs a running management to ask.
+  # What waits on the step is whoever resolved MESH_ADMIN, through `backs`,
+  # and that is a different floe.
   testTheChainIsOrderedByWhatItNeeds = {
-    expr = {
-      automation = auto.needs;
-      operator = op.needs;
-    };
-    expected = {
-      automation = [ "server" ];
-      operator = [ "automation" ];
-    };
+    expr = auto.needs;
+    expected = [ "server" ];
   };
 
   # ---- claims about itself ------------------------------------------------
@@ -488,7 +484,6 @@ lib.runTests {
       images = [
         "netbird/automation/tools"
         "netbird/dashboard/dashboard"
-        "netbird/operator/operator"
         "netbird/server/management"
         "netbird/server/relay"
         "netbird/server/signal"
@@ -497,11 +492,16 @@ lib.runTests {
     };
   };
 
-  # A consumer resolving MESH_NETWORK waits for the servers, not for the UI in
-  # front of them: the dashboard being down is not the mesh being down.
-  testTheUiIsNotWhatBacksThePromise = {
+  # Two promises, two waits. A consumer resolving MESH_NETWORK waits for the
+  # servers and not for the UI in front of them — the dashboard being down is
+  # not the mesh being down — while one resolving MESH_ADMIN waits for the Job
+  # that mints the token, which is a longer wait and only for whoever needs it.
+  testEachPromiseWaitsForWhatStandsBehindIt = {
     expr = r.component.backs;
-    expected.mesh = [ "server" ];
+    expected = {
+      mesh = [ "server" ];
+      admin = [ "automation" ];
+    };
   };
 
   # Two URLs for one server. An in-cluster consumer that used the routed one

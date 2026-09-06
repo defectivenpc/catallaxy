@@ -1,10 +1,11 @@
 # The one credential nobody owns, and the operator that spends it.
 #
 # Everything else in this floe is declarative because something else
-# reconciles it: kaniop owns the service account and rotates its token,
-# netbird-operator owns groups, setup keys, routers and network resources.
-# Between the two sits a netbird personal access token — minted by netbird,
-# owned by nobody, and expiring.
+# reconciles it: kaniop owns the service account and rotates its token, and
+# `netbird-operator` — a floe of its own, possibly in another cluster — owns
+# groups, setup keys, routers and network resources. Between the two sits a
+# netbird personal access token, minted by netbird, owned by nobody, and
+# expiring.
 #
 # So that is the only thing here that is a script, and the only thing that
 # self-heals. The same script runs as a Job at install and as a CronJob after,
@@ -13,7 +14,6 @@
   lib,
   k8s,
   nb,
-  kinds,
 }:
 
 let
@@ -218,30 +218,6 @@ in
           failedJobsHistoryLimit = 3;
           startingDeadlineSeconds = 300;
           jobTemplate.spec.template.spec = podSpec;
-        };
-      };
-    };
-
-  # The operator, and what it needs to have happened first.
-  operator =
-    { chart }:
-    {
-      helmCharts.netbird-operator = kinds.mkHelmChart {
-        inherit chart;
-        releaseName = "netbird-operator";
-        inherit namespace;
-        values = {
-          managementURL = nb.managementInternalUrl;
-
-          netbirdAPI.keyFromSecret = {
-            name = nb.patSecret;
-            key = nb.patKey;
-          };
-
-          # The operator's admission webhook validates the CRs below. Failing
-          # open, because a webhook that is not up yet must not block the
-          # apply that installs the thing it validates.
-          webhook.failurePolicy = "Ignore";
         };
       };
     };

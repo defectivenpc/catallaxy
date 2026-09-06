@@ -1,5 +1,5 @@
 # Signatures and output kinds. Both are pure data.
-{ lib }:
+{ lib, types }:
 
 {
   # A signature: a named record schema over data.
@@ -17,6 +17,16 @@
     __floeSig = true;
     inherit name fields;
   };
+
+  # Whether a promise of this signature could mean anything in another link.
+  #
+  # Derived from the fields rather than declared beside them, so a signature
+  # that gains a routed address starts crossing without anyone remembering to
+  # say so. `link` refuses such an entry in its scope, and a container that
+  # assembles scopes should refuse the *offer* — which is where whoever wrote
+  # it can do something about it, and is reachable even when no second link
+  # exists yet to be handed one.
+  isUncrossable = sig: lib.all (t: types.isLocal t) (lib.attrValues sig.fields);
 
   # An output kind: a registered dotted name plus a schema for one class of
   # build product. Kinds are defined by distributions, not floe core.

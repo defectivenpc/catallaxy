@@ -4,6 +4,7 @@
 {
   lib,
   types,
+  interfaces,
   floeLib,
 }:
 
@@ -254,9 +255,7 @@
       # of the fields instead of being asserted beside them — so a signature
       # that gains a routed address starts crossing without anyone
       # remembering to say so.
-      uncrossable = lib.filter (
-        n: lib.all (t: types.isLocal t) (lib.attrValues scope.${n}.sig.fields)
-      ) scopeNames;
+      uncrossable = lib.filter (n: interfaces.isUncrossable scope.${n}.sig) scopeNames;
 
       fixed = lib.fix (
         self:

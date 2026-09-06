@@ -12,6 +12,7 @@
   lib,
   pkgs,
   mkLab,
+  labDefs,
 }:
 
 let
@@ -87,7 +88,7 @@ let
             cert-manager = floes.cert-manager { chart = "/dev/null"; };
             trust-manager = floes.trust-manager { chart = "/dev/null"; };
           };
-          provides = [ "cert-manager" ];
+          provides = [ "cert-manager/issuance" ];
         };
       };
   };
@@ -120,31 +121,77 @@ let
                 server = "172.27.0.1";
               };
             };
-            provides = lib.optional (lib.elem clusterName offerers) "zone";
+            provides = lib.optional (lib.elem clusterName offerers) "zone/zone";
           });
         };
     };
 
-  # A name that resolves to no unit. One cluster, one floe, nothing else that
-  # could fail — so `tryEval` catching *something* can only be this.
-  undeclared = mkScopeLab {
+  # One cluster, one floe, nothing else that could fail — so `tryEval`
+  # catching *something* can only be the offer.
+  offeringOnly =
+    {
+      subnet,
+      dnsPort,
+      name,
+    }:
+    spec:
+    mkScopeLab {
+      inherit name subnet dnsPort;
+      body =
+        { floes }:
+        {
+          lab.clusters.core = {
+            floes.cluster = floes.k3d-cluster {
+              name = "core";
+              instanceName = "${name}-core";
+            };
+            provides = [ spec ];
+          };
+        };
+    };
+
+  offeringUnit = offeringOnly {
     name = "scope-undeclared";
     subnet = "172.26.0.0/16";
     dnsPort = 5376;
-    body =
-      { floes }:
-      {
-        lab.clusters.core = {
-          floes.cluster = floes.k3d-cluster {
-            name = "core";
-            instanceName = "scope-undeclared-core";
-          };
-          provides = [ "nope" ];
-        };
-      };
   };
 
+  # A cluster with a cert-manager, offering one promise or the other. One of
+  # the two can cross and one cannot, which is the case the offer surface is
+  # per promise for.
+  offeringCertManager =
+    spec:
+    mkScopeLab {
+      name = "scope-cm";
+      subnet = "172.25.0.0/16";
+      dnsPort = 5377;
+      body =
+        { floes }:
+        {
+          lab.clusters.core = {
+            floes = {
+              cluster = floes.k3d-cluster {
+                name = "core";
+                instanceName = "scope-cm-core";
+              };
+              cert-manager = floes.cert-manager { chart = "/dev/null"; };
+            };
+            provides = [ spec ];
+          };
+        };
+    };
+
   refuses = l: !(builtins.tryEval (builtins.deepSeq l.config.lab.out.cliConfig "evaluated")).success;
+
+  # ---- the shipped lab that actually crosses ------------------------------
+  #
+  # Everything above is a fixture bent one way at a time. This is `homelab.mesh`
+  # as it ships: `core` runs netbird and offers `netbird/mesh`, `obs` runs an
+  # operator and nothing else of the mesh.
+  mesh = labDefs."homelab.mesh".config.lab.clusters;
+
+  operatorValues =
+    cluster: mesh.${cluster}.out.bundles."netbird-operator/operator".helmCharts.netbird-operator.values;
 
   results = lib.runTests {
 
@@ -217,11 +264,37 @@ let
       expected = false;
     };
 
-    # Offering a unit the cluster does not declare is a name resolving to
-    # nothing. Refused rather than silently contributing no entry, which is
-    # what a typo would otherwise do.
-    testOfferingAUnitTheClusterDoesNotHaveIsRefused = {
-      expr = refuses undeclared;
+    # A name resolving to nothing, in each of the three ways it can. Refused
+    # rather than silently contributing no entry, which is what a typo would
+    # otherwise do.
+    testAnOfferThatNamesNothingIsRefused = {
+      expr = map (spec: refuses (offeringUnit spec)) [
+        "cluster" # no promise named
+        "nope/it" # no such unit
+        "cluster/nope" # unit, no such promise
+      ];
+      expected = [
+        true
+        true
+        true
+      ];
+    };
+
+    # `X509_ISSUANCE` is a mix — `publicIssuer` is true wherever it is asked —
+    # so the promise crosses even though most of its fields do not.
+    testAPromiseWithSomethingPortableCanBeOffered = {
+      expr = refuses (offeringCertManager "cert-manager/issuance");
+      expected = false;
+    };
+
+    # `X509_WEBHOOK` is entirely local. Refused where it is offered, which is
+    # where a lab author can do something about it — not in whichever cluster
+    # first resolved a hole against it.
+    #
+    # The pair is the point of naming promises rather than units: one floe,
+    # one offerable and one not.
+    testAPromiseThatCannotTravelIsRefused = {
+      expr = refuses (offeringCertManager "cert-manager/webhook");
       expected = true;
     };
   };

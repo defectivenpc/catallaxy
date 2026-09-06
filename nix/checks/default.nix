@@ -48,6 +48,7 @@
     lib
     pkgs
     mkLab
+    labDefs
     ;
 }
 // import ./secret-sharing.nix {

@@ -10,13 +10,12 @@
 # It is not the whole of the parked floe, which was 4,890 lines across twenty
 # files. Three layers of it are not here and are named rather than omitted:
 #
-# **The operator** (`netbird.io/Group`, `netbird.io/SetupKey`) reconciles mesh
-# state from CRs, which is how a lab declares a setup key instead of clicking
-# one. It authenticates to netbird's API with a personal access token, and
-# that token is minted by a bootstrap Job that first authenticates *to kanidm*
-# with a service-account credential. The new kanidm floe mints no service
-# accounts, so that chain has a missing first link — it is the work this floe
-# is blocked on, not something skipped for time.
+# **The operator** is `floes/cluster/netbird-operator`, a floe of its own. It
+# is not part of this one because it does not have to run where this one does:
+# a cluster with no control plane still reconciles mesh CRs against the
+# control plane in another, which is what `MESH_NETWORK` crossing a lab scope
+# is for. What stays here is the credential it spends — this floe mints the
+# personal access token and promises where it landed (`MESH_ADMIN`).
 #
 # **The agent** is an in-cluster peer advertising the cluster's service range
 # into the mesh, which is what makes one cluster reachable from another. It
@@ -108,18 +107,6 @@ floe.mkFloe {
       description = "Registry every netbird image is pulled from.";
     };
 
-    operatorChart = lib.mkOption {
-      type = lib.types.str;
-      description = ''
-        Store path of the netbird-operator chart. Required.
-
-        The operator is what makes mesh state declarative: groups, setup keys,
-        routers and the Services exposed on the mesh are all CRs it
-        reconciles. Without it a lab is back to clicking a setup key into the
-        dashboard and hoping nothing drifts.
-      '';
-    };
-
     storage = lib.mkOption {
       type = lib.types.str;
       default = "1Gi";
@@ -167,6 +154,13 @@ floe.mkFloe {
   requires.identity = sigs.IDENTITY_OPERATOR;
 
   provides.mesh = sigs.MESH_NETWORK;
+
+  # Where the token that administers the mesh lands. A separate promise rather
+  # than a field of MESH_NETWORK, because the two have opposite reach: the
+  # mesh spans clusters and this is a Secret in one namespace of one of them.
+  # `netbird-operator` resolves this when it runs beside the control plane and
+  # is told where the token is when it does not.
+  provides.admin = sigs.MESH_ADMIN;
 
   out.component = kinds.component;
 
@@ -306,14 +300,7 @@ floe.mkFloe {
         k8s = import ./k8s.nix { inherit lib nb; };
         management = import ./management.nix { inherit lib k8s nb; };
         workloads = import ./workloads.nix { inherit lib k8s nb; };
-        automation = import ./automation.nix {
-          inherit
-            lib
-            k8s
-            nb
-            kinds
-            ;
-        };
+        automation = import ./automation.nix { inherit lib k8s nb; };
 
         # One hostname, five rules. Written out rather than built with
         # `kinds.mkRoute`, which makes a single-backend route — the shape
@@ -396,6 +383,12 @@ floe.mkFloe {
 
           # One name, so the UI and the API are the same origin.
           dashboardUrl = "https://${apiDomain}";
+        };
+
+        config.floe.provides.admin.tokenSecret = {
+          namespace = ns;
+          name = nb.patSecret;
+          key = nb.patKey;
         };
 
         config.floe.out.component = kinds.mkComponent {
@@ -538,8 +531,8 @@ floe.mkFloe {
             # The identity, and the one token nobody else owns.
             #
             # After the server, because it asks netbird a question before it
-            # does anything — and before the operator, which cannot start
-            # without the answer.
+            # does anything. What waits on *this* is whoever resolved
+            # `MESH_ADMIN` — the operator, wherever it runs.
             automation = kinds.mkBundle {
               needs = [ "server" ];
 
@@ -561,48 +554,14 @@ floe.mkFloe {
               # while the token was still being minted.
               ready = nb.serviceAccount.ready;
             };
-
-            operator = kinds.mkBundle {
-              needs = [ "automation" ];
-
-              helmCharts = (automation.operator { chart = inputs.operatorChart; }).helmCharts;
-
-              needsSecrets = [ "${ns}/${nb.patSecret}" ];
-
-              # The chart's own image, declared because the chart is opaque
-              # until apply and an operator mirroring this lab into an airgap
-              # gets what was declared and nothing else.
-              images.operator = {
-                registry = "ghcr.io";
-                repository = "netbirdio/netbird-operator";
-                tag = "v0.7.0";
-                digest = null;
-              };
-
-              # The CRDs come from the chart, so a CR of these kinds is
-              # ordered after it by the derived `kind:` edge rather than by
-              # anything written here.
-              crds = [
-                "netbird.io/Group"
-                "netbird.io/SetupKey"
-                "netbird.io/NetworkRouter"
-                "netbird.io/NetworkResource"
-                "netbird.io/NBPolicy"
-              ];
-
-              ready = {
-                kind = "condition";
-                resource = "deployment/netbird-operator";
-                namespace = ns;
-                condition = "Available";
-                timeout = "5m";
-              };
-            };
           };
 
-          # What stands behind the promise: a consumer resolving MESH_NETWORK
-          # waits for the servers, not for the UI in front of them.
+          # What stands behind each promise. A consumer resolving MESH_NETWORK
+          # waits for the servers, not for the UI in front of them; one
+          # resolving MESH_ADMIN waits for the Job that mints the token, which
+          # is a longer wait and only for whoever actually needs it.
           backs.mesh = [ "server" ];
+          backs.admin = [ "automation" ];
         };
       }
     )

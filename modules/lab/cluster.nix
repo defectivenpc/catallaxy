@@ -338,26 +338,30 @@ types.submodule (
       provides = mkOption {
         type = types.listOf types.str;
         default = [ ];
-        example = [ "netbird" ];
+        example = [ "netbird/mesh" ];
         description = ''
-          Units in this cluster whose provides are offered to the lab.
+          Promises this cluster offers to the lab, as `<unit>/<provide>`.
 
           A link is per-cluster, so `requires.mesh = MESH_NETWORK` finds only
           what is in the same cluster — right for almost everything, and wrong
-          for the few things a lab has one of. Naming a unit here puts its
-          provides in the lab's scope, where every *other* cluster resolves
-          them if nothing of its own answers first.
+          for the few things a lab has one of. Naming a promise here puts it
+          in the lab's scope, where every *other* cluster resolves it if
+          nothing of its own answers first.
 
           Nearer wins, so offering something lab-wide cannot break a cluster
           that already has its own: a cluster with a gateway keeps it, and one
           without picks up the lab's.
 
-          Opt-in per unit rather than automatic. A cluster's floes provide
-          plenty that is meaningless elsewhere — an in-cluster Service
-          address, a webhook only its own API server calls — and offering
-          everything would make those resolvable by accident. What is
-          *readable* across the boundary is then decided per field by
-          `T.local`; see `lib/floe-core/link.nix`.
+          Per promise rather than per unit, because one floe holds both kinds.
+          `netbird` provides `MESH_NETWORK`, which is the whole point of a
+          mesh, and `MESH_ADMIN`, which is a reference to a Secret in this
+          cluster and can never mean anything anywhere else — offering the
+          unit would offer both, and `link` is right to refuse the second.
+
+          Opt-in rather than automatic, for the same reason: a cluster's floes
+          promise plenty that is meaningless elsewhere. What is *readable*
+          across the boundary is then decided per field by `T.local`; see
+          `lib/floe-core/link.nix`.
         '';
       };
 
