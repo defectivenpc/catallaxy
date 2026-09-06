@@ -86,11 +86,16 @@ in
   # Split and reversed, `cert-manager -> nothing` and
   # `trust-manager -> cert-manager`, which is a DAG at any granularity.
 
+  # Entirely local, and the clearest case of it: a webhook serving admission
+  # for CRDs installed here. Offered to another cluster it would name a
+  # namespace that has no such Deployment and kinds the API server has never
+  # heard of, which is why `link` refuses the whole signature at a boundary
+  # rather than waiting for a field to be read.
   X509_WEBHOOK = floe.mkSig {
     name = "X509_WEBHOOK";
     fields = {
-      namespace = T.k8sName;
-      crdKinds = T.listOf T.str;
+      namespace = T.local T.k8sName;
+      crdKinds = T.local (T.listOf T.str);
     };
   };
 
@@ -100,21 +105,33 @@ in
       # Whether the issuer's chain is one a public client already trusts. A
       # self-signed lab CA is not, and a consumer that cares has to be able
       # to ask rather than assume.
+      # Not local: it is a fact about the chain, true wherever it is asked.
       publicIssuer = T.bool;
-      issuerRef = T.record {
-        name = T.str;
-        kind = T.str;
-      };
+
+      # A ClusterIssuer object in this cluster. A Certificate elsewhere naming
+      # it stays pending forever against an issuer that does not exist.
+      issuerRef = T.local (
+        T.record {
+          name = T.str;
+          kind = T.str;
+        }
+      );
 
       # Where the issuer's own CA certificate lives, for whoever distributes
       # it. Null when the issuer is a public one and there is nothing to
       # distribute.
-      caSecret = T.nullOr (
-        T.record {
-          name = T.str;
-          key = T.str;
-          namespace = T.k8sName;
-        }
+      # Local for the same reason, and the caveat is worth stating: the CA
+      # *certificate* is perfectly portable, and `lab.secrets.publish` is how
+      # it travels. What cannot travel is this reference to where it happens
+      # to sit here.
+      caSecret = T.local (
+        T.nullOr (
+          T.record {
+            name = T.str;
+            key = T.str;
+            namespace = T.k8sName;
+          }
+        )
       );
     };
   };
@@ -501,6 +518,34 @@ in
       queryUrl = T.local T.str;
       otlpGrpc = T.local T.str;
       otlpHttp = T.local T.str;
+    };
+  };
+
+  # The lab's own DNS zone, and where its authoritative server answers.
+  #
+  # The first signature provided by a *lab* rather than by something in a
+  # cluster. It carries a fact the lab decides and every cluster reads —
+  # `lab-dns` teaches each cluster's CoreDNS about the zone, `external-dns`
+  # publishes records into it — and until now each of those took the same
+  # three values as inputs, threaded by hand at every instantiation, with
+  # nothing checking that two floes in one lab were told the same thing.
+  #
+  # Every field is portable. The server is the docker bridge gateway, which
+  # every cluster on the lab's network reaches, and the zone and port are
+  # decisions rather than addresses — so this crosses to every cluster
+  # without a `T.local` anywhere in it.
+  DNS_ZONE = floe.mkSig {
+    name = "DNS_ZONE";
+    fields = {
+      # `lab.test`, no trailing dot: it is both the zone and the suffix every
+      # routed hostname hangs off.
+      zone = T.dnsName;
+
+      # Where the authoritative server answers, as seen from inside the lab
+      # network. The bridge gateway rather than loopback — `127.0.0.1` in a
+      # pod is the pod.
+      server = T.str;
+      port = T.port;
     };
   };
 

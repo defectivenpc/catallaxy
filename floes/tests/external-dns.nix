@@ -14,11 +14,16 @@ let
       name = "external-dns";
       inputs = {
         chart = "/dev/null";
-        zone = "lab.test";
-        dnsServer = "172.20.0.1";
         tsigSecretRef = "external-dns/externaldns-tsig";
       }
-      // extra;
+      // (removeAttrs extra [ "zone" ]);
+
+      # The zone is no longer an input — it arrives through `DNS_ZONE`, from
+      # the lab — so a check that varies it varies the provider.
+      stubValues.zone = {
+        zone = "lab.test";
+      }
+      // (lib.filterAttrs (n: _: n == "zone") extra);
     };
 
   r = evalWith { };
@@ -56,10 +61,7 @@ lib.runTests {
     expr = map (a: a.assertion) (
       (evalWith { tsigSecretRef = "elsewhere/externaldns-tsig"; }).component.assertions
     );
-    expected = [
-      false
-      true
-    ];
+    expected = [ false ];
   };
 
   # The lab has to know something must land this Secret; nothing in the
@@ -78,12 +80,12 @@ lib.runTests {
     expected = [ "lab.test" ];
   };
 
+  # Refused by `DNS_ZONE`'s own type, at the lab that decides the zone, not by
+  # an assertion in each floe that reads one. `support.fails` rather than an
+  # assertion list because a type error throws.
   testItRefusesATrailingDot = {
-    expr = map (a: a.assertion) ((evalWith { zone = "lab.test."; }).component.assertions);
-    expected = [
-      true
-      false
-    ];
+    expr = support.fails (evalWith { zone = "lab.test."; }).component;
+    expected = true;
   };
 
   # Two clusters publishing into one zone each need to know which records are

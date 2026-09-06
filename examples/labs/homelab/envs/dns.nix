@@ -45,9 +45,7 @@
 
   lab.clusters.core.floes.external-dns = floes.external-dns {
     chart = "${cataCharts.external-dns.chart}";
-    inherit (config.lab.dns) zone tsigKeyname tsigSecretAlg;
-    dnsServer = config.lab.network.gateway;
-    dnsPort = config.lab.dns.port;
+    inherit (config.lab.dns) tsigKeyname tsigSecretAlg;
 
     tsigSecretRef = "external-dns/externaldns-tsig";
 

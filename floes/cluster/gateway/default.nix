@@ -33,11 +33,6 @@ floe.mkFloe {
       '';
     };
 
-    baseDomain = lib.mkOption {
-      type = lib.types.str;
-      description = "Domain the routes through this gateway hang off. Required.";
-    };
-
     namespace = lib.mkOption {
       type = lib.types.str;
       default = "kube-system";
@@ -93,6 +88,12 @@ floe.mkFloe {
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
 
+  # The domain routes through this gateway hang off. Every lab passed
+  # `config.lab.dns.zone` here and the gateway then re-published it as
+  # `API_GATEWAY.baseDomain` for its consumers, so the value made a round trip
+  # through an input that could only ever hold one answer.
+  requires.zone = sigs.DNS_ZONE;
+
   # The Gateway and GatewayClass objects below have no types without these.
   # Resolved from a peer rather than installed here, because cilium's floe
   # needs the same CRDs and two installs of one thing is the conflict the
@@ -124,6 +125,7 @@ floe.mkFloe {
       { config, lib, ... }:
       let
         inputs = config.floe.inputs;
+        zone = config.floe.requires.zone;
 
         # Exactly-one, expressed over a fan-in hole: a lab either has an
         # issuer in the link or it does not, and `tls.enable` says which the
@@ -161,15 +163,15 @@ floe.mkFloe {
             # Inert to Kubernetes and load-bearing for
             # `lint.route-hostname-in-zone`, which reads what was applied
             # rather than what a floe was configured with. Without it the
-            # zone exists only as this floe's `baseDomain` input and the
-            # lint has nothing to compare against — it would find no zones
+            # zone exists only in the lab's `DNS_ZONE` and the lint has
+            # nothing to compare against — it would find no zones
             # and pass by having looked at nothing.
             #
             # Not `listener.hostname`, which would be the Gateway API way to
             # say it and would have the gateway enforce it at runtime: a
             # wildcard listener does not match the apex, and `mkRoute`
             # deliberately allows a route on the base domain itself.
-            labels."catallaxy.io/base-domain" = inputs.baseDomain;
+            labels."catallaxy.io/base-domain" = zone.zone;
           };
           spec = {
             gatewayClassName = inputs.className;
@@ -196,7 +198,7 @@ floe.mkFloe {
 
         config.floe.provides.gateway = {
           className = config.gatewayResource.spec.gatewayClassName;
-          inherit (inputs) baseDomain;
+          baseDomain = zone.zone;
           parentRef = {
             inherit (config.gatewayResource.metadata) name namespace;
             sectionName = listenerName;
@@ -315,8 +317,8 @@ floe.mkFloe {
                   spec = {
                     secretName = certSecret;
                     dnsNames = [
-                      inputs.baseDomain
-                      "*.${inputs.baseDomain}"
+                      zone.zone
+                      "*.${zone.zone}"
                     ];
                     inherit (issuance) issuerRef;
                   };

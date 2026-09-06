@@ -64,13 +64,10 @@ in
       chart = "${cataCharts.trust-manager.chart}";
     };
 
-    lab-dns = floes.lab-dns {
-      inherit (config.lab.dns) zone server port;
-    };
+    lab-dns = floes.lab-dns { };
 
     gateway = floes.gateway {
       chart = "${cataCharts.traefik.chart}";
-      baseDomain = config.lab.dns.zone;
       tlsEnable = true;
     };
 

@@ -1,9 +1,9 @@
 # lab-dns, alone.
 #
 # The one floe whose whole content is a fact the lab holds, so what is worth
-# pinning is that the three inputs reach the server block and nothing else
-# does — a hardcoded zone or port here resolves for whoever wrote it and for
-# nobody standing a second lab up beside theirs.
+# pinning is that all three fields of `DNS_ZONE` reach the server block and
+# nothing else does — a hardcoded zone or port here resolves for whoever wrote
+# it and for nobody standing a second lab up beside theirs.
 { lib, pkgs }:
 
 let
@@ -11,7 +11,7 @@ let
 
   r = support.evalFloe {
     name = "lab-dns";
-    inputs = {
+    stubValues.zone = {
       zone = "example.test";
       server = "172.20.0.1";
       port = 5399;
@@ -41,7 +41,7 @@ lib.runTests {
     };
   };
 
-  # All three inputs, in the one place they are read. A pod resolving
+  # All three fields, in the one place they are read. A pod resolving
   # `podinfo.example.test` gets here or gets NXDOMAIN from a resolver that
   # never heard of the lab.
   testTheServerBlockCarriesTheZoneTheServerAndThePort = {

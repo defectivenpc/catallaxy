@@ -99,17 +99,12 @@
     trust-manager = floes.trust-manager { chart = "${cataCharts.trust-manager.chart}"; };
 
     # ---- routing --------------------------------------------------------
-    lab-dns = floes.lab-dns {
-      inherit (config.lab.dns) zone;
-      server = config.lab.network.gateway;
-    };
+    lab-dns = floes.lab-dns { };
     # Records for what the gateway routes. `defaultTargets` because a k3d
     # Service reports a cluster-internal LoadBalancer address that nothing
     # outside the cluster can reach.
     external-dns = floes.external-dns {
       chart = "${cataCharts.external-dns.chart}";
-      inherit (config.lab.dns) zone;
-      dnsServer = config.lab.network.gateway;
       tsigSecretRef = "external-dns/externaldns-tsig";
       defaultTargets = [ config.lab.network.gateway ];
     };
@@ -144,7 +139,6 @@
     };
     gateway = floes.gateway {
       chart = "${cataCharts.traefik.chart}";
-      baseDomain = config.lab.dns.zone;
       tlsEnable = true;
     };
     podinfo = floes.podinfo { };

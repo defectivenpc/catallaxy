@@ -43,6 +43,13 @@
     "custom"
   ];
 }
+// import ./lab-scope.nix {
+  inherit
+    lib
+    pkgs
+    mkLab
+    ;
+}
 // import ./secret-sharing.nix {
   inherit
     lib

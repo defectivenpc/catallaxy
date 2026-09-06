@@ -27,6 +27,47 @@ The format is based on
 
 ### Changed
 
+- **The lab is a scope, and provides into it.** A cluster's link is given
+  the lab's provides plus every other cluster's offered ones, resolved
+  nearer-first: a unit of the cluster answers a hole if it can, and the
+  scope is consulted only if none does. Cross-cluster resolution shipped as
+  flat threading where an offered provide _competed_ with a cluster's own,
+  so exporting a gateway from `mgmt` refused every cluster that had one.
+
+  The other direction is new. `lab.provides` takes floe instances that
+  install nothing — there is no cluster for them to render into — and exist
+  to answer a signature. `floes/lab/zone.nix` is the first: `lab.dns.*`
+  stays the surface an environment writes, the lab builds one `lab-zone` out
+  of the merged result, and `lab-dns`, `external-dns` and `gateway` require
+  `DNS_ZONE` instead of taking a zone, a server and a port as hand-passed
+  inputs.
+
+  That was six arguments across three floes with nothing checking they
+  agreed, and they did not: `every-floe` pointed external-dns at
+  `--rfc2136-port=53` while the lab's Knot listened on 5354. It renders and
+  never runs, so nothing had ever noticed. Every other rendered byte is
+  unchanged — the digest diff for `homelab.dns` is `metadata.json` alone.
+
+  Two properties hold by construction rather than by a rule: the lab's own
+  provides are linked with no scope, so they cannot depend on a cluster (RFC
+  0005 §6.2's stratification); and a cluster's own offers are excluded from
+  its own scope, which is what breaks the evaluation cycle a cluster reading
+  its own link result would form.
+
+- **`X509_WEBHOOK` and two thirds of `X509_ISSUANCE` are link-local.** They
+  were missed when locality was classified per field. A webhook serving
+  admission for CRDs installed _here_ is the clearest thing that cannot
+  cross a cluster boundary, and an `issuerRef` names a ClusterIssuer object
+  that exists in one cluster — a Certificate elsewhere naming it stays
+  pending forever. `publicIssuer` stays portable, because whether a chain is
+  publicly trusted is true wherever it is asked.
+
+  The consequence is that `cert-manager` cannot be offered to another
+  cluster at all: `X509_WEBHOOK` is now entirely local, and `link` refuses
+  such a signature as a scope entry up front rather than at whichever field
+  a consumer touched first. That is the right answer — its CRDs are not
+  installed there and its webhook does not run there.
+
 - **`k8sName` is out of floe-core.** It lived in the type prelude and was
   the one thing making the header's "contains no Kubernetes" false; RFC 0001
   even listed it in the prelude two paragraphs after making the claim. It is

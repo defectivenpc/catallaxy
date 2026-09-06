@@ -103,13 +103,10 @@ let
 
     # So a pod resolves `*.${zone}` too. Its resolver is the cluster's
     # CoreDNS, which has never heard of the lab.
-    lab-dns = floes.lab-dns {
-      inherit (config.lab.dns) zone server port;
-    };
+    lab-dns = floes.lab-dns { };
 
     gateway = floes.gateway {
       chart = "${cataCharts.traefik.chart}";
-      baseDomain = zone;
       tlsEnable = true;
     };
 

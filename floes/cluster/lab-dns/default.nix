@@ -11,7 +11,8 @@
 # only thing needed is to put the file there.
 #
 # A floe rather than a cluster module because it needs exactly two facts the
-# lab holds — the zone and where its server answers — and those are inputs.
+# lab holds — the zone and where its server answers — and the lab provides
+# them: `requires.zone = DNS_ZONE`, resolved from lab scope.
 {
   lib,
   floe,
@@ -24,28 +25,6 @@ floe.mkFloe {
   name = "lab-dns";
 
   inputs = {
-    zone = lib.mkOption {
-      type = lib.types.str;
-      description = "The lab's DNS zone. Required; pass `config.lab.dns.zone`.";
-    };
-
-    server = lib.mkOption {
-      type = lib.types.str;
-      description = ''
-        Address the lab's DNS answers on, as seen from inside the cluster.
-        Required; pass `config.lab.dns.server`.
-
-        The docker bridge gateway rather than loopback: `127.0.0.1` inside a
-        pod is the pod.
-      '';
-    };
-
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 5354;
-      description = "Port the lab's DNS answers on. Pass `config.lab.dns.port`.";
-    };
-
     namespace = lib.mkOption {
       type = lib.types.str;
       default = "kube-system";
@@ -55,6 +34,12 @@ floe.mkFloe {
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
 
+  # The zone, the server and the port, from whoever holds them — which in a
+  # lab is the lab. These were three inputs the caller threaded in by hand,
+  # and `external-dns` took the same three, so a lab had six arguments to keep
+  # consistent and nothing checking that it had.
+  requires.zone = sigs.DNS_ZONE;
+
   out.component = kinds.component;
 
   modules = [
@@ -62,12 +47,13 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
+        zone = config.floe.requires.zone;
 
         serverBlock = ''
-          ${inputs.zone}:53 {
+          ${zone.zone}:53 {
               errors
               cache 30
-              forward . ${inputs.server}:${toString inputs.port}
+              forward . ${zone.server}:${toString zone.port}
           }
         '';
       in
@@ -86,11 +72,11 @@ floe.mkFloe {
                 cidr = "0.0.0.0/0";
                 ports = [
                   {
-                    port = inputs.port;
+                    port = zone.port;
                     protocol = "UDP";
                   }
                   {
-                    port = inputs.port;
+                    port = zone.port;
                     protocol = "TCP";
                   }
                 ];

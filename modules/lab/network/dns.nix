@@ -9,7 +9,12 @@
 # updates this zone over RFC2136 and needs a key it was told about. Nothing
 # reads it yet; the key exists so the floe that will can be added without
 # reshaping the service.
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  floes,
+  ...
+}:
 
 let
   inherit (lib)
@@ -196,6 +201,18 @@ in
       };
     };
   };
+
+  # Unconditional, like `zone` itself: a lab that runs no DNS server of its
+  # own still declares the zone its routes hang off, and the floes that need
+  # to know it need to know it either way. `enable` adds something that
+  # answers for the zone, not the zone.
+  #
+  # This is the merge surface meeting the floe surface. `lab.dns.*` stays what
+  # an env file writes — `homelab/envs/dns.nix` sets `hostPort` and `port`
+  # follows — and the lab builds one floe out of the merged result, so the
+  # clusters read a resolved answer rather than each being handed three
+  # arguments that can disagree.
+  config.lab.provides.zone = floes.lab-zone { inherit (cfg) zone server port; };
 
   # `dnsInfo` is defined unconditionally and `service` under `mkIf`, which is
   # not an inconsistency: a read-only option counts its default as a

@@ -141,6 +141,17 @@ let
       };
     };
 
+    # Provided by the lab rather than by anything in a cluster, which is why
+    # the isolation harness has to stand in for it like any other peer.
+    zone = {
+      sig = sigs.DNS_ZONE;
+      value = {
+        zone = "stub.test";
+        server = "172.20.0.1";
+        port = 5354;
+      };
+    };
+
     identityOperator = {
       sig = sigs.IDENTITY_OPERATOR;
       value = {
@@ -203,11 +214,17 @@ in
   # cannot express: a `requiresMany` hole resolving to nothing. That is the
   # whole behaviour of an optional dependency, and with every stub always
   # present it is the one case never exercised.
+  #
+  # `stubValues` overrides fields on a stub's value, for a floe that reads a
+  # fact through a `requires` hole rather than an input — varying it is then
+  # varying the *provider*, and a check that wants to see a malformed zone
+  # refused has nowhere else to put it.
   evalFloe =
     {
       name,
       inputs ? { },
       without ? [ ],
+      stubValues ? { },
     }:
     let
       def = import floeSet.${name} {
@@ -225,9 +242,17 @@ in
       # signature this floe answers is dropped rather than the check being
       # written to expect a failure.
       provided = map (p: p.name) (lib.attrValues def.provides);
+
+      theseStubs = lib.mapAttrs' (
+        n: s:
+        lib.nameValuePair "stub-${n}" (
+          (mkStub n (s // { value = s.value // (stubValues.${n} or { }); })).instantiate { }
+        )
+      ) stubs;
+
       usable = lib.filterAttrs (
         n: u: !(lib.elem u.def.provides.it.name provided) && !(lib.elem n (map (w: "stub-${w}") without))
-      ) stubUnits;
+      ) theseStubs;
 
       link = floe.link {
         units = usable // {

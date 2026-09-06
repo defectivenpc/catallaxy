@@ -48,28 +48,6 @@ floe.mkFloe {
       description = "Namespace the controller runs in.";
     };
 
-    zone = lib.mkOption {
-      type = lib.types.str;
-      description = ''
-        Zone this controller manages, as `lab.test` — no trailing dot.
-
-        Also the domain filter: without one, external-dns considers every
-        record in the server its own, and `policy = "sync"` then deletes the
-        ones it did not create.
-      '';
-    };
-
-    dnsServer = lib.mkOption {
-      type = lib.types.str;
-      description = "Host of the RFC2136 server to send updates to. Required.";
-    };
-
-    dnsPort = lib.mkOption {
-      type = lib.types.port;
-      default = 53;
-      description = "Port of the RFC2136 server.";
-    };
-
     tsigKeyname = lib.mkOption {
       type = lib.types.str;
       default = "externaldns-key";
@@ -146,6 +124,11 @@ floe.mkFloe {
   # a source whose kind does not exist is not a warning — external-dns fails
   # its own startup check and crash-loops.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
+
+  # Which zone to publish into and where its server listens. The same three
+  # facts `lab-dns` needs, from the same place, so the two cannot be told
+  # different things about one lab.
+  requires.zone = sigs.DNS_ZONE;
   requires.gatewayApi = sigs.GATEWAY_API;
 
   out.component = kinds.component;
@@ -155,6 +138,7 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
+        zone = config.floe.requires.zone;
         cluster = config.floe.requires.cluster;
 
         secretParts = lib.splitString "/" inputs.tsigSecretRef;
@@ -273,11 +257,11 @@ floe.mkFloe {
             # rather than a `reaches`.
             egress.internet.ports = [
               {
-                port = inputs.dnsPort;
+                port = zone.port;
                 protocol = "UDP";
               }
               {
-                port = inputs.dnsPort;
+                port = zone.port;
                 protocol = "TCP";
               }
             ];
@@ -330,7 +314,7 @@ floe.mkFloe {
               values = {
                 provider.name = "rfc2136";
                 inherit (inputs) sources policy interval;
-                domainFilters = [ inputs.zone ];
+                domainFilters = [ zone.zone ];
 
                 # The cluster's own name. Two clusters publishing into one
                 # zone each need to know which records are theirs, and the
@@ -339,9 +323,9 @@ floe.mkFloe {
                 txtPrefix = "extdns-";
 
                 extraArgs = [
-                  "--rfc2136-host=${inputs.dnsServer}"
-                  "--rfc2136-port=${toString inputs.dnsPort}"
-                  "--rfc2136-zone=${inputs.zone}"
+                  "--rfc2136-host=${zone.server}"
+                  "--rfc2136-port=${toString zone.port}"
+                  "--rfc2136-zone=${zone.zone}"
                   "--rfc2136-tsig-keyname=${inputs.tsigKeyname}"
                   "--rfc2136-tsig-secret-alg=${inputs.tsigSecretAlg}"
                 ]
@@ -401,10 +385,9 @@ floe.mkFloe {
                 + "through a secretKeyRef, which only resolves within its own namespace "
                 + "('${inputs.namespace}')";
             }
-            {
-              assertion = !(lib.hasSuffix "." inputs.zone);
-              message = "zone is '${inputs.zone}'; external-dns wants it without the trailing dot";
-            }
+            # The trailing-dot check used to be here. It is `T.dnsName` on
+            # `DNS_ZONE.zone` now — refused where the zone is decided rather
+            # than in whichever consumer happened to look.
           ];
         };
       }

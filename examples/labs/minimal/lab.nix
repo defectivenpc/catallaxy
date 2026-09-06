@@ -52,7 +52,6 @@ in
 
     gateway = floes.gateway {
       chart = "${cataCharts.traefik.chart}";
-      baseDomain = config.lab.dns.zone;
     };
 
     podinfo = floes.podinfo { };

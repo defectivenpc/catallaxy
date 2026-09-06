@@ -41,6 +41,12 @@
     zot = ./cluster/zot;
   };
 
+  # Floes that live at lab scope rather than in a cluster: they install
+  # nothing and answer a signature every cluster can resolve.
+  lab = {
+    lab-zone = ./lab/zone.nix;
+  };
+
   provisioners = {
     k3d-cluster = ./provisioners/k3d-cluster.nix;
   };

@@ -37,9 +37,7 @@
 
   lab.clusters.app.floes = {
     # So a pod resolves `*.minimal.test` too, not just the host.
-    lab-dns = floes.lab-dns {
-      inherit (config.lab.dns) zone server port;
-    };
+    lab-dns = floes.lab-dns { };
 
     # One root, and the lab holds it. `cert-generate` writes the CA that
     # HAProxy serves from, and the CLI seeds it here as this issuer's backing
@@ -61,7 +59,6 @@
     gateway = lib.mkForce (
       floes.gateway {
         chart = "${cataCharts.traefik.chart}";
-        baseDomain = config.lab.dns.zone;
         tlsEnable = true;
       }
     );

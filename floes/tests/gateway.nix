@@ -12,7 +12,6 @@ let
     name = "gateway";
     inputs = {
       chart = "/dev/null";
-      baseDomain = "lab.test";
     };
   };
 
@@ -20,7 +19,6 @@ let
     name = "gateway";
     inputs = {
       chart = "/dev/null";
-      baseDomain = "lab.test";
       tlsEnable = true;
     };
   };
@@ -62,8 +60,8 @@ lib.runTests {
   testTlsCertificateCoversTheZone = {
     expr = tls.bundles.gateway.resources.gateway-tls.spec.dnsNames;
     expected = [
-      "lab.test"
-      "*.lab.test"
+      "stub.test"
+      "*.stub.test"
     ];
   };
 
