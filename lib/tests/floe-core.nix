@@ -35,6 +35,18 @@ let
 
   fails = expr: !(builtins.tryEval (builtins.deepSeq expr "evaluated")).success;
 
+  # Two variants with different field names, so a value carrying the wrong
+  # one fails on the shape and not only on the tag.
+  unionTy = T.taggedUnion {
+    small = T.record { size = T.int; };
+    large = T.record { label = T.str; };
+  };
+
+  nestedTy = T.record {
+    name = T.str;
+    config = unionTy;
+  };
+
   # ---- externals: a hole answered from outside this link -------------------
   #
   # One floe requiring INGRESS and nothing in the link providing it, so the
@@ -372,5 +384,98 @@ lib.runTests {
       "ingress"
       "myapp"
     ];
+  };
+
+  # ---- tagged unions -------------------------------------------------------
+  #
+  # The shape a kind reaches for when a value is one of several things and the
+  # alternatives are not all present at once. `record` makes every variant
+  # required; an enum beside an untagged record lets the tag and the block
+  # disagree. Both failures are silent, which is why these are pinned.
+
+  testTheNamedVariantIsChecked = {
+    expr = floe.T.checkValue [ ] unionTy { small.size = 1; };
+    expected = {
+      small.size = 1;
+    };
+  };
+
+  testTheOtherVariantIsAlsoChecked = {
+    expr = floe.T.checkValue [ ] unionTy { large.label = "wide"; };
+    expected = {
+      large.label = "wide";
+    };
+  };
+
+  # The variant's own schema still applies. A union that accepted anything
+  # under a known name would check only the spelling of the tag.
+  testAVariantWithTheWrongFieldTypeIsRefused = {
+    expr = fails (floe.T.checkValue [ ] unionTy { small.size = "1"; });
+    expected = true;
+  };
+
+  testAVariantMissingAFieldIsRefused = {
+    expr = fails (floe.T.checkValue [ ] unionTy { small = { }; });
+    expected = true;
+  };
+
+  # The three ways the tag itself can be wrong. Zero and two are what `record`
+  # cannot say at all: it would accept both and call them well-typed.
+  testNoVariantIsRefused = {
+    expr = fails (floe.T.checkValue [ ] unionTy { });
+    expected = true;
+  };
+
+  testTwoVariantsAtOnceAreRefused = {
+    expr = fails (
+      floe.T.checkValue [ ] unionTy {
+        small.size = 1;
+        large.label = "wide";
+      }
+    );
+    expected = true;
+  };
+
+  testAnUnknownVariantIsRefused = {
+    expr = fails (floe.T.checkValue [ ] unionTy { medium.size = 2; });
+    expected = true;
+  };
+
+  # Sealing, as `record` does it: a union restricts to the variant it named,
+  # so a stray sibling cannot ride along inside the value.
+  testAnUnknownVariantIsRefusedEvenBesideAKnownOne = {
+    expr = fails (
+      floe.T.checkValue [ ] unionTy {
+        small.size = 1;
+        medium.size = 2;
+      }
+    );
+    expected = true;
+  };
+
+  # A union nests like any other type: this is what lets a kind carry one
+  # field that is a union and the rest ordinary.
+  testAUnionNestsInsideARecord = {
+    expr = floe.T.checkValue [ ] nestedTy {
+      name = "app";
+      config.small.size = 3;
+    };
+    expected = {
+      name = "app";
+      config.small.size = 3;
+    };
+  };
+
+  testAUnionInsideARecordStillRefusesTwoVariants = {
+    expr = fails (
+      floe.T.checkValue [ ] nestedTy {
+        name = "app";
+        config = {
+          small.size = 3;
+          large.label = "wide";
+        };
+      }
+    );
+    expected = true;
   };
 }

@@ -21,6 +21,20 @@ in
       context = T.local T.str;
       podSubnet = T.local T.str;
       serviceSubnet = T.local T.str;
+
+      # Whether a `LoadBalancer` Service gets an address here.
+      #
+      # k3s ships ServiceLB and binds the node's own ports, so one does. A
+      # bare Talos cluster ships nothing of the kind, and a LoadBalancer there
+      # stays `Pending` forever while port 80 of the node answers nothing —
+      # which is not a failure anything reports, because a Service with no
+      # address is a Service that is still being reconciled.
+      #
+      # A member reads this to decide two things it would otherwise have to
+      # infer from the provisioner's name: whether to ask for a `NodePort`
+      # instead, and whether waiting for `.status.addresses[0]` is waiting for
+      # something that will ever arrive.
+      assignsLoadBalancers = T.local T.bool;
     };
   };
 

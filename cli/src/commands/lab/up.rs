@@ -172,9 +172,10 @@ fn declared_host_ports(lab: &LabSpec) -> Vec<(String, u16)> {
     // were already up, rather than by the preflight that exists to say
     // "nothing was started".
     let clusters = lab.clusters.iter().flat_map(|(name, cluster)| {
-        let k3d = cluster.provisioner_config.k3d.ports.iter();
-        let talos = cluster.provisioner_config.talos.exposed_ports.iter();
-        k3d.chain(talos)
+        cluster
+            .provisioner_config
+            .published_ports()
+            .iter()
             .filter_map(move |mapping| host_port_of(mapping).map(|port| (name.clone(), port)))
     });
 

@@ -28,6 +28,11 @@ let
         context = "k3d-stub";
         podSubnet = "10.244.0.0/16";
         serviceSubnet = "10.96.0.0/12";
+
+        # The k3d answer, because that is what the stub's context says it is.
+        # A floe whose rendering turns on this — the gateway is the one — has
+        # its own suite covering both sides rather than relying on the stub.
+        assignsLoadBalancers = true;
       };
     };
 

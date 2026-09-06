@@ -83,17 +83,29 @@ unchanged across all three implementations.
 The parked tree was deleted with these still missing. They are features, not
 interface, and each would be written against RFC 0001 rather than ported:
 
-- **Cloud provisioning.** The `cluster-api` and `crossplane` floes, the
-  `infra` lab, and `minimal.talos`. `floes/provisioners/` has `k3d-cluster`
-  and nothing else.
+- **Cloud provisioning.** The `cluster-api` and `crossplane` floes and the
+  `infra` lab.
 
-  This is the one gap the tree currently makes a claim about:
-  `modules/lab/planner/kinds/` ships `infra-{plan,apply,destroy}`, `pivot`,
+  `minimal.talos` is back: `floes/provisioners/` has `k3d-cluster` and
+  `talos-cluster`, and `catallaxy.cluster` carries a tagged union rather
+  than a required k3d block, so a third is an ordinary addition (RFC 0005
+  §6.4 and §8.2).
+
+  RFC 0003's `resources` category is built and drives OpenTofu, so
+  `infra-{plan,apply,destroy}` are emitted and no longer orphaned —
+  `examples/labs/tests/every-floe.nix` renders a stack and
+  `lib/tests/render-infra.nix` pins what the renderer does with it. The
+  category is exercised entirely on providers that reach no network
+  (`local`, `random`), which is what makes it iterable without an account.
+
+  What remains orphaned is the Crossplane half: `pivot`,
   `release-cluster-cloud-resources` and
-  `{reconcile,delete}-managed-resource`, and **nothing in the tree emits any
-  of them**. `bootstrap-argocd-helm`, `sync-kubeconfig`,
+  `{reconcile,delete}-managed-resource` are shipped, implemented in the CLI,
+  and **emitted by nothing**, because the channel that would emit them — a
+  cluster declaring which _other_ clusters it brings into existence — does
+  not exist yet. `bootstrap-argocd-helm`, `sync-kubeconfig`,
   `colima-network-route`, `host-trust-install` and `publish-images` are
-  orphaned the same way. The CLI still implements them.
+  orphaned the same way.
 
 - **The book.** `docs/` is `rfcs/` and this file. `pkgs/default.nix` has no
   docs target.

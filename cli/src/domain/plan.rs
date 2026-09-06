@@ -486,6 +486,22 @@ pub struct RemoveNetworkParams {}
 pub struct RemoveServicesParams {}
 
 impl StepParams {
+    /// The stack this step acts on, if it acts on one.
+    ///
+    /// Separate from `cluster_refs` because a stack is not a cluster: it is
+    /// keyed `(scope, unit, phase)` (RFC 0003 §5), so `core-dns-after-clusters`
+    /// is a perfectly good stack and never a cluster name. The two were one
+    /// list, and every infra step therefore linted as a reference to a cluster
+    /// that does not exist.
+    pub fn stack_refs(&self) -> Option<&str> {
+        match self {
+            StepParams::InfraPlan(p) | StepParams::InfraApply(p) | StepParams::InfraDestroy(p) => {
+                Some(&p.stack)
+            }
+            _ => None,
+        }
+    }
+
     pub fn cluster_refs(&self) -> Vec<(&'static str, &str)> {
         match self {
             StepParams::CreateCluster(p) => vec![("name", &p.name)],
@@ -505,14 +521,19 @@ impl StepParams {
                 .map(|t| vec![("target", t)])
                 .unwrap_or_default(),
             StepParams::ReleaseClusterCloudResources(p) => vec![("target", &p.target)],
-            StepParams::InfraPlan(p) | StepParams::InfraApply(p) | StepParams::InfraDestroy(p) => {
-                vec![("stack", &p.stack)]
-            }
             StepParams::BootstrapArgocdKubectlSsa(p) => vec![("target", &p.target)],
             StepParams::BootstrapArgocdHelm(p) => vec![("target", &p.target)],
             StepParams::VerifyArgocdReachable(p) => vec![("target", &p.target)],
 
-            StepParams::SetupServices(_)
+            // A stack name is not a cluster name — see `stack_refs`. Nothing
+            // validates it here because it is derived in one Nix expression
+            // that also names the step and the rendered directory, so the
+            // three cannot disagree; and if a package predates the stack,
+            // `Stack::resolve` says so with the path it looked in.
+            StepParams::InfraPlan(_)
+            | StepParams::InfraApply(_)
+            | StepParams::InfraDestroy(_)
+            | StepParams::SetupServices(_)
             | StepParams::DockerNetworkCreate(_)
             | StepParams::CertGenerate(_)
             | StepParams::TrustBundle(_)

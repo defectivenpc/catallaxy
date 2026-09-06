@@ -19,17 +19,25 @@ let
 
   cfg = config.lab.proxy;
 
-  # Every publicly routed hostname, with the cluster that serves it. The
-  # elaborator already read these off the rendered routes, so there is no list
-  # to keep in step with the manifests.
+  # Every publicly routed hostname the lab is the edge for, with the cluster
+  # that serves it. The elaborator already read these off the rendered routes,
+  # so there is no list to keep in step with the manifests.
+  #
+  # Filtered on `edge.mode` (RFC 0005 §6.4): a cluster that is its own edge
+  # has no row here, no backend, and nothing for the proxy to say about it.
+  # Before this the lab assumed it was the edge for every cluster, and one
+  # that was not could not be expressed at all — it failed the assertion
+  # below rather than being routed elsewhere.
   exposed = lib.concatLists (
     lib.mapAttrsToList (
       clusterName: c:
-      map (h: {
-        inherit clusterName;
-        inherit (h) host bundle;
-        inherit (c.ingress) backend httpPort httpsPort;
-      }) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+      lib.optionals (c.edge.mode == "proxy") (
+        map (h: {
+          inherit clusterName;
+          inherit (h) host bundle;
+          inherit (c.edge) backend httpPort httpsPort;
+        }) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+      )
     ) config.lab.clusters
   );
 
@@ -38,10 +46,14 @@ let
   # A route whose cluster cannot say where to send traffic would render a
   # backend pointing at nothing, and every request through it would time out
   # with no indication why.
+  #
+  # Only reachable now for a cluster that says the lab *is* its edge and then
+  # names none, which is a contradiction rather than an unsupported
+  # provisioner — so the message says so.
   backendless = lib.unique (
-    map (e: "cluster '${e.clusterName}' routes '${e.host}' but has no ingress backend") (
-      lib.filter (e: e.backend == null) exposed
-    )
+    map (
+      e: "cluster '${e.clusterName}' says the lab is its edge and names no backend to send '${e.host}' to"
+    ) (lib.filter (e: e.backend == null) exposed)
   );
 
   routedClusters = lib.unique (map (e: e.clusterName) (lib.filter (e: e.backend != null) exposed));

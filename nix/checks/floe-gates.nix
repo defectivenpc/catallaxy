@@ -29,7 +29,30 @@
 let
   imageUtil = import ../../lib/render/images.nix { inherit lib; };
 
-  shipped = lib.attrNames floeSet;
+  # Only the floes that install something into a cluster.
+  #
+  # Both gates below are about a floe's *bundles*: images are what its
+  # manifests pull and network is what its workloads talk to. A floe in the
+  # other delivery camp (RFC 0003 `resources`) has neither — its provider
+  # binaries come from the lab's own tool, not from a registry, and nothing it
+  # declares runs in the cluster at all.
+  #
+  # Exempted by what it emits rather than by name, so the exemption cannot go
+  # stale: a resources floe that later grows bundles rejoins the gate on its
+  # own, and a name in a list would have had to be noticed and removed.
+  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
+
+  defOf =
+    name:
+    import floeSet.${name} {
+      inherit lib pkgs;
+      inherit (catallaxy) floe sigs kinds;
+    };
+
+  installsIntoACluster =
+    name: lib.any (k: k.name == "catallaxy.component") (lib.attrValues (defOf name).out);
+
+  shipped = lib.filter installsIntoACluster (lib.attrNames floeSet);
 
   # A lab names *units*, and a unit may be called anything. `def.name` is what
   # floe it actually is, which is what a claim about the shipped set has to be

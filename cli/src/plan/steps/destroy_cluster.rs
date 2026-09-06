@@ -31,7 +31,7 @@ pub fn run(sctx: &StepContext<'_>, p: &DestroyClusterParams) -> Result<()> {
                 );
             }
             if spec.provisioner == ProvisionerKind::K3d
-                && !io::k3d::sweep_stragglers(spec.provisioner_config.k3d.cluster_name.as_str())
+                && !io::k3d::sweep_stragglers(k3d_name(spec))
             {
                 step_failed = true;
             }
@@ -65,11 +65,22 @@ pub fn run(sctx: &StepContext<'_>, p: &DestroyClusterParams) -> Result<()> {
     Ok(())
 }
 
+/// The k3d cluster name, empty for a cluster k3d did not make.
+///
+/// Both callers already guard on the provisioner, so the empty case is
+/// unreachable. It stays a `&str` rather than an `Option` so the guard
+/// remains the one place the provisioner is decided.
+fn k3d_name(spec: &ClusterSpec) -> &str {
+    spec.provisioner_config
+        .k3d()
+        .map_or("", |c| c.cluster_name.as_str())
+}
+
 fn k3d_already_gone(sctx: &StepContext<'_>, spec: &ClusterSpec) -> bool {
     if spec.provisioner != ProvisionerKind::K3d {
         return false;
     }
-    let cluster_short = spec.provisioner_config.k3d.cluster_name.as_str();
+    let cluster_short = k3d_name(spec);
     let docker_host = crate::provision::resolve_docker_host(sctx.ctx, spec)
         .ok()
         .flatten();

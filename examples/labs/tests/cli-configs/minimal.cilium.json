@@ -1,0 +1,224 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {},
+    "strategy": "kapp"
+  },
+  "clusterNames": [
+    "app"
+  ],
+  "clusters": {
+    "app": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-minimal-cilium-app-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "podinfo/podinfo",
+          "host": "podinfo.minimal.test",
+          "namespace": "podinfo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cilium": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "podinfo": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "k3d-minimal-cilium-app",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "minimal.cilium",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "cilium/cilium",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "podinfo/podinfo",
+            "resourceCount": 3
+          }
+        ]
+      ],
+      "name": "app",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {},
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [
+            {
+              "name": "cilium",
+              "path": "/nix/store/HASH-cilium-bootstrap.yaml"
+            }
+          ],
+          "clusterName": "minimal-cilium-app",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "minimal.cilium",
+          "noFlannel": true,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": null,
+  "infraPublications": [],
+  "labName": "minimal.cilium",
+  "labNamespaces": {
+    "app": [
+      "cert-manager",
+      "podinfo"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.33.0.0/16",
+    "name": "minimal.cilium"
+  },
+  "opsToolPath": "/nix/store/HASH-minimal.cilium-ops/bin/minimal.cilium-ops",
+  "registryPort": 5055,
+  "registryUpstreams": [
+    "codeberg.org",
+    "registry.k8s.io",
+    "ghcr.io",
+    "quay.io",
+    "docker.io",
+    "public.ecr.aws",
+    "oci.external-secrets.io"
+  ],
+  "runtimeContexts": {
+    "app": "k3d-minimal-cilium-app"
+  },
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {},
+    "stores": {}
+  },
+  "services": {
+    "registry": {
+      "container": "catallaxy-minimal.cilium-registry",
+      "description": "Zot OCI registry (image cache)",
+      "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "ports": [
+        "5055:5000"
+      ],
+      "readyProbe": {
+        "expectedStatus": 200,
+        "host": "127.0.0.1",
+        "kind": "http",
+        "path": "/v2/",
+        "port": 5055,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/etc/zot/config.json": {
+          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
+        },
+        "/var/lib/zot": {
+          "persist": "data"
+        }
+      }
+    }
+  },
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": false
+    }
+  }
+}

@@ -82,7 +82,10 @@ impl LabRecord {
                     Some(ClusterRecord {
                         cluster: name.clone(),
                         provisioner: format!("{:?}", spec.provisioner).to_lowercase(),
-                        k3d_cluster: Some(spec.provisioner_config.k3d.cluster_name.clone())
+                        k3d_cluster: spec
+                            .provisioner_config
+                            .k3d()
+                            .map(|c| c.cluster_name.clone())
                             .filter(|n| !n.is_empty()),
                         kube_context: spec.kube_context.clone(),
                     })

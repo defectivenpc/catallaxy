@@ -1,3 +1,4 @@
 [001] run-script name=core-purge-records cluster=core policy.onFailure=continue params.bin=/nix/store/HASH-external-dns-purge-records/bin/external-dns-purge-records
 [002] destroy-cluster name=destroy-cluster-core cluster=core params.name=core params.provisioner=k3d params.skipIfMissing=true
-[003] remove-network name=remove-network
+[003] infra-destroy name=infra-destroy-core-provisioned-before-clusters params.stack=core-provisioned-before-clusters
+[004] remove-network name=remove-network

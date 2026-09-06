@@ -1,8 +1,10 @@
 [001] docker-network-create name=docker-network-create params.gateway=172.30.0.1 params.name=every-floe params.subnet=172.30.0.0/16
 [002] ensure-secrets name=ensure-secrets params.stores=["authored","knot"]
-[003] create-cluster name=create-cluster-core cluster=core params.name=core params.provisioner=k3d
-[004] bootstrap-argocd-kubectl-ssa name=bootstrap-argocd cluster=core params.kubeContext=k3d-every-floe-core params.manifestRoot=bootstrap/core params.target=core
-[005] deploy-manifests name=deploy-manifests-core cluster=core params.kubeContext=k3d-every-floe-core params.target=core
-[006] bootstrap-forgejo-repos name=bootstrap-repos cluster=core params.kubeContext=k3d-every-floe-core params.target=core
-[007] publish-manifests name=publish-manifests
-[008] apply-root-application name=apply-root-application cluster=core params.kubeContext=k3d-every-floe-core params.manifestPath=cd/root-application.yaml params.target=core
+[003] infra-plan name=infra-plan-core-provisioned-before-clusters params.stack=core-provisioned-before-clusters
+[004] infra-apply name=infra-apply-core-provisioned-before-clusters params.stack=core-provisioned-before-clusters
+[005] create-cluster name=create-cluster-core cluster=core params.name=core params.provisioner=k3d
+[006] bootstrap-argocd-kubectl-ssa name=bootstrap-argocd cluster=core params.kubeContext=k3d-every-floe-core params.manifestRoot=bootstrap/core params.target=core
+[007] deploy-manifests name=deploy-manifests-core cluster=core params.kubeContext=k3d-every-floe-core params.target=core
+[008] bootstrap-forgejo-repos name=bootstrap-repos cluster=core params.kubeContext=k3d-every-floe-core params.target=core
+[009] publish-manifests name=publish-manifests
+[010] apply-root-application name=apply-root-application cluster=core params.kubeContext=k3d-every-floe-core params.manifestPath=cd/root-application.yaml params.target=core

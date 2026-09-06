@@ -553,7 +553,7 @@ where
 }
 
 fn cleanup_bootstrap_resources(kube_context: &str, spec: &ClusterSpec) {
-    if spec.provisioner_config.k3d.auto_deploy_manifests.is_empty() {
+    if spec.provisioner_config.auto_deploy_manifests().is_empty() {
         return;
     }
 

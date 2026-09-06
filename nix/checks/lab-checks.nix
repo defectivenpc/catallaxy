@@ -15,6 +15,8 @@
   labDefs,
   snapshotDir,
   digestDir,
+  cliConfigDir,
+  cliConfigs,
 }:
 
 let
@@ -183,6 +185,36 @@ let
         touch $out
       '';
 
+  # What the CLI parses, pinned field by field.
+  #
+  # The digest covers what a lab *renders* and the plan snapshots cover what
+  # it *does*. Neither covers what it *is*: `provisioner`, `provisionerConfig`,
+  # `kubernetes`, `network`, `kubeContext`, the service and verify blocks and
+  # the runtime contexts all reach `cata` through `cliConfig` and appear in no
+  # other fixture. A refactor of the cluster descriptor could rewrite every one
+  # of them and no check would move.
+  #
+  # Diffed against `nix/cli-configs.nix` rather than recomputed, so this and
+  # `refresh-cli-configs` read one store path instead of two pipelines.
+  cliConfigCheck =
+    name: _lab:
+    pkgs.runCommand "cliConfig-${name}" { nativeBuildInputs = [ pkgs.diffutils ]; } ''
+      if ! diff -u ${cliConfigDir}/${name}.json ${cliConfigs}/${name}.json; then
+        echo "" >&2
+        echo "The document cata parses for ${name} changed." >&2
+        echo "This is the lab as the CLI sees it: how each cluster is" >&2
+        echo "provisioned, on what ranges, under which context, and what the" >&2
+        echo "runner is told to stand up. None of it appears in the manifest" >&2
+        echo "digest, so this is the only place a change to it shows." >&2
+        echo "" >&2
+        echo "If intended, refresh it and read the diff:" >&2
+        echo "" >&2
+        echo "  nix run .#refresh-cli-configs" >&2
+        exit 1
+      fi
+      touch $out
+    '';
+
   # Every image the lab pulls comes from a registry the cache sits in front of.
   #
   # `lab.registry.upstreams` is both the zot sync sources and the `mirrors:`
@@ -247,6 +279,7 @@ let
         { "${name}-lint" = lintCheck name lab; }
         { "plan-deploy-${name}" = planSnapshotCheck name lab "deploy"; }
         { "plan-teardown-${name}" = planSnapshotCheck name lab "teardown"; }
+        { "cliConfig-${name}" = cliConfigCheck name lab; }
       ]) labDefs
     );
 
@@ -325,10 +358,17 @@ let
       name: lab:
       lib.optionals lab.config.lab.proxy.enable (
         let
+          # Only the clusters the lab is the edge for. One that is its own
+          # edge (RFC 0005 §6.4) routes its hostnames itself, so the lab's
+          # proxy having no backend for them is the arrangement rather than
+          # the fault.
           routed = lib.unique (
             lib.concatLists (
               lib.mapAttrsToList (
-                _: c: map (h: h.host) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+                _: c:
+                lib.optionals (c.edge.mode == "proxy") (
+                  map (h: h.host) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+                )
               ) lab.config.lab.clusters
             )
           );
@@ -409,9 +449,17 @@ let
     ) labDefs
   );
 
-  # One hostname, two clusters. HAProxy emits a `use_backend` line per exposed
-  # host and the first match wins, so the second cluster's route is
-  # unreachable and nothing anywhere says so.
+  # One hostname, two clusters the lab fronts. HAProxy emits a `use_backend`
+  # line per exposed host and the first match wins, so the second cluster's
+  # route is unreachable and nothing anywhere says so.
+  #
+  # Only clusters the lab is the edge for, because that is the whole of the
+  # fault: it is HAProxy's ordering, and a cluster HAProxy has no row for
+  # cannot lose to another. A lab that serves a name locally while something
+  # else serves it for a self-edge cluster (RFC 0005 §6.4) is the arrangement
+  # rather than the collision — one name, two edges, and only one of them
+  # here. Counting those as a clash would refuse exactly the setup the mode
+  # exists to allow.
   hostClashes = lib.concatLists (
     lib.mapAttrsToList (
       labName: lab:
@@ -419,10 +467,12 @@ let
         claimsHere = lib.concatLists (
           lib.mapAttrsToList (
             clusterName: c:
-            map (h: {
-              inherit clusterName;
-              inherit (h) host;
-            }) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+            lib.optionals (c.edge.mode == "proxy") (
+              map (h: {
+                inherit clusterName;
+                inherit (h) host;
+              }) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+            )
           ) lab.config.lab.clusters
         );
       in

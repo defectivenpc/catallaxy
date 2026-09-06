@@ -87,6 +87,12 @@
         # and the check that pins what it says. Computing it twice would let
         # them disagree about the very thing one exists to check.
         e2eLabs = lib.mapAttrs (_: l: l.config.lab.out.selfContained) exampleLabs;
+
+        # Same reason, for the document the CLI parses: the check diffs
+        # against this and `refresh-cli-configs` copies out of it, so the
+        # fixture and the check cannot be produced by two pipelines that
+        # disagree.
+        cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
       in
       {
         legacyPackages = {
@@ -107,6 +113,13 @@
           # everything that renders, fixtures included.
           digestLabs = lib.attrNames labDefs;
 
+          # One derivation holding `<lab>.json` for every lab, which both
+          # `cliConfig-<lab>` and `refresh-cli-configs` read. Fixtures
+          # included, for the same reason the digests include them: a fixture
+          # exists to be rendered and checked, and a cluster descriptor is
+          # exactly the thing a fixture is cheapest to pin.
+          labCliConfigs = cliConfigs;
+
           # Both plans per lab, for `cata lab plan --from-file`. A fixture is
           # not in `labs`, so the CLI cannot resolve one by name — and the
           # snapshot check compares fixtures too, so there has to be a way to
@@ -125,6 +138,7 @@
             e2e
             e2e-all
             refresh-digests
+            refresh-cli-configs
             refresh-plans
             ;
         };
@@ -149,6 +163,11 @@
         apps.refresh-digests = {
           type = "app";
           program = "${packages'.refresh-digests}/bin/refresh-digests";
+        };
+
+        apps.refresh-cli-configs = {
+          type = "app";
+          program = "${packages'.refresh-cli-configs}/bin/refresh-cli-configs";
         };
 
         apps.refresh-plans = {
@@ -177,7 +196,7 @@
           # `mkLab` can: the refusal is an assertion inside the module tree,
           # so there is nothing to inspect without evaluating it.
           inherit (labs) mkLab;
-          inherit e2eLabs;
+          inherit e2eLabs cliConfigs;
         };
       }
     );

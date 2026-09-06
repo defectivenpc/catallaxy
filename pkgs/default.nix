@@ -60,6 +60,7 @@ let
   e2e = import ./e2e.nix { inherit lib pkgs cataWrapped; };
   e2e-all = import ./e2e-all.nix { inherit lib pkgs e2e; };
   refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
+  refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
   refresh-plans = import ./refresh-plans.nix {
     inherit lib pkgs;
     cata = cataWrapped;
@@ -74,6 +75,7 @@ in
     e2e
     e2e-all
     refresh-digests
+    refresh-cli-configs
     refresh-plans
     ;
 }

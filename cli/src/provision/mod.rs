@@ -4,14 +4,49 @@ use anyhow::{Context, Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::{ClusterSpec, ProvisionerKind};
+use crate::domain::cluster::{K3dConfig, TalosConfig};
+use crate::domain::{ClusterSpec, ProvisionerConfig, ProvisionerKind};
 use crate::io;
 
+/// What the provisioner calls this cluster's containers.
+///
+/// Matched on the config rather than on `spec.provisioner`: the arms are then
+/// exhaustive by construction and each has the data it names, where before
+/// the two carried the same fact and a new provisioner had to be added to
+/// both or fall through to `""`.
 pub fn provisioner_cluster_name(spec: &ClusterSpec) -> &str {
-    match spec.provisioner {
-        ProvisionerKind::K3d => &spec.provisioner_config.k3d.cluster_name,
-        ProvisionerKind::Talos => &spec.provisioner_config.talos.cluster_name,
-        ProvisionerKind::Crossplane | ProvisionerKind::External => "",
+    match &spec.provisioner_config {
+        ProvisionerConfig::K3d(c) => &c.cluster_name,
+        ProvisionerConfig::Talos(c) => &c.cluster_name,
+    }
+}
+
+/// The k3d settings, on a code path that only runs for a k3d cluster.
+///
+/// An error rather than a panic or an empty default: reaching here with
+/// anything else is a dispatch bug, and one that names the configuration it
+/// actually got is a bug someone can find. The old shape could not fail here
+/// at all — every spec carried a k3d block — so a mis-dispatched Talos
+/// cluster was provisioned with k3d's defaults instead.
+fn k3d_config(spec: &ClusterSpec) -> Result<&K3dConfig> {
+    spec.provisioner_config.k3d().with_context(|| {
+        format!(
+            "cluster '{}' reached the k3d path carrying a {:?} configuration",
+            spec.name,
+            spec.provisioner_config.kind()
+        )
+    })
+}
+
+/// The Talos settings, on a code path that only runs for a Talos cluster.
+fn talos_config(spec: &ClusterSpec) -> Result<&TalosConfig> {
+    match &spec.provisioner_config {
+        ProvisionerConfig::Talos(c) => Ok(c),
+        other => bail!(
+            "cluster '{}' reached the Talos path carrying a {:?} configuration",
+            spec.name,
+            other.kind()
+        ),
     }
 }
 
@@ -20,7 +55,7 @@ pub fn resolve_docker_host(_ctx: &CataContext, spec: &ClusterSpec) -> Result<Opt
         return Ok(None);
     }
 
-    let colima = &spec.provisioner_config.docker.colima;
+    let colima = &spec.host.colima;
     if !colima.enable {
         return Ok(None);
     }
@@ -104,17 +139,14 @@ pub fn provision_cluster_with_registry(
             io::talos::cluster_create(io::talos::ClusterCreate {
                 name: &cluster_name,
                 workers: spec.kubernetes.workers,
-                talos: &spec.provisioner_config.talos,
+                talos: talos_config(spec)?,
                 docker_host: docker_host.as_deref(),
             })?;
 
             // talosctl returns as soon as it has started the containers, so
             // without this the run marches on to a deploy against an API that
             // is not up. The k3d path has always waited here.
-            wait_until_answering(
-                &spec.kube_context,
-                &spec.provisioner_config.docker.wait_timeout,
-            )?;
+            wait_until_answering(&spec.kube_context, &spec.host.wait_timeout)?;
 
             crate::host::state::write_cluster_shape(
                 &spec.lab_name,
@@ -225,7 +257,7 @@ fn provision_k3d(
         }
     }
 
-    let k3d = &spec.provisioner_config.k3d;
+    let k3d = k3d_config(spec)?;
     let auto_deploy = resolve_auto_deploy(ctx, name, spec, lab_package);
     let port_refs: Vec<&str> = k3d.ports.iter().map(String::as_str).collect();
 
@@ -283,10 +315,7 @@ fn provision_k3d(
     // fresh cluster with no entry anywhere and nothing to wait on.
     io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
 
-    wait_until_answering(
-        &spec.kube_context,
-        &spec.provisioner_config.docker.wait_timeout,
-    )?;
+    wait_until_answering(&spec.kube_context, &spec.host.wait_timeout)?;
 
     crate::host::state::write_cluster_shape(
         &spec.lab_name,
@@ -352,15 +381,9 @@ fn converge_existing_cluster(
             "{} Cluster '{name}' is short {to_add} worker(s); adding them",
             style(">>>").cyan()
         );
-        let existing = io::k3d::node_names(&spec.provisioner_config.k3d.cluster_name, docker_host)
-            .len()
-            .max(1);
-        io::k3d::add_agents(
-            &spec.provisioner_config.k3d.cluster_name,
-            to_add,
-            existing,
-            docker_host,
-        )?;
+        let k3d_name = &k3d_config(spec)?.cluster_name;
+        let existing = io::k3d::node_names(k3d_name, docker_host).len().max(1);
+        io::k3d::add_agents(k3d_name, to_add, existing, docker_host)?;
         crate::host::state::write_cluster_shape(&spec.lab_name, name, &declared)?;
         return Ok(Convergence::Unchanged);
     }
@@ -443,7 +466,7 @@ fn converge_k3d_in_place(
 ) -> Result<()> {
     use crate::domain::cluster_shape::Fix;
 
-    let cluster = &spec.provisioner_config.k3d.cluster_name;
+    let cluster = &k3d_config(spec)?.cluster_name;
 
     for fix in report.fixes() {
         match fix {
@@ -478,7 +501,7 @@ fn replace_k3d_nodes(
     recorded: &crate::domain::cluster_shape::ClusterShape,
     docker_host: Option<&str>,
 ) -> Result<()> {
-    let cluster = &spec.provisioner_config.k3d.cluster_name;
+    let cluster = &k3d_config(spec)?.cluster_name;
     let declared_version = &spec.kubernetes.version;
 
     if !io::k3d_node::upgrade_is_one_step(&recorded.version, declared_version) {
@@ -519,10 +542,7 @@ fn replace_k3d_nodes(
         // The API is down while the container restarts, and `kubectl wait`
         // treats ServiceUnavailable as a hard error rather than retrying, so
         // the cluster has to be answering before the node can be asked about.
-        wait_until_answering(
-            &spec.kube_context,
-            &spec.provisioner_config.docker.wait_timeout,
-        )?;
+        wait_until_answering(&spec.kube_context, &spec.host.wait_timeout)?;
         io::k3d::wait_node_ready(&spec.kube_context, node)?;
     }
 
@@ -546,7 +566,9 @@ fn adopt_existing_cluster(
         Some(nodes) => describe_cluster_drift(
             spec.kubernetes.workers,
             nodes.workers,
-            spec.provisioner_config.k3d.image.as_deref(),
+            spec.provisioner_config
+                .k3d()
+                .and_then(|c| c.image.as_deref()),
             nodes.kubelet_version.as_deref(),
         )
         .is_empty(),
@@ -647,7 +669,9 @@ fn report_out_of_band_drift(name: &str, spec: &ClusterSpec) {
     let drift = describe_cluster_drift(
         spec.kubernetes.workers,
         nodes.workers,
-        spec.provisioner_config.k3d.image.as_deref(),
+        spec.provisioner_config
+            .k3d()
+            .and_then(|c| c.image.as_deref()),
         nodes.kubelet_version.as_deref(),
     );
 
@@ -709,8 +733,7 @@ fn resolve_auto_deploy(
 ) -> Vec<(String, String)> {
     let mut auto_deploy: Vec<(String, String)> = spec
         .provisioner_config
-        .k3d
-        .auto_deploy_manifests
+        .auto_deploy_manifests()
         .iter()
         .map(|m| (m.name.clone(), m.path.clone()))
         .collect();

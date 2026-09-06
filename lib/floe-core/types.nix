@@ -159,6 +159,29 @@ rec {
     name = "record { ${lib.concatStringsSep ", " (lib.attrNames fields)} }";
   };
 
+  # A value that is exactly one of several shapes, saying which by the name it
+  # is under: `{ k3d = { … }; }`.
+  #
+  # `record` cannot express this. A record with one field per variant makes
+  # every variant required, so a shape that is not k3d has to emit a k3d block
+  # anyway — which is how `catallaxy.cluster` came to carry one, and why the
+  # comment on the provisioner floe saying "the provisioner is not a closed
+  # set" was true of the floe and false of the kind it emitted.
+  #
+  # Nor does an `enum` discriminator beside an untagged record. Then the tag
+  # and the block are two facts that can disagree, and the disagreement is
+  # exactly the one nothing catches: a value tagged `talos` carrying k3d
+  # settings type-checks perfectly and means nothing.
+  #
+  # Serialises as serde's default externally-tagged representation, so a Rust
+  # `enum` reads it with no custom deserialiser and gets exactly-one-variant
+  # from the same place this does.
+  taggedUnion = variants: {
+    tag = "taggedUnion";
+    inherit variants;
+    name = "tagged union { ${lib.concatStringsSep " | " (lib.attrNames variants)} }";
+  };
+
   isDeferredToken = v: isAttrs v && (v.__deferred or false) == true;
 
   # checkValue :: [string] -> type -> value -> value
@@ -230,6 +253,36 @@ rec {
             fail "missing field(s): ${lib.concatStringsSep ", " missing}"
           else
             lib.mapAttrs (f: fty: checkValue (path ++ [ f ]) fty v.${f}) ty.fields
+      )
+    else if ty.tag == "taggedUnion" then
+      (
+        let
+          known = lib.attrNames ty.variants;
+          expected = "expected exactly one of [${lib.concatStringsSep ", " known}]";
+          present = lib.attrNames v;
+          unknown = lib.subtractLists known present;
+        in
+        if !isAttrs v then
+          fail "expected ${ty.name}, got ${typeOf v}"
+        else if unknown != [ ] then
+          # Named before the count, because a misspelt variant is also a
+          # wrong count and reporting that first sends the reader looking
+          # for a second variant they never wrote.
+          fail "no variant named ${lib.concatMapStringsSep ", " (n: "'${n}'") unknown}; ${expected}"
+        else if present == [ ] then
+          fail "names no variant; ${expected}"
+        else if lib.length present > 1 then
+          fail (
+            "names ${toString (lib.length present)} variants at once "
+            + "(${lib.concatStringsSep ", " present}); a tagged union carries one. ${expected}"
+          )
+        else
+          let
+            k = lib.head present;
+          in
+          {
+            ${k} = checkValue (path ++ [ k ]) ty.variants.${k} v.${k};
+          }
       )
     else if ty ? check then
       (if ty.check v then v else fail "expected ${ty.name}, got ${short v}")

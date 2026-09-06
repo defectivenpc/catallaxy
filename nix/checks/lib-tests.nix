@@ -49,6 +49,7 @@ let
     manifest-graph = testsDir + "/manifest-graph.nix";
     manifest-autoedges = testsDir + "/manifest-autoedges.nix";
     plan-graph = testsDir + "/plan-graph.nix";
+    render-infra = testsDir + "/render-infra.nix";
   };
 
   # Discovered, not listed. A hand-written list beside a `readDir` only ever

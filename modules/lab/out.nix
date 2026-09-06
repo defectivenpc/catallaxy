@@ -21,6 +21,23 @@ let
   clusters = config.lab.clusters;
 
   imageUtil = import ../../lib/render/images.nix { inherit lib; };
+  infraLib = import ../../lib/render/infra.nix { inherit lib; };
+  tofuProviders = import ../../lib/tofu-providers.nix { inherit lib pkgs; };
+
+  # Every stack in the lab, across every cluster. Names are already scoped by
+  # the cluster that produced them, so this merge is disjoint by construction
+  # — the same property the component monoid gets from `qualify`.
+  allStacks = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: c: c.stacks) clusters);
+
+  # The providers the lab's stacks actually name, so `init` verifies those and
+  # no others. A lab with no stacks builds no tool at all.
+  usedProviders = lib.unique (
+    lib.concatLists (
+      lib.mapAttrsToList (_: stack: lib.mapAttrsToList (_: r: r.provider) stack.resources) allStacks
+    )
+  );
+
+  infraTool = tofuProviders.toolFor usedProviders;
   chainsaw = import ../../lib/render/chainsaw.nix { inherit lib pkgs; };
   lintRender = import ../../lib/render/lint.nix { inherit lib pkgs; };
   # The lab's own vault, if it has exactly one.
@@ -198,6 +215,21 @@ in
   config.lab.out = {
     cliConfig = {
       labName = config.lab.name;
+
+      # Flattened per RFC 0003 §7, because the executor wants "for this
+      # stack, these outputs go to these places" and not a walk over
+      # resources. `InfraPublication` in `cli/src/domain/lab.rs`.
+      infraPublications = lib.concatLists (
+        lib.mapAttrsToList (
+          stackName: stack:
+          map (pub: {
+            stack = stackName;
+            outputName = infraLib.outputName pub.resource pub.output;
+            inherit (pub) store key;
+          }) stack.publications
+        ) allStacks
+      );
+
       clusterNames = lib.attrNames clusters;
       clusters = lib.mapAttrs (_: c: c.spec) clusters;
 
@@ -331,13 +363,42 @@ in
         # `autodeploy/<cluster>/<name>.yaml` is the layout
         # `cli/src/provision/mod.rs` already looks in before falling back to
         # the declared path, so nothing on the CLI side changes.
+        #
+        # Guarded on the variant rather than indexing `.k3d` outright: the
+        # provisioner config is a tagged union now, so a cluster made any
+        # other way carries no k3d key and reading one would be an eval error
+        # in the lab package rather than the empty list it means.
+        # `infra/<stack>/main.tf.json`, exactly where
+        # `cli/src/plan/steps/infra.rs` looks. Rendered as data and written
+        # with `jq`, the way `metadata.json` is: the file is a value, so it
+        # is diffable as a fixture without building anything.
+        infraRenders = lib.mapAttrsToList (stackName: stack: ''
+          mkdir -p $out/infra/${stackName}
+          jq . ${
+            pkgs.writeText "${stackName}.tf.json" (
+              builtins.toJSON (
+                infraLib.renderStack {
+                  name = stackName;
+                  inherit stack;
+                  stacks = allStacks;
+                  providers = tofuProviders.constraints;
+                  # Where the CLI puts a stack's state, restated once so a
+                  # remote-state read resolves to the same place the producer
+                  # writes. `host::state::infra_work_dir` is the other half.
+                  stateDir = "$HOME/.local/share/catallaxy/infra/${config.lab.name}";
+                }
+              )
+            )
+          } > $out/infra/${stackName}/main.tf.json
+        '') allStacks;
+
         autoDeployCopies = lib.concatLists (
           lib.mapAttrsToList (
             clusterName: c:
             map (m: ''
               mkdir -p $out/autodeploy/${clusterName}
               cp ${m.path} $out/autodeploy/${clusterName}/${m.name}.yaml
-            '') c.spec.provisionerConfig.k3d.autoDeployManifests
+            '') (c.spec.provisionerConfig.k3d.autoDeployManifests or [ ])
           ) clusters
         );
       in
@@ -363,6 +424,12 @@ in
           jq . "$metadataTextPath" > $out/metadata.json
 
           ${lib.concatStringsSep "\n" autoDeployCopies}
+
+          ${lib.optionalString (allStacks != { }) ''
+            mkdir -p $out/infra/bin
+            ln -s ${infraTool}/bin/tofu $out/infra/bin/tofu
+          ''}
+          ${lib.concatStringsSep "\n" infraRenders}
 
           ${lib.optionalString (config.lab.out.rootApplication != { }) ''
             mkdir -p $out/cd

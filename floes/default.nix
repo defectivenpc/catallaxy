@@ -31,6 +31,7 @@
     openebs = ./cluster/openebs;
     otel-collector = ./cluster/otel-collector;
     podinfo = ./cluster/podinfo;
+    provisioned = ./cluster/provisioned;
     prometheus = ./cluster/prometheus;
     redis-operator = ./cluster/redis-operator;
     reloader = ./cluster/reloader;
@@ -50,5 +51,6 @@
 
   provisioners = {
     k3d-cluster = ./provisioners/k3d-cluster.nix;
+    talos-cluster = ./provisioners/talos-cluster.nix;
   };
 }

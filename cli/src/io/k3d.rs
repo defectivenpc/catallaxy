@@ -418,9 +418,8 @@ pub fn add_servers(
 /// same way `cluster_create` derives it.
 pub fn node_image_for(spec: &crate::domain::ClusterSpec) -> String {
     spec.provisioner_config
-        .k3d
-        .image
-        .clone()
+        .k3d()
+        .and_then(|c| c.image.clone())
         .unwrap_or_else(|| format!("rancher/k3s:v{}-k3s1", spec.kubernetes.version))
 }
 

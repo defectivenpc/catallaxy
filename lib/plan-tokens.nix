@@ -20,9 +20,19 @@ let
     gone = "cluster/${name}/gone";
     destroyed = "cluster/${name}/destroyed";
   };
+  # One unit of state and one apply — RFC 0003 §5. Both directions, because
+  # a teardown that is unordered against the cluster lifecycle leaves an
+  # `after-clusters` stack destroyed next to network teardown by accident of
+  # the sort rather than by declaration, and an accident that happens to be
+  # correct is not an ordering constraint.
+  stackTokens = name: {
+    applied = "stack/${name}/applied";
+    destroyed = "stack/${name}/destroyed";
+  };
 in
 {
   cluster = clusterTokens;
+  stack = stackTokens;
 
   lab = {
     preflightOk = "lab/preflight-ok";

@@ -34,11 +34,17 @@ impl VerifyContext<'_> {
         self.lab.namespaces_for(cluster)
     }
 
+    /// Every routed hostname the lab's proxy can be asked about.
+    ///
+    /// Clusters that are their own edge (RFC 0005 §6.4) are left out: their
+    /// hostnames do not resolve through the lab, so probing them at the lab's
+    /// ingress tests a route nobody declared and fails for the wrong reason.
     pub fn exposed_hosts(&self) -> Vec<(String, ExposedHost)> {
         let mut out: Vec<(String, ExposedHost)> = self
             .lab
             .clusters
             .iter()
+            .filter(|(_, spec)| spec.edge.mode == crate::domain::EdgeMode::Proxy)
             .flat_map(|(cluster, spec)| {
                 spec.exposed_hosts
                     .iter()
@@ -223,9 +229,9 @@ mod tests {
                          "noTraefik": true, "noServiceLB": false, "noFlannel": false, "noLocalStorage": false,
                          "ports": [], "extraApiServerArgs": [], "extraVolumes": [],
                          "autoDeployManifests": [] },
-                "docker": { "clusterName": name, "waitTimeout": "10m",
-                            "colima": { "enable": true, "profile": "catallaxy", "cpu": 4, "disk": 60, "memory": 8 } },
             },
+            "host": { "waitTimeout": "10m",
+                      "colima": { "enable": true, "profile": "catallaxy", "cpu": 4, "disk": 60, "memory": 8 } },
             "floes": {},
             "exposedHosts": [],
             "projections": {},
@@ -274,6 +280,43 @@ mod tests {
             .map(|(_, h)| h.host)
             .collect();
         assert_eq!(hosts, vec!["a.test", "b.test"]);
+    }
+
+    /// A cluster the lab is not the edge for is not probed through the lab.
+    ///
+    /// `verify` resolves every routed host to the lab's ingress on loopback,
+    /// which is right exactly when the lab fronts every cluster. For one that
+    /// fronts itself the probe would dial HAProxy for a name HAProxy has no
+    /// backend for, get its default 503, and report the cluster as broken
+    /// when nothing about it is.
+    #[test]
+    fn a_self_edge_clusters_hosts_are_not_probed_through_the_lab() {
+        let (lab, config) = with(json!({
+            "clusterNames": ["local", "cloud"],
+            "clusters": {
+                "local": { "exposedHosts": [
+                    { "host": "here.test", "tier": "public", "namespace": "n", "bundle": "x" },
+                ]},
+                "cloud": {
+                    "edge": { "mode": "self", "backend": null, "httpPort": 80, "httpsPort": 443 },
+                    "exposedHosts": [
+                        { "host": "there.test", "tier": "public", "namespace": "n", "bundle": "y" },
+                    ],
+                },
+            },
+        }));
+        let ctx = VerifyContext {
+            lab_name: "l",
+            lab: &lab,
+            config: &config,
+            package: None,
+        };
+        let hosts: Vec<String> = ctx
+            .exposed_hosts()
+            .into_iter()
+            .map(|(_, h)| h.host)
+            .collect();
+        assert_eq!(hosts, vec!["here.test"]);
     }
 
     #[test]

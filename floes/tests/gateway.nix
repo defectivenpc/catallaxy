@@ -23,7 +23,19 @@ let
     };
   };
 
+  # The same floe on a cluster where nothing assigns LoadBalancer addresses.
+  # Only that one field of the cluster differs — the inputs are `plain`'s.
+  onNodePorts = support.evalFloe {
+    name = "gateway";
+    inputs = {
+      chart = "/dev/null";
+    };
+    stubValues.cluster.assignsLoadBalancers = false;
+  };
+
   listeners = r: map (l: l.name) r.bundles.gateway.resources.default-gateway.spec.listeners;
+
+  traefikValues = r: r.bundles.controller.helmCharts.traefik.values;
 in
 lib.runTests {
 
@@ -83,5 +95,53 @@ lib.runTests {
   testTheGatewayFollowsItsController = {
     expr = plain.bundles.gateway.needs;
     expected = [ "controller" ];
+  };
+
+  # ---- reached by NodePort ------------------------------------------------
+  #
+  # k3s ships ServiceLB and binds the node's own 80 and 443, so a LoadBalancer
+  # Service is reachable at the node's name. Nothing else does: it stays
+  # Pending forever, port 80 of the node answers nothing, and neither is a
+  # failure anything reports.
+  #
+  # Both sides are pinned because only having the second would let the
+  # NodePort become unconditional without a test moving.
+
+  testOnAClusterWithServiceLbTheServiceKeepsItsDefault = {
+    expr = (traefikValues plain).service or null;
+    expected = null;
+  };
+
+  testWithoutOneTheGatewayAsksForANodePort = {
+    expr = {
+      inherit ((traefikValues onNodePorts).service) type;
+      http = (traefikValues onNodePorts).ports.web.nodePort;
+      https = (traefikValues onNodePorts).ports.websecure.nodePort;
+    };
+    expected = {
+      type = "NodePort";
+      # One value, in the distribution: the provisioner answers `edge.httpPort`
+      # from the same attrset, so what the proxy dials and what the gateway
+      # binds cannot drift.
+      http = 30080;
+      https = 30443;
+    };
+  };
+
+  # An address is the right thing to wait for when something assigns one. A
+  # Gateway fronted by a NodePort never gets one, so waiting for it waits out
+  # the full timeout on a gateway that has been serving the whole time —
+  # ten minutes of a lab looking hung, then a failure naming the wrong thing.
+  testTheProbeWaitsForWhatCanActuallyArrive = {
+    expr = {
+      withServiceLb = plain.bundles.gateway.ready.kind;
+      onNodePorts = onNodePorts.bundles.gateway.ready.kind;
+      condition = onNodePorts.bundles.gateway.ready.condition or null;
+    };
+    expected = {
+      withServiceLb = "jsonpath";
+      onNodePorts = "condition";
+      condition = "Programmed";
+    };
   };
 }

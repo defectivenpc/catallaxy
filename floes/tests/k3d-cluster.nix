@@ -28,7 +28,7 @@ lib.runTests {
   testTheTwoNamesStaySeparate = {
     expr = {
       signature = r.provides.cluster.name;
-      containers = descriptor.k3d.clusterName;
+      containers = descriptor.config.k3d.clusterName;
       descriptor = descriptor.name;
     };
     expected = {
@@ -70,7 +70,7 @@ lib.runTests {
   # not know what else shares it. Null here, filled by the lab; a default
   # invented at this level would be one the lab then has to override.
   testItLeavesTheDockerNetworkToTheLab = {
-    expr = descriptor.k3d.network;
+    expr = descriptor.config.k3d.network;
     expected = null;
   };
 
@@ -79,7 +79,7 @@ lib.runTests {
   # stay in: a floe needing Cilium or OpenEBS turns the conflicting one off.
   testItDropsOnlyTheIngressAFloeReplaces = {
     expr = {
-      inherit (descriptor.k3d)
+      inherit (descriptor.config.k3d)
         noTraefik
         noServiceLB
         noLocalStorage
@@ -109,19 +109,43 @@ lib.runTests {
       };
     in
     {
-      expr = cilium.link.out."catallaxy.cluster".k3d-cluster.k3d.noFlannel;
+      expr = cilium.link.out."catallaxy.cluster".k3d-cluster.config.k3d.noFlannel;
       expected = true;
     };
 
+  # The lab is a k3d cluster's edge, and the floe says so rather than the lab
+  # inferring it. `modules/lab/cluster.nix` used to test `provisioner == "k3d"`
+  # and build this container name itself, which made every new provisioner an
+  # edit to the lab — the one thing RFC 0005 §8.2 says adding one must not be.
+  testItNamesTheLabAsItsEdge = {
+    expr = descriptor.edge;
+    expected = {
+      mode = "proxy";
+      # The instance name, not the cluster name: two labs each holding a
+      # cluster called `app` have distinct containers and so distinct edges.
+      backend = "k3d-homelab-local-app-server-0";
+
+      # k3s's ServiceLB binds these on the node. A provisioner without one
+      # answers a NodePort here instead, which is the whole reason the ports
+      # are the provisioner's to say rather than the lab's to assume.
+      httpPort = 80;
+      httpsPort = 443;
+    };
+  };
+
   # Pinned, not floating. A lab is reproducible or it is not.
   testTheNodeImageIsPinned = {
-    expr = lib.hasInfix ":v" descriptor.k3d.image;
+    expr = lib.hasInfix ":v" descriptor.config.k3d.image;
     expected = true;
   };
 
   testItProvisionsItselfOnDocker = {
     expr = {
-      inherit (descriptor) provisioner provider;
+      # The provisioner is the union's key. There is no separate field
+      # to read, which is the point: a tag beside an untagged block is two
+      # facts that can disagree.
+      provisioner = lib.head (lib.attrNames descriptor.config);
+      inherit (descriptor) provider;
       inherit (descriptor.kubernetes) distribution controlPlanes workers;
     };
     expected = {

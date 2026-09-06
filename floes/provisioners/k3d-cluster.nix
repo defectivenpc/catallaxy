@@ -136,11 +136,15 @@ floe.mkFloe {
             serviceSubnet
             ;
           context = config.kubeContext;
+
+          # k3s ships ServiceLB, so a LoadBalancer Service gets the node's own
+          # address and the gateway is reached on 80 and 443. That is the same
+          # fact `edge` projects outward, read from the other side.
+          assignsLoadBalancers = true;
         };
 
         config.floe.out.cluster = {
           inherit (inputs) name;
-          provisioner = "k3d";
           provider = "docker";
           kubeContext = config.kubeContext;
 
@@ -155,7 +159,24 @@ floe.mkFloe {
             inherit (inputs) podSubnet serviceSubnet;
           };
 
-          k3d = {
+          # The lab is this cluster's edge: it runs on the lab's own docker
+          # network, so the proxy reaches it by container name. RFC 0005 §6.4.
+          #
+          # The server node rather than a published port, because the proxy
+          # and the cluster share a network and the port a k3d cluster
+          # publishes to the *host* is a different thing entirely.
+          edge = {
+            mode = "proxy";
+            backend = "k3d-${inputs.instanceName}-server-0";
+
+            # k3s's ServiceLB binds these on the node itself, so the gateway's
+            # LoadBalancer Service is reachable at the node's name on the
+            # ordinary ports. A provisioner without it answers a NodePort.
+            httpPort = 80;
+            httpsPort = 443;
+          };
+
+          config.k3d = {
             clusterName = inputs.instanceName;
             inherit (inputs) image;
 

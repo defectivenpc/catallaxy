@@ -148,6 +148,17 @@
     };
     podinfo = floes.podinfo { };
 
+    # The other delivery camp. Publishes into the runtime store, so this
+    # fixture covers the join between the two (RFC 0003 §7) and not only the
+    # resources on their own.
+    provisioned = floes.provisioned {
+      stateDir = "/tmp/catallaxy-every-floe";
+      publishTo = {
+        store = "runtime";
+        key = "provisioned/identity";
+      };
+    };
+
     # The escape hatch, instantiated once per app the way a lab would.
     hello = floes.custom {
       name = "hello";

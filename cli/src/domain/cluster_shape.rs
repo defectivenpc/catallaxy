@@ -82,8 +82,17 @@ impl ClusterShape {
         // ships no Traefik, and worse, the apiserver args and volume mounts
         // k3d would have rendered for OIDC and PKI, asserting that a cluster
         // was configured in a way it never was.
-        match spec.provisioner {
-            crate::domain::ProvisionerKind::K3d => shape.with_k3d(&spec.provisioner_config.k3d),
+        // Matched on the config, so the k3d block is unreachable without the
+        // k3d tag. It used to be reachable with any tag at all, which is what
+        // made the fiction above possible in the first place.
+        match &spec.provisioner_config {
+            crate::domain::ProvisionerConfig::K3d(k3d) => shape.with_k3d(k3d),
+
+            // Talos records nothing beyond the common fields, and there is
+            // deliberately no `with_talos` writing its subnet and memory into
+            // the columns above. Those columns are k3d's vocabulary; a record
+            // answering `noTraefik` for a distribution that ships no Traefik
+            // is the same fiction, arriving by a different route.
             _ => shape,
         }
     }
@@ -777,17 +786,34 @@ mod tests {
 
     // A record is what drift is compared against, so a field it carries that
     // the cluster never saw is worse than a field it omits.
+    //
+    // This used to hand the fixture a `talos` tag over a k3d block and check
+    // that the tag won. That spec is no longer expressible: the tag *is* the
+    // block's key. So the fixture is a real Talos cluster, and what it proves
+    // is that a shape built from one carries no k3d options — the same claim,
+    // now made against a spec that could exist.
     #[test]
     fn a_non_k3d_shape_records_no_k3d_options() {
         let mut json = crate::domain::cluster::tests::cluster_json();
         json["provisioner"] = serde_json::json!("talos");
-        json["provisionerConfig"]["k3d"]["noTraefik"] = serde_json::json!(true);
-        json["provisionerConfig"]["k3d"]["image"] = serde_json::json!("rancher/k3s:v1.31.4-k3s1");
-        json["provisionerConfig"]["k3d"]["extraApiServerArgs"] =
-            serde_json::json!(["--oidc-issuer-url=x"]);
+        json["provisionerConfig"] = serde_json::json!({
+            "talos": {
+                "clusterName": "minimal-talos-app",
+                "image": null,
+                "kubernetesVersion": null,
+                "subnet": "10.5.0.0/24",
+                "exposedPorts": [],
+                "mounts": [],
+                "memory": "2048",
+                "cpus": "2",
+                "configPatches": [],
+                "reachableFrom": [],
+            }
+        });
         let spec = ClusterSpec::from_value(json).expect("fixture parses");
 
         let recorded = ClusterShape::of(&spec);
+        assert_eq!(recorded.provisioner, "talos");
         assert_eq!(recorded.image, None);
         assert!(!recorded.no_traefik);
         assert_eq!(recorded.extra_api_server_args, Vec::<String>::new());

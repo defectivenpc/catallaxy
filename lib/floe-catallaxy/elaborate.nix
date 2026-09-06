@@ -515,5 +515,12 @@ in
         owners = lib.mapAttrs (_: resolveOwner defaultOwner) bundles;
 
         cluster = linkResult.out."catallaxy.cluster" or { };
+
+        # RFC 0003's camp, collected the same way and joined by nothing: a
+        # unit's resources are its own, and a stack is keyed by the unit that
+        # declared them (RFC 0003 §5). Passing them through per unit rather
+        # than merging is what keeps that key available at all.
+        resources = linkResult.out."catallaxy.resources" or { };
+        publications = linkResult.out."catallaxy.publications" or { };
       };
 }

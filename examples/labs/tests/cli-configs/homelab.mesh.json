@@ -1,0 +1,799 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {},
+    "strategy": "kapp"
+  },
+  "clusterNames": [
+    "core",
+    "obs"
+  ],
+  "clusters": {
+    "core": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-homelab-mesh-core-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "forgejo/forgejo",
+          "host": "git.homelab.test",
+          "namespace": "forgejo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "harbor/harbor",
+          "host": "harbor.homelab.test",
+          "namespace": "harbor",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "netbird/server",
+          "host": "netbird.homelab.test",
+          "namespace": "netbird",
+          "paths": [
+            "/api",
+            "/management.ManagementService/",
+            "/signalexchange.SignalExchange/",
+            "/relay",
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "kanidm/server",
+          "host": "idm.homelab.test",
+          "namespace": "default",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "external-secrets": {
+          "enable": true
+        },
+        "forgejo": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "harbor": {
+          "enable": true
+        },
+        "kanidm": {
+          "enable": true
+        },
+        "kaniop": {
+          "enable": true
+        },
+        "lab-dns": {
+          "enable": true
+        },
+        "netbird": {
+          "enable": true
+        },
+        "netbird-operator": {
+          "enable": true
+        },
+        "openbao": {
+          "enable": true
+        },
+        "reloader": {
+          "enable": true
+        },
+        "seaweedfs": {
+          "enable": true
+        },
+        "secret-store": {
+          "enable": true
+        },
+        "trust-manager": {
+          "enable": true
+        },
+        "velero": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "k3d-homelab-mesh-core",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "homelab.mesh",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "external-secrets/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "kaniop/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "lab-dns/coredns",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "external-secrets/external-secrets",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "kaniop/kaniop",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "openbao/server",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "projection/vault-token",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "reloader/reloader",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "seaweedfs/seaweedfs",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "openbao/init",
+            "resourceCount": 7
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "secret-store/store",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "velero/crds",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/trust-manager",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "velero/velero",
+            "resourceCount": 2
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 2
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/bundles",
+            "resourceCount": 2
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "kanidm/server",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "forgejo/forgejo",
+            "resourceCount": 4
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "harbor/harbor",
+            "resourceCount": 14
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/credentials",
+            "resourceCount": 5
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/dashboard",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "forgejo/bootstrap",
+            "resourceCount": 2
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/server",
+            "resourceCount": 12
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/automation",
+            "resourceCount": 7
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "netbird-operator/operator",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "secret-publication/netbird-api-token",
+            "resourceCount": 1
+          }
+        ]
+      ],
+      "name": "core",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {
+        "vault-token": {
+          "keys": {
+            "token": {
+              "from": "token",
+              "jsonKey": null,
+              "transform": "none"
+            }
+          },
+          "namespace": "external-secrets",
+          "source": "vault-credential"
+        }
+      },
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [],
+          "clusterName": "homelab-mesh-core",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "homelab.mesh",
+          "noFlannel": false,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    },
+    "obs": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-homelab-mesh-obs-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "grafana/grafana",
+          "host": "grafana.homelab.test",
+          "namespace": "monitoring",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "external-secrets": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "grafana": {
+          "enable": true
+        },
+        "lab-dns": {
+          "enable": true
+        },
+        "loki": {
+          "enable": true
+        },
+        "netbird-operator": {
+          "enable": true
+        },
+        "otel-collector": {
+          "enable": true
+        },
+        "prometheus": {
+          "enable": true
+        },
+        "secret-store": {
+          "enable": true
+        },
+        "tempo": {
+          "enable": true
+        },
+        "trust-manager": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "k3d-homelab-mesh-obs",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "homelab.mesh",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "external-secrets/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "lab-dns/coredns",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "external-secrets/external-secrets",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "loki/loki",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "projection/vault-token",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "tempo/tempo",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "secret-store/store",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "prometheus/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "secret-subscription/netbird-api-token",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/trust-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 2
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird-operator/operator",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "prometheus/prometheus",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/bundles",
+            "resourceCount": 2
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "grafana/grafana",
+            "resourceCount": 3
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "otel-collector/gateway",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "otel-collector/agent",
+            "resourceCount": 0
+          }
+        ]
+      ],
+      "name": "obs",
+      "network": {
+        "podSubnet": "10.245.0.0/16",
+        "serviceSubnet": "10.112.0.0/12"
+      },
+      "projections": {
+        "vault-token": {
+          "keys": {
+            "token": {
+              "from": "token",
+              "jsonKey": null,
+              "transform": "none"
+            }
+          },
+          "namespace": "external-secrets",
+          "source": "vault-credential"
+        }
+      },
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [],
+          "clusterName": "homelab-mesh-obs",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "homelab.mesh",
+          "noFlannel": false,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": {
+    "host": "127.0.0.1",
+    "port": 5362,
+    "tsigKeyname": "externaldns-key",
+    "tsigSecret": "kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=",
+    "tsigSecretAlg": "hmac-sha256",
+    "zone": "homelab.test"
+  },
+  "infraPublications": [],
+  "labName": "homelab.mesh",
+  "labNamespaces": {
+    "core": [
+      "cert-manager",
+      "external-secrets",
+      "forgejo",
+      "harbor",
+      "kanidm",
+      "netbird",
+      "openbao",
+      "reloader",
+      "seaweedfs",
+      "velero"
+    ],
+    "obs": [
+      "cert-manager",
+      "external-secrets",
+      "monitoring",
+      "loki",
+      "netbird",
+      "observability",
+      "tempo"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.36.0.0/16",
+    "name": "homelab.mesh"
+  },
+  "opsToolPath": "/nix/store/HASH-homelab.mesh-ops/bin/homelab.mesh-ops",
+  "registryPort": 5058,
+  "registryUpstreams": [
+    "codeberg.org",
+    "registry.k8s.io",
+    "ghcr.io",
+    "quay.io",
+    "docker.io",
+    "public.ecr.aws",
+    "oci.external-secrets.io"
+  ],
+  "runtimeContexts": {
+    "core": "k3d-homelab-mesh-core",
+    "obs": "k3d-homelab-mesh-obs"
+  },
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {
+      "vault-credential": {
+        "keys": {
+          "token": {
+            "generator": "hex",
+            "length": 32
+          }
+        },
+        "kind": "value",
+        "store": "authored"
+      }
+    },
+    "stores": {
+      "authored": {
+        "backend": "sops",
+        "direction": "authored",
+        "vault": {
+          "path": "secret",
+          "server": null,
+          "version": "v2"
+        },
+        "writerCommand": null
+      },
+      "runtime": {
+        "backend": "vault",
+        "direction": "runtime",
+        "vault": {
+          "path": "secret",
+          "server": "https://vault.homelab.test",
+          "version": "v2"
+        },
+        "writerCommand": null
+      }
+    }
+  },
+  "services": {
+    "dns": {
+      "command": [
+        "knotd"
+      ],
+      "container": "catallaxy-homelab.mesh-dns",
+      "description": "Knot DNS server (homelab.test)",
+      "image": "cznic/knot:latest",
+      "networks": [
+        "homelab.mesh"
+      ],
+      "ports": [
+        "5362:53/tcp",
+        "5362:53/udp"
+      ],
+      "volumes": {
+        "/config/knot.conf": {
+          "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: homelab.test.\n    storage: /storage\n    file: homelab.test.zone\n    acl: update-acl\n"
+        },
+        "/storage/homelab.test.zone": {
+          "content": "$ORIGIN homelab.test.\n$TTL 300\n\n@   IN  SOA ns1.homelab.test. admin.homelab.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.homelab.test.\nns1 IN  A   127.0.0.1\n\n; Every host-facing endpoint arrives through the ingress, which routes\n; by Host header, so one wildcard answers for all of them. The target is\n; the docker bridge gateway because the same zone is served to the host\n; and to pods, and that address reaches the ingress's published port\n; from both.\n;\n; A more specific record always wins, so a DNS controller keeps control\n; of anything it publishes. Without this a lab that runs no such\n; controller resolves nothing at all.\n*   IN  A   172.36.0.1\n"
+        }
+      }
+    },
+    "egress": {
+      "container": "catallaxy-homelab.mesh-egress",
+      "description": "Forward proxy inside the lab network (homelab.test)",
+      "dnsContainers": [
+        "catallaxy-homelab.mesh-dns"
+      ],
+      "image": "ghcr.io/querateam/docker-tinyproxy:latest",
+      "networks": [
+        "homelab.mesh"
+      ],
+      "ports": [
+        "127.0.0.1:3135:8888"
+      ],
+      "volumes": {
+        "/etc/tinyproxy/tinyproxy.conf": {
+          "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
+        }
+      }
+    },
+    "proxy": {
+      "container": "catallaxy-homelab.mesh-ingress",
+      "description": "HAProxy lab ingress (homelab.test)",
+      "extraMounts": [
+        {
+          "container": "/etc/haproxy/certs/lab.pem",
+          "host": "{{STATE_DIR}}/proxy/lab.pem"
+        }
+      ],
+      "image": "haproxy:3.1-alpine",
+      "networks": [
+        "homelab.mesh"
+      ],
+      "ports": [
+        "127.0.0.1:8086:80",
+        "172.36.0.1:80:80",
+        "127.0.0.1:8449:443",
+        "172.36.0.1:443:443"
+      ],
+      "readyProbe": {
+        "host": "127.0.0.1",
+        "kind": "tcp",
+        "port": 8086,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/usr/local/etc/haproxy/haproxy.cfg": {
+          "content": "global\n    log stdout format raw local0 info\n\n# `init-addr none` with a resolver, rather than resolving at startup:\n# the proxy comes up before the cluster it points at exists, and\n# HAProxy refuses to start on a server name it cannot resolve.\nresolvers docker\n    nameserver dns1 127.0.0.11:53\n    resolve_retries 30\n    timeout resolve 1s\n    timeout retry 1s\n    hold valid 10s\n\ndefaults\n    timeout connect 5s\n    timeout client 1h\n    timeout server 1h\n    timeout tunnel 1h\n    log global\n\nfrontend ft_https\n    bind *:443 ssl crt /etc/haproxy/certs/lab.pem\n    mode http\n\n    use_backend bk_http_core if { req.hdr(host),field(1,:) -i git.homelab.test }\n    use_backend bk_http_core if { req.hdr(host),field(1,:) -i harbor.homelab.test }\n    use_backend bk_http_core if { req.hdr(host),field(1,:) -i netbird.homelab.test }\n    use_backend bk_http_core if { req.hdr(host),field(1,:) -i idm.homelab.test }\n    use_backend bk_http_obs if { req.hdr(host),field(1,:) -i grafana.homelab.test }\n\nfrontend ft_http\n    bind *:80\n    mode http\n\n    # Redirect to the bare host, not `redirect scheme https`,\n    # which keeps whatever port the client used and would send it\n    # to HTTPS on the HTTP port. Dropping the port lands on 443,\n    # which is what the zone's wildcard reaches.\n    http-request redirect location https://%[req.hdr(host),field(1,:)]%[path] code 301\n\n\nbackend bk_http_core\n    mode http\n    server srv1 k3d-homelab-mesh-core-server-0:443 ssl verify none init-addr none resolvers docker resolve-prefer ipv4\n\nbackend bk_http_obs\n    mode http\n    server srv1 k3d-homelab-mesh-obs-server-0:443 ssl verify none init-addr none resolvers docker resolve-prefer ipv4\n"
+        }
+      }
+    },
+    "registry": {
+      "container": "catallaxy-homelab.mesh-registry",
+      "description": "Zot OCI registry (image cache)",
+      "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "ports": [
+        "5058:5000"
+      ],
+      "readyProbe": {
+        "expectedStatus": 200,
+        "host": "127.0.0.1",
+        "kind": "http",
+        "path": "/v2/",
+        "port": 5058,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/etc/zot/config.json": {
+          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
+        },
+        "/var/lib/zot": {
+          "persist": "data"
+        }
+      }
+    }
+  },
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": true
+    }
+  }
+}

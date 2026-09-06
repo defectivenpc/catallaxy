@@ -134,6 +134,28 @@ floe.mkFloe {
         issuance = config.floe.requires.issuance;
         tls = inputs.tlsEnable;
 
+        # Where the gateway is reached from outside the cluster.
+        #
+        # k3s ships ServiceLB, so a LoadBalancer Service takes the node's own
+        # 80 and 443 and there is nothing to arrange. Nothing else does: the
+        # Service stays `Pending` forever, the node's 80 answers nothing, and
+        # neither is an error anything reports. A cluster with no such
+        # mechanism is reached on a NodePort instead.
+        #
+        # Read off the cluster signature rather than inferred from the
+        # provisioner's name, which is what the previous implementation did
+        # (`cluster.provisionerOut.publishesGatewayPorts`, keyed on a
+        # provisioner enum). A floe asking "am I on k3d" is a floe that has
+        # to be edited for every provisioner; one asking "does a LoadBalancer
+        # get an address here" is asking the thing it actually depends on.
+        reachedByNodePort = !config.floe.requires.cluster.assignsLoadBalancers;
+
+        # One value, in the distribution. The provisioner answers
+        # `edge.httpPort` with the same attrset, so the port the lab's proxy
+        # dials and the port the gateway binds cannot disagree — there is
+        # nothing to keep in step.
+        nodePorts = kinds.gatewayNodePorts;
+
         # The listener a route attaches to. With TLS on, plaintext exists only
         # to be redirected, so a consumer's `parentRef` has to name the https
         # one — which is why this is derived rather than fixed.
@@ -258,6 +280,13 @@ floe.mkFloe {
                   gateway.enabled = false;
 
                   ingressRoute.dashboard.enabled = false;
+                }
+                // lib.optionalAttrs reachedByNodePort {
+                  service.type = "NodePort";
+                  ports.web.nodePort = nodePorts.http;
+                  ports.websecure.nodePort = nodePorts.https;
+                }
+                // {
 
                   additionalArguments = [
                     "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=0s"
@@ -328,13 +357,31 @@ floe.mkFloe {
               # A Deployment being Available says the controller is up; it
               # says nothing about whether this Gateway got an address. That
               # is a second fact and so a second probe.
-              ready = {
-                kind = "jsonpath";
-                resource = "gateway/${inputs.gatewayName}";
-                namespace = inputs.namespace;
-                jsonpath = "{.status.addresses[0].value}";
-                timeout = "10m";
-              };
+              #
+              # An address is the right thing to wait for when something
+              # assigns one — it is the difference between a Gateway the
+              # controller accepted and one traffic can arrive at. A Gateway
+              # fronted by a NodePort never gets one, because there is no
+              # address to assign, so waiting for it waits out the timeout on
+              # a gateway that has been serving the whole time. `Programmed`
+              # is what remains true in both cases.
+              ready =
+                if reachedByNodePort then
+                  {
+                    kind = "condition";
+                    resource = "gateway/${inputs.gatewayName}";
+                    namespace = inputs.namespace;
+                    condition = "Programmed";
+                    timeout = "10m";
+                  }
+                else
+                  {
+                    kind = "jsonpath";
+                    resource = "gateway/${inputs.gatewayName}";
+                    namespace = inputs.namespace;
+                    jsonpath = "{.status.addresses[0].value}";
+                    timeout = "10m";
+                  };
 
               # A check about *other* floes' output would not belong on a
               # bundle. This one reads every route in the cluster against the

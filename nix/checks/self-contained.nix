@@ -48,6 +48,17 @@ let
       mentions = [ ];
     };
 
+    # The same lab on the second provisioner. Eligible for a reason worth
+    # writing down: `provenUnattended` in `modules/lab/e2e.nix` has named
+    # Talos since it was written, and until this lab existed nothing used that
+    # provisioner — so the entry made a claim, this table pinned the claim,
+    # and neither was ever tested. It is now the difference between the two
+    # halves of the predicate rather than a spare value in a list.
+    "minimal.talos" = {
+      eligible = true;
+      mentions = [ ];
+    };
+
     # The gitops lab: `cata` applies Argo CD and the git server, publishes the
     # rendered tree into that server, and hands the cluster over. Nothing in
     # it needs a human or a credential from outside, so it stands up

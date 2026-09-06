@@ -20,6 +20,7 @@ let
 
   coreKinds = (import ../../lib/kubernetes/types.nix { inherit lib; }).coreKinds;
   address = import ../../lib/eval/secret-address.nix { inherit lib; };
+  infraLib = import ../../lib/render/infra.nix { inherit lib; };
 
   # A bundle the lab owns. Same shape as one a floe contributes, so it gets
   # the same derived edges and the same coherence checks.
@@ -106,43 +107,79 @@ types.submodule (
         description = "How long a bundle may take to reconcile before the apply gives up.";
       };
 
-      # Where the host ingress sends traffic for this cluster. A property of
-      # how the cluster was provisioned rather than of what is installed in
-      # it, which is why it is answered here and not by a floe: the floes
-      # declare hostnames, and something outside them has to know where the
-      # cluster's edge is.
-      ingress = {
-        backend = mkOption {
-          type = types.nullOr types.str;
-          default =
-            let
-              descriptor = lib.head (lib.attrValues config.out.cluster);
-            in
-            if descriptor.provisioner == "k3d" then "k3d-${descriptor.k3d.clusterName}-server-0" else null;
-          defaultText = lib.literalExpression "the k3d server container, for a k3d cluster";
-          description = ''
-            Hostname the ingress connects to for this cluster, resolved on the
-            lab's docker network.
+      # Where this cluster's edge is — RFC 0005 §6.4.
+      #
+      # Every field is read off the descriptor the provisioner emitted,
+      # because where a cluster's edge is follows from how it was made and
+      # not from what is installed in it. It stays an option surface so a lab
+      # can override one, which is the case a fixture needs and nothing in
+      # the shipped tree does.
+      #
+      # This used to be `ingress`, defaulting `backend` by testing
+      # `provisioner == "k3d"` and building the container name here — so
+      # every new provisioner was an edit to the lab, which is the one thing
+      # RFC 0005 §8.2 says adding one must not be.
+      edge =
+        let
+          fromDescriptor = (lib.head (lib.attrValues config.out.cluster)).edge;
+        in
+        {
+          mode = mkOption {
+            type = types.enum [
+              "proxy"
+              "self"
+              "none"
+            ];
+            default = fromDescriptor.mode;
+            defaultText = lib.literalExpression "what the provisioner answered";
+            description = ''
+              Who fronts this cluster.
 
-            Null for a provisioner that has not been taught to answer it. The
-            proxy refuses a cluster that routes a hostname and answers null,
-            rather than rendering a backend that resolves to nothing and
-            timing out every request through it.
-          '';
-        };
+              `proxy` — the lab does, at `backend`. `self` — the cluster is
+              its own edge and the lab routes nothing to it, which is what a
+              managed cluster in a cloud answers. `none` — nothing routes to
+              it at all.
 
-        httpPort = mkOption {
-          type = types.port;
-          default = 80;
-          description = "Port the cluster's gateway serves plain HTTP on, at the backend.";
-        };
+              `self` is a refusal to route rather than a deferred address:
+              the lab has nothing to say about how to reach the cluster, and
+              saying nothing is a complete answer.
+            '';
+          };
 
-        httpsPort = mkOption {
-          type = types.port;
-          default = 443;
-          description = "Port the cluster's gateway serves HTTPS on, at the backend.";
+          backend = mkOption {
+            type = types.nullOr types.str;
+
+            # Keyed on the *effective* mode, not the descriptor's. A lab that
+            # overrides the mode is saying something else reaches this
+            # cluster, and leaving the provisioner's backend standing would
+            # have the document assert a route the proxy does not render.
+            default = if config.edge.mode == "proxy" then fromDescriptor.backend else null;
+            defaultText = lib.literalExpression "the backend the provisioner named, when the lab is this cluster's edge";
+            description = ''
+              Hostname the lab's proxy connects to for this cluster, resolved
+              on the lab's docker network.
+
+              Null unless `mode` is `proxy`. A cluster the lab fronts and
+              cannot name a backend for is refused, rather than rendering a
+              route to a name that resolves to nothing and timing out every
+              request through it.
+            '';
+          };
+
+          httpPort = mkOption {
+            type = types.port;
+            default = fromDescriptor.httpPort;
+            defaultText = lib.literalExpression "what the provisioner answered";
+            description = "Port the proxy dials for plain HTTP, at the backend.";
+          };
+
+          httpsPort = mkOption {
+            type = types.port;
+            default = fromDescriptor.httpsPort;
+            defaultText = lib.literalExpression "what the provisioner answered";
+            description = "Port the proxy dials for HTTPS, at the backend.";
+          };
         };
-      };
 
       # Lab-held material landed in this cluster as a Secret.
       #
@@ -390,6 +427,17 @@ types.submodule (
         internal = true;
         readOnly = true;
         description = "The link result: provides, out, graph, phases, wiring.";
+      };
+
+      stacks = mkOption {
+        type = types.attrsOf types.raw;
+        readOnly = true;
+        internal = true;
+        description = ''
+          This cluster's provisioning stacks, keyed `(unit, phase)` and
+          scoped by the cluster — RFC 0003 §5. Read by the lab, which renders
+          each one and derives the plan steps that drive it.
+        '';
       };
 
       out = mkOption {
@@ -703,6 +751,16 @@ types.submodule (
           extraBundles = publicationBundles // subscriptionBundles;
         };
 
+        # The stacks this cluster's floes declare, keyed `(unit, phase)`.
+        #
+        # Scoped by the cluster name so two clusters running the same floe get
+        # two state files rather than one whose addresses collide — the same
+        # reason RFC 0003 §5 keys on the instantiation and not the definition.
+        stacks = infraLib.collectStacks {
+          scope = name;
+          inherit (config.out) resources publications;
+        };
+
         # Every assertion the cluster's floes made, already prefixed with the
         # floe that made it by the join, plus the lab's own wiring checks.
         #
@@ -725,47 +783,84 @@ types.submodule (
         spec =
           let
             descriptor = lib.head (lib.attrValues config.out.cluster);
+
+            # The union's key *is* the provisioner. Reading it here rather
+            # than taking a second field off the descriptor is what stops the
+            # tag and the block disagreeing — a spec saying `talos` while
+            # carrying k3d settings would type-check and mean nothing.
+            provisioner = lib.head (lib.attrNames descriptor.config);
+
+            # What only the lab knows, per variant. One entry today; a
+            # provisioner with nothing to add needs no entry, and this is the
+            # place to look when one does.
+            #
+            # The k3d floe leaves `network` null because which docker network
+            # a cluster joins is a fact about what else is on the host.
+            # `docker-network-create` makes this one first.
+            labKnows = {
+              k3d = c: c // { network = lab.name; };
+
+              # talosctl makes the cluster's own network and will not join
+              # one it did not make, and kube-proxy in nftables mode will not
+              # answer a NodePort on an interface added afterwards — so
+              # putting the nodes on the lab's bridge as well looks right and
+              # still refuses every connection. Reaching in is the direction
+              # that works, and the proxy is what has to reach.
+              talos =
+                c:
+                c
+                // {
+                  reachableFrom = lib.optional lab.proxy.enable lab.proxy.containerName;
+                };
+            };
           in
           {
             inherit (descriptor)
               name
-              provisioner
               provider
               kubeContext
               kubernetes
               network
               ;
 
+            inherit provisioner;
+
+            # Carried to the CLI because `verify` has to know which hostnames
+            # it can reach through the lab's proxy. It used to resolve every
+            # routed host to loopback, which is right exactly when the lab is
+            # the edge for every cluster — true until one is not.
+            inherit (config) edge;
+
             labName = lab.name;
 
             deploy.strategy = "kapp";
             lifecycle = { };
 
+            # `ProvisionerConfig` in `cli/src/domain/cluster.rs` is an
+            # externally-tagged enum, which is exactly this shape: one key,
+            # named for the variant. A provisioner that is not built yet is
+            # absent rather than empty, and absent is a parse error naming the
+            # variant instead of a default that silently means k3d.
             provisionerConfig = {
-              # The cluster floe leaves `network` null: which docker network it
-              # joins is a fact about what else is on the host, which is the
-              # lab's business. `docker-network-create` makes this one first.
-              k3d = descriptor.k3d // {
-                network = lab.name;
-              };
+              ${provisioner} = (labKnows.${provisioner} or lib.id) descriptor.config.${provisioner};
+            };
 
-              docker = {
-                clusterName = descriptor.k3d.clusterName;
-                inherit (config) waitTimeout;
-                colima = {
-                  inherit (config.colima)
-                    enable
-                    profile
-                    cpu
-                    memory
-                    disk
-                    ;
-                };
+            # Host facts, off the provisioner config where they never
+            # belonged: colima is a macOS VM the operator runs and the wait is
+            # how long *this lab* is willing to spend, neither of which is
+            # something k3d is told. `docker.clusterName` went with them — it
+            # was read by nothing at all.
+            host = {
+              inherit (config) waitTimeout;
+              colima = {
+                inherit (config.colima)
+                  enable
+                  profile
+                  cpu
+                  memory
+                  disk
+                  ;
               };
-
-              # `talos` is deliberately absent rather than `{ }`. Its
-              # `#[serde(default)]` is on the field, so an omitted key is fine
-              # and an empty one fails on a missing `clusterName`.
             };
 
             # The CLI knows a floe only as a name and whether it is on. That is
@@ -774,6 +869,12 @@ types.submodule (
             floes = lib.mapAttrs (_: _: { enable = true; }) config.floes;
 
             inherit (config.out) exposedHosts;
+
+            # Stack names only. The rendered stacks live in the lab package
+            # and the plan steps name them; a spec carrying the resources
+            # themselves would put every provider argument into the document
+            # every `nix eval` of the lab has to serialise.
+            infraStacks = lib.attrNames config.stacks;
 
             # `ProjectionConfig` in `cli/src/domain/cluster.rs`. `source`,
             # `namespace` and every key's `from` are required there; the field

@@ -11,6 +11,7 @@
   labDefs,
   mkLab,
   e2eLabs,
+  cliConfigs,
 }:
 
 {
@@ -29,9 +30,11 @@
     pkgs
     packages
     labDefs
+    cliConfigs
     ;
   snapshotDir = ../../examples/labs/tests/plan-snapshots;
   digestDir = ../../examples/labs/tests/manifest-digests;
+  cliConfigDir = ../../examples/labs/tests/cli-configs;
 }
 // import ./floe-gates.nix {
   inherit lib pkgs labDefs;
@@ -42,6 +45,7 @@
     "custom"
   ];
 }
+// import ./lab-edge.nix { inherit lib pkgs mkLab; }
 // import ./lab-scope.nix {
   inherit
     lib

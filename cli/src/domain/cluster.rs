@@ -48,6 +48,15 @@ pub struct ClusterSpec {
 
     pub provisioner_config: ProvisionerConfig,
 
+    /// What the operator's machine contributes. `#[serde(default)]` because
+    /// a lab that names no timeout and runs no VM has nothing to say here.
+    #[serde(default)]
+    pub host: HostConfig,
+
+    /// Who fronts this cluster — RFC 0005 §6.4.
+    #[serde(default)]
+    pub edge: EdgeSpec,
+
     pub floes: BTreeMap<String, FloeSpec>,
 
     pub exposed_hosts: Vec<ExposedHost>,
@@ -138,16 +147,133 @@ impl DeployStrategy {
     }
 }
 
+/// How this cluster is made, and the settings for that one way.
+///
+/// Externally tagged, which is serde's default for an enum and exactly what
+/// `T.taggedUnion` in `lib/floe-core/types.nix` emits: `{"k3d": {…}}`. One
+/// key, named for the variant.
+///
+/// It was a struct with one required field per provisioner, so a cluster made
+/// any other way still had to carry a k3d block — which made the comment on
+/// `floes/provisioners/k3d-cluster.nix` saying "the provisioner is not a
+/// closed set" true of the floe and false of what it emitted. Worse, the
+/// block sat beside a `provisioner` tag that could contradict it, and a spec
+/// tagged `talos` carrying k3d settings parsed perfectly.
+///
+/// Variants arrive with the provisioners that emit them. An absent one is a
+/// parse error naming the variant, which is the point: `#[serde(default)]` on
+/// a Talos block meant a missing one became an empty one and failed later, on
+/// a missing cluster name, somewhere that could not say why.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProvisionerConfig {
-    pub k3d: K3dConfig,
-    /// Talos gets its own block. It used to borrow `docker.clusterName`,
-    /// which is the shared docker-daemon config and carries no lab prefix, so
-    /// two labs with the same cluster name collided on container names.
+pub enum ProvisionerConfig {
+    K3d(K3dConfig),
+    Talos(TalosConfig),
+}
+
+impl ProvisionerConfig {
+    /// The provisioner this config is for.
+    ///
+    /// `ClusterSpec::provisioner` carries the same fact, because the plan
+    /// steps and the lab document name it as a string. Derived from one place
+    /// on the Nix side (the union's key) so the two cannot disagree;
+    /// `spec_provisioner_agrees_with_its_config` holds the line here.
+    pub fn kind(&self) -> ProvisionerKind {
+        match self {
+            ProvisionerConfig::K3d(_) => ProvisionerKind::K3d,
+            ProvisionerConfig::Talos(_) => ProvisionerKind::Talos,
+        }
+    }
+
+    /// The k3d settings, when this is a k3d cluster.
+    ///
+    /// Callers that only want to know "is there anything to do here" get
+    /// `None` for every other provisioner rather than an empty k3d block that
+    /// would read as "k3d, configured with nothing".
+    pub fn k3d(&self) -> Option<&K3dConfig> {
+        match self {
+            ProvisionerConfig::K3d(c) => Some(c),
+            ProvisionerConfig::Talos(_) => None,
+        }
+    }
+
+    /// Every host port this cluster's provisioner publishes.
+    ///
+    /// The preflight compares these against the lab's services, and it has to
+    /// work for a provisioner it was not written with in mind — so the match
+    /// lives here, once, rather than at the call site chaining one accessor
+    /// per variant.
+    pub fn published_ports(&self) -> &[String] {
+        match self {
+            ProvisionerConfig::K3d(c) => &c.ports,
+            ProvisionerConfig::Talos(c) => &c.exposed_ports,
+        }
+    }
+
+    /// Manifests the provisioner applies before the node is Ready.
+    ///
+    /// Empty for a provisioner with no such mechanism, which is a real answer
+    /// and not a missing one: it means nothing was applied that way.
+    pub fn auto_deploy_manifests(&self) -> &[AutoDeployManifest] {
+        match self {
+            ProvisionerConfig::K3d(c) => &c.auto_deploy_manifests,
+            ProvisionerConfig::Talos(_) => &[],
+        }
+    }
+}
+
+/// Who fronts this cluster, and where.
+///
+/// `verify` needs it: a hostname routed by a cluster the lab is *not* the edge
+/// for cannot be reached through the lab's proxy, and resolving it to loopback
+/// probes the wrong thing and reports the wrong failure.
+///
+/// Defaults to `proxy` with no backend so an older lab document still parses.
+/// That combination is refused at evaluation, so it cannot arrive from Nix.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EdgeSpec {
+    pub mode: EdgeMode,
+    pub backend: Option<String>,
+    pub http_port: u16,
+    pub https_port: u16,
+}
+
+impl Default for EdgeSpec {
+    fn default() -> Self {
+        EdgeSpec {
+            mode: EdgeMode::Proxy,
+            backend: None,
+            http_port: 80,
+            https_port: 443,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EdgeMode {
+    /// The lab fronts this cluster, at `backend`.
+    #[default]
+    Proxy,
+    /// The cluster is its own edge; the lab routes nothing to it.
+    #[serde(rename = "self")]
+    Own,
+    /// Nothing routes to this cluster at all.
+    None,
+}
+
+/// What the operator's machine contributes, as opposed to the provisioner.
+///
+/// Colima is a VM the operator runs and the timeout is how long this lab is
+/// willing to wait; k3d is told neither. They lived under
+/// `provisionerConfig.docker` beside a `clusterName` that nothing read.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HostConfig {
+    pub wait_timeout: String,
     #[serde(default)]
-    pub talos: TalosConfig,
-    pub docker: DockerConfig,
+    pub colima: ColimaConfig,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -204,15 +330,7 @@ pub struct AutoDeployManifest {
     pub path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DockerConfig {
-    pub cluster_name: String,
-    pub wait_timeout: String,
-    pub colima: ColimaConfig,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ColimaConfig {
     pub enable: bool,
@@ -337,11 +455,10 @@ pub(crate) mod tests {
                     "extraVolumes": [],
                     "autoDeployManifests": [],
                 },
-                "docker": {
-                    "clusterName": "catallaxy-app",
-                    "waitTimeout": "10m",
-                    "colima": { "enable": true, "profile": "catallaxy", "cpu": 4, "disk": 60, "memory": 8 },
-                },
+            },
+            "host": {
+                "waitTimeout": "10m",
+                "colima": { "enable": true, "profile": "catallaxy", "cpu": 4, "disk": 60, "memory": 8 },
             },
             "floes": {
                 "cert-manager": { "enable": true, "namespace": "cert-manager", "version": "v1.16.1", "domain": "" },
@@ -364,12 +481,29 @@ pub(crate) mod tests {
     #[test]
     fn the_provisioner_config_carries_what_nix_computed() {
         let spec = ClusterSpec::from_value(cluster_json()).unwrap();
-        assert_eq!(
-            spec.provisioner_config.k3d.cluster_name,
-            "minimal-local-app"
-        );
-        assert!(!spec.provisioner_config.k3d.no_flannel);
-        assert_eq!(spec.provisioner_config.docker.colima.cpu, 4);
+        let k3d = spec.provisioner_config.k3d().expect("a k3d cluster");
+        assert_eq!(k3d.cluster_name, "minimal-local-app");
+        assert!(!k3d.no_flannel);
+        assert_eq!(spec.host.colima.cpu, 4);
+    }
+
+    /// The tag and the block are one fact on the Nix side — `provisioner` is
+    /// read off the union's key in `modules/lab/cluster.nix` — and this is
+    /// where that stays true after the wire.
+    #[test]
+    fn spec_provisioner_agrees_with_its_config() {
+        let spec = ClusterSpec::from_value(cluster_json()).unwrap();
+        assert_eq!(spec.provisioner, spec.provisioner_config.kind());
+    }
+
+    /// Two variants at once is not a `ProvisionerConfig`. Serde's
+    /// externally-tagged representation refuses it for the same reason
+    /// `T.taggedUnion` does, so the refusal holds on both sides of the wire.
+    #[test]
+    fn a_config_naming_two_provisioners_is_refused() {
+        let mut json = cluster_json();
+        json["provisionerConfig"]["talos"] = serde_json::json!({ "clusterName": "x" });
+        assert!(ClusterSpec::from_value(json).is_err());
     }
 
     #[test]
