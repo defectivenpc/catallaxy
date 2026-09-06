@@ -9,5 +9,9 @@ docs/book/book/
 docs/book/src/reference/options/
 .claude/
 .sops.yaml
-secrets/
+
+# Root-anchored. Unanchored, this matched *any* directory named `secrets`,
+# which silently untracked 381 lines of source under `modules/lab/secrets/`
+# — found only when that tree was deleted and three files survived `git rm`.
+/secrets/
 __pycache__/
