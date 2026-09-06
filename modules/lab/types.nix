@@ -20,6 +20,95 @@
 let
   inherit (lib) mkOption types;
 
+  # ---- the lab's scope ----------------------------------------------------
+  #
+  # Two sources, one pool: floes the lab links itself, and whatever each
+  # cluster offered upward. Every cluster resolves against it when nothing of
+  # its own answers first.
+
+  # Linked with no scope of its own, so what the lab provides cannot depend on
+  # any cluster. That is RFC 0005 §6.2's stratification, holding by
+  # construction rather than by a rule nobody checks.
+  labLink = catallaxy.floe.link { units = config.lab.provides; };
+
+  entriesOf =
+    {
+      prefix,
+      origin,
+      instances,
+      provideOf,
+    }:
+    lib.foldl' lib.mergeAttrs { } (
+      lib.mapAttrsToList (
+        unit: inst:
+        lib.mapAttrs' (
+          instName: sig:
+          lib.nameValuePair "${prefix}/${unit}/${instName}" {
+            inherit sig;
+            value = provideOf unit instName;
+            origin = "${origin}, unit '${unit}'";
+          }
+        ) inst.def.provides
+      ) instances
+    );
+
+  labOwn = entriesOf {
+    prefix = "lab";
+    origin = "the lab";
+    instances = config.lab.provides;
+    provideOf = unit: instName: labLink.provides.${unit}.${instName};
+  };
+
+  offered = lib.mapAttrs (
+    clusterName: cluster:
+    entriesOf {
+      prefix = clusterName;
+      origin = "cluster '${clusterName}'";
+      instances = lib.genAttrs cluster.provides (
+        unit:
+        cluster.floes.${unit}
+          or (throw "cluster '${clusterName}' offers unit '${unit}' to the lab, which it does not declare")
+      );
+      provideOf = unit: instName: cluster.link.provides.${unit}.${instName};
+    }
+  ) config.lab.clusters;
+
+  # Its own offers are excluded, and that is what breaks the evaluation cycle
+  # rather than a resolution rule: a cluster that both offers and consumes
+  # would otherwise depend on its own link result. Nearer-wins means a local
+  # unit answers first regardless.
+  scopeFor =
+    clusterName:
+    labOwn
+    // lib.foldl' lib.mergeAttrs { } (
+      lib.attrValues (lib.filterAttrs (n: _: n != clusterName) offered)
+    );
+
+  # Two clusters offering one signature is a lab-wide ambiguity, caught once
+  # here rather than N-1 times as each other cluster fails to choose.
+  scopeCollisions =
+    let
+      claims = lib.concatLists (
+        lib.mapAttrsToList (
+          clusterName: entries:
+          lib.mapAttrsToList (_key: e: {
+            inherit clusterName;
+            sig = e.sig.name;
+          }) entries
+        ) offered
+      );
+    in
+    lib.concatMap (
+      sigName:
+      let
+        holders = lib.unique (map (c: c.clusterName) (lib.filter (c: c.sig == sigName) claims));
+      in
+      lib.optional (lib.length holders > 1) (
+        "clusters ${lib.concatStringsSep " and " holders} both offer '${sigName}' to the lab. "
+        + "A scope holds one of each, so whichever a third cluster resolved would be arbitrary."
+      )
+    ) (lib.unique (map (c: c.sig) claims));
+
   clusterSubmodule = import ./cluster.nix {
     inherit
       lib
@@ -30,6 +119,7 @@ let
       floes
       ;
     lab = config.lab;
+    inherit scopeFor;
   };
 
   assertionType = types.submodule {
@@ -75,6 +165,28 @@ in
           config.lab.network.subnet;
       defaultText = lib.literalExpression "the address after the subnet's own";
       description = "Gateway address within the subnet.";
+    };
+
+    provides = mkOption {
+      type = types.attrsOf types.raw;
+      default = { };
+      example = lib.literalExpression "{ zone = floes.lab-zone { ... }; }";
+      description = ''
+        Floes linked at lab scope, whose provides every cluster can resolve.
+
+        The other direction from `lab.clusters.<c>.provides`: that offers a
+        cluster's promise upward, this declares one the lab makes itself. A
+        floe here installs nothing — there is no cluster for it to render
+        into — and exists to answer a signature, which is how a fact the lab
+        holds reaches the floes that need it without being threaded through
+        every instantiation by hand.
+
+        These are linked on their own, with no scope of their own, so **the
+        lab's provides cannot depend on any cluster**. That is RFC 0005 §6.2's
+        stratification, enforced by construction rather than by a rule nobody
+        checks: a container's provisions come from its own configuration, its
+        contents read them, and the aggregate folds the contents.
+      '';
     };
 
     clusters = mkOption {
@@ -182,7 +294,11 @@ in
   };
 
   config.assertions =
-    config.lab.assertions
+    map (message: {
+      assertion = false;
+      inherit message;
+    }) scopeCollisions
+    ++ config.lab.assertions
     ++ lib.concatLists (
       lib.mapAttrsToList (
         clusterName: cluster:

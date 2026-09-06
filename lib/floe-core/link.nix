@@ -13,32 +13,38 @@
       units,
       policies ? [ ],
 
-      # Provides resolved outside this link, as `<name> -> { sig; value; origin; }`.
+      # The enclosing scope: provides from a link that contains this one, as
+      # `<name> -> { sig; value; origin; }`, already sealed there.
       #
-      # A link is one graph, and a deployment is often more than one — two
-      # clusters in a lab, each linked on its own, where a floe in the second
-      # legitimately depends on something the first provides. Without this the
-      # only way to express that is for the consumer to rebuild the producer's
-      # value from a naming convention, which is a dependency with nothing
-      # checking it.
+      # A link is one graph and a deployment is often several nested ones — a
+      # lab holding clusters, each linked on its own. Something offered by the
+      # lab is in scope for every cluster in it, and a floe that needs it says
+      # so with an ordinary `requires` rather than rebuilding the value from a
+      # naming convention.
       #
-      # `sig` is what the value claims to satisfy, and it is sealed here like
-      # any other provide: a value crossing a boundary is exactly where a
-      # wrong shape is least likely to be noticed. `origin` is opaque to core
-      # and travels only so an error can say where the value came from.
+      # **A local provider shadows one from scope.** The scope is consulted
+      # only when no unit of this link provides the signature, which is what
+      # every scoped language does and what makes a lab-wide offer safe: a
+      # cluster with its own gateway keeps it, and one without picks up the
+      # lab's. Treating the two as competing providers refuses exactly the
+      # arrangement the scope exists to allow.
       #
-      # What an external provider does *not* do is create an ordering edge.
-      # There is no node in this graph to order against, and the thing it
-      # names is applied by a different pass entirely — so `wiring.one` and
-      # `wiring.optional` stay unit-only, and externals are reported
-      # separately in `wiring.external`.
-      external ? { },
+      # `sig` is what the value claims to satisfy and is sealed here again: a
+      # value crossing a boundary is where a wrong shape is least likely to be
+      # noticed. `origin` is opaque to core and travels only so an error can
+      # say where the value came from.
+      #
+      # What a scope provider does *not* do is create an ordering edge. There
+      # is no node in this graph to order against and what backs it is applied
+      # by a different pass, so `wiring.one` and `wiring.optional` stay
+      # unit-only and scope resolutions are reported in `wiring.scope`.
+      scope ? { },
     }:
     let
       unitNames = lib.attrNames units;
-      externalNames = lib.attrNames external;
+      scopeNames = lib.attrNames scope;
 
-      isExternal = p: p ? external;
+      isFromScope = p: p ? scope;
 
       getInstance =
         u:
@@ -52,7 +58,7 @@
 
       # ---- Resolution (headers only; no body evaluation) -------------------
 
-      providersOf =
+      localProvidersOf =
         sigName:
         lib.concatMap (
           u:
@@ -66,18 +72,28 @@
               instance = instName;
             }
           ) (lib.attrNames provs)
-        ) unitNames
-        ++ lib.concatMap (
-          n: lib.optional (external.${n}.sig.name == sigName) { external = n; }
-        ) externalNames;
+        ) unitNames;
+
+      scopeProvidersOf =
+        sigName: lib.concatMap (n: lib.optional (scope.${n}.sig.name == sigName) { scope = n; }) scopeNames;
+
+      # Nearer wins. The enclosing scope is asked only when nothing here
+      # answers, so a local provider shadows one from outside rather than
+      # colliding with it.
+      providersOf =
+        sigName:
+        let
+          here = localProvidersOf sigName;
+        in
+        if here != [ ] then here else scopeProvidersOf sigName;
 
       describeProviders =
         ps:
         lib.concatMapStringsSep ", " (
           p:
-          if isExternal p then
-            "'${p.external}' (from outside this link${
-              lib.optionalString (external.${p.external} ? origin) ": ${external.${p.external}.origin}"
+          if isFromScope p then
+            "'${p.scope}' (from the enclosing scope${
+              lib.optionalString (scope.${p.scope} ? origin) ": ${scope.${p.scope}.origin}"
             })"
           else
             "'${p.unit}' (as ${p.instance})"
@@ -112,7 +128,7 @@
                 hole: sig:
                 map (
                   p: "unit '${u}' ${label} '${sig.name}' as hole '${hole}' and also provides it (as ${p.instance})"
-                ) (lib.filter (p: !(isExternal p) && p.unit == u) (providersOf sig.name))
+                ) (lib.filter (p: !(isFromScope p) && p.unit == u) (localProvidersOf sig.name))
               ) decl
             );
         in
@@ -168,8 +184,8 @@
       # Holes answered by a unit of this link, and holes answered from
       # outside. Everything that reasons about *order* wants the first;
       # everything that reasons about *what a floe got* wants both.
-      localOnly = lib.filterAttrs (_hole: p: p != null && !(isExternal p));
-      externalOnly = lib.filterAttrs (_hole: p: p != null && isExternal p);
+      localOnly = lib.filterAttrs (_hole: p: p != null && !(isFromScope p));
+      fromScopeOnly = lib.filterAttrs (_hole: p: p != null && isFromScope p);
 
       # ---- Evaluation fixpoint ---------------------------------------------
 
@@ -181,11 +197,11 @@
           name = "signature ${sig.name}";
         } v;
 
-      # An external provide, sealed against the signature it claims. Sealed
-      # here rather than trusted from the caller: whoever assembled it did so
-      # outside this link, which is the least likely place for a wrong shape
-      # to be noticed, and a link that accepted one would hand it to a body
-      # that reads a field which is not there.
+      # A provide from the enclosing scope, sealed against the signature it
+      # claims. Sealed here rather than trusted from the caller: whoever
+      # assembled it did so outside this link, which is the least likely place
+      # for a wrong shape to be noticed, and a link that accepted one would
+      # hand it to a body that reads a field which is not there.
       # Sealed like any other provide, and then narrowed to what still means
       # something here.
       #
@@ -201,10 +217,10 @@
       # wrong and must not be refused. `OIDC_PROVIDER` is the case — from
       # another link you can validate a token against the issuer and you
       # cannot render a client, and both halves of that are true at once.
-      sealedExternal = lib.mapAttrs (
+      sealedScope = lib.mapAttrs (
         n: entry:
         let
-          sealed = sealSig [ "external" n ] entry.sig entry.value;
+          sealed = sealSig [ "scope" n ] entry.sig entry.value;
         in
         lib.mapAttrs (
           field: value:
@@ -225,7 +241,7 @@
           else
             value
         ) sealed
-      ) external;
+      ) scope;
 
       # A promise with nothing portable in it at all.
       #
@@ -239,8 +255,8 @@
       # that gains a routed address starts crossing without anyone
       # remembering to say so.
       uncrossable = lib.filter (
-        n: lib.all (t: types.isLocal t) (lib.attrValues external.${n}.sig.fields)
-      ) externalNames;
+        n: lib.all (t: types.isLocal t) (lib.attrValues scope.${n}.sig.fields)
+      ) scopeNames;
 
       fixed = lib.fix (
         self:
@@ -250,8 +266,7 @@
             inst = getInstance u;
 
             valueOf =
-              p:
-              if isExternal p then sealedExternal.${p.external} else self.${p.unit}.sealedProvides.${p.instance};
+              p: if isFromScope p then sealedScope.${p.scope} else self.${p.unit}.sealedProvides.${p.instance};
 
             resolved =
               lib.mapAttrs (_hole: valueOf) wiringOne.${u}
@@ -296,9 +311,9 @@
         else
           [ ];
 
-      # Only holes that resolved *inside* this link. An external provider is
-      # not a node here, and what backs it is applied by a different pass —
-      # so there is nothing in this graph for an edge to point at.
+      # Only holes that resolved *inside* this link. A provider from the
+      # enclosing scope is not a node here, and what backs it is applied by a
+      # different pass — so there is nothing in this graph to point an edge at.
       evalEdges = lib.concatMap (
         u:
         lib.mapAttrsToList (hole: p: {
@@ -399,17 +414,17 @@
         # `requiresOptional` has no such ambiguity.
         #
         # Both carry only holes a *unit of this link* answered. A hole
-        # resolved from outside is in `external` instead, and is absent from
-        # these two — which is what keeps every existing reader correct
-        # without knowing externals exist: they all walk these to derive
+        # resolved from the enclosing scope is in `scope` instead, and absent
+        # from these two — which is what keeps every existing reader correct
+        # without knowing the scope exists: they all walk these to derive
         # order, and there is no order to derive against another graph.
         wiring = {
           one = lib.mapAttrs (_u: localOnly) wiringOne;
           optional = lib.mapAttrs (_u: localOnly) wiringOptional;
 
-          external = lib.mapAttrs (
-            u: _: (externalOnly wiringOne.${u}) // (externalOnly wiringOptional.${u})
-          ) (lib.genAttrs unitNames getInstance);
+          scope = lib.mapAttrs (u: _: (fromScopeOnly wiringOne.${u}) // (fromScopeOnly wiringOptional.${u})) (
+            lib.genAttrs unitNames getInstance
+          );
         };
       };
 
@@ -420,12 +435,12 @@
     # downstream reason about a link that should not exist.
     if uncrossable != [ ] then
       throw (
-        "floe link error: these provides were offered to this link from outside it, and "
-        + "every field of their signatures is link-local:\n  - "
+        "floe link error: these provides were offered to this link by its enclosing "
+        + "scope, and every field of their signatures is link-local:\n  - "
         + lib.concatMapStringsSep "\n  - " (
           n:
-          "'${n}' (signature '${external.${n}.sig.name}'"
-          + lib.optionalString (external.${n} ? origin) ", from ${external.${n}.origin}"
+          "'${n}' (signature '${scope.${n}.sig.name}'"
+          + lib.optionalString (scope.${n} ? origin) ", from ${scope.${n}.origin}"
           + ")"
         ) uncrossable
         + "\n\nNothing in them would be readable here, so resolving a hole against one "

@@ -114,7 +114,7 @@ let
     ext:
     floe.link {
       units.consumer = consumer.instantiate { };
-      external = ext;
+      scope = ext;
     };
 
   linkedExternally = withExternal { ingress = externalIngress; };
@@ -227,14 +227,14 @@ lib.runTests {
   # Without `external` this link is a "no provider for signature" throw.
   # The whole point, read through the body: the value crossed the boundary,
   # was sealed, reached `config.floe.requires`, and came back out.
-  testAnExternalProvideAnswersAHole = {
+  testAScopeProvideAnswersAHole = {
     expr = linkedExternally.provides.consumer.echo.v;
     expected = "elsewhere.example.com";
   };
 
   # A link with the hole and no external is still the error it always was.
   # The paired negative, so the test above cannot pass for the wrong reason.
-  testWithoutTheExternalTheHoleIsUnfilled = {
+  testWithoutTheScopeTheHoleIsUnfilled = {
     expr = fails (withExternal { }).provides.consumer.echo.v;
     expected = true;
   };
@@ -242,7 +242,7 @@ lib.runTests {
   # Sealed like any other provide. A value assembled outside this link is the
   # least likely place for a wrong shape to be noticed, and a body reading a
   # field that is not there fails far from the cause.
-  testAnExternalIsSealedAgainstItsSignature = {
+  testAScopeProvideIsSealedAgainstItsSignature = {
     expr =
       fails
         (withExternal {
@@ -255,23 +255,30 @@ lib.runTests {
 
   # Exactly-one holds across the boundary too: a unit provider and an external
   # one are two providers, and picking either would be arbitrary.
-  testAnExternalCompetesWithALocalProvider = {
+  # Nearer wins: a unit of this link shadows a provider from the enclosing
+  # scope rather than colliding with it. That is what makes a lab-wide offer
+  # safe — a cluster with its own gateway keeps it, and one without picks up
+  # the lab's.
+  #
+  # This is the behaviour change the scope was built for. It used to be a
+  # refusal for "two providers", which meant offering anything lab-wide broke
+  # every cluster that already had one.
+  testALocalProviderShadowsTheScope = {
     expr =
-      fails
-        (floe.link {
-          units = {
-            consumer = consumer.instantiate { };
-            ingress = fixture.floes.nginxIngress.instantiate { baseDomain = "lab.example.com"; };
-          };
-          external.ingress = externalIngress;
-        }).provides.consumer.echo.v;
-    expected = true;
+      (floe.link {
+        units = {
+          consumer = consumer.instantiate { };
+          ingress = fixture.floes.nginxIngress.instantiate { baseDomain = "lab.example.com"; };
+        };
+        scope.ingress = externalIngress;
+      }).provides.consumer.echo.v;
+    expected = "lab.example.com";
   };
 
   # An external is not a node, so it is not in the graph and orders nothing.
   # Whatever backs it is applied by a different pass entirely, and an edge
   # here would be an edge to a node that does not exist.
-  testAnExternalAddsNoEdgeAndNoNode = {
+  testAScopeProvideAddsNoEdgeAndNoNode = {
     expr = {
       nodes = linkedExternally.graph.nodes;
       edges = linkedExternally.graph.edges;
@@ -285,14 +292,14 @@ lib.runTests {
   # `wiring.one` is what every existing reader walks to derive order, so an
   # externally-resolved hole must not appear in it. It appears in `external`
   # instead, which is how a reader that *does* care can ask.
-  testExternalHolesAreReportedApartFromLocalOnes = {
+  testScopeHolesAreReportedApartFromLocalOnes = {
     expr = {
       one = linkedExternally.wiring.one.consumer;
-      external = linkedExternally.wiring.external.consumer;
+      scope = linkedExternally.wiring.scope.consumer;
     };
     expected = {
       one = { };
-      external.ingress.external = "ingress";
+      scope.ingress.scope = "ingress";
     };
   };
 
@@ -318,7 +325,7 @@ lib.runTests {
       fails
         (floe.link {
           units.local-consumer = localConsumer.instantiate { };
-          external.ingress = externalIngress;
+          scope.ingress = externalIngress;
         }).provides.local-consumer.echo.v;
     expected = true;
   };
@@ -326,7 +333,7 @@ lib.runTests {
   # The paired positive, and the reason this is per field: the *same* external
   # read for something that does travel is correct. Without it the throw above
   # could be any failure at all.
-  testAPortableFieldOnTheSameExternalStillReads = {
+  testAPortableFieldOnTheSameScopeProvideStillReads = {
     expr = linkedExternally.provides.consumer.echo.v;
     expected = "elsewhere.example.com";
   };
@@ -340,12 +347,12 @@ lib.runTests {
   # fails for "no provider for INGRESS" and the test passes whatever the
   # refusal does — which is how five refusals in `nix/checks/secret-sharing.nix`
   # once passed for the wrong reason.
-  testAnAllLocalSignatureIsRefusedAsAnExternal = {
+  testAnAllLocalSignatureIsRefusedFromScope = {
     expr =
       fails
         (floe.link {
           units.consumer = consumer.instantiate { };
-          external = {
+          scope = {
             ingress = externalIngress;
             other = {
               sig = ALL_LOCAL;

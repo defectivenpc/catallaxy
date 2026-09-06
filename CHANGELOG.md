@@ -11,41 +11,42 @@ The format is based on
 
 - **kanidm is reachable through the gateway, for the first time.** Its route
   existed but every request through it failed the backend handshake: traefik
-  validated the certificate against the *pod IP*
-  (`x509: cannot validate certificate for 10.244.0.x because it doesn't
-  contain any IP SANs`) because no `BackendTLSPolicy` told it which hostname
-  to check.
+  validated the certificate against the _pod IP_
+  (`x509: cannot validate certificate for 10.244.0.x because it doesn't contain any IP SANs`)
+  because no `BackendTLSPolicy` told it which hostname to check.
 
-  `kaniop.rs/Kanidm` has a `spec.gateway.backendTlsPolicy` field that accepts
-  exactly such a policy and produces nothing — the CRD declares it, the value
-  validates, and no object is ever created. The floe renders the policy
-  itself now, where its absence is visible. Confirmed live: `https://idm.<zone>/status`
-  answers 200 where it answered 500.
+  `kaniop.rs/Kanidm` has a `spec.gateway.backendTlsPolicy` field that
+  accepts exactly such a policy and produces nothing — the CRD declares it,
+  the value validates, and no object is ever created. The floe renders the
+  policy itself now, where its absence is visible. Confirmed live:
+  `https://idm.<zone>/status` answers 200 where it answered 500.
 
-  The previous diagnosis recorded against `homelab.mesh` — that Gateway API's
-  experimental CRD channel was missing — was wrong. That channel is what
-  `gateway-api-crds` installs.
+  The previous diagnosis recorded against `homelab.mesh` — that Gateway
+  API's experimental CRD channel was missing — was wrong. That channel is
+  what `gateway-api-crds` installs.
 
 ### Changed
 
-- **`k8sName` is out of floe-core.** It lived in the type prelude and was the
-  one thing making the header's "contains no Kubernetes" false; RFC 0001 even
-  listed it in the prelude two paragraphs after making the claim. It is in
-  `lib/floe-catallaxy/prelude.nix` now, and the RFC says that a distribution
-  extends the prelude — which was always true and never written down.
+- **`k8sName` is out of floe-core.** It lived in the type prelude and was
+  the one thing making the header's "contains no Kubernetes" false; RFC 0001
+  even listed it in the prelude two paragraphs after making the claim. It is
+  in `lib/floe-catallaxy/prelude.nix` now, and the RFC says that a
+  distribution extends the prelude — which was always true and never written
+  down.
 
 - **`homelab.mesh`'s reason is the real one.** netbird's operator needs a
   personal access token, minting one needs an identity netbird will accept,
   and kanidm 1.6.4 cannot issue this platform one without a human: its token
   endpoint supports `authorization_code`, `client_credentials`,
   `refresh_token` and `device_code`, and not the `token-exchange` grant the
-  parked floe used. `client_credentials` is the only non-interactive one left
-  and it needs a *confidential* client, while netbird's must be public so the
-  dashboard can use PKCE — one audience, two incompatible requirements.
+  parked floe used. `client_credentials` is the only non-interactive one
+  left and it needs a _confidential_ client, while netbird's must be public
+  so the dashboard can use PKCE — one audience, two incompatible
+  requirements.
 
   Verified working up to that point on a live cluster: the service account
-  reconciles, kaniop mints and rotates its API token, and the token step reads
-  it and reaches the endpoint.
+  reconciles, kaniop mints and rotates its API token, and the token step
+  reads it and reaches the endpoint.
 
 ### Changed
 
