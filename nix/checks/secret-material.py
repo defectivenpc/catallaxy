@@ -11,10 +11,11 @@ Grafana's `admin-password` and four of Harbor's internal secrets were exactly
 this. Every chart involved takes an `existingSecret`, and `secrets.generate`
 mints one in the cluster, which is where a credential belongs.
 
-The test is entropy-shaped because the problem is: a base64 value that decodes
-to a long mixed-case alphanumeric run with no structure is what a generator
-emits, and is not what anyone writes by hand. A real configuration value has
-punctuation, or a word in it, or is short.
+Three shapes are refused: a mixed-case alphanumeric run (`randAlphaNum`), a
+PEM private key (`genSelfSignedCert`), and an htpasswd line (`htpasswd`). The
+first is entropy-shaped; the other two are structural, and were missed for as
+long as the test assumed a generated value is alphanumeric — harbor's chart
+minted a token-signing keypair on every render and this said nothing.
 """
 
 import base64
@@ -23,9 +24,14 @@ import re
 import sys
 
 # `  key: value` at the indent Secret data sits at.
-ENTRY = re.compile(r"^\s{2}([A-Za-z0-9_.-]+):\s*([A-Za-z0-9+/=]{16,})\s*$")
+ENTRY = re.compile(r"^\s{2}([A-Za-z0-9_.-]+):\s*\"?([A-Za-z0-9+/=]{16,})\"?\s*$")
 
 MIN_LENGTH = 12
+
+PEM_PRIVATE_KEY = re.compile(r"-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----")
+
+# `user:$2a$10$…` — bcrypt is the only hash htpasswd accepts here.
+HTPASSWD = re.compile(r"^[^:\s]+:\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$")
 
 
 def generated_value(encoded: str) -> str | None:
@@ -34,6 +40,12 @@ def generated_value(encoded: str) -> str | None:
         decoded = base64.b64decode(encoded, validate=True).decode()
     except Exception:
         return None
+
+    if PEM_PRIVATE_KEY.search(decoded):
+        return decoded
+    if HTPASSWD.match(decoded.strip()):
+        return decoded
+
     if len(decoded) < MIN_LENGTH or not decoded.isalnum():
         return None
     # All three classes present is what `randAlphaNum` produces and what a

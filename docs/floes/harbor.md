@@ -20,6 +20,7 @@ Harbor, an OCI registry with its own database and cache.
 | cluster | KUBERNETES_CLUSTER | The cluster a member installs into: its name, version, context and address ranges. |
 | gateway | API_GATEWAY | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 | generation | SECRET_GENERATION | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
+| issuance | X509_ISSUANCE | Something that signs certificates, and whether a browser will trust what it signs. |
 
 ## Requires, optionally
 

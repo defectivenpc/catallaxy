@@ -31,7 +31,8 @@ let
 in
 lib.runTests {
 
-  # Six, not five and not four. Each `existingSecret` below points at one.
+  # Seven, not six. The eighth — the token CA — is cert-manager's, so it is
+  # an `externalSecrets` entry rather than one this bundle mints.
   #
   # Three carry a `-secret`/`-http-secret` suffix rather than reading as the
   # obvious name, and that is the fix for a real failure: the chart renders
@@ -45,10 +46,16 @@ lib.runTests {
       "harbor/harbor-admin"
       "harbor/harbor-core-secret"
       "harbor/harbor-jobservice-secret"
+      "harbor/harbor-registry-credential"
       "harbor/harbor-registry-http-secret"
       "harbor/harbor-secret-key"
       "harbor/harbor-xsrf"
     ];
+  };
+
+  testTheTokenCaIsIssuedNotMinted = {
+    expr = r.bundles.harbor.resources.harbor-token.spec.secretName;
+    expected = "harbor-token-ca";
   };
 
   # The chart mints one for anything not pointed at an existing Secret, so a
@@ -61,6 +68,13 @@ lib.runTests {
       xsrf = values.core.existingXsrfSecret;
       jobservice = values.jobservice.existingSecret;
       registry = values.registry.existingSecret;
+
+      # These two were missed, and the chart minted both on every render: a
+      # token-signing keypair via `genSelfSignedCert`, and an htpasswd whose
+      # bcrypt salt is fresh each time. Both landed in the manifest and in the
+      # digest, and both rotated on every apply.
+      token = values.core.secretName;
+      registryCred = values.registry.credentials.existingSecret;
     };
     expected = {
       admin = "harbor-admin";
@@ -69,7 +83,17 @@ lib.runTests {
       xsrf = "harbor-xsrf";
       jobservice = "harbor-jobservice-secret";
       registry = "harbor-registry-http-secret";
+      token = "harbor-token-ca";
+      registryCred = "harbor-registry-credential";
     };
+  };
+
+  # The htpasswd is derived from the generated password inside the cluster,
+  # so the salt never reaches a rendered file.
+  testTheHtpasswdIsTemplatedNotRendered = {
+    expr =
+      r.bundles.harbor.resources."harbor-registry-credential-external-secret".spec.target.template.data.REGISTRY_HTPASSWD;
+    expected = ''{{ htpasswd "harbor_registry_user" .password }}'';
   };
 
   # Harbor uses `secretKey` as an AES key and refuses to start on anything but
@@ -121,11 +145,14 @@ lib.runTests {
     expected = [ "https://harbor.stub.test/c/oidc/callback" ];
   };
 
-  # kaniop writes those, and kaniop is another floe's — so nothing here
-  # creates them and nothing should look for a creator.
+  # Two writers outside this bundle's manifests: cert-manager for the token
+  # CA, kaniop for the OIDC client. Nothing here creates either.
   testTheClientSecretIsExternal = {
     expr = r.bundles.harbor.externalSecrets;
-    expected = [ "harbor/harbor-kanidm-oauth2-credentials" ];
+    expected = [
+      "harbor/harbor-token-ca"
+      "harbor/harbor-kanidm-oauth2-credentials"
+    ];
   };
 
   testAskingWithNoIssuerIsRefused = {

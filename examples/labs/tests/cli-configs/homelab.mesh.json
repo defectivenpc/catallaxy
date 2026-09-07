@@ -269,7 +269,7 @@
           {
             "hasReadyProbe": true,
             "name": "harbor/harbor",
-            "resourceCount": 14
+            "resourceCount": 17
           },
           {
             "hasReadyProbe": true,
