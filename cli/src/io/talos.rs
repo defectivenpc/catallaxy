@@ -112,7 +112,7 @@ fn attach_to_cluster_network(name: &str, containers: &[String], docker_host: Opt
 }
 
 /// The context the lab addresses this cluster by, which is what
-/// `cluster.ref.kubeContext` is set to in `modules/lab/provisioners/talos.nix`.
+/// `kubeContext` is set to in `floes/provisioners/talos-cluster.nix`.
 pub fn context_name(name: &str) -> String {
     format!("admin@{name}")
 }
@@ -453,8 +453,8 @@ mod tests {
         assert!(!a.iter().any(|x| x == "--image"));
     }
 
-    /// The lab sets `cluster.ref.kubeContext` to this string in
-    /// `modules/lab/provisioners/talos.nix`, and every step after cluster
+    /// The floe sets `kubeContext` to this string in
+    /// `floes/provisioners/talos-cluster.nix`, and every step after cluster
     /// creation addresses the cluster through it. Drifting one without the
     /// other deploys to whatever else answers.
     #[test]

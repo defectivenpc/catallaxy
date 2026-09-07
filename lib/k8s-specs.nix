@@ -50,11 +50,16 @@ let
     }
   ) standaloneCrdDefs;
 
-  crds =
-    (lib.filterAttrs (_: v: v != null) (lib.mapAttrs (_: entry: entry.crds or null) cataCharts))
-    // standaloneCrds;
-
 in
 {
-  inherit specs crds standaloneCrds;
+  # `specs` has no consumer in the flake and is not dead: it is the *input* to
+  # `lib/kubernetes/generated/`, which `cata generate` emits and
+  # `lib/kubernetes/types.nix` reads. Nothing wires the two together — see
+  # `docs/prior-implementations.md` — so this pin is the only record of which
+  # API versions those 527k lines were generated from.
+  #
+  # A `crds` union of every chart's CRDs plus these used to sit here and was
+  # read by nothing; a floe that needs a chart's CRDs takes them from
+  # `cataCharts.<name>.crds` directly.
+  inherit specs standaloneCrds;
 }

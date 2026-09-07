@@ -97,7 +97,7 @@ let
     variadic = T.bool;
   };
 
-  # RFC 0002 §6's shape. `modules/lab/ops/types.nix` carries
+  # RFC 0002 §6's shape. An earlier design carried
   # `package = types.package`, a derivation, which cannot live in a kind
   # schema — the linker's scan walks every output and `nix eval --json` has to
   # serialise it. So `package` is a store path *string*, the same

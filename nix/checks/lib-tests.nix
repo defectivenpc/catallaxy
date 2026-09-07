@@ -38,9 +38,6 @@ let
     # Suites for code already in the tree that was, until now, untested here:
     # they were parked alongside the lab system and test none of it.
     #
-    # Two more are still parked because they test things that are:
-    # `render-images` covers `applyToDir`, the image-lock rewriting that comes
-    # back with `lab.images`, and `drift` covers the argocd lowering.
     util-network = testsDir + "/util-network.nix";
     util-duration = testsDir + "/util-duration.nix";
     util-hcl = testsDir + "/util-hcl.nix";
