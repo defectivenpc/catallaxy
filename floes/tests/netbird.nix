@@ -517,17 +517,6 @@ lib.runTests {
     };
   };
 
-  testItDeclaresTheEgressItNeeds = {
-    expr = {
-      undeclared = r.cluster.undeclaredNetwork;
-      internet = map (p: p.port) r.component.network.egress.internet.ports;
-    };
-    expected = {
-      undeclared = [ ];
-      internet = [ 443 ];
-    };
-  };
-
   # The init container is the whole reason the credentials stay out of the
   # manifest, so what it mounts is worth pinning.
   testTheInitContainerHasBothCredentials = {

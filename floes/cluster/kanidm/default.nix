@@ -169,17 +169,6 @@ floe.mkFloe {
           # is this floe's and the claim is one it can make.
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.https = {
-              port = 8443;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            reaches = [ ];
-          };
-
           bundles.server = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

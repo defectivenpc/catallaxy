@@ -97,14 +97,6 @@ floe.mkFloe {
           backs.distribution = [ "bundles" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.webhook = {
-              port = 6443;
-              fromApiServer = true;
-            };
-          };
-
           # A public issuer has no CA to hand out, so there is nothing to
           # distribute and the floe should not have been enabled. Said rather
           # than silently rendering a Bundle with no source.

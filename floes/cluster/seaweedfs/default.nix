@@ -63,13 +63,6 @@ floe.mkFloe {
           backs.store = [ "seaweedfs" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.s3.port = 8333;
-            serves.filer.port = 8888;
-            serves.master.port = 9333;
-          };
-
           bundles.seaweedfs = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

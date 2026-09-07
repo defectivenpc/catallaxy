@@ -278,17 +278,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.api = {
-              port = 8200;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            reaches = [ ];
-          };
-
           # A consumer's token is only good once the Job has written it, and
           # the Job cannot run until the server answers. Naming both here is
           # what orders a consumer after the whole of it without naming

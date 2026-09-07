@@ -135,24 +135,10 @@ floe.mkFloe {
         config.floe.provides.delivery = {
           strategy = "argocd";
           bootstrapTool = "kubectl-ssa";
-          appliedByKapp = false;
         };
 
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
-
-          network = {
-            declared = true;
-            serves.http = {
-              port = 8080;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            # It clones from the git server and talks to the apiserver. The
-            # first is nameable only as a unit, not as a `<unit>/<label>`.
-            reaches = [ ];
-          };
 
           bundles.argocd = kinds.mkBundle {
             createNamespaces = [ ns ];

@@ -204,51 +204,6 @@ let
     verify = T.attrsOf verifyCheckSchema;
   };
 
-  # What a floe declares about its own network needs, from which the cluster
-  # synthesises NetworkPolicies. `reaches` names `<unit>/<label>` — the unit
-  # namespace the join already established, so a label no enabled floe serves
-  # is an error rather than a rule that renders and does nothing.
-  #
-  # `declared` is not redundant with the rest being empty: a floe that needs
-  # nothing beyond the namespace default still sets it, because otherwise it
-  # is indistinguishable from one nobody has looked at, and telling those two
-  # apart is the whole point of asking.
-  portSchema = T.record {
-    port = T.any;
-    protocol = T.enum [
-      "TCP"
-      "UDP"
-      "SCTP"
-    ];
-  };
-
-  networkSchema = T.record {
-    declared = T.bool;
-    serves = T.attrsOf (
-      T.record {
-        port = T.any;
-        protocol = T.enum [
-          "TCP"
-          "UDP"
-          "SCTP"
-        ];
-        fromExternal = T.bool;
-        fromApiServer = T.bool;
-      }
-    );
-    reaches = T.listOf T.str;
-    egress = T.record {
-      internet = T.record { ports = T.listOf portSchema; };
-      cidrs = T.listOf (
-        T.record {
-          cidr = T.str;
-          except = T.listOf T.str;
-          ports = T.listOf portSchema;
-        }
-      );
-    };
-  };
-
   # Drift a CD tool should not fight. `reason` is required and deliberately
   # has no default: a rule with no rationale cannot be retired safely and is
   # indistinguishable from one added to turn a red light green.
@@ -272,8 +227,6 @@ let
     # `backedBy`, carried here rather than on the provide because a provide
     # is sealed against its signature and an extra field would be dropped.
     backs = T.attrsOf (T.listOf T.str);
-
-    network = networkSchema;
 
     # A floe claiming its image set is exhaustive, so the cluster can check
     # that claim against what it actually rendered. Floe-level rather than
@@ -872,7 +825,6 @@ rec {
     {
       bundles ? { },
       backs ? { },
-      network ? { },
       imagesComplete ? false,
       assertions ? [ ],
       warnings ? [ ],
@@ -889,49 +841,8 @@ rec {
         steps
         ;
 
-      network = mkNetwork network;
       drift = map mkDrift drift;
     };
-
-  mkNetwork =
-    {
-      declared ? false,
-      serves ? { },
-      reaches ? [ ],
-      egress ? { },
-    }:
-    {
-      inherit declared reaches;
-
-      serves = lib.mapAttrs (_: s: {
-        inherit (s) port;
-        protocol = s.protocol or "TCP";
-        fromExternal = s.fromExternal or false;
-        fromApiServer = s.fromApiServer or false;
-      }) serves;
-
-      egress = {
-        internet.ports = map mkPort (egress.internet.ports or [ ]);
-        cidrs = map (c: {
-          inherit (c) cidr;
-          except = c.except or [ ];
-          ports = map mkPort (c.ports or [ ]);
-        }) (egress.cidrs or [ ]);
-      };
-    };
-
-  mkPort =
-    p:
-    if lib.isInt p || lib.isString p then
-      {
-        port = p;
-        protocol = "TCP";
-      }
-    else
-      {
-        inherit (p) port;
-        protocol = p.protocol or "TCP";
-      };
 
   mkDrift =
     {
@@ -954,7 +865,6 @@ rec {
   empty = {
     bundles = { };
     backs = { };
-    network = { };
     imagesComplete = { };
     assertions = [ ];
     warnings = [ ];
@@ -995,10 +905,9 @@ rec {
       # `backs."${providerUnit}/${instance}"`.
       backs = lib.mapAttrs' (n: bs: lib.nameValuePair (key n) (map key bs)) c.backs;
 
-      # `network` and `imagesComplete` are per-floe facts, so they key on the
+      # `imagesComplete` is a per-floe fact, so it keys on the
       # unit rather than merging: two floes' netpol declarations are two
       # declarations, and the cluster reads them side by side.
-      network.${unit} = c.network;
       imagesComplete.${unit} = c.imagesComplete;
 
       # Keyed by unit, like `network`: the planner stamps each step with the
@@ -1017,7 +926,6 @@ rec {
   join = a: b: {
     bundles = a.bundles // b.bundles;
     backs = a.backs // b.backs;
-    network = a.network // b.network;
     imagesComplete = a.imagesComplete // b.imagesComplete;
     steps = a.steps // b.steps;
     assertions = a.assertions ++ b.assertions;

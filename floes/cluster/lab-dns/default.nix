@@ -64,27 +64,6 @@ floe.mkFloe {
           # workload here to be ready.
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            egress.cidrs = [
-              {
-                # CoreDNS dialling the lab's resolver. Not `internet`: the
-                # address is on the lab's own bridge.
-                cidr = "0.0.0.0/0";
-                ports = [
-                  {
-                    port = zone.port;
-                    protocol = "UDP";
-                  }
-                  {
-                    port = zone.port;
-                    protocol = "TCP";
-                  }
-                ];
-              }
-            ];
-          };
-
           bundles.coredns = kinds.mkBundle {
             resources.coredns-custom = {
               apiVersion = "v1";

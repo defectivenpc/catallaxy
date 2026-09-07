@@ -147,14 +147,6 @@ floe.mkFloe {
 
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.api.port = 9090;
-            # It scrapes every target in the cluster, which is not a set that
-            # can be named here.
-            serves.scrape.port = 9090;
-          };
-
           bundles.crds = kinds.mkBundle {
             yamls = [ inputs.crds ];
             crds = crdKinds;

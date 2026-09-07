@@ -250,24 +250,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-
-            # The RFC2136 server, and nothing else. A lab resolver is on the
-            # host network rather than in the cluster, so this is egress
-            # rather than a `reaches`.
-            egress.internet.ports = [
-              {
-                port = zone.port;
-                protocol = "UDP";
-              }
-              {
-                port = zone.port;
-                protocol = "TCP";
-              }
-            ];
-          };
-
           # `sync` is the only policy that deletes, so it is the only one that
           # can leave anything behind. Declared conditionally for that reason
           # and not as a matter of taste: a teardown step that has nothing to

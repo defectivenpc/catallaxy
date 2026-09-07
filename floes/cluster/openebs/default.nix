@@ -57,7 +57,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           backs.storage = [ "openebs" ];
           imagesComplete = true;
-          network.declared = true;
 
           bundles.openebs = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];

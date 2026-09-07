@@ -78,22 +78,6 @@ let
     ) labDefs
   );
 
-  declaring = lib.unique (
-    lib.concatLists (
-      lib.mapAttrsToList (
-        _: lab:
-        lib.concatLists (
-          lib.mapAttrsToList (
-            _: cluster:
-            lib.mapAttrsToList (unit: _: floeNameOf cluster unit) (
-              lib.filterAttrs (_: n: n.declared) cluster.out.network
-            )
-          ) (clustersOf lab)
-        )
-      ) labDefs
-    )
-  );
-
   claimingImages = lib.unique (map (c: c.floe) claims);
 
   refuse =
@@ -193,10 +177,4 @@ perClaim
         )
       );
 
-  every-floe-declares-its-network =
-    refuse "every-floe-declares-its-network"
-      "A floe says what traffic it needs, or a default-deny policy silently refuses it. A floe needing nothing beyond the namespace default still sets `network.declared`, so that it reads as reviewed rather than as overlooked."
-      (
-        map (f: "floe '${f}' never declares its network in any lab") (lib.subtractLists declaring shipped)
-      );
 }

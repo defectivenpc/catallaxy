@@ -91,17 +91,6 @@ floe.mkFloe {
           backs.registry = [ "zot" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.registry.port = inputs.port;
-
-            # It syncs from upstreams on a cold pull if configured to, and
-            # nothing here configures it — but the chart's default config does
-            # reach out, and a default-deny that silently blocked it would
-            # look like a registry that is merely slow.
-            egress.internet.ports = [ 443 ];
-          };
-
           bundles.zot = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

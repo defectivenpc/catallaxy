@@ -395,38 +395,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-
-            serves = {
-              api = {
-                port = 80;
-                fromExternal = true;
-              };
-              grpc = {
-                port = 33073;
-                fromExternal = true;
-              };
-              signal = {
-                port = 80;
-                fromExternal = true;
-              };
-              relay = {
-                port = 33080;
-                fromExternal = true;
-              };
-              dashboard = {
-                port = 80;
-                fromExternal = true;
-              };
-            };
-
-            # Management fetches the issuer's signing keys, and re-fetches
-            # them when they rotate. That is the only thing here that leaves
-            # the cluster.
-            egress.internet.ports = [ 443 ];
-          };
-
           bundles = {
             # Everything the servers read before they can start, and nothing
             # that reads anything. Separate from the servers so the wait is

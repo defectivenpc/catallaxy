@@ -150,18 +150,6 @@ floe.mkFloe {
 
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.webhook = {
-              port = 10250;
-              fromApiServer = true;
-            };
-            # ACME and OCSP live outside the cluster. Nothing in this round
-            # uses either, but the controller dials out regardless of which
-            # issuer is configured.
-            egress.internet.ports = [ 443 ];
-          };
-
           bundles.cert-manager = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

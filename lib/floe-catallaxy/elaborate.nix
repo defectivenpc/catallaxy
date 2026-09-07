@@ -504,7 +504,6 @@ in
         # A floe that says nothing about its network is not the same as one
         # that needs nothing, and the difference is why `declared` exists.
         # Naming them is all this does; refusing them is a lab's decision.
-        undeclaredNetwork = lib.attrNames (lib.filterAttrs (_: n: !(n.declared or false)) joined.network);
 
         images = lib.foldl' lib.mergeAttrs { } (
           lib.mapAttrsToList (

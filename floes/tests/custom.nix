@@ -154,8 +154,4 @@ lib.runTests {
     expected = true;
   };
 
-  testDeclaresItsNetwork = {
-    expr = r.component.network.declared;
-    expected = true;
-  };
 }

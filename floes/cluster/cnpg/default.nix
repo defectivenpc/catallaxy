@@ -52,14 +52,6 @@ floe.mkFloe {
           backs.operator = [ "cnpg" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.webhook = {
-              port = 9443;
-              fromApiServer = true;
-            };
-          };
-
           bundles.cnpg = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

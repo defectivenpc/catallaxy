@@ -45,7 +45,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           backs.operator = [ "redis-operator" ];
           imagesComplete = true;
-          network.declared = true;
 
           bundles.redis-operator = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];

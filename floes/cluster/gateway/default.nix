@@ -232,22 +232,6 @@ floe.mkFloe {
           # The chart renders one workload and `images.traefik` below is it.
           imagesComplete = true;
 
-          # The lab's edge: everything from outside arrives here, and it
-          # reaches every workload with a route. `reaches` is left empty
-          # because the backends are whatever attached a route, which is not
-          # knowable from here — the routes name the gateway, not the reverse.
-          network = {
-            declared = true;
-            serves.http = {
-              port = inputs.httpPort;
-              fromExternal = true;
-            };
-            serves.https = {
-              port = inputs.httpsPort;
-              fromExternal = true;
-            };
-          };
-
           # The out-of-zone check that used to live here, over the fan-in,
           # is now in two places that between them cover more: `mkRoute`
           # refuses one at construction, where the trace names the floe that

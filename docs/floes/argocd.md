@@ -52,7 +52,6 @@ Argo CD, which takes ownership of applying the cluster's manifests.
 
 | field | value |  |
 | --- | --- | --- |
-| appliedByKapp | `false` | travels |
 | bootstrapTool | `"kubectl-ssa"` | travels |
 | strategy | `"argocd"` | travels |
 

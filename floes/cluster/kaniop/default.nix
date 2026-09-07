@@ -60,7 +60,6 @@ floe.mkFloe {
             "kaniop"
           ];
           imagesComplete = true;
-          network.declared = true;
 
           bundles.crds = kinds.mkBundle {
             yamls = [ "${crds}" ];

@@ -42,10 +42,4 @@ lib.runTests {
     expected = true;
   };
 
-  # A floe that says nothing about its network is indistinguishable from one
-  # nobody has looked at.
-  testDeclaresItsNetwork = {
-    expr = r.component.network.declared;
-    expected = true;
-  };
 }

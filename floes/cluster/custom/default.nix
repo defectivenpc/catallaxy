@@ -189,11 +189,6 @@ floe.mkFloe {
           # in front of the one gate that checks them.
           imagesComplete = false;
 
-          network = {
-            declared = true;
-            serves.http.port = inputs.servicePort;
-          };
-
           bundles.${inputs.name} = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
             inherit (inputs) yamls images ready;

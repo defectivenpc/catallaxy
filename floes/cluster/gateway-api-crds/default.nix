@@ -73,7 +73,6 @@ floe.mkFloe {
           # the same as saying nothing: an undeclared floe reads as one nobody
           # has looked at.
           imagesComplete = true;
-          network.declared = true;
 
           backs.api = [ "crds" ];
 

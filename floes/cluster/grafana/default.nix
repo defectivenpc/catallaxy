@@ -197,20 +197,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.http = {
-              port = 3000;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            # Every backend that resolved, and the issuer. Not nameable here:
-            # a label is the provider's own name for one of its ports and a
-            # signature carries endpoints, not labels.
-            reaches = [ ];
-          };
-
           bundles.grafana = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

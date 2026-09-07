@@ -146,17 +146,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.http = {
-              port = 3000;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            reaches = [ ];
-          };
-
           backs.git = [ "forgejo" ];
 
           bundles.forgejo = kinds.mkBundle {

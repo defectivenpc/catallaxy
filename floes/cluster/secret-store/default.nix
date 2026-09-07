@@ -170,13 +170,6 @@ floe.mkFloe {
           backs.store = [ "store" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            # The controller dials the store, which is usually outside the
-            # cluster. Which host is not knowable from here.
-            egress.internet.ports = [ 443 ];
-          };
-
           bundles.store = kinds.mkBundle {
             # The token is an ordinary Secret this floe does not create — a
             # projection or an operator supplies it — and naming it is what

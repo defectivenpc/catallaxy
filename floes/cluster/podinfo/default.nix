@@ -105,13 +105,6 @@ floe.mkFloe {
           # One container, and it is the one below.
           imagesComplete = true;
 
-          # Reached by the gateway and nothing else. It dials nothing, which
-          # is stated rather than left blank so it reads as reviewed.
-          network = {
-            declared = true;
-            serves.http.port = inputs.port;
-          };
-
           bundles.podinfo = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

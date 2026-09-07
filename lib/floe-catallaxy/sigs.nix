@@ -715,7 +715,6 @@ in
         "helm"
         "none"
       ];
-      appliedByKapp = T.bool;
     };
   };
 }

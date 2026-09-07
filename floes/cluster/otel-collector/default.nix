@@ -156,42 +156,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-
-            serves.otlp = {
-              port = inputs.otlpGrpcPort;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            serves.otlp-http = {
-              port = inputs.otlpHttpPort;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-
-            # Empty, and not because there is no egress — this floe dials
-            # every backend that resolved.
-            #
-            # `reaches` is `<unit>/<label>`. The unit half is available: a
-            # fan-in resolves keyed by provider unit name, so
-            # `lib.attrNames config.floe.requires.logs` is exactly it. The
-            # label half is not. A label is the *provider's* name for one of
-            # its own ports — loki calls it `http`, tempo `otlpGrpc`,
-            # prometheus `api` — and the signature carries endpoints, not port
-            # labels. A consumer that guessed would name a label the next
-            # LOG_INGEST provider spells differently, and a netpol naming a
-            # label nobody serves matches nothing.
-            #
-            # Closing it means putting the label on the signature, or deriving
-            # the pair in the elaborator, which sees both halves. Either is a
-            # decision for `security.networkPolicies`; this is the case that
-            # shows it cannot be pushed down to the floe.
-            reaches = [ ];
-          };
-
           bundles = {
             gateway = kinds.mkBundle {
               createNamespaces = [ inputs.namespace ];

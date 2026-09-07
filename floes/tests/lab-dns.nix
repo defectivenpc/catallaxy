@@ -82,29 +82,6 @@ lib.runTests {
     };
   };
 
-  # It dials the lab's resolver on the input port, and says so — a floe
-  # silent about its network is named by the elaborator, and this one must
-  # not be among them.
-  testItDeclaresTheEgressItActuallyNeeds = {
-    expr = {
-      undeclared = r.cluster.undeclaredNetwork;
-      ports = (lib.head r.component.network.egress.cidrs).ports;
-    };
-    expected = {
-      undeclared = [ ];
-      ports = [
-        {
-          port = 5399;
-          protocol = "UDP";
-        }
-        {
-          port = 5399;
-          protocol = "TCP";
-        }
-      ];
-    };
-  };
-
   # It requires the cluster and nothing else, and declares no ordering.
   # Whatever wave it lands in is derived.
   testItDeclaresNoOrdering = {

@@ -51,11 +51,6 @@ floe.mkFloe {
           backs.logs = [ "loki" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.http.port = 3100;
-          };
-
           bundles.loki = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

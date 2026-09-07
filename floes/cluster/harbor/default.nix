@@ -174,17 +174,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.http = {
-              port = 8080;
-              protocol = "TCP";
-              fromExternal = false;
-              fromApiServer = false;
-            };
-            reaches = [ ];
-          };
-
           backs.registry = [ "harbor" ];
 
           bundles.harbor = kinds.mkBundle {

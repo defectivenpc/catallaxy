@@ -66,7 +66,6 @@ lib.runTests {
     expected = {
       strategy = "argocd";
       bootstrapTool = "kubectl-ssa";
-      appliedByKapp = false;
     };
   };
 

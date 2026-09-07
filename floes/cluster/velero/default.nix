@@ -150,13 +150,6 @@ floe.mkFloe {
             }
           ];
 
-          network = {
-            declared = true;
-            # It dials the store, and on a restore it writes to every
-            # namespace — which is not a set that can be named here.
-            reaches = [ ];
-          };
-
           bundles.crds = kinds.mkBundle {
             yamls = [ inputs.crds ];
             crds = map (k: "velero.io/${k}") [

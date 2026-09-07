@@ -49,13 +49,6 @@ floe.mkFloe {
           backs.traces = [ "tempo" ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.http.port = 3100;
-            serves.otlpGrpc.port = 4317;
-            serves.otlpHttp.port = 4318;
-          };
-
           bundles.tempo = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

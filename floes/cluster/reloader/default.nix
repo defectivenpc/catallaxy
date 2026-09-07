@@ -52,8 +52,6 @@ floe.mkFloe {
           backs.reload = [ "reloader" ];
           imagesComplete = true;
 
-          network.declared = true;
-
           bundles.reloader = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 

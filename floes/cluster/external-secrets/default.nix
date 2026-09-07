@@ -81,15 +81,6 @@ floe.mkFloe {
           ];
           imagesComplete = true;
 
-          network = {
-            declared = true;
-            serves.webhook = {
-              port = 443;
-              fromApiServer = true;
-            };
-            egress.internet.ports = [ 443 ];
-          };
-
           bundles.crds = kinds.mkBundle {
             yamls = [ inputs.crds ];
             crds = crdKinds;

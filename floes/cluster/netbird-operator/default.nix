@@ -178,17 +178,6 @@ floe.mkFloe {
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
 
-          network = {
-            declared = true;
-
-            # It dials the management API and nothing dials it. In the cluster
-            # running the control plane that is one hop; elsewhere it leaves
-            # through the ingress, which is what `managementUrl` being a routed
-            # name means.
-            serves = { };
-            egress.internet.ports = [ 443 ];
-          };
-
           bundles.operator = kinds.mkBundle {
             createNamespaces = [ ns ];
 

@@ -117,15 +117,6 @@ let
           config.floe.out.component = kinds.mkComponent {
             imagesComplete = true;
 
-            network = {
-              declared = true;
-
-              # The CNI is not a workload with peers — it is the thing every
-              # other workload's traffic goes through. A NetworkPolicy scoped
-              # to its pods would be a policy about the datapath enforcing it.
-              reaches = [ ];
-            };
-
             bundles.cilium = kinds.mkBundle {
               # No `createNamespaces`: kube-system is one the cluster ships
               # with, and emitting a Namespace for it has the applier adopt it.
