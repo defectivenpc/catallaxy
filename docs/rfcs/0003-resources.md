@@ -1,7 +1,37 @@
 # RFC 0003 — Resources: state-based provisioning
 
-Status: **Draft** Scope: one of the delivery categories a floe can declare.
-Depends on RFC 0001, sibling to RFC 0002 and RFC 0004.
+Status: **Implemented.** Scope: one of the delivery categories a floe can
+declare. Depends on RFC 0001, sibling to RFC 0002 and RFC 0004.
+
+> **What shipped.** `lib/floe-catallaxy/resources.nix` (the kinds),
+> `lib/render/infra.nix` (stacks → `main.tf.json`), `lib/tofu-providers.nix`
+> (provider pins read off the derivation, §10), `floes/cluster/provisioned/`
+> (a fixture on providers that reach nothing) and `floes/cluster/doks/` (a
+> real cloud cluster). Driven by `infra-{plan,apply,destroy}` from
+> `modules/lab/plan.nix`; pinned by `lib/tests/render-infra.nix`.
+>
+> Corrections to the text below:
+>
+> - **`after-manifests` is gone.** §5's table and §6's teardown paragraph
+>   still describe three phases; the implementation ships two.
+>   `resources.nix` gives the reason — the only case §11.2 could name was a
+>   DNS record for a running service, which external-dns already does from
+>   inside the cluster. §11.2 is answered: no.
+> - **§7's publication is not a Kubernetes handle.** It writes into a
+>   `lab.secrets.stores` entry the lab already declares, and a cluster reads
+>   it with the `secrets.subscribe` it already has — one addressing scheme
+>   rather than two.
+> - **§12.8 is met**, as of the change that made `infra-plan`
+>   `dryRunSafe = false` and gated it on `--infra`. A plan is read-only but
+>   not inert: it authenticates and calls the provider's API.
+> - **§8 is not met.** `tofu plan` writes no `-out` and `tofu apply`
+>   consumes no plan file, so what is applied is not provably what the plan
+>   showed.
+> - **§7's "destroying a stack un-publishes" is not met.** What a
+>   publication wrote into a secret store outlives the stack.
+> - **§6's backward-phase refusal is not built**; a cycle between stacks is
+>   caught, but by the plan graph, naming steps rather than the resource and
+>   output.
 
 RFC 0002 covers the reconcile camp — manifests handed to Kubernetes, which
 converges. This covers the state-based camp: plan against recorded state,
@@ -13,8 +43,9 @@ alternatives, and nothing a floe writes should name any of them.
 
 ## 0. What this category supplies
 
-This RFC **registers the `resources` category** (RFC 0001 §6.4). Its four
-parts:
+This RFC describes the **resources** delivery category. RFC 0001 defines no
+category-registration mechanism; a category is a different output kind on a
+floe — here `catallaxy.resources`. The four parts:
 
 | Part         | Is                                                                     |
 | ------------ | ---------------------------------------------------------------------- |
@@ -76,7 +107,7 @@ Terraform or by Cluster API. Cataloguing which camp each belongs to does not
 stop two of them running at once.
 
 RFC 0001 already answers this. `dns-record` is a **signature**, and exactly
-one floe provides it per instantiation (RFC 0001 §7.1). Whether that floe
+one floe provides it per instantiation (RFC 0001 §4.6). Whether that floe
 implements it with a resource or with a bundle is its own business, and
 enabling two providers is a link error naming both. The rule in this section
 decides what a floe _author_ should reach for; the one-provider rule is what
@@ -118,8 +149,8 @@ things.
 A resource's output does not exist until apply. `resources.zone.out.id` is
 therefore a value of a distinct type: **known to exist, not yet known**.
 
-In RFC 0001 §5 terms it is an ordinary value member whose type says
-deferred. That gives it a typing rule rather than a convention:
+In RFC 0001 §3.1 terms it is an ordinary value whose type says deferred.
+That gives it a typing rule rather than a convention:
 
 | A deferred value may flow into | Because                                 |
 | ------------------------------ | --------------------------------------- |
@@ -164,7 +195,7 @@ length removing.
 
 **Why the instantiation and not the definition.** One definition is
 instantiated many times — once per cluster, once per environment (RFC 0001
-§7.1). Keying on the definition would put two environments' resources in one
+§4.6). Keying on the definition would put two environments' resources in one
 state file with colliding addresses, so each would plan to destroy the
 other's.
 
@@ -201,8 +232,8 @@ Our graph is only needed _between_ stacks, where the tool cannot see.
 
 **Derived from references.** If a resource in stack A reads an output of a
 resource in stack B, A's plan waits for B's apply. Nothing is declared; the
-edge is read out of the references (RFC 0001 §8, third flow — a fold over
-what was written, not a list someone maintains).
+edge is read out of the references (a fold over what was written, not a list
+someone maintains).
 
 Note it is A's _plan_ that waits, not A's apply: rendering A's plan needs
 B's recorded state.

@@ -50,6 +50,7 @@
 }
 // import ./lab-edge.nix { inherit lib pkgs mkLab; }
 // import ./floe-headers.nix { inherit lib pkgs; }
+// import ./rfc-refs.nix { inherit lib pkgs; }
 // import ./floe-names.nix {
   inherit lib pkgs;
   catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };

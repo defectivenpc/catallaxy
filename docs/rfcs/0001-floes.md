@@ -1,9 +1,51 @@
 # RFC 0001: Floe
 
-**Status:** Draft **Author:** Michael Whitehead **Created:** 2026-08-26
-**Target:** floe core library (Nix), Catallaxy distribution
+**Status:** **Implemented**, amended. **Author:** Michael Whitehead
+**Created:** 2026-08-26 **Target:** floe core library (Nix), Catallaxy
+distribution
 
-## Summary
+> **What shipped, and what did not.** The core is built:
+> `lib/floe-core/{floe,link,interfaces,types}.nix`. Five named deliverables
+> in §8 were **abandoned by design**, not left pending, and the reasons are
+> worth knowing before reading them as a to-do list:
+>
+> | §8 item                   | What happened                                                                                                                                                                                                                                                    |
+> | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | `signatureOptions` (§4.4) | Never built. Conformance is checked **once**, at link (`link.nix` `sealSig` → `types.checkValue`), not twice. The "two schema layers" drawback in §5 therefore does not exist.                                                                                   |
+> | `checkFloe` (§4.9)        | Never built. Replaced by `floes/tests/support.nix`: a stub floe per signature, linked _and elaborated_, so a suite exercises the real linker rather than an approximation. One suite per floe, enforced 1:1 by `nix/checks/lib-tests.nix`.                       |
+> | `mkHelmFloe` (§4.5)       | Never built, and unbuildable as specified — it wires `out.k8s.helmRelease`, a kind this distribution does not have. The sugar that exists is `catallaxy.mkComponentFloe`, which defaults `requires.cluster` and `out.component` and does nothing chart-specific. |
+> | Hole renaming (§3.2, §6)  | Never built. Resolution is by signature name alone.                                                                                                                                                                                                              |
+> | `T.template` (§3.1, §7)   | Never built.                                                                                                                                                                                                                                                     |
+>
+> Other drift a reader should know about:
+>
+> - **`requiresMany` is gone**, replaced by `requiresOptional`
+>   (zero-or-one). It carried no ordering edge, and it implied only the floe
+>   installing a capability could render resources using it — which is not
+>   how Kubernetes works. `lib/floe-core/floe.nix` records the argument.
+> - **The kinds named in §3.1 and §4.11** — `k8s.manifests`,
+>   `terraform.json`, `catallaxy.meta` — are not the shipped ones. Those are
+>   `catallaxy.component`, `catallaxy.cluster`, `catallaxy.resources` and
+>   `catallaxy.publications`. The first and third survive only as test
+>   fixtures.
+> - **§4.2 forbids functions in kind schemas**; `T.moduleType` does exactly
+>   that, and `lib/floe-core/types.nix` argues the prohibition confused
+>   _values_ with _schemas_. Values stay pure; a schema is never serialised.
+> - **§4.6 says there is no monoid.** True of core, which collects by unit
+>   and never merges. One layer up the distribution does define one —
+>   `lib/floe-catallaxy/component.nix`, with identity and associativity —
+>   and `elaborate.nix` gives the layering argument.
+> - **§4.3's claim that a floe's complete interface is readable without
+>   evaluating the body is now true**, via `nix/floe-interface.nix`,
+>   `docs/floes/` and 37 `floe-interface-*` checks. It is true of the
+>   _declaration_ half; what a floe emits is derived after linking, because
+>   an ops command's name is not knowable until then.
+> - **§4.5's projection rule is the RFC's only normative MUST and nothing
+>   checks it.** The practical enforcement is the per-floe interface
+>   document, which renders a provide's value beside the bundles it was
+>   projected from.
+
+## 1. Summary
 
 Floe is a mixin-style module linking system for Nix. It lets infrastructure
 components declare typed interfaces (signatures), require and provide those
@@ -20,7 +62,7 @@ The first distribution built on floe is Catallaxy, which defines Kubernetes,
 Terraform, and cluster-metadata output kinds plus topology policies for a
 four-cluster platform.
 
-## Motivation
+## 2. Motivation
 
 Today, wrapping a Helm chart (or any component) in Nix gives no checked
 contract between components. If grafana exposes an ingress URL and a
@@ -49,9 +91,9 @@ inter-component interfaces poorly (one global option tree, merge-everything
 semantics, no hiding). Floe adds the missing inter-component layer without
 modifying or reimplementing the module system.
 
-## Guide-level explanation
+## 3. Guide-level explanation
 
-### Concepts
+### 3.1 Concepts
 
 **Signature.** A named record schema over data. Field types come from a
 small prelude of types (`str`, `port`, `url`, `dnsName`, `enum`, `attrsOf`,
@@ -162,7 +204,7 @@ result = link {
 };
 ```
 
-### What the deployer sees
+### 3.2 What the deployer sees
 
 Constructing an instance means supplying inputs. `instantiate` eagerly
 validates the supplied attrset against the floe's input declarations, before
@@ -178,7 +220,7 @@ are one floe definition and two entries in `units`, each with its own
 inputs. Hole renaming is only needed when the instances' requires must
 resolve differently.
 
-### What the author sees
+### 3.3 What the author sees
 
 Five names: `mkFloe`, `config.floe.inputs`, `config.floe.requires`,
 `config.floe.provides`, `config.floe.out`. Everything else is the module
@@ -188,9 +230,9 @@ system. A floe can wrap an existing module or Helm chart by listing it in
 deliberately: body-internal options are private wiring between the floe's
 own modules and are not settable from outside.
 
-## Reference-level explanation
+## 4. Reference-level explanation
 
-### Option namespaces
+### 4.1 Option namespaces
 
 `mkFloe` runs `lib.evalModules` per floe and injects generated declarations.
 Each surface has exactly one writer:
@@ -208,7 +250,7 @@ Namespacing is achieved by eval isolation, not naming convention. Intra-floe
 merge (multiple body modules contributing to `out.k8s.*`, `mkIf`,
 priorities) is fully supported; it is the module system doing its job.
 
-### The type-language rule
+### 4.2 The type-language rule
 
 The serialization boundary picks the type language.
 
@@ -231,7 +273,7 @@ same way the NixOS manual renders options. This is acceptable because inputs
 are validated entirely inside Nix eval and never require re-checking
 downstream.
 
-### Inputs
+### 4.3 Inputs
 
 `instantiate suppliedInputs` performs an eager pre-check before body eval
 and before linking: a mini `evalModules` containing only the floe's input
@@ -261,7 +303,7 @@ The complete interface of a floe (inputs docs, requires, provides, out
 kinds) is available from its declaration header without evaluating the body,
 and is included in the link result and IR.
 
-### Signature compilation and double checking
+### 4.4 Signature compilation and double checking
 
 `signatureOptions` compiles the data schema of each signature and kind into
 `mkOption` declarations, so conformance is enforced twice: by NixOS option
@@ -270,7 +312,7 @@ floe's own check on the serialized projection after eval (`seal`), which
 also drops any provided fields not in the signature (opaque ascription).
 Downstream floes can only see what the signature promises.
 
-### Application: wrapping charts, and the projection rule
+### 4.5 Application: wrapping charts, and the projection rule
 
 Nothing in floe core is chart-specific. A chart wrapper is an ordinary floe,
 and the author chooses the exposure level of its input surface:
@@ -312,7 +354,7 @@ change would silently split them.
 declares the internal `chartValues` option and wires `out.k8s.helmRelease`
 from it.
 
-### Linking semantics
+### 4.6 Linking semantics
 
 1. **Resolve.** For each `requires` hole, find exactly one unit providing
    that signature. Zero providers: error listing the missing signature and
@@ -333,7 +375,7 @@ from it.
    below) to derive deploy edges.
 6. **Policy.** Run distribution-supplied checks over the link result.
 
-### The link result
+### 4.7 The link result
 
 ```nix
 {
@@ -352,7 +394,7 @@ The entire result is serializable JSON. It is the IR consumed by backends
 documentation (name, type description, default, description) from its
 declarations, enabling generated per-floe reference docs.
 
-### Deferred values
+### 4.8 Deferred values
 
 Some values are known at eval (chart version, namespace); some exist only
 after apply (LB address, KMS key ARN). `T.deferred t` types the second
@@ -381,7 +423,7 @@ Semantics:
 Open question 1 governs whether deferred values may flow through string
 interpolation.
 
-### Per-floe checking without linking
+### 4.9 Per-floe checking without linking
 
 `checkFloe` evaluates one floe with synthetic requires: probe attrsets
 containing only signature-declared fields with dummy values satisfying their
@@ -392,7 +434,7 @@ implementation present. It is an approximation (value-dependent branches and
 dynamic `getAttr` escape it), but it catches the dominant failure,
 referencing a field the signature never promised.
 
-### Policies
+### 4.10 Policies
 
 A policy is a function over the link result returning a list of violations.
 Floe core runs them; distributions define them. Examples from Catallaxy:
@@ -406,7 +448,7 @@ This preserves layering: core owns coherence, distributions own domain
 legality. Invalid deployments become unlinkable, with the policy name in the
 error.
 
-### Distributions
+### 4.11 Distributions
 
 A distribution ships domain signatures, output kinds, policies, and
 backends. Catallaxy is the first distribution:
@@ -424,14 +466,14 @@ backends. Catallaxy is the first distribution:
 Floe core knows none of this. A distribution shipping `systemd.units` and
 `caddy.config` kinds requires no core changes.
 
-### Compilation pipeline framing
+### 4.12 Compilation pipeline framing
 
 Flake inputs pin floe repos (Nix as fetch/pin substrate). Then: eval floes
 (parse), signature conformance (typecheck), hole resolution (link), policies
 (lint), backends over IR slices (codegen). The platform is a compilation
 problem; these are its passes.
 
-## Drawbacks
+## 5. Drawbacks
 
 - Checking is eval-time and value-level, not static over source. Body
   interiors are unchecked except at the boundaries; `checkFloe` is an
@@ -450,7 +492,7 @@ problem; these are its passes.
   serialization simultaneously. This RFC therefore forbids functions in kind
   schemas.
 
-## Alternatives considered
+## 6. Alternatives considered
 
 **ML functors as the composition primitive.** Rejected. Sharing constraints
 reappear immediately (two functors each taking the same dependency must be
@@ -495,7 +537,7 @@ fights chart wrapping; Cue/KCL lack linking semantics; a Haskell embedding
 maximizes types and interop cost simultaneously. None displaces the design
 because floe's checked surface is data, which is language-agnostic.
 
-## Open questions
+## 7. Open questions
 
 1. **Deferred transparency in interpolation.** Does
    `"https://${deferredValue}"` produce a deferred string or an eval error?
@@ -519,7 +561,7 @@ because floe's checked surface is data, which is language-agnostic.
    `instantiate`. Exact shape unspecified; needed for the residual
    "downstream fills in values the provider cannot know" cases.
 
-## Implementation plan
+## 8. Implementation plan
 
 1. Prelude domain types plus `mkSig`, `mkOutputKind` (pure data).
 2. `signatureOptions` / `optionsFromKinds` compilers to `mkOption`
@@ -542,7 +584,7 @@ Milestone test: grafana wrapped as a floe providing OBSERVER, a downstream
 app consuming it, with each error class in Motivation demonstrably failing
 at eval.
 
-## Prior art
+## 9. Prior art
 
 - MixML (Rossberg & Dreyer): mixin linking with type checking; source of the
   unit/link semantics.

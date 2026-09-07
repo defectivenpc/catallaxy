@@ -1,15 +1,53 @@
 # RFC 0004 — Appliances: what a lab runs for itself
 
-Status: **Draft** Scope: one of the delivery categories a floe can declare.
-Depends on RFC 0001, sibling to RFC 0002 and RFC 0003.
+Status: **Not built.** Scope: one of the delivery categories a floe can
+declare. Depends on RFC 0001, sibling to RFC 0002 and RFC 0003.
+
+> **What shipped instead.** No `appliances` category exists, and no `run`.
+> The word "appliance" appears nowhere in the source tree. A lab's host
+> services are **four fixed options** — `lab.{dns,registry,proxy,egress}` —
+> declared by the lab module in `modules/lab/host/` and
+> `modules/lab/network/dns.nix`, aggregated into `lab.out.services`, and run
+> by `cli/src/host/services.rs`. RFC 0005 §1.1 concedes the point from the
+> other side: an appliance is not a floe, so `lab.dns` is an option surface
+> rather than a signature.
+>
+> What of this RFC _is_ true of the tree:
+>
+> - **§3** — a change to an appliance's configuration is a change to the
+>   appliance. Built precisely: `services.rs` compares rendered volume
+>   content and the image, and recreates the container on either.
+> - **§6** — providing without running. Shipped, but one level up and for
+>   _clusters_: `floes/provisioners/external-cluster.nix` provides
+>   `KUBERNETES_CLUSTER` and creates nothing. For DNS itself,
+>   `lab.dns.enable = false` still yields `lab.provides.zone`, so a consumer
+>   genuinely cannot tell — §6 built via an option rather than via two
+>   floes.
+> - **§8.2** — one host, several labs. Answered: `nix/checks/lab-checks.nix`
+>   refuses two labs claiming one host port or overlapping docker subnets,
+>   across every lab at once.
+>
+> What is not:
+>
+> - **§4** — "ordering comes from requirements, not from a lifecycle table".
+>   `modules/lab/plan.nix` opens with a lifecycle table. Resolving
+>   `DNS_ZONE` creates no ordering edge, and `lib/floe-core/link.nix` says
+>   why: a scope provider is not a node in that graph.
+> - **§9.7** — "no edit to a registry, an aggregator, a port table". All
+>   three exist: the imports and `lab.out.services` in
+>   `modules/lab/host/default.nix`, and `portsOf` in
+>   `nix/checks/lab-checks.nix`.
+> - **§2's `ops`, `verify` and `backedBy` on an appliance.** None exists;
+>   host-service verification is hard-coded in `cli/src/verify/checks/`.
 
 A lab needs infrastructure of its own: name resolution for its zone, an
 image cache, a way in, a way out. This RFC defines how a floe declares one.
 
 ## 0. What this category supplies
 
-This RFC **registers the `appliances` category** (RFC 0001 §6.4). Its four
-parts:
+This RFC describes an **appliances** delivery category. RFC 0001 defines no
+category-registration mechanism, and this category was never built — see the
+status note above. The four parts:
 
 | Part         | Is                                                     |
 | ------------ | ------------------------------------------------------ |
@@ -71,10 +109,10 @@ Readiness and the operator surface sit beside the thing they are about, and
 `needs` names siblings directly rather than through a shared namespace — the
 same locality argument RFC 0002 §6 makes, for the same reason.
 
-**An appliance may be named in `backedBy`.** RFC 0001 §6.3 defines
-`backedBy` as naming the deliverables whose readiness is the capability's
-readiness; for an appliance-backed provision those are appliances, and they
-are nodes in the same delivery graph (RFC 0001 §12).
+**An appliance may be named in `backedBy`.** RFC 0002 §7 defines `backedBy`
+as naming the deliverables whose readiness is the capability's readiness;
+for an appliance-backed provision those are appliances, and they are nodes
+in the same delivery graph (RFC 0001 §4.12).
 
 **`ready` is not optional in practice.** An appliance with no probe is one
 whose failure surfaces later and somewhere else, as a timeout in whatever
@@ -156,7 +194,7 @@ The second runs nothing. It has no `backedBy`, so there is nothing to wait
 for: the claim is that the zone is already served, and if it is not, that is
 a misconfiguration rather than a race.
 
-Consumers cannot tell the difference, which is the point (RFC 0001 §5). It
+Consumers cannot tell the difference, which is the point (RFC 0001 §3.1). It
 also settles what the built-in appliances are for. A local resolver and a
 local registry are **defaults, not fixtures** — conveniences for a lab
 standing on its own. A lab with DNS and a registry already in place

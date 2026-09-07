@@ -1,7 +1,35 @@
 # RFC 0002 — Bundles: what a floe installs
 
-Status: **Draft** Scope: one of the delivery categories a floe can declare.
-Depends on RFC 0001, sibling to RFC 0003 and RFC 0004.
+Status: **Implemented, under different names.** Scope: one of the delivery
+categories a floe can declare. Depends on RFC 0001, sibling to RFC 0003 and
+RFC 0004.
+
+> **What shipped instead.** Substantially all of this RFC is built, in
+> `lib/floe-catallaxy/component.nix` (`bundleSchema`) and
+> `lib/floe-catallaxy/elaborate.nix`. The vocabulary moved:
+>
+> | This RFC                                                                     | The tree                                                                                                                           |
+> | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+> | `install`                                                                    | split three ways: `resources`, `helmCharts`, `yamls`                                                                               |
+> | `backedBy`                                                                   | `backs`, and on the **component**, not the provide — a provide is sealed against its signature and an extra field would be dropped |
+> | `uses.<signature>`                                                           | `config.floe.requires.<hole>`                                                                                                      |
+> | `k8s.helm`, `k8s.ready.*`, `k8s.secret`                                      | `kinds.mkHelmChart`, `kinds.readyDeployment`/`readyCondition`, `kinds.mkGeneratedSecret`                                           |
+> | `<bundle>.ref`, `<bundle>.crd`, the `types`/`values` split on a provide (§7) | **not built.** A provide is a flat record sealed against its signature; `crds` is a list of `group/Kind` strings.                  |
+>
+> Three further divergences:
+>
+> - **§2 lists six bundle fields; the shipped schema has fifteen.** The nine
+>   extra — `createNamespaces`, `crds`, `secrets`, `needsSecrets`,
+>   `externalSecrets`, `routedHosts`, `awaitRollout`, `owner`, `images` —
+>   exist because chart and controller output is opaque until apply, and
+>   each carries its reason in `component.nix`.
+> - **§6 says a check about consumers is not a bundle's check.** The gateway
+>   floe does exactly that, deliberately, with `scope = "per-cluster"` and a
+>   counter-argument in its own comment. There is no signature-lint
+>   mechanism.
+> - **§10.6 is not met.** A chart relying on Helm hook weights should be
+>   "rejected with an explanation"; `lib/render/manifest.nix` drops hook
+>   resources silently, with no count and no diagnostic.
 
 RFC 0001 defines a floe as a component with holes that declares an interface
 — `requires` and `provides`, which know nothing about how anything is
@@ -12,8 +40,10 @@ lab runs for itself.
 
 ## 0. What this category supplies
 
-This RFC **registers the `bundles` category** (RFC 0001 §6.4). Its four
-parts:
+This RFC describes the **bundles** delivery category. RFC 0001 defines no
+category-registration mechanism — a category is, in the shipped tree, simply
+a different output kind on a floe (`out.component` vs `out.resources`). The
+four parts:
 
 | Part         | Is                                                             |
 | ------------ | -------------------------------------------------------------- |
@@ -56,7 +86,7 @@ readiness, and of ownership.**
 
 All six are Kubernetes-aware, which is why they live here and not on the
 floe. That is what keeps `requires` and `provides` a pure module interface
-(RFC 0001 §6).
+(RFC 0001 §4.1).
 
 ```nix
 bundles.core = {
@@ -102,11 +132,11 @@ A chart is a _source of manifests_. It is rendered at build time and the
 output joins the same graph as everything else. Helm's own lifecycle —
 hooks, weights, release state — is deliberately not honoured.
 
-This is not incidental. RFC 0001 §1 argues that hook weights are an ordering
-mechanism nobody outside the chart can read, and that the proliferation of
-such private mechanisms is the problem. Honouring them here would
-reintroduce exactly that: a second ordering system, invisible to the graph,
-that cannot be checked.
+This is not incidental. Hook weights are an ordering mechanism nobody
+outside the chart can read, and that the proliferation of such private
+mechanisms is the problem. Honouring them here would reintroduce exactly
+that: a second ordering system, invisible to the graph, that cannot be
+checked.
 
 The consequence is worth stating plainly: a chart that relies on hook
 ordering to be correct will not work unmodified. That ordering has to be
@@ -115,8 +145,8 @@ expressed as bundles and `needs`, where it can be seen.
 ## 4. `ready`
 
 A bundle's readiness is a predicate written down statically and evaluated at
-apply time. RFC 0001 §9 gives the rule it must obey — **inspect to confirm,
-never to discover** — and this is the vocabulary for doing so.
+apply time. The rule it must obey — **inspect to confirm, never to
+discover** — and this is the vocabulary for doing so.
 
 | Probe          | Asks                                           |
 | -------------- | ---------------------------------------------- |
@@ -142,8 +172,7 @@ the rollout wait.
 
 **`script` is the admission of defeat.** It is present because some upstream
 components expose no other signal, and every use of it is a place where the
-component's own readiness contract (RFC 0001 §9) is unwritable. Prefer any
-other probe.
+component's own readiness contract is unwritable. Prefer any other probe.
 
 ## 5. `needs`
 
@@ -165,8 +194,8 @@ anywhere another floe can see it.
 this is where it goes — but an edge to a sibling has so far been enough.
 
 Ordering _between_ floes is not expressible here and must not be. It comes
-from `requires` and `backedBy` (RFC 0001 §6.3, §7), which is what makes it
-checkable.
+from `requires` (RFC 0001 §4.6) and `backedBy` (§7 below), which is what
+makes it checkable.
 
 ## 6. Operator surface
 
@@ -177,8 +206,7 @@ three are declared beside the thing they are about, and can interpolate its
 namespace, its workload names, and `uses.<signature>` for a peer's value.
 Any other home restates facts the bundle already holds.
 
-All three fold outward to the lab (RFC 0001 §8, third flow). None is part of
-any signature.
+All three fold outward to the lab. None is part of any signature.
 
 `ops` are keyed by category then name, matching the
 `<lab>-ops <category> <name>` invocation.
@@ -222,23 +250,23 @@ through a declared requirement. Neither spells a string that lives somewhere
 else.
 
 The `verify` check is the instructive one. A self-healing CronJob that
-probes an endpoint and deletes a Secret when it fails is, under RFC 0001 §9,
-a provider failing its own readiness contract with the blame hidden. The
-check belongs here, naming the failure, rather than in a job that papers
-over it.
+probes an endpoint and deletes a Secret when it fails is, under that rule, a
+provider failing its own readiness contract with the blame hidden. The check
+belongs here, naming the failure, rather than in a job that papers over it.
 
 **A check about consumers is not a bundle's check.** Some lints assert about
 _other floes'_ output — "every route in this cluster attaches to a listener
 some Gateway declares" examines everyone's routes, not the declaring floe's.
 Nesting that on a bundle records where it was written rather than what it
-examines. It is a signature lint (RFC 0001 §5.5). A bundle's `lint` is about
-that bundle's own rendered output.
+examines. It wants to be a _signature_ lint, a mechanism RFC 0001 does not
+define and which was never built. A bundle's `lint` is about that bundle's
+own rendered output.
 
 ## 7. What a bundle exposes upward
 
-A provision in RFC 0001 §5 is made of types and values, and both are
-ultimately backed by something a bundle installs. Two constructors join the
-two RFCs:
+A provision, as this RFC imagines it, is made of types and values, and both
+are ultimately backed by something a bundle installs. Two constructors join
+the two RFCs:
 
 | Constructor                      | Produces                                      |
 | -------------------------------- | --------------------------------------------- |
@@ -255,16 +283,17 @@ provides.certificate-issuance = {
 
 Naming the bundle is what makes the claim checkable. A handle must name an
 object that bundle actually renders, and a type must be defined by a CRD it
-actually installs. Both are conformance checks over rendered output (RFC
-0001 §17.4), and both are how a declaration is prevented from lying.
+actually installs. Both would be conformance checks over rendered output —
+RFC 0001 describes no such mechanism, and neither handles nor this check
+were built — and both are how a declaration would be prevented from lying.
 
 `backedBy` is separate and means something else: which bundles must be
-_ready_ before a consumer may proceed. See RFC 0001 §6.3.
+_ready_ before a consumer may proceed.
 
 ## 8. Elaboration
 
-Linking produces the delivery graph (RFC 0001 §12), in which a bundle is one
-node kind. This is what happens to the bundle nodes.
+Linking produces the delivery graph (RFC 0001 §4.12), in which a bundle is
+one node kind. This is what happens to the bundle nodes.
 
 ```text
 delivery graph
@@ -279,15 +308,15 @@ delivery graph
 ```
 
 **A bundle node carries its target cluster**, supplied by the floe that
-contains it (RFC 0001 §6.1). Two clusters in one lab put their bundles in
-one graph, and each node says where it goes.
+contains it. Two clusters in one lab put their bundles in one graph, and
+each node says where it goes.
 
 **Derived structural edges** are the ones nobody should have to write: a
 namespaced object follows whoever declares the namespace; an object follows
 whoever provides the Secret it mounts. These are read out of the rendered
 output rather than declared. The CRD edge used to be derived this way too
-and is now a declared type member (RFC 0001 §5.4), which is strictly better
-— it cannot be forgotten and it carries a name.
+and is now a declared type member, which is strictly better — it cannot be
+forgotten and it carries a name.
 
 **Waves are an artifact of the sort, not a concept.** They exist because
 applying independent bundles concurrently is faster than applying them one
