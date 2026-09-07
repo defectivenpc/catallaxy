@@ -48,14 +48,14 @@
 # advertises, and leaves one hostname to match the wildcard certificate
 # instead of three.
 {
+  catallaxy,
   lib,
-  floe,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "netbird";
   summary = "A NetBird control plane: management, signal, dashboard and its identity setup.";
 
@@ -120,8 +120,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # Three routed hostnames, so a gateway and the CRDs it is written against.
   requires.gateway = sigs.API_GATEWAY;
 
@@ -162,8 +160,6 @@ floe.mkFloe {
   # `netbird-operator` resolves this when it runs beside the control plane and
   # is told where the token is when it does not.
   provides.admin = sigs.MESH_ADMIN;
-
-  out.component = kinds.component;
 
   modules = [
     (

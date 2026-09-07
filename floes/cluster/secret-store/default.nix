@@ -10,13 +10,13 @@
 # the namespace holding it.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "secret-store";
   summary = "A ClusterSecretStore pointing at a backend the lab holds.";
 
@@ -139,14 +139,11 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The CRDs and the validating webhook. Applying a ClusterSecretStore before
   # the webhook answers is rejected outright.
   requires.generation = sigs.SECRET_GENERATION;
 
   provides.store = sigs.SECRET_STORE;
-  out.component = kinds.component;
 
   modules = [
     (

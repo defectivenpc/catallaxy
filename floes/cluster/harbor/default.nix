@@ -13,13 +13,13 @@
 # instead, at the length Harbor requires.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "harbor";
   summary = "Harbor, an OCI registry with its own database and cache.";
 
@@ -55,7 +55,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
   # Six of them, and the reason is in the header.
@@ -64,8 +63,6 @@ floe.mkFloe {
   requiresOptional.oidc = sigs.OIDC_PROVIDER;
 
   provides.registry = sigs.OCI_REGISTRY;
-
-  out.component = kinds.component;
 
   modules = [
     (

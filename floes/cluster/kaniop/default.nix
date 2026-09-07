@@ -4,6 +4,7 @@
 # well before the controller is up, and a consumer applying a `Kanidm` needs
 # the first while a consumer waiting for reconciliation needs the second.
 {
+  catallaxy,
   lib,
   pkgs,
   floe,
@@ -12,7 +13,7 @@
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "kaniop";
   summary = "The kaniop operator, which reconciles Kanidm and its clients.";
 
@@ -29,9 +30,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.operator = sigs.IDENTITY_OPERATOR;
-  out.component = kinds.component;
 
   modules = [
     (

@@ -13,13 +13,13 @@
 # and reads the credentials from the Secret kaniop writes beside it.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "grafana";
   summary = "Grafana, wired to whichever metrics, logs and traces backends the cluster has.";
 
@@ -65,7 +65,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
   # For the admin password. Left to the chart, it mints one while rendering —
@@ -79,8 +78,6 @@ floe.mkFloe {
   requiresOptional.logs = sigs.LOG_INGEST;
   requiresOptional.traces = sigs.TRACE_INGEST;
   requiresOptional.oidc = sigs.OIDC_PROVIDER;
-
-  out.component = kinds.component;
 
   modules = [
     (

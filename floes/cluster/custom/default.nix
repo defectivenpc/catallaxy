@@ -18,13 +18,13 @@
 # different thing and should say so by being a different floe.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "custom";
   summary = "An arbitrary set of resources, optionally routed and OIDC-registered.";
 
@@ -134,15 +134,12 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
   # Optional, because most apps do not log anyone in and a lab may have no
   # issuer at all. `oidc = true` with nothing providing one is refused below
   # rather than rendering a client resource of an unknown kind.
   requiresOptional.oidc = sigs.OIDC_PROVIDER;
-
-  out.component = kinds.component;
 
   modules = [
     (

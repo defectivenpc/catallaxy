@@ -5,13 +5,13 @@
 # floe that needs a database. It comes back when forgejo does.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "cnpg";
   summary = "CloudNativePG, the PostgreSQL operator.";
 
@@ -28,9 +28,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.operator = sigs.POSTGRES_OPERATOR;
-  out.component = kinds.component;
 
   modules = [
     (

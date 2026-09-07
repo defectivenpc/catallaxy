@@ -18,6 +18,7 @@
 # both clusters rather than making every invocation carry a flag with one
 # legal value.
 {
+  catallaxy,
   lib,
   pkgs,
   floe,
@@ -26,7 +27,7 @@
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "velero";
   summary = "Velero, cluster backup and restore against an object store.";
 
@@ -93,10 +94,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.store = sigs.OBJECT_STORE;
-
-  out.component = kinds.component;
 
   modules = [
     (

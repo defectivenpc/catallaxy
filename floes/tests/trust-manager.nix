@@ -22,6 +22,7 @@ lib.runTests {
       lib.attrNames
         (import ../cluster/trust-manager {
           inherit lib pkgs;
+          catallaxy = support.catallaxy;
           inherit (support.catallaxy) floe sigs kinds;
         }).requires;
     expected = [

@@ -260,6 +260,7 @@ in
         inherit
           lib
           pkgs
+          catallaxy
           floe
           sigs
           kinds

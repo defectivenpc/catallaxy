@@ -10,13 +10,13 @@
 # every other consumer now builds with `kinds.mkOAuth2Client`.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "argocd";
   summary = "Argo CD, which takes ownership of applying the cluster's manifests.";
 
@@ -53,7 +53,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
   requires.generation = sigs.SECRET_GENERATION;
 
@@ -65,8 +64,6 @@ floe.mkFloe {
   requiresOptional.oidc = sigs.OIDC_PROVIDER;
 
   provides.delivery = sigs.DELIVERY_POLICY;
-
-  out.component = kinds.component;
 
   modules = [
     (

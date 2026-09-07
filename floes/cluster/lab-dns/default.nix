@@ -15,13 +15,13 @@
 # them: `requires.zone = DNS_ZONE`, resolved from lab scope.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "lab-dns";
   summary = "A CoreDNS override teaching the cluster to resolve the lab's zone.";
 
@@ -33,15 +33,11 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The zone, the server and the port, from whoever holds them — which in a
   # lab is the lab. These were three inputs the caller threaded in by hand,
   # and `external-dns` took the same three, so a lab had six arguments to keep
   # consistent and nothing checking that it had.
   requires.zone = sigs.DNS_ZONE;
-
-  out.component = kinds.component;
 
   modules = [
     (

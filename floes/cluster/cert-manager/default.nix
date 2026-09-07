@@ -15,13 +15,13 @@
 # lab that wants TLS wants the self-signed CA.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "cert-manager";
   summary = "cert-manager, and an issuer for the lab's own certificates.";
 
@@ -70,12 +70,8 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   provides.webhook = sigs.X509_WEBHOOK;
   provides.issuance = sigs.X509_ISSUANCE;
-
-  out.component = kinds.component;
 
   modules = [
     (

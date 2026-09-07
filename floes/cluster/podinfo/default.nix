@@ -12,13 +12,13 @@
 # gateway's own `backs`.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "podinfo";
   summary = "podinfo, a small routed workload for proving a cluster serves traffic.";
 
@@ -58,15 +58,12 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
   # What the gateway collects. The old `floes.custom` wrote its hostname into
   # `floes.gateway.internalHostnames`; providing it instead means the gateway
   # learns the same fact through an edge the linker checks, and this floe
   # still names nothing of the gateway's.
-
-  out.component = kinds.component;
 
   modules = [
     (

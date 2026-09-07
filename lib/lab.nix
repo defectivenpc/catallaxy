@@ -25,7 +25,7 @@ let
       _: path:
       let
         def = import path {
-          inherit lib pkgs;
+          inherit lib pkgs catallaxy;
           inherit (catallaxy) floe sigs kinds;
         };
       in

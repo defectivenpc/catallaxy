@@ -45,7 +45,7 @@ let
   defOf =
     name:
     import floeSet.${name} {
-      inherit lib pkgs;
+      inherit lib pkgs catallaxy;
       inherit (catallaxy) floe sigs kinds;
     };
 

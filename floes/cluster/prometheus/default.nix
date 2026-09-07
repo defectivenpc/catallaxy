@@ -12,13 +12,13 @@
 # option.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "prometheus";
   summary = "Prometheus and its CRDs, as the cluster's metrics store.";
 
@@ -85,8 +85,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The operator's admission webhook is fronted by a certificate cert-manager
   # issues. The chart's alternative is a `patch` Job that generates one with a
   # self-signed CA of its own and writes it back into the webhook config — an
@@ -95,7 +93,6 @@ floe.mkFloe {
   requires.issuance = sigs.X509_ISSUANCE;
 
   provides.metrics = sigs.METRICS_INGEST;
-  out.component = kinds.component;
 
   modules = [
     (

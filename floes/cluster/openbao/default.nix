@@ -19,6 +19,7 @@
 # generated from what the command actually becomes, so the two cannot drift
 # again. Auto-unseal needs a KMS, which a lab on one docker host does not have.
 {
+  catallaxy,
   lib,
   pkgs,
   floe,
@@ -32,7 +33,7 @@ let
   idempotent = import ../../../lib/util/idempotent-job.nix { inherit lib; };
 in
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "openbao";
   summary = "OpenBao, a Vault-compatible server, with its KV mount initialised.";
 
@@ -94,11 +95,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   provides.vault = sigs.VAULT_SERVER;
-
-  out.component = kinds.component;
 
   modules = [
     (

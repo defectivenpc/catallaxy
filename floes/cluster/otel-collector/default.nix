@@ -17,13 +17,13 @@
 # that does not exist.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "otel-collector";
   summary = "An OpenTelemetry collector, exporting to whichever backends the cluster has.";
 
@@ -65,8 +65,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # Zero or one of each, and the reason no `enable` flag or endpoint option
   # exists for any of the three. An optional hole orders like an ordinary
   # one, so the collector follows whatever backends the cluster has.
@@ -82,8 +80,6 @@ floe.mkFloe {
   # because it stores nothing. "Somewhere to send OTLP" and "a place traces
   # are kept and queried" are two different signatures, and the second one
   # gets designed when something needs it.
-
-  out.component = kinds.component;
 
   modules = [
     (

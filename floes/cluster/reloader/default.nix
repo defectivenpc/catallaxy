@@ -9,13 +9,13 @@
 # `lib/k8s-annotations.nix` builds the annotation from them.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "reloader";
   summary = "Reloader, which restarts a workload when a Secret or ConfigMap it mounts changes.";
 
@@ -32,9 +32,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.reload = sigs.CONFIG_RELOAD;
-  out.component = kinds.component;
 
   modules = [
     (

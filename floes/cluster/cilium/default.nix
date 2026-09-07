@@ -22,6 +22,7 @@
 # derivation is not a link-time value, and the lab is already the place that
 # knows which provisioner it is configuring.
 {
+  catallaxy,
   lib,
   pkgs,
   floe,
@@ -61,7 +62,7 @@ let
         > $out
     '';
 
-  cilium = floe.mkFloe {
+  cilium = catallaxy.mkComponentFloe {
     name = "cilium";
     summary = "Cilium as the cluster's CNI, replacing the provisioner's default.";
 
@@ -101,10 +102,6 @@ let
         '';
       };
     };
-
-    requires.cluster = sigs.KUBERNETES_CLUSTER;
-
-    out.component = kinds.component;
 
     modules = [
       (

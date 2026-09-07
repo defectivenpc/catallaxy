@@ -1,13 +1,13 @@
 # OT-Container-Kit's Redis operator: reconciles Redis and RedisCluster CRs.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "redis-operator";
   summary = "OT-Container-Kit's Redis operator.";
 
@@ -24,9 +24,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.operator = sigs.REDIS_OPERATOR;
-  out.component = kinds.component;
 
   modules = [
     (

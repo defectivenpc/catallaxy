@@ -1,13 +1,13 @@
 # SeaweedFS: an S3-compatible object store for a lab that has no cloud one.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "seaweedfs";
   summary = "SeaweedFS, an S3-compatible object store.";
 
@@ -30,9 +30,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.store = sigs.OBJECT_STORE;
-  out.component = kinds.component;
 
   modules = [
     (

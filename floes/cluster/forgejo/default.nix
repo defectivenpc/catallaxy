@@ -7,6 +7,7 @@
 # It provides GIT_REPOSITORY, which is what makes a gitops lab possible without
 # a repository outside the lab — Round 4's argocd clones from here.
 {
+  catallaxy,
   lib,
   pkgs,
   floe,
@@ -15,7 +16,7 @@
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "forgejo";
   summary = "Forgejo, a git server, with an admin account and repositories bootstrapped.";
 
@@ -67,15 +68,12 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
   requires.generation = sigs.SECRET_GENERATION;
 
   requiresOptional.oidc = sigs.OIDC_PROVIDER;
 
   provides.git = sigs.GIT_REPOSITORY;
-
-  out.component = kinds.component;
 
   modules = [
     (

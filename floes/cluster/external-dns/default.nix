@@ -20,6 +20,7 @@
 #     resolver; the cloud ones are credentials-and-a-zone and belong to
 #     whoever brings the credentials.
 {
+  catallaxy,
   lib,
   pkgs,
   floe,
@@ -33,7 +34,7 @@ let
   duration = import ../../../lib/util/duration.nix { inherit lib; };
 in
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "external-dns";
   summary = "external-dns, publishing routed hostnames into the lab's zone over RFC2136.";
 
@@ -121,18 +122,11 @@ floe.mkFloe {
     };
   };
 
-  # `gateway-httproute` and `gateway-tlsroute` are in the default sources, and
-  # a source whose kind does not exist is not a warning — external-dns fails
-  # its own startup check and crash-loops.
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # Which zone to publish into and where its server listens. The same three
   # facts `lab-dns` needs, from the same place, so the two cannot be told
   # different things about one lab.
   requires.zone = sigs.DNS_ZONE;
   requires.gatewayApi = sigs.GATEWAY_API;
-
-  out.component = kinds.component;
 
   modules = [
     (

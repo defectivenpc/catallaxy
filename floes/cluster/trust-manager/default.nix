@@ -7,13 +7,13 @@
 # the Bundle CRs are here and the cycle is gone.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "trust-manager";
   summary = "trust-manager, distributing the lab's CA into every namespace that needs it.";
 
@@ -40,8 +40,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The webhook, because a `Bundle` is a CR the API server has to admit. And
   # issuance, because the CA it distributes is the one that issuer signs
   # from — this floe reads the Secret cert-manager's root Certificate wrote.
@@ -49,7 +47,6 @@ floe.mkFloe {
   requires.issuance = sigs.X509_ISSUANCE;
 
   provides.distribution = sigs.TRUST_BUNDLE;
-  out.component = kinds.component;
 
   modules = [
     (

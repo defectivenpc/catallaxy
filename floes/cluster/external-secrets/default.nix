@@ -9,13 +9,13 @@
 # nothing; it comes back with openbao.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "external-secrets";
   summary = "External Secrets, which mints secret values in the cluster.";
 
@@ -41,13 +41,9 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The controller and its generator kinds, which is what this floe actually
   # installs. It creates no store, so it cannot answer SECRET_STORE.
   provides.generation = sigs.SECRET_GENERATION;
-
-  out.component = kinds.component;
 
   modules = [
     (

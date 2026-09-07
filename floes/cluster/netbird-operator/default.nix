@@ -31,14 +31,14 @@
 # `managementInternalUrl` is a throw naming the field. This floe uses the
 # routed name in *both* cases — see `managementUrl` below.
 {
+  catallaxy,
   lib,
-  floe,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "netbird-operator";
   summary = "The NetBird operator, which joins this cluster to a mesh another one runs.";
 
@@ -97,8 +97,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The mesh to reconcile against. The one hole here that crosses a cluster
   # boundary, and the reason this floe exists apart from the control plane.
   requires.mesh = sigs.MESH_NETWORK;
@@ -110,8 +108,6 @@ floe.mkFloe {
   requiresOptional.admin = sigs.MESH_ADMIN;
 
   provides.operator = sigs.MESH_OPERATOR;
-
-  out.component = kinds.component;
 
   modules = [
     (

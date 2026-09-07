@@ -10,13 +10,13 @@
 # here — it was absent only while nothing provided an issuer.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "gateway";
   summary = "Traefik as the Gateway API implementation, and the cluster's one Gateway.";
 
@@ -87,8 +87,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # The domain routes through this gateway hang off. Every lab passed
   # `config.lab.dns.zone` here and the gateway then re-published it as
   # `API_GATEWAY.baseDomain` for its consumers, so the value made a round trip
@@ -119,7 +117,6 @@ floe.mkFloe {
   # part only it can do — knowing what a well-formed route looks like, and
   # refusing an out-of-zone one at construction.
   provides.gateway = sigs.API_GATEWAY;
-  out.component = kinds.component;
 
   modules = [
     (

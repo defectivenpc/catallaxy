@@ -12,13 +12,13 @@
 # `kinds.mkOAuth2Client`. The provider collects nothing.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "kanidm";
   summary = "Kanidm as the lab's OIDC provider, reconciled by kaniop.";
 
@@ -96,8 +96,6 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   # An issuer nobody can reach is not an issuer.
   #
   # This floe promised `https://<domain>` and rendered no route to it, so every
@@ -123,8 +121,6 @@ floe.mkFloe {
   requires.issuance = sigs.X509_ISSUANCE;
 
   provides.oidc = sigs.OIDC_PROVIDER;
-
-  out.component = kinds.component;
 
   modules = [
     (

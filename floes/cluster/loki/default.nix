@@ -5,13 +5,13 @@
 # it comes back when a lab asks for it.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "loki";
   summary = "Loki, the log store.";
 
@@ -28,9 +28,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.logs = sigs.LOG_INGEST;
-  out.component = kinds.component;
 
   modules = [
     (

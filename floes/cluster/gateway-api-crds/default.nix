@@ -7,13 +7,13 @@
 # what makes a second provider an error instead of a silent merge.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "gateway-api-crds";
   summary = "The Gateway API CRDs, so Gateway and route kinds have types.";
 
@@ -32,9 +32,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.api = sigs.GATEWAY_API;
-  out.component = kinds.component;
 
   modules = [
     (

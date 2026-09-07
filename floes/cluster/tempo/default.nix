@@ -4,13 +4,13 @@
 # consumer choice a lab with an object store makes.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "tempo";
   summary = "Tempo, the trace store.";
 
@@ -27,9 +27,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.traces = sigs.TRACE_INGEST;
-  out.component = kinds.component;
 
   modules = [
     (

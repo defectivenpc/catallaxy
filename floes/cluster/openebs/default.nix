@@ -5,13 +5,13 @@
 # `lib/charts.nix` pins.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "openebs";
   summary = "Rancher's local-path provisioner as the cluster's default StorageClass.";
 
@@ -34,9 +34,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.storage = sigs.STORAGE_CLASS;
-  out.component = kinds.component;
 
   modules = [
     (

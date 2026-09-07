@@ -16,13 +16,13 @@
 # lab that wants a registry, and OIDC waits for the identity work.
 {
   lib,
-  floe,
+  catallaxy,
   sigs,
   kinds,
   ...
 }:
 
-floe.mkFloe {
+catallaxy.mkComponentFloe {
   name = "zot";
   summary = "Zot, a small OCI registry used as the lab's pull-through cache.";
 
@@ -57,10 +57,7 @@ floe.mkFloe {
     };
   };
 
-  requires.cluster = sigs.KUBERNETES_CLUSTER;
-
   provides.registry = sigs.OCI_REGISTRY;
-  out.component = kinds.component;
 
   modules = [
     (
