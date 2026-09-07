@@ -1,16 +1,11 @@
 # OpenTelemetry Collector: one place everything in the cluster sends to.
 #
-# Rebuilt against RFC 0001. The parked floe was 808 lines across two files, and
-# most of that was the wiring this design does not need: every backend endpoint
-# was an option, set by the lab from another floe's `exports`, with an
-# assertion beside it checking the lab had remembered to turn on the thing the
-# endpoint pointed at.
-#
-# All three backends are `requiresMany`. That is not an abuse of the fan-in —
-# it is what an optional dependency *is*. `requires` resolves to exactly one
-# provider or fails the link; `requiresMany` resolves to however many there
-# are, including none. A cluster with loki and no tempo gets a logs pipeline
-# and no traces pipeline, and neither the lab nor this floe has to say so.
+# All three backends are `requiresOptional`, which is what an optional
+# dependency is: `requires` resolves to exactly one provider or fails the
+# link, and this resolves to one or to nothing. A cluster with loki and no
+# tempo gets a logs pipeline and no traces pipeline, and neither the lab nor
+# this floe has to say so — there is no endpoint option to set and no
+# assertion checking somebody remembered to turn the backend on.
 #
 # The pipelines are built from what resolved, so a backend that is not in the
 # cluster is not an exporter that is configured and failing — it is a pipeline
@@ -75,7 +70,7 @@ catallaxy.mkComponentFloe {
   # No `provides`. The obvious one — TRACE_INGEST, so another floe can send
   # here rather than to tempo — is wrong twice over. `providersOf` includes the
   # declaring unit, so the collector would resolve its own
-  # `requiresMany.traces` to itself and export into its own receiver; and
+  # `requiresOptional.traces` to itself and export into its own receiver; and
   # TRACE_INGEST carries `queryUrl`, which a collector has no answer for,
   # because it stores nothing. "Somewhere to send OTLP" and "a place traces
   # are kept and queried" are two different signatures, and the second one

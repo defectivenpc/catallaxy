@@ -16,7 +16,7 @@
 #   The floe proper is an ordinary Helm release that takes ownership
 #   afterwards, so upgrades and drift work like every other floe's.
 #
-# The parked tree did this with `cluster.bootstrapManifests`, a writeback from
+# This was once a cluster-level manifest channel, a writeback from
 # the floe into the cluster's own inputs. That needed a channel the link graph
 # does not have, and it is what blocked this migration. Nothing was needed: a
 # derivation is not a link-time value, and the lab is already the place that

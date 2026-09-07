@@ -1,11 +1,11 @@
 # Forgejo: git over HTTP, for a lab that wants to push somewhere it controls.
 #
-# 260 lines against the parked 1,233, and the same two reasons as harbor's:
-# most of the parked file was option surface, and what stays is the secrets the
-# chart would otherwise mint while rendering.
+# Same shape as harbor: a small input surface, and the secrets minted here
+# rather than left to the chart, which would otherwise generate them while
+# rendering and put them in the manifest.
 #
-# It provides GIT_REPOSITORY, which is what makes a gitops lab possible without
-# a repository outside the lab — Round 4's argocd clones from here.
+# It provides GIT_REPOSITORY, which is what makes a gitops lab possible with no
+# repository outside the lab — argocd clones from here.
 {
   catallaxy,
   lib,

@@ -45,7 +45,7 @@
   # Deliberately absent: gatewayAPI, ingressController, bgpControlPlane,
   # l2announcements, egressGateway, encryption, clusterMesh, bandwidthManager.
   #
-  # The parked floe carried an option for each, and the example labs set none
+  # An earlier design carried an option for each, and the example labs set none
   # of them. Gateway API in particular is the `gateway` floe's job here — two
   # implementations of one API is the conflict `provides` exists to refuse,
   # and turning cilium's on would make a second GatewayClass nobody asked for.

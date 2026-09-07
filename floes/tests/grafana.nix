@@ -33,7 +33,7 @@ lib.runTests {
 
   # ---- datasources, at each width --------------------------------------
 
-  # One per backend that resolved. The parked floe read three sibling floes'
+  # One per backend that resolved. An earlier design read three sibling floes'
   # `enable` flags, had a URL option to override each, and an assertion apiece.
   testEveryResolvedBackendBecomesADatasource = {
     expr = dsOf r;

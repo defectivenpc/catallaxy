@@ -30,7 +30,7 @@ let
   managementConfig = {
     # STUN and TURN are the peer's problem, not the server's, and a lab on one
     # docker network needs neither: every peer can reach every other directly.
-    # The parked floe carried options for both and the mesh lab set a TURN
+    # An earlier design carried options for both and the mesh lab set a TURN
     # domain it never stood a server up for.
     Stuns = [ ];
     TURNConfig = {

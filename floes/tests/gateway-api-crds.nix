@@ -1,6 +1,6 @@
 # gateway-api-crds, alone.
 #
-# The shipped tree installed these through `cluster.prerequisites`, a
+# These were once installed by the cluster itself rather than a floe, as a
 # mechanism that exists because gateway and cilium both need them and a
 # bundle declared by two floes is a conflicting definition. Exactly-one
 # provider is that rule already.

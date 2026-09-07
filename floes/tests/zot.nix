@@ -27,7 +27,7 @@ lib.runTests {
 
   # A boolean in this chart version, not an object. `{ enabled = true; }` is
   # also truthy and would pick the same workload while silently discarding the
-  # size beside it — which is what the parked floe did.
+  # size beside it — which is what an earlier design did.
   testPersistenceIsTheBooleanThisChartTakes = {
     expr = values.persistence;
     expected = true;

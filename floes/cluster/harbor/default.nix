@@ -1,10 +1,9 @@
 # Harbor: an OCI registry with projects, users and scanning.
 #
-# 300 lines against the parked 1,320, and the difference is almost entirely
-# option surface — the parked floe carried an option for every value the chart
-# takes, and the example labs set six of them.
+# The input surface is deliberately four values rather than one per chart
+# setting; a lab that needs more reaches the chart through `chart`.
 #
-# What is *not* dropped is the six secrets. Left to itself the chart mints them
+# What it does not leave to the chart is the six secrets. Left to itself the chart mints them
 # with `randAlphaNum` while rendering, so all six land in the manifest, in the
 # digest that pins it and in the Nix store, and all six change on any
 # re-render. That is not only a leak: a rotating `REGISTRY_HTTP_SECRET`

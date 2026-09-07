@@ -1,13 +1,13 @@
 # external-dns: Kubernetes objects in, DNS records out.
 #
-# Rebuilt against RFC 0001, and the first floe to contribute a plan step. That
+# The one floe that contributes a plan step. That
 # step is the reason it comes back now: with `policy = "sync"`, external-dns
 # owns the records it created, and destroying the cluster out from under it
 # leaves them in the zone forever — nothing is left to notice they should go.
 # The step deletes what external-dns watches and waits for the queue to drain
 # before the cluster is torn down.
 #
-# Two things the parked floe did that are not carried forward:
+# Two things it deliberately does not do:
 #
 #   - The TSIG secret was a plain option interpolated into `extraArgs`, which
 #     renders it into the Deployment's argv. That is secret material in a

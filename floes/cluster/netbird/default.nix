@@ -7,7 +7,7 @@
 # credentials they share and the OIDC client they authenticate against. That
 # is a netbird you can log into and register a peer with.
 #
-# It is not the whole of the parked floe, which was 4,890 lines across twenty
+# It is not the whole of NetBird, which is
 # files. Three layers of it are not here and are named rather than omitted:
 #
 # **The operator** is `floes/cluster/netbird-operator`, a floe of its own. It
@@ -39,7 +39,7 @@
 #     /relay                           relay        the websocket fallback
 #     /                                dashboard    the UI
 #
-# The parked floe gave management, signal and the dashboard a hostname each,
+# Giving management, signal and the dashboard a hostname each
 # and this floe did too until it was stood up: `https://<api host>/` answered
 # 404, because there is no page at the root of an API. That is indisistinguishable
 # from a gateway with no route at all, which is why `lab.verify.endpoints`
@@ -97,7 +97,7 @@ catallaxy.mkComponentFloe {
         The dashboard, which is versioned separately from the server.
 
         Pinned rather than `main`, which is what netbird's own compose files
-        use and what the parked floe carried: a lab is reproducible or it is
+        use: a lab is reproducible or it is
         not.
       '';
     };

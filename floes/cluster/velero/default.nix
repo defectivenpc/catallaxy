@@ -1,15 +1,15 @@
 # Velero: backups of the cluster, into an object store.
 #
-# Rebuilt against RFC 0001. It takes its bucket endpoint from `OBJECT_STORE`
-# rather than from a hostname written twice — the parked floe read
-# `floes.seaweedfs.exports.s3Endpoint` with a hardcoded fallback beside it,
+# It takes its bucket endpoint from `OBJECT_STORE`
+# rather than from a hostname written twice. An earlier design read
+# seaweedfs's own options with a hardcoded fallback beside them,
 # which is a default that silently works until the day the store moves.
 #
 # The seven `ops` commands are wrappers around the `velero` binary, which is
 # why each is a `package` rather than a fixed argv: they take user arguments
 # and need `velero` on PATH.
 #
-# The parked floe gave every one a required `--cluster` enum with exactly one
+# An earlier design gave every one a required `--cluster` enum with exactly one
 # value — `config.cluster.name` — that the script then ignored, baking the
 # kubecontext in at build time regardless. That is not carried forward. The
 # context this floe backs up is the one it `requires`, and it knows it; and
@@ -238,7 +238,7 @@ catallaxy.mkComponentFloe {
                     config = {
                       inherit (inputs) region;
 
-                      # Straight off the signature. The parked floe read this
+                      # Straight off the signature. An earlier design read this
                       # from a sibling floe's exports with a hardcoded
                       # fallback beside it.
                       s3Url = store.s3Endpoint;

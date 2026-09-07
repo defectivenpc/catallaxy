@@ -5,9 +5,9 @@
 # gets the Service address; a human opening the Application in the UI needs
 # the routed one, and only one of those resolves in each place.
 #
-# 280 lines against the parked 917. What is dropped is the option surface —
-# HA, dex, per-repo TLS knobs, and an `oidc` block that duplicated the one
-# every other consumer now builds with `kinds.mkOAuth2Client`.
+# It exposes no HA, dex or per-repo TLS settings, and no `oidc` block: a
+# consumer registers its own client with `kinds.mkOAuth2Client`, so there is
+# nothing here for a second one to duplicate.
 {
   lib,
   catallaxy,

@@ -61,7 +61,7 @@ catallaxy.mkComponentFloe {
   requires.gateway = sigs.API_GATEWAY;
 
   # What the gateway collects. The old `floes.custom` wrote its hostname into
-  # `floes.gateway.internalHostnames`; providing it instead means the gateway
+  # a hostname list on the gateway's options; providing it instead means the gateway
   # learns the same fact through an edge the linker checks, and this floe
   # still names nothing of the gateway's.
 

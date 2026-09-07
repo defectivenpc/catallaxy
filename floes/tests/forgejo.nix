@@ -23,7 +23,7 @@ lib.runTests {
 
   # Two URLs because they are read by different things and only one resolves
   # in each place. A CD tool in the cluster clones over the Service; a human
-  # needs the routed one. The parked tree had a single `gitRepo` and consumers
+  # needs the routed one. An earlier design had a single `gitRepo` and consumers
   # picked whichever happened to work where they were tested.
   testItPublishesBothUrls = {
     expr = {

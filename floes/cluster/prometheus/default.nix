@@ -1,6 +1,6 @@
 # Prometheus, via kube-prometheus-stack.
 #
-# Rebuilt against RFC 0001 rather than ported. The parked floe carried a
+# It carries no
 # 402-line option surface and the example labs between them set exactly two
 # things on it — a remote-write URL read off its exports, and a gateway block.
 # What is here is what a lab exercises plus what a consumer has to be told.

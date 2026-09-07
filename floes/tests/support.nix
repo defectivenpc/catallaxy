@@ -240,7 +240,7 @@ in
   # be restating its `requires` in a second place that can disagree.
   #
   # `without` names stubs to leave out, for the one thing that arrangement
-  # cannot express: a `requiresMany` hole resolving to nothing. That is the
+  # cannot express: an optional hole resolving to nothing. That is the
   # whole behaviour of an optional dependency, and with every stub always
   # present it is the one case never exercised.
   #

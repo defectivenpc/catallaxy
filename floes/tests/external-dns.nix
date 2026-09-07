@@ -39,7 +39,7 @@ lib.runTests {
   # ---- the secret ------------------------------------------------------
 
   # The whole reason the floe takes a reference instead of the value. The
-  # parked floe passed `--rfc2136-tsig-secret=<key>`, which renders the key
+  # earlier design passed `--rfc2136-tsig-secret=<key>`, which renders the key
   # into the Deployment's argv, where `get pod` shows it and where the
   # rendered manifest carries it into the store.
   testTheTsigKeyIsNeverAnArgument = {

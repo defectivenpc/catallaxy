@@ -2,14 +2,12 @@
 #
 # No Helm chart. kaniop installs a `kaniop.rs/Kanidm` CRD and reconciles it
 # into a StatefulSet, so this floe's whole job is to render one CR and say
-# where the issuer is — which is why it is 200 lines against the parked
-# floe's 1,681.
+# where the issuer is.
 #
-# Most of that 1,681 was `oauth2Clients`: an attrset of client records the
-# provider published, which six consumers indexed by an id each had invented.
-# That is gone. kaniop registers `KanidmOAuth2Client`, so a client is an
-# ordinary namespaced resource and each consumer renders its own with
-# `kinds.mkOAuth2Client`. The provider collects nothing.
+# It publishes no client registry. kaniop registers `KanidmOAuth2Client`, so a
+# client is an ordinary namespaced resource and each consumer renders its own
+# with `kinds.mkOAuth2Client` — the provider collects nothing, and no consumer
+# has to invent an id for itself.
 {
   lib,
   catallaxy,

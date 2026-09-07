@@ -1,14 +1,11 @@
 # Grafana: dashboards over whatever the cluster stores.
 #
-# Two optional dependencies, both `requiresOptional`, and between them they
-# are why this floe is 250 lines against the parked 615.
+# Four optional dependencies — metrics, logs, traces and OIDC — and a
+# datasource exists exactly when its backend does. Neither the lab nor this
+# floe says which are present anywhere: there is no `enable` to read, no URL
+# to override and no assertion to keep in step.
 #
-# The datasources were three `enable` reads into sibling floes' config, three
-# URL options to override them, and an assertion apiece. A datasource now
-# exists exactly when its backend does, and neither the lab nor this floe says
-# so anywhere.
-#
-# OIDC was six consumers indexing `kanidm.exports.oauth2Clients` by an id each
+# OIDC was once six consumers indexing a client registry by an id each
 # had invented. Grafana registers its own client with `kinds.mkOAuth2Client`
 # and reads the credentials from the Secret kaniop writes beside it.
 {

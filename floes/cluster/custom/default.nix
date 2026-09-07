@@ -4,16 +4,16 @@
 # need one. It takes resources, an optional chart, and puts a route in front.
 #
 # One app per instance, not an attrset of them. A `provides` is one value per
-# hole, so a floe holding N apps cannot answer `ROUTE_REQUEST` N times — and
+# hole, so a floe holding N apps cannot answer one route-request promise N times — and
 # the linker's exactly-one rule is what makes a route attach to exactly one
-# gateway. The parked floe held the attrset and wrote every hostname into
-# `floes.gateway.internalHostnames`, which is the sibling write RFC 0001
+# gateway. An earlier design held the attrset and wrote every hostname into
+# a hostname list written into the gateway's own options, which is the sibling write RFC 0001
 # removed. A lab with three apps instantiates this three times:
 #
 #     floes.hello   = floes.custom { name = "hello";   ... };
 #     floes.welcome = floes.custom { name = "welcome"; ... };
 #
-# Always routed. Every app the parked labs declared through this set a
+# Always routed. Every app declared through this sets a
 # gateway, which is what it is for; something that runs unexposed is a
 # different thing and should say so by being a different floe.
 {

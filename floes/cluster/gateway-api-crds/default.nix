@@ -1,6 +1,6 @@
 # The Gateway API CRDs, as their own unit.
 #
-# In the shipped tree this is `cluster.prerequisites.gateway-api-crds`: a
+# These were once owned by the cluster rather than a floe: a
 # mechanism that exists because gateway and cilium both install these, and a
 # bundle declared by two floes is a conflicting definition. Here it is an
 # ordinary floe providing GATEWAY_API, and the linker's exactly-one rule is

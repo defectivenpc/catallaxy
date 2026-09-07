@@ -1,7 +1,7 @@
 # otel-collector, alone.
 #
 # The floe exists to test one idea: three optional backends, expressed as
-# `requiresMany` rather than as three `enable` flags with three endpoint
+# `requiresOptional` rather than as three `enable` flags with three endpoint
 # options and three assertions checking the lab set them consistently. So most
 # of this is about what happens at each width — all three, one, none.
 { lib, pkgs }:
@@ -36,7 +36,7 @@ lib.runTests {
     ];
   };
 
-  # Endpoints off the signatures. The parked floe took each as an option the
+  # Endpoints off the signatures. An earlier design took each as an option the
   # lab set from another floe's `exports`, with an assertion beside it
   # checking the lab had turned on the thing the endpoint pointed at.
   testEndpointsComeFromTheSignatures = {

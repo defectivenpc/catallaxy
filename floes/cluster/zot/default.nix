@@ -4,9 +4,9 @@
 # front of upstreams. This one holds images the lab itself produces, and lives
 # in the cluster where the things that pull them are.
 #
-# Rebuilt against RFC 0001 rather than ported, and the values are written
+# The values are written
 # against the chart actually pinned (0.1.113) rather than carried over: the
-# parked floe set `persistence = { enabled = true; size = ...; }`, and in this
+# obvious spelling is `persistence = { enabled = true; size = ...; }`, and in this
 # version `persistence` is a plain boolean selecting StatefulSet over
 # Deployment, with the claim configured under `pvc`. The old shape is truthy,
 # so it would have picked the right workload and silently ignored the size.

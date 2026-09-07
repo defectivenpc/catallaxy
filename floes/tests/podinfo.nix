@@ -33,7 +33,7 @@ lib.runTests {
   # The route is the gateway's own constructor's output, not a hand-rolled
   # HTTPRoute. That is the whole of the routing inversion now: a consumer
   # requires API_GATEWAY and renders its own resource, and there is no
-  # ROUTE_REQUEST for the gateway to collect.
+  # a route request for the gateway to collect.
   testTheRouteIsBuiltByTheGatewaysConstructor = {
     expr =
       route == support.catallaxy.kinds.mkRoute {

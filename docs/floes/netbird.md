@@ -8,7 +8,7 @@ A NetBird control plane: management, signal, dashboard and its identity setup.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| dashboardVersion | string | `"v2.16.0"` | The dashboard, which is versioned separately from the server.  Pinned rather than `main`, which is what netbird's own compose files use and what the parked floe carried: a lab is reproducible or it is not.  |
+| dashboardVersion | string | `"v2.16.0"` | The dashboard, which is versioned separately from the server.  Pinned rather than `main`, which is what netbird's own compose files use: a lab is reproducible or it is not.  |
 | namespace | string | `"netbird"` | Namespace the control plane runs in. |
 | registry | string | `"docker.io"` | Registry every netbird image is pulled from. |
 | storage | string | `"1Gi"` | Size of the volume management's sqlite store lives on.  The whole mesh is in it: peers, keys, groups and policies. Losing it is losing every peer's registration.  |

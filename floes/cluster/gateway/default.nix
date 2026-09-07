@@ -96,18 +96,18 @@ catallaxy.mkComponentFloe {
   # The Gateway and GatewayClass objects below have no types without these.
   # Resolved from a peer rather than installed here, because cilium's floe
   # needs the same CRDs and two installs of one thing is the conflict the
-  # shipped tree routes around with `cluster.prerequisites`.
+  # cluster used to route around by owning the install itself.
   requires.gatewayApi = sigs.GATEWAY_API;
 
   # Exactly-one, not fan-in, because this is a dependency rather than a
   # collection: the Gateway's certificate is signed by it, and the listener
-  # never programs until the issuer exists. `requiresMany` would have made it
+  # never programs until the issuer exists. An optional hole would have made it
   # optional at the cost of the ordering edge, and floe-core has no
   # optional-exactly-one hole — so every cluster with a gateway has an issuer,
   # and `tlsEnable` decides only whether it is used.
   requires.issuance = sigs.X509_ISSUANCE;
 
-  # No fan-in. `floes.gateway.internalHostnames` — which eight consumers used
+  # No fan-in. A hostname list on this floe's own options — which eight consumers used
   # to write *into* this floe — was inverted correctly, but the inversion is
   # `provides.gateway` below, not a collection.
   #
