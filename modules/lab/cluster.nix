@@ -181,6 +181,57 @@ types.submodule (
           };
         };
 
+      # Other lab clusters this one brings into existence.
+      #
+      # The channel the planner reads instead of a floe's internals. A floe
+      # that manages cluster lifecycle — Crossplane, Cluster API — declares
+      # what it will create here, and everything else is derived: which
+      # kubeconfigs get synced, what the apply order across clusters is, and
+      # what the teardown deletes and waits for.
+      #
+      # Declared on the *management* cluster and nowhere else. The alternative
+      # is each provisioned cluster naming what makes it, which RFC 0005 §6.2
+      # forbids — a container's provisions may not depend on its contents, and
+      # a cluster naming the controller that creates it is that inversion. It
+      # also keeps the CR's coordinates in one place rather than two that can
+      # disagree.
+      provisions = mkOption {
+        type = types.attrsOf (
+          types.submodule (
+            { name, ... }:
+            {
+              options = {
+                resourceKind = mkOption {
+                  type = types.str;
+                  example = "clusters.kubernetes.digitalocean.crossplane.io";
+                  description = "Fully qualified CR kind that represents the cluster.";
+                };
+
+                resourceName = mkOption {
+                  type = types.str;
+                  default = name;
+                  defaultText = lib.literalExpression "the cluster's name";
+                  description = ''
+                    Name of that CR. Defaults to the lab's name for the
+                    cluster, which is what a floe rendering the CR from this
+                    declaration would use anyway.
+                  '';
+                };
+              };
+            }
+          )
+        );
+        default = { };
+        description = ''
+          Keyed as the clusters are named under `lab.clusters`.
+
+          A cluster named here must exist in the lab and must be provisioned
+          externally — one this machine creates is not something a controller
+          elsewhere also creates, and both trying is the failure that produces
+          two clusters and one name.
+        '';
+      };
+
       # Lab-held material landed in this cluster as a Secret.
       #
       # The Secret is rendered and applied by `cata` from the decrypted store,
@@ -812,6 +863,14 @@ types.submodule (
                 // {
                   reachableFrom = lib.optional lab.proxy.enable lab.proxy.containerName;
                 };
+
+              # The other direction: what only the *lab* needs. Where a
+              # cluster's kubeconfig is published is read by the planner to
+              # derive a `sync-kubeconfig` step, and the step carries the
+              # address — so passing it on here as well would put the same
+              # fact in the document twice, and `cli_parses_nothing_it_ignores`
+              # is right to refuse a field nothing reads.
+              external = c: removeAttrs c [ "kubeconfigFrom" ];
             };
           in
           {

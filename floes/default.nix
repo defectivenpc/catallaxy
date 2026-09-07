@@ -14,6 +14,7 @@
     cilium = ./cluster/cilium;
     cnpg = ./cluster/cnpg;
     custom = ./cluster/custom;
+    doks = ./cluster/doks;
     external-dns = ./cluster/external-dns;
     external-secrets = ./cluster/external-secrets;
     grafana = ./cluster/grafana;
@@ -50,6 +51,7 @@
   };
 
   provisioners = {
+    external-cluster = ./provisioners/external-cluster.nix;
     k3d-cluster = ./provisioners/k3d-cluster.nix;
     talos-cluster = ./provisioners/talos-cluster.nix;
   };

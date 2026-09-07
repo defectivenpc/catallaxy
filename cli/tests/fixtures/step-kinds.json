@@ -551,6 +551,13 @@
         "required": false,
         "sample": []
       },
+      "fromSecret": {
+        "required": false,
+        "sample": {
+          "key": "conformance-sample",
+          "store": "conformance-sample"
+        }
+      },
       "kubeContext": {
         "required": false,
         "sample": "conformance-sample"

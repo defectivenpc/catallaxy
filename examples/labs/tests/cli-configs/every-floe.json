@@ -124,6 +124,9 @@
         "cnpg": {
           "enable": true
         },
+        "doks": {
+          "enable": true
+        },
         "external-dns": {
           "enable": true
         },
@@ -220,6 +223,7 @@
         "waitTimeout": "10m"
       },
       "infraStacks": [
+        "core-doks-before-clusters",
         "core-provisioned-before-clusters"
       ],
       "kubeContext": "k3d-every-floe-core",

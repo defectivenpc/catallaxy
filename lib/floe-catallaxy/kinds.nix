@@ -73,6 +73,32 @@ let
     reachableFrom = T.listOf T.str;
   };
 
+  # A cluster something else brings into existence.
+  #
+  # `cata` creates nothing for one of these: the `create-cluster` step is a
+  # no-op and the cluster arrives because a controller reconciled a CR, or a
+  # state-based apply made it, or because it was already there. What makes it
+  # a *lab* cluster is that a lab names it and installs into it.
+  #
+  # `madeBy` is free text and exists for the operator reading a plan. It is
+  # not dispatched on — the whole point of this variant is that the lab does
+  # not act — and a message saying "created by crossplane on mgmt" is the
+  # difference between a no-op step that reads as broken and one that reads
+  # as waiting.
+  externalSchema = T.record {
+    madeBy = T.str;
+
+    # Where its kubeconfig is published, when a state-based apply made it.
+    # Null for one a controller reconciles — there the lab reaches the
+    # kubeconfig through the management cluster's `provisions` declaration.
+    kubeconfigFrom = T.nullOr (
+      T.record {
+        store = T.str;
+        key = T.str;
+      }
+    );
+  };
+
   # Where this cluster's edge is — RFC 0005 §6.4.
   #
   # Answered by the provisioner because it is a fact about how the cluster
@@ -132,6 +158,7 @@ let
     config = T.taggedUnion {
       k3d = k3dSchema;
       talos = talosSchema;
+      external = externalSchema;
     };
   };
 

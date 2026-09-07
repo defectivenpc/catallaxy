@@ -11,6 +11,7 @@
   labDefs,
   mkLab,
   e2eLabs,
+  cloudE2eLabs,
   cliConfigs,
 }:
 
@@ -22,6 +23,7 @@
 // import ./lib-tests.nix { inherit lib pkgs; }
 // import ./lab-manifests.nix { inherit lib pkgs labDefs; }
 // import ./self-contained.nix { inherit lib pkgs e2eLabs; }
+// import ./cloud-e2e.nix { inherit lib pkgs cloudE2eLabs; }
 // import ./step-kinds.nix { inherit lib pkgs; }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {

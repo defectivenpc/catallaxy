@@ -1,0 +1,7 @@
+[001] docker-network-create name=docker-network-create params.gateway=172.42.0.1 params.name=provisions params.subnet=172.42.0.0/16
+[002] create-cluster name=create-cluster-mgmt cluster=mgmt params.name=mgmt params.provisioner=k3d
+[003] deploy-manifests name=deploy-manifests-mgmt cluster=mgmt params.kubeContext=k3d-provisions-mgmt params.target=mgmt
+[004] wait-for-resources name=wait-for-cluster-workload cluster=mgmt params.kubeContext=k3d-provisions-mgmt params.resources=[{"kind":"clusters.kubernetes.digitalocean.crossplane.io","name":"workload"}] params.target=mgmt params.waitTimeoutSeconds=1800
+[005] sync-kubeconfig name=sync-kubeconfig-workload cluster=mgmt params.clusters=["workload"] params.kubeContext=k3d-provisions-mgmt params.target=mgmt
+[006] create-cluster name=create-cluster-workload cluster=workload params.name=workload params.provisioner=external
+[007] deploy-manifests name=deploy-manifests-workload cluster=workload params.kubeContext=cata-provisions-workload params.target=workload

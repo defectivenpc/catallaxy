@@ -29,6 +29,11 @@ let
     local = pkgs.opentofu.plugins.hashicorp_local;
     random = pkgs.opentofu.plugins.hashicorp_random;
     null = pkgs.opentofu.plugins.hashicorp_null;
+
+    # The first real one. A lab that names it renders and plans with no
+    # credential on the machine — `cata lab plan` reads only the lab
+    # document — and only `infra-apply` behind `--infra` reaches an account.
+    digitalocean = pkgs.opentofu.plugins.digitalocean_digitalocean;
   };
 
   # `{ source, version }` as `required_providers` wants it, read off the

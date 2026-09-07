@@ -117,3 +117,30 @@ pub fn rename_context_in(kubeconfig: &Path, from: &str, to: &str) {
         .args(["config", "rename-context", from, to]);
     let _ = run_capture(&mut cmd);
 }
+
+/// Write a kubeconfig we were handed and merge it under a chosen context.
+///
+/// The producing tool names the context whatever it likes — `doctl` writes
+/// `do-<region>-<name>` — and the lab decided a name of its own. Renaming on
+/// the way in is what keeps `KUBERNETES_CLUSTER.context` a decision rather
+/// than a discovery (RFC 0005 §6.3) for a cluster this machine did not make.
+///
+/// The same shape as `crossplane::sync_kubeconfig`, which reads its bytes out
+/// of a connection Secret instead of a secret store. Only the source differs.
+///
+/// # Errors
+///
+/// If the file cannot be written or the merge fails.
+pub fn write_and_merge_kubeconfig(context_name: &str, kubeconfig: &str) -> Result<()> {
+    let kube_dir = crate::io::fs::home_dir()?.join(".kube");
+    let path = kube_dir.join(format!("{context_name}.kubeconfig"));
+    crate::io::fs::write_atomic(&path, kubeconfig.as_bytes())?;
+
+    if let Some(original) = current_context_of(&path)
+        && original != context_name
+    {
+        rename_context_in(&path, &original, context_name);
+    }
+
+    merge_kubeconfig(&path, context_name)
+}

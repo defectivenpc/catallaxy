@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::step_kind::StepKind;
 
@@ -308,6 +308,21 @@ pub struct SyncKubeconfigParams {
     pub clusters: Vec<String>,
     #[serde(default)]
     pub kube_context: Option<String>,
+    /// Read it from a lab secret store rather than a connection Secret.
+    #[serde(default)]
+    pub from_secret: Option<SecretRef>,
+}
+
+/// A value in one of the lab's secret stores, by address.
+///
+/// An address, never a value — which is what keeps a credential out of the
+/// rendered plan and out of `metadata.json`, and so gives the
+/// `<lab>-renders-no-secret-material` check nothing to find.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretRef {
+    pub store: String,
+    pub key: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

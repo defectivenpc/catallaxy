@@ -18,6 +18,8 @@ pub fn provisioner_cluster_name(spec: &ClusterSpec) -> &str {
     match &spec.provisioner_config {
         ProvisionerConfig::K3d(c) => &c.cluster_name,
         ProvisionerConfig::Talos(c) => &c.cluster_name,
+        // Nothing on this host is named after it.
+        ProvisionerConfig::External(_) => "",
     }
 }
 
@@ -166,9 +168,20 @@ pub fn provision_cluster_with_registry(
             );
         }
         ProvisionerKind::External => {
+            // Say what brings it into existence. A step that does nothing and
+            // says nothing reads as broken; one that names what it is waiting
+            // for reads as waiting, which is what it is doing — the plan has
+            // already ordered this after whatever reconciles the cluster.
+            let made_by = match &spec.provisioner_config {
+                ProvisionerConfig::External(c) if !c.made_by.is_empty() => {
+                    format!(" It is made by {}.", c.made_by)
+                }
+                _ => String::new(),
+            };
             println!(
                 "{} Cluster '{name}' is external, so the lab declares nothing \
-                 about how it is built and changes to it are not catallaxy's to make",
+                 about how it is built and changes to it are not catallaxy's \
+                 to make.{made_by}",
                 style(">>>").cyan()
             );
         }

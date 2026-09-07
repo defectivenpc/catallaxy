@@ -57,6 +57,19 @@ let
   # forgotten.
   stackDeps = name: infraLib.dependenciesOf stacks name;
 
+  # ---- clusters that other clusters bring into existence -------------------
+
+  provisions = import ./planner/provisions.nix {
+    inherit
+      lib
+      config
+      t
+      needs
+      wants
+      ;
+    stackNames = lib.attrNames stacks;
+  };
+
   infraSteps = lib.foldl' lib.mergeAttrs { } (
     lib.mapAttrsToList (
       stackName: _:
@@ -118,6 +131,8 @@ let
   );
 in
 {
+  config.lab.assertions = provisions.assertions;
+
   config.lab.steps =
     lib.optionalAttrs needsDockerNetwork {
       docker-network-create = {
@@ -249,6 +264,8 @@ in
 
     // infraSteps
 
+    // provisions.steps
+
     // lib.optionalAttrs needsDockerNetwork {
       remove-network = {
         kind = "remove-network";
@@ -269,7 +286,14 @@ in
           # `needs`, not `wants`, so it is an error when the anchor is absent
           # rather than a step that floats. A cluster not on the lab's network
           # drops the edge entirely instead of needing something nothing makes.
-          after = lib.optional (onDockerNetwork name) (needs t.lab.network);
+          #
+          # A cluster another cluster provisions waits for its kubeconfig,
+          # which waits for the CR to reconcile, which waits for the
+          # management cluster's manifests. Without that this step is
+          # unconstrained and the sort decides — which is how the previous
+          # implementation created cloud clusters before the cluster that
+          # creates them existed.
+          after = lib.optional (onDockerNetwork name) (needs t.lab.network) ++ provisions.extraAfterFor name;
           params = {
             inherit name;
             inherit (c.spec) provisioner;
@@ -295,6 +319,12 @@ in
           description = "Destroy ${c.spec.provisioner} cluster '${name}'";
           cluster = name;
           provides = [ (t.cluster name).destroyed ];
+
+          # A management cluster is destroyed after everything it provisioned
+          # is gone. Destroy it first and the CR goes with it while the
+          # cluster it represents keeps running — orphaned, billed, and with
+          # nothing left that knows its name.
+          after = provisions.teardownAfterFor name;
           params = {
             inherit name;
             inherit (c.spec) provisioner;

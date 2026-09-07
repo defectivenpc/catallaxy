@@ -148,6 +148,14 @@
     };
     podinfo = floes.podinfo { };
 
+    # A real cloud cluster, declared and never applied. It renders here so
+    # its resource declaration is checked; `examples/labs/tests/cloud.nix` is
+    # where the arrangement around it is.
+    doks = floes.doks {
+      name = "every-floe-workload";
+      version = "1.31.1-do.4";
+    };
+
     # The other delivery camp. Publishes into the runtime store, so this
     # fixture covers the join between the two (RFC 0003 §7) and not only the
     # resources on their own.

@@ -391,19 +391,34 @@ let
   # `out.cluster` is the descriptor the provisioner emitted, so this is the
   # range the cluster is actually created with rather than the input someone
   # meant to pass.
+  # Only the clusters that share the lab's docker network.
+  #
+  # The whole fault here is one network handing out two identical addresses.
+  # A cluster in a cloud is on its own network entirely, so its ranges may
+  # overlap another's freely — and refusing that would refuse the ordinary
+  # arrangement of a local cluster and a managed one, which both take the
+  # provider's defaults and both are right to.
+  #
+  # `provider` is the descriptor's own answer, the same fact
+  # `modules/lab/plan.nix` uses to decide whether a cluster needs the network
+  # at all.
+  onLabNetwork = cluster: cluster.spec.provider == "docker";
+
   rangesOf =
     labName: clusterName: cluster:
-    lib.concatLists (
-      lib.mapAttrsToList (_unit: descriptor: [
-        {
-          what = "${clusterName}'s pod range";
-          cidr = descriptor.network.podSubnet;
-        }
-        {
-          what = "${clusterName}'s service range";
-          cidr = descriptor.network.serviceSubnet;
-        }
-      ]) cluster.out.cluster
+    lib.optionals (onLabNetwork cluster) (
+      lib.concatLists (
+        lib.mapAttrsToList (_unit: descriptor: [
+          {
+            what = "${clusterName}'s pod range";
+            cidr = descriptor.network.podSubnet;
+          }
+          {
+            what = "${clusterName}'s service range";
+            cidr = descriptor.network.serviceSubnet;
+          }
+        ]) cluster.out.cluster
+      )
     );
 
   # Cross-cluster only, and every combination of the two kinds: on one docker

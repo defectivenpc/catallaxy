@@ -65,6 +65,7 @@ in
   lab.proxy.enable = true;
   lab.network.subnet = "172.40.0.0/16";
   lab.proxy.httpPort = 8090;
+  lab.egress.port = 3137;
   lab.dns.hostPort = 5370;
 
   lab.clusters.core.floes = common "core";

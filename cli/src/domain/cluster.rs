@@ -169,6 +169,19 @@ impl DeployStrategy {
 pub enum ProvisionerConfig {
     K3d(K3dConfig),
     Talos(TalosConfig),
+    External(ExternalConfig),
+}
+
+/// A cluster something else brings into existence.
+///
+/// `cata` creates nothing for one of these. `madeBy` is free text for the
+/// operator reading a plan and is never dispatched on — dispatching on it
+/// would make it a provisioner enum again, which is the shape this whole
+/// type replaced.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalConfig {
+    pub made_by: String,
 }
 
 impl ProvisionerConfig {
@@ -182,6 +195,7 @@ impl ProvisionerConfig {
         match self {
             ProvisionerConfig::K3d(_) => ProvisionerKind::K3d,
             ProvisionerConfig::Talos(_) => ProvisionerKind::Talos,
+            ProvisionerConfig::External(_) => ProvisionerKind::External,
         }
     }
 
@@ -193,7 +207,7 @@ impl ProvisionerConfig {
     pub fn k3d(&self) -> Option<&K3dConfig> {
         match self {
             ProvisionerConfig::K3d(c) => Some(c),
-            ProvisionerConfig::Talos(_) => None,
+            ProvisionerConfig::Talos(_) | ProvisionerConfig::External(_) => None,
         }
     }
 
@@ -207,6 +221,8 @@ impl ProvisionerConfig {
         match self {
             ProvisionerConfig::K3d(c) => &c.ports,
             ProvisionerConfig::Talos(c) => &c.exposed_ports,
+            // Nothing on this host publishes a port for it.
+            ProvisionerConfig::External(_) => &[],
         }
     }
 
@@ -217,7 +233,7 @@ impl ProvisionerConfig {
     pub fn auto_deploy_manifests(&self) -> &[AutoDeployManifest] {
         match self {
             ProvisionerConfig::K3d(c) => &c.auto_deploy_manifests,
-            ProvisionerConfig::Talos(_) => &[],
+            ProvisionerConfig::Talos(_) | ProvisionerConfig::External(_) => &[],
         }
     }
 }

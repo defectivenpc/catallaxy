@@ -88,6 +88,11 @@
         # them disagree about the very thing one exists to check.
         e2eLabs = lib.mapAttrs (_: l: l.config.lab.out.selfContained) exampleLabs;
 
+        # The billable matrix, over every lab including fixtures: a cloud lab
+        # is a fixture until someone has an account, and `nix run .#e2e-cloud`
+        # is how it stops being one.
+        cloudE2eLabs = lib.mapAttrs (_: l: l.config.lab.out.cloudE2e) labDefs;
+
         # Same reason, for the document the CLI parses: the check diffs
         # against this and `refresh-cli-configs` copies out of it, so the
         # fixture and the check cannot be produced by two pipelines that
@@ -107,7 +112,7 @@
 
           # What the e2e runner builds its matrix from. Example labs only:
           # a fixture exists to be rendered and checked, never stood up.
-          inherit e2eLabs;
+          inherit e2eLabs cloudE2eLabs;
 
           # What `refresh-digests` iterates and what the digest checks cover —
           # everything that renders, fixtures included.
@@ -137,6 +142,8 @@
           inherit (packages')
             e2e
             e2e-all
+            e2e-cloud
+            cloud-reap
             refresh-digests
             refresh-cli-configs
             refresh-plans
@@ -158,6 +165,17 @@
         apps.e2e-all = {
           type = "app";
           program = "${packages'.e2e-all}/bin/cata-e2e-all";
+        };
+
+        # Spends money. Never in `nix flake check`, never on a PR.
+        apps.e2e-cloud = {
+          type = "app";
+          program = "${packages'.e2e-cloud}/bin/cata-e2e-cloud";
+        };
+
+        apps.cloud-reap = {
+          type = "app";
+          program = "${packages'.cloud-reap}/bin/cata-cloud-reap";
         };
 
         apps.refresh-digests = {
@@ -196,7 +214,7 @@
           # `mkLab` can: the refusal is an assertion inside the module tree,
           # so there is nothing to inspect without evaluating it.
           inherit (labs) mkLab;
-          inherit e2eLabs cliConfigs;
+          inherit e2eLabs cloudE2eLabs cliConfigs;
         };
       }
     );
