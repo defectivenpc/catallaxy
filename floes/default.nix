@@ -1,13 +1,7 @@
-# The floes catallaxy ships, as name -> path.
+# The floes catallaxy ships :: { Group -> { FloeName -> Path } }
 #
-# An attribute set rather than an import list, so a consumer can `removeAttrs`
-# one or substitute their own. Membership is explicit: adding a floe means
-# adding a line here, which is what keeps a check able to say which floes it
-# checked.
-#
-# `lib/lab.nix` flattens the groups — `cluster`, `lab` and `provisioners` —
-# because the split is how the set is organised on disk, not a namespace a
-# lab has to spell.
+# An attrset so a consumer can `removeAttrs` one or substitute their own.
+# `lib/lab.nix` flattens the groups; they are disk layout, not a namespace.
 {
   cluster = {
     argocd = ./cluster/argocd;

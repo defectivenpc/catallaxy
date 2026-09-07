@@ -232,9 +232,7 @@
           packages = packages';
           inherit labDefs;
 
-          # `labDefs` includes fixtures, which are not example labs — a
-          # fixture exists to be rendered and checked, never stood up. The
-          # count check is about the ones a reader can run.
+          # `labDefs` includes fixtures; `counts` wants the runnable set.
           inherit exampleLabs;
 
           # A check that a *wrong* lab is refused has to build one, and only

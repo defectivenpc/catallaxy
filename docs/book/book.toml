@@ -5,9 +5,7 @@ authors = ["Catallaxy Contributors"]
 language = "en"
 src = "src"
 
-# A `SUMMARY.md` entry with no file is an error, not an empty page mdbook
-# writes for you. The default is the other way round, which means a typo in a
-# path renders a blank chapter and passes CI.
+# A SUMMARY entry with no file is an error, not a blank page.
 [build]
 create-missing = false
 

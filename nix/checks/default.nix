@@ -18,13 +18,8 @@
 }:
 
 let
-  # The floe set with its groups flattened — the set a lab actually sees,
-  # since `lib/lab.nix` flattens before handing it over. Three checks read it
-  # and each used to spell the fold itself, which is three chances to disagree
-  # about what "every floe" means.
-  #
-  # `floe-gates.nix` deliberately takes only `.cluster`; it is about what a
-  # cluster component must declare, and a provisioner is not one.
+  # allFloes :: { FloeName -> Path }, groups flattened as `lib/lab.nix` does.
+  # `floe-gates.nix` takes only `.cluster` on purpose.
   allFloes = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
 in
 

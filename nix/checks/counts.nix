@@ -1,21 +1,7 @@
-# A number stated in prose matches the number in the tree.
+# "<N> floes" and "<N> example labs" in prose match the tree.
 #
-# Written because the floe count appeared in four places with **four
-# different values** — 27, 33, 29 and 29 — while the real figure was 37. None
-# was a typo; each was true when written, and each was left behind by the next
-# floe. A count in prose has no reader that would notice, which is exactly the
-# kind of claim a build should be making instead of a person.
-#
-# Deliberately narrow. It knows two quantities, spelled as digits or as words,
-# and it will not learn to parse arbitrary claims:
-#
-#   "<N> floes"        -> the flattened `floes/default.nix`
-#   "<N> example labs" -> the labs that can actually be run
-#
-# `CHANGELOG.md` and `docs/rfcs/` are not in the source list, on the same rule
-# the header check uses: an entry dated last March saying there were 27 floes
-# is a true statement about last March, and rewriting it would falsify the
-# record.
+# CHANGELOG.md and docs/rfcs/ are not sources: a dated entry's count was true
+# when written.
 {
   lib,
   pkgs,
@@ -24,8 +10,6 @@
 }:
 
 let
-  # Files whose prose makes claims. Everything else is generated, a dated
-  # record, or code the other checks already cover.
   sources = [
     "README.md"
     "floes/default.nix"
@@ -48,6 +32,7 @@ let
     "start-here/next-steps.md"
   ];
 
+  # expected :: { Subject -> Int }
   expected = {
     floes = lib.length (lib.attrNames floeSet);
     "example labs" = lib.length (lib.attrNames labDefs);

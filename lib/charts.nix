@@ -387,11 +387,8 @@ let
     }
   ) chartDefs;
 
-  # Pinned for the Crossplane floe, which is not built — see
-  # `docs/prior-implementations.md`. Kept rather than deleted for the same
-  # reason the mdbook scaffolding is: re-deriving two upstream hashes later is
-  # a real cost, and a pin with no consumer reads as dead only when nothing
-  # says otherwise. Reachable as `legacyPackages.charts.crossplaneProviderCrds`.
+  # For the Crossplane floe, which is not built. Kept: re-deriving the hashes
+  # later costs more than the pin does.
   crossplaneProviderCrdDefs = {
     provider-upjet-digitalocean = {
       type = "github";

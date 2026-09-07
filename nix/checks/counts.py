@@ -1,21 +1,8 @@
-"""Check every "<N> floes" and "<N> example labs" in prose against the tree.
+"""Check "<N> floes" and "<N> example labs" in prose against the tree.
 
-See `counts.nix` for why this exists. The short version: the floe count was
-stated in four places with four different values, none of them right.
-
-Numbers are matched as digits and as words, because prose prefers words and
-"thirty-three floes" goes stale exactly the way "33" does. A word outside the
-table below is not matched at all — failing open rather than guessing, since
-the alternative is inventing a number nobody wrote.
-
-Only *total* claims count. "Two floes providing `X509_ISSUANCE` in one
-cluster is a question only you can answer" is about two floes, not about the
-set, and a check that read it as a count of the catalogue would be demanding
-the sentence be wrong. The rule separating them is grammatical: a partitive
-takes a participle or a relative pronoun after the noun ("floes providing…",
-"floes that…"), a total does not. That is not airtight, and it does not need
-to be — the failure this exists for is a number in a summary sentence going
-stale, and a sentence that survives the rule wrongly costs a reword.
+Numbers are matched as digits or as words. Only total claims count: a
+partitive takes a participle or a relative after the noun ("floes
+providing…"), and is skipped.
 """
 
 import json
@@ -58,20 +45,18 @@ WORDS = {
     "forty": 40,
 }
 
-# Longest-first, so "thirty-three" is not matched as "thirty".
 NUMBER = "|".join([r"\d+"] + sorted(WORDS, key=len, reverse=True))
 
-
-def value(token: str) -> int:
-    return int(token) if token.isdigit() else WORDS[token.lower()]
-
-
-# A word that turns "N floes" into "N floes of a particular sort" rather than
-# "the N floes there are".
 RELATIVES = {"that", "which", "who", "whose", "providing", "with", "in", "of"}
 
 
+def value(token: str) -> int:
+    """Token -> Int"""
+    return int(token) if token.isdigit() else WORDS[token.lower()]
+
+
 def is_partitive(tail: str | None) -> bool:
+    """The word after the noun -> whether the claim is about a subset."""
     if not tail:
         return False
     word = tail.strip().strip(",.;:").lower()
@@ -82,14 +67,9 @@ def main(expected_path: str, root: str) -> int:
     expected = json.loads(pathlib.Path(expected_path).read_text())
     root = pathlib.Path(root)
 
-    # "<N> floes", and "<N> built-in floes" / "<N> example labs" — an
-    # adjective may sit between the number and the noun, which is how
-    # "27 built-in floes" was written.
     patterns = {
         subject: re.compile(
-            # An adjective or two may sit between: "27 built-in floes".
             rf"\b({NUMBER})\b(?:\s+[a-z-]+){{0,2}}?\s+{re.escape(subject)}\b"
-            # …and what follows decides total vs partitive.
             rf"(?P<tail>\s+\S+)?",
             re.IGNORECASE,
         )
@@ -110,8 +90,7 @@ def main(expected_path: str, root: str) -> int:
                     if is_partitive(match.group("tail")):
                         continue
                     checked += 1
-                    got = value(match.group(1))
-                    if got != expected[subject]:
+                    if value(match.group(1)) != expected[subject]:
                         wrong.append(
                             f"  {rel}:{lineno}: says {match.group(0).strip()!r}, "
                             f"but there are {expected[subject]}"
@@ -121,23 +100,11 @@ def main(expected_path: str, root: str) -> int:
         print(f"{len(wrong)} stale count(s) in prose:", file=sys.stderr)
         for line in wrong:
             print(line, file=sys.stderr)
-        print(
-            "\nThe number is in the tree; prose that repeats it goes stale "
-            "silently,\nwhich is why this check exists. Update the sentence, "
-            "or reword it so it\ndoes not carry a count at all — the second is "
-            "usually the better fix.",
-            file=sys.stderr,
-        )
+        print("\nUpdate the sentence, or reword it to carry no count.", file=sys.stderr)
         return 1
 
     if checked == 0:
-        print(
-            "no counts found in prose at all — either every sentence was "
-            "reworded\n(fine, but then remove this check) or the source list "
-            "in counts.nix is\nno longer pointing at the files that make "
-            "claims.",
-            file=sys.stderr,
-        )
+        print("no counts matched — the source list in counts.nix is stale.", file=sys.stderr)
         return 1
 
     summary = ", ".join(f"{v} {k}" for k, v in sorted(expected.items()))

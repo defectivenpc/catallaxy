@@ -26,14 +26,8 @@ let
       || (lib.hasSuffix ".txt" path && lib.hasInfix "/tests/" path);
   };
 
-  # The book's source, for `cli/tests/book.rs` — every `cata` command a page
-  # prints has to be one the parser accepts, and the parser is here.
-  #
-  # Passed as an environment variable rather than by widening `src` to the
-  # repo root, which would rebuild the CLI on any change anywhere. It is set
-  # on `buildPackage` only and not on `commonArgs`, so `buildDepsOnly`'s
-  # artifacts are unaffected: editing a page recompiles the crate from cached
-  # dependencies rather than from nothing.
+  # For `cli/tests/book.rs`. On `buildPackage` only, so `buildDepsOnly`'s
+  # artifacts survive a docs edit.
   bookSrc = ../docs/book/src;
 
   commonArgs = {

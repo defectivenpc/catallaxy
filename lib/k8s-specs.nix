@@ -52,14 +52,7 @@ let
 
 in
 {
-  # `specs` has no consumer in the flake and is not dead: it is the *input* to
-  # `lib/kubernetes/generated/`, which `cata generate` emits and
-  # `lib/kubernetes/types.nix` reads. Nothing wires the two together — see
-  # `docs/prior-implementations.md` — so this pin is the only record of which
-  # API versions those 527k lines were generated from.
-  #
-  # A `crds` union of every chart's CRDs plus these used to sit here and was
-  # read by nothing; a floe that needs a chart's CRDs takes them from
-  # `cataCharts.<name>.crds` directly.
+  # `specs` is the input to `lib/kubernetes/generated/`, wired to it by
+  # nothing; it records which API versions those were generated from.
   inherit specs standaloneCrds;
 }

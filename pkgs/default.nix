@@ -1,8 +1,7 @@
 # The CLI, the tools it shells out to, and the runners that test a whole lab.
 #
-# The option-docs generator is still parked in the previous `lib/docs/`; the
-# splicer for it survives as `cata-build docs render`. The book itself is
-# here — `docs.nix`.
+# The option-docs generator is still parked; its splicer survives as
+# `cata-build docs render`.
 {
   lib,
   pkgs,

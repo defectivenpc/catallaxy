@@ -10,15 +10,10 @@
 let
   catallaxy = import ./floe-catallaxy { inherit lib pkgs; };
 
-  # The shipped set, with the framework arguments already applied, so a lab
-  # writes `floes.cert-manager { }` rather than importing and applying each
-  # one by hand — which would be a line of boilerplate per floe, in every lab
-  # that used one.
+  # applyFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
   #
-  # `pkgs` is a definition-time argument, not a floe input: a floe that has to
-  # derive something at build time — pulling a CRD file out of its chart, say
-  # — needs it, and `instantiate` deep-forces inputs, so a derivation could
-  # not travel that way even if it wanted to.
+  # `pkgs` is a definition-time argument, not a floe input: `instantiate`
+  # deep-forces inputs, so a derivation could not travel that way.
   applyFloes =
     set:
     lib.mapAttrs (
