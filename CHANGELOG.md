@@ -873,8 +873,8 @@ The format is based on
   Scanners read it directly: `grype sbom:result/sbom.json`. An image the lab
   has no digest for gets no `pkg:oci` purl, because a purl identifies an
   artefact by digest and a tag cannot stand in for one; `cata images lock`
-  is what turns purls on. See
-  [Software Bill of Materials](./docs/book/src/reference/sbom.md).
+  is what turns purls on. See `docs/book/src/reference/sbom.md`, a page that
+  has not been written back.
 
 ### Fixed
 

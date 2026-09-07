@@ -1,7 +1,8 @@
 # The CLI, the tools it shells out to, and the runners that test a whole lab.
 #
-# The option-docs generator and the book build are still parked in
-# the previous `lib/docs/`; they come back with the book.
+# The option-docs generator is still parked in the previous `lib/docs/`; the
+# splicer for it survives as `cata-build docs render`. The book itself is
+# here — `docs.nix`.
 {
   lib,
   pkgs,
@@ -64,6 +65,7 @@ let
   refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
   refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
   refresh-floe-docs = import ./refresh-floe-docs.nix { inherit lib pkgs; };
+  docs = import ./docs.nix { inherit lib pkgs; };
   refresh-plans = import ./refresh-plans.nix {
     inherit lib pkgs;
     cata = cataWrapped;
@@ -83,5 +85,6 @@ in
     refresh-cli-configs
     refresh-floe-docs
     refresh-plans
+    docs
     ;
 }

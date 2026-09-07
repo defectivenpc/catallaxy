@@ -163,6 +163,7 @@
             refresh-cli-configs
             refresh-floe-docs
             refresh-plans
+            docs
             ;
         };
 
