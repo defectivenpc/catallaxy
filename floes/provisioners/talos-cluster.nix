@@ -24,6 +24,7 @@
 
 floe.mkFloe {
   name = "talos-cluster";
+  summary = "A Talos cluster in docker, on a network talosctl makes.";
 
   inputs = {
     name = lib.mkOption {

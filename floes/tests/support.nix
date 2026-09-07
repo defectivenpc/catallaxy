@@ -221,6 +221,7 @@ let
     { sig, value }:
     floe.mkFloe {
       name = "stub-${name}";
+      summary = "Fixture floe for a test suite.";
       provides.it = sig;
       modules = [ { config.floe.provides.it = value; } ];
     };

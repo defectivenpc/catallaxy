@@ -9,6 +9,7 @@
 
 floe.mkFloe {
   name = "nginx-ingress";
+  summary = "Fixture floe for a test suite.";
 
   inputs = {
     baseDomain = lib.mkOption {

@@ -9,6 +9,7 @@
 
 floe.mkFloe {
   name = "seaweedfs";
+  summary = "SeaweedFS, an S3-compatible object store.";
 
   inputs = {
     chart = lib.mkOption {

@@ -18,6 +18,7 @@
 
 floe.mkFloe {
   name = "secret-store";
+  summary = "A ClusterSecretStore pointing at a backend the lab holds.";
 
   inputs = {
     labStore = lib.mkOption {

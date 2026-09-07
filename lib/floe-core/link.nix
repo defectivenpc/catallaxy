@@ -388,6 +388,13 @@
       result = {
         provides = lib.genAttrs unitNames (u: fixed.${u}.sealedProvides);
         out = outByKind;
+
+        # What each unit's inputs are, rendered — RFC 0001 §216 and §337-341
+        # say the link result carries this and it was never built, which is
+        # why nothing could answer "what is this floe's interface" without
+        # reading the source.
+        inputs = lib.genAttrs unitNames (u: interfaces.renderInputs (getInstance u).def.inputs);
+
         graph = {
           nodes = unitNames;
           edges = evalEdges ++ deployEdges;

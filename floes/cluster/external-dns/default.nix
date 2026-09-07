@@ -35,6 +35,7 @@ in
 
 floe.mkFloe {
   name = "external-dns";
+  summary = "external-dns, publishing routed hostnames into the lab's zone over RFC2136.";
 
   inputs = {
     chart = lib.mkOption {

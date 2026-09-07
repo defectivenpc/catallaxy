@@ -12,9 +12,12 @@
 # What this floe does not do is come back from a restart on its own. A
 # shamir-sealed vault is sealed again the moment its pod moves, and unsealing
 # needs the keys, which are deliberately not in the cluster the vault protects.
-# `autoUnseals = false` on the signature says so, and `cata lab ops secrets
-# openbao-unseal` is how a human does it. Auto-unseal needs a KMS, which a lab
-# on one docker host does not have.
+# `autoUnseals = false` on the signature says so, and
+# `cata lab ops secrets openbao-init-unseal` is how a human does it. The
+# `init-` in that name is the bundle the command sits on, which the operator
+# surface folds in (`elaborate.nix:322-331`) — `docs/floes/openbao.md` is
+# generated from what the command actually becomes, so the two cannot drift
+# again. Auto-unseal needs a KMS, which a lab on one docker host does not have.
 {
   lib,
   pkgs,
@@ -31,6 +34,7 @@ in
 
 floe.mkFloe {
   name = "openbao";
+  summary = "OpenBao, a Vault-compatible server, with its KV mount initialised.";
 
   inputs = {
     chart = lib.mkOption {

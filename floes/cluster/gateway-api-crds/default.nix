@@ -15,6 +15,7 @@
 
 floe.mkFloe {
   name = "gateway-api-crds";
+  summary = "The Gateway API CRDs, so Gateway and route kinds have types.";
 
   inputs = {
     manifest = lib.mkOption {

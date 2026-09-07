@@ -57,6 +57,7 @@
 
 floe.mkFloe {
   name = "netbird";
+  summary = "A NetBird control plane: management, signal, dashboard and its identity setup.";
 
   inputs = {
     subdomain = lib.mkOption {

@@ -98,6 +98,18 @@
         # fixture and the check cannot be produced by two pipelines that
         # disagree.
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
+
+        # And for the floes themselves. One derivation holding every floe's
+        # interface, which the check diffs against and `refresh-floe-docs`
+        # copies out of — so the fixture and the check cannot be produced by
+        # two pipelines that disagree.
+        floeInterfaces = import ./nix/floe-interface.nix {
+          inherit lib pkgs labDefs;
+          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs; };
+          # Flattened, the way `lib/lab.nix` flattens it: the three groups are
+          # how the set is organised on disk, not a namespace anything spells.
+          floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+        };
       in
       {
         legacyPackages = {
@@ -125,6 +137,9 @@
           # exactly the thing a fixture is cheapest to pin.
           labCliConfigs = cliConfigs;
 
+          # Every floe's interface, one file each.
+          inherit floeInterfaces;
+
           # Both plans per lab, for `cata lab plan --from-file`. A fixture is
           # not in `labs`, so the CLI cannot resolve one by name — and the
           # snapshot check compares fixtures too, so there has to be a way to
@@ -146,6 +161,7 @@
             cloud-reap
             refresh-digests
             refresh-cli-configs
+            refresh-floe-docs
             refresh-plans
             ;
         };
@@ -188,6 +204,11 @@
           program = "${packages'.refresh-cli-configs}/bin/refresh-cli-configs";
         };
 
+        apps.refresh-floe-docs = {
+          type = "app";
+          program = "${packages'.refresh-floe-docs}/bin/refresh-floe-docs";
+        };
+
         apps.refresh-plans = {
           type = "app";
           program = "${packages'.refresh-plans}/bin/refresh-plans";
@@ -214,7 +235,12 @@
           # `mkLab` can: the refusal is an assertion inside the module tree,
           # so there is nothing to inspect without evaluating it.
           inherit (labs) mkLab;
-          inherit e2eLabs cloudE2eLabs cliConfigs;
+          inherit
+            e2eLabs
+            cloudE2eLabs
+            cliConfigs
+            floeInterfaces
+            ;
         };
       }
     );

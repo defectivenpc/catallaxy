@@ -15,6 +15,8 @@ in
   # not a discovery.
   KUBERNETES_CLUSTER = floe.mkSig {
     name = "KUBERNETES_CLUSTER";
+    as = "cluster";
+    description = "The cluster a member installs into: its name, version, context and address ranges.";
     fields = {
       name = T.local T.k8sName;
       version = T.local T.str;
@@ -50,6 +52,8 @@ in
   # prerequisite mechanism has nothing left to do.
   GATEWAY_API = floe.mkSig {
     name = "GATEWAY_API";
+    as = "gatewayApi";
+    description = "The Gateway API CRDs are registered, so Gateway and route kinds have types.";
     fields = {
       version = T.local T.str;
       crdKinds = T.local (T.listOf T.str);
@@ -69,6 +73,8 @@ in
   # `kinds.mkRoute`, which the gateway ships.
   API_GATEWAY = floe.mkSig {
     name = "API_GATEWAY";
+    as = "gateway";
+    description = "An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in.";
     fields = {
       className = T.local T.str;
       baseDomain = T.dnsName;
@@ -107,6 +113,8 @@ in
   # rather than waiting for a field to be read.
   X509_WEBHOOK = floe.mkSig {
     name = "X509_WEBHOOK";
+    as = "webhook";
+    description = "The certificate controller's admission webhook is serving, so its CRs are accepted.";
     fields = {
       namespace = T.local T.k8sName;
       crdKinds = T.local (T.listOf T.str);
@@ -115,6 +123,8 @@ in
 
   X509_ISSUANCE = floe.mkSig {
     name = "X509_ISSUANCE";
+    as = "issuance";
+    description = "Something that signs certificates, and whether a browser will trust what it signs.";
     fields = {
       # Whether the issuer's chain is one a public client already trusts. A
       # self-signed lab CA is not, and a consumer that cares has to be able
@@ -155,6 +165,8 @@ in
   # them is cert-manager's.
   TRUST_BUNDLE = floe.mkSig {
     name = "TRUST_BUNDLE";
+    as = "trust";
+    description = "A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates.";
     fields = {
       namespace = T.local T.k8sName;
 
@@ -199,6 +211,8 @@ in
 
   POSTGRES_OPERATOR = floe.mkSig {
     name = "POSTGRES_OPERATOR";
+    as = "postgresOperator";
+    description = "The PostgreSQL operator's CRDs are registered, so a Cluster CR has a type.";
     fields = {
       crdKinds = T.local (T.listOf T.str);
     };
@@ -206,6 +220,8 @@ in
 
   IDENTITY_OPERATOR = floe.mkSig {
     name = "IDENTITY_OPERATOR";
+    as = "identityOperator";
+    description = "The identity operator's CRDs are established, so its CRs can be applied.";
     fields = {
       crdsEstablished = T.local T.str;
     };
@@ -213,6 +229,8 @@ in
 
   REDIS_OPERATOR = floe.mkSig {
     name = "REDIS_OPERATOR";
+    as = "redisOperator";
+    description = "The Redis operator's CRDs are registered, so Redis CRs have a type.";
     fields = {
       crdKinds = T.local (T.listOf T.str);
     };
@@ -231,6 +249,8 @@ in
   # a floe may mint a credential for itself with `kinds.mkGeneratedSecret`.
   SECRET_GENERATION = floe.mkSig {
     name = "SECRET_GENERATION";
+    as = "generation";
+    description = "A controller that mints secret values in the cluster, so none is rendered into a manifest.";
     fields = {
       namespace = T.local T.k8sName;
       crdKinds = T.local (T.listOf T.str);
@@ -250,6 +270,8 @@ in
   # consumer, and `storeName` is the field the old signature was missing.
   SECRET_STORE = floe.mkSig {
     name = "SECRET_STORE";
+    as = "secretStore";
+    description = "A named store an ExternalSecret reads from, and whether it may be written to.";
     fields = {
 
       # What goes in an ExternalSecret's `secretStoreRef`.
@@ -279,6 +301,8 @@ in
   # the store. What mints it is a Job, so the value does not exist at eval.
   VAULT_SERVER = floe.mkSig {
     name = "VAULT_SERVER";
+    as = "vault";
+    description = "A Vault-compatible server: where it answers, its KV mount, and whether it unseals itself.";
     fields = {
 
       # In-cluster. A different cluster reading this store needs an address
@@ -330,6 +354,8 @@ in
   # not worth abstracting until there is a second one.
   OIDC_PROVIDER = floe.mkSig {
     name = "OIDC_PROVIDER";
+    as = "oidc";
+    description = "An OIDC issuer, its endpoints, and the CR a consumer registers a client with.";
     fields = {
 
       # Base issuer. A client's own discovery document hangs off it, per
@@ -381,6 +407,8 @@ in
   # to work where they were tested.
   GIT_REPOSITORY = floe.mkSig {
     name = "GIT_REPOSITORY";
+    as = "git";
+    description = "A git remote, addressed differently from inside and outside the cluster.";
     fields = {
 
       # `http://forgejo-http.forgejo.svc.cluster.local:3000`. No TLS: the
@@ -427,6 +455,8 @@ in
   # a signature cannot carry and which `lib/k8s-annotations.nix` replaces.
   CONFIG_RELOAD = floe.mkSig {
     name = "CONFIG_RELOAD";
+    as = "reload";
+    description = "The annotations that make a workload restart when a Secret or ConfigMap it mounts changes.";
     fields = {
       secretAnnotation = T.local T.str;
       configMapAnnotation = T.local T.str;
@@ -437,6 +467,8 @@ in
 
   STORAGE_CLASS = floe.mkSig {
     name = "STORAGE_CLASS";
+    as = "storageClass";
+    description = "A StorageClass a PVC can name, and whether it is the cluster's default.";
     fields = {
       className = T.local T.str;
       isDefault = T.local T.bool;
@@ -445,6 +477,8 @@ in
 
   OBJECT_STORE = floe.mkSig {
     name = "OBJECT_STORE";
+    as = "objectStore";
+    description = "An S3-compatible endpoint and the credentials, if any, needed to reach it.";
     fields = {
       namespace = T.local T.k8sName;
       s3Endpoint = T.local T.str;
@@ -476,6 +510,8 @@ in
   # consumer never has to strip one to make the other.
   OCI_REGISTRY = floe.mkSig {
     name = "OCI_REGISTRY";
+    as = "registry";
+    description = "A container registry, addressed for a human and for a node pulling an image.";
     fields = {
       namespace = T.local T.k8sName;
       url = T.str;
@@ -509,6 +545,8 @@ in
   # own API server has never heard of.
   METRICS_INGEST = floe.mkSig {
     name = "METRICS_INGEST";
+    as = "metrics";
+    description = "Where metrics are written and queried, and the monitoring CRDs a consumer may use.";
     fields = {
       crdsEstablished = T.local T.str;
       crdKinds = T.local (T.listOf T.str);
@@ -519,6 +557,8 @@ in
 
   LOG_INGEST = floe.mkSig {
     name = "LOG_INGEST";
+    as = "logs";
+    description = "Where logs are pushed and queried.";
     fields = {
       pushUrl = T.local T.str;
       queryUrl = T.local T.str;
@@ -528,6 +568,8 @@ in
 
   TRACE_INGEST = floe.mkSig {
     name = "TRACE_INGEST";
+    as = "traces";
+    description = "Where traces are sent and queried.";
     fields = {
       queryUrl = T.local T.str;
       otlpGrpc = T.local T.str;
@@ -550,6 +592,8 @@ in
   # without a `T.local` anywhere in it.
   DNS_ZONE = floe.mkSig {
     name = "DNS_ZONE";
+    as = "zone";
+    description = "The lab's DNS zone and the server authoritative for it. The only fully portable signature.";
     fields = {
       # `lab.test`, no trailing dot: it is both the zone and the suffix every
       # routed hostname hangs off.
@@ -577,6 +621,8 @@ in
   # behind them.
   MESH_NETWORK = floe.mkSig {
     name = "MESH_NETWORK";
+    as = "mesh";
+    description = "A mesh control plane, addressed from inside the cluster running it and from outside.";
 
     # The point of a mesh is that it spans clusters, and the field types are
     # what say so: `managementUrl` is a routed name a peer anywhere reaches,
@@ -609,6 +655,8 @@ in
   # through `lab.secrets.{publish,subscribe}`.
   MESH_ADMIN = floe.mkSig {
     name = "MESH_ADMIN";
+    as = "meshAdmin";
+    description = "The credential that administers the mesh, as a Secret only its own cluster can read.";
     fields = {
       tokenSecret = T.local (
         T.record {
@@ -628,6 +676,8 @@ in
   # mesh needs both — the network to join, and an operator here to do it.
   MESH_OPERATOR = floe.mkSig {
     name = "MESH_OPERATOR";
+    as = "meshOperator";
+    description = "The mesh operator's CRDs are registered, and the router its resources attach to.";
     fields = {
       namespace = T.local T.k8sName;
       crdKinds = T.local (T.listOf T.str);
@@ -652,6 +702,8 @@ in
   # between rendering for a CD tool and rendering for a direct apply.
   DELIVERY_POLICY = floe.mkSig {
     name = "DELIVERY_POLICY";
+    as = "delivery";
+    description = "How manifests reach the cluster, and what bootstraps whatever applies them.";
     fields = {
       strategy = T.enum [
         "kapp"

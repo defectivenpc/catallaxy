@@ -17,6 +17,7 @@
 
 floe.mkFloe {
   name = "forgejo";
+  summary = "Forgejo, a git server, with an admin account and repositories bootstrapped.";
 
   inputs = {
     chart = lib.mkOption {

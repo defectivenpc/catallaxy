@@ -17,6 +17,7 @@
 
 floe.mkFloe {
   name = "external-secrets";
+  summary = "External Secrets, which mints secret values in the cluster.";
 
   inputs = {
     chart = lib.mkOption {

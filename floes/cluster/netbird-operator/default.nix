@@ -40,6 +40,7 @@
 
 floe.mkFloe {
   name = "netbird-operator";
+  summary = "The NetBird operator, which joins this cluster to a mesh another one runs.";
 
   inputs = {
     chart = lib.mkOption {

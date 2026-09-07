@@ -63,6 +63,7 @@ let
 
   cilium = floe.mkFloe {
     name = "cilium";
+    summary = "Cilium as the cluster's CNI, replacing the provisioner's default.";
 
     inputs = {
       chart = lib.mkOption {

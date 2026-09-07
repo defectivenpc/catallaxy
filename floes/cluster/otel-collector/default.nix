@@ -25,6 +25,7 @@
 
 floe.mkFloe {
   name = "otel-collector";
+  summary = "An OpenTelemetry collector, exporting to whichever backends the cluster has.";
 
   inputs = {
     chart = lib.mkOption {

@@ -26,6 +26,7 @@
 
 floe.mkFloe {
   name = "custom";
+  summary = "An arbitrary set of resources, optionally routed and OIDC-registered.";
 
   inputs = {
     name = lib.mkOption {

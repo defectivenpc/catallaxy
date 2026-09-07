@@ -15,6 +15,7 @@
 
 floe.mkFloe {
   name = "trust-manager";
+  summary = "trust-manager, distributing the lab's CA into every namespace that needs it.";
 
   inputs = {
     chart = lib.mkOption {

@@ -43,6 +43,7 @@ let
 
   clusterKind = floe.mkOutputKind {
     name = "catallaxy.cluster";
+    description = "Fixture kind: a permissive stand-in for the real cluster descriptor.";
     schema = floe.T.attrsOf floe.T.any;
   };
 
@@ -50,6 +51,7 @@ let
 
   clusterFloe = floe.mkFloe {
     name = "k3d";
+    summary = "Fixture floe for a test suite.";
     provides.cluster = sigs.KUBERNETES_CLUSTER;
     out.cluster = clusterKind;
     modules = [
@@ -68,6 +70,7 @@ let
 
   crdsFloe = floe.mkFloe {
     name = "crds";
+    summary = "Fixture floe for a test suite.";
     requires.cluster = sigs.KUBERNETES_CLUSTER;
     provides.api = sigs.GATEWAY_API;
     out.component = kinds.component;
@@ -96,6 +99,7 @@ let
 
   gatewayFloe = floe.mkFloe {
     name = "gateway";
+    summary = "Fixture floe for a test suite.";
     requires.cluster = sigs.KUBERNETES_CLUSTER;
     requires.gatewayApi = sigs.GATEWAY_API;
     provides.gateway = sigs.API_GATEWAY;
@@ -162,6 +166,7 @@ let
   # the gateway. Every edge it ends up with is derived.
   serviceFloe = floe.mkFloe {
     name = "svc";
+    summary = "Fixture floe for a test suite.";
     requires.cluster = sigs.KUBERNETES_CLUSTER;
     requires.gateway = sigs.API_GATEWAY;
     out.component = kinds.component;
@@ -271,6 +276,7 @@ let
     component:
     floe.mkFloe {
       name = "broken";
+      summary = "Fixture floe for a test suite.";
       requires.cluster = sigs.KUBERNETES_CLUSTER;
       out.component = kinds.component;
       modules = [ { config.floe.out.component = component; } ];
@@ -494,6 +500,7 @@ lib.runTests {
     let
       solo = floe.mkFloe {
         name = "velero";
+        summary = "Fixture floe for a test suite.";
         out.component = kinds.component;
         modules = [
           {

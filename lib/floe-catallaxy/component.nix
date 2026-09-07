@@ -312,6 +312,7 @@ in
 rec {
   component = floe.mkOutputKind {
     name = "catallaxy.component";
+    description = "What a floe installs into a cluster: bundles, and the operator surface around them.";
     schema = componentSchema;
   };
 

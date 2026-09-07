@@ -23,6 +23,7 @@
 
 floe.mkFloe {
   name = "lab-dns";
+  summary = "A CoreDNS override teaching the cluster to resolve the lab's zone.";
 
   inputs = {
     namespace = lib.mkOption {

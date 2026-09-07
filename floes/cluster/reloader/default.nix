@@ -17,6 +17,7 @@
 
 floe.mkFloe {
   name = "reloader";
+  summary = "Reloader, which restarts a workload when a Secret or ConfigMap it mounts changes.";
 
   inputs = {
     chart = lib.mkOption {

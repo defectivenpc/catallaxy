@@ -24,6 +24,7 @@
 
 floe.mkFloe {
   name = "external-cluster";
+  summary = "A cluster something else brings into existence, which this lab installs into.";
 
   inputs = {
     name = lib.mkOption {

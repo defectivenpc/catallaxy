@@ -19,6 +19,7 @@
 
 floe.mkFloe {
   name = "provisioned";
+  summary = "A fixture floe in the resources camp: mints a value and writes a local file.";
 
   inputs = {
     stateDir = lib.mkOption {

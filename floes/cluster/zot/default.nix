@@ -24,6 +24,7 @@
 
 floe.mkFloe {
   name = "zot";
+  summary = "Zot, a small OCI registry used as the lab's pull-through cache.";
 
   inputs = {
     chart = lib.mkOption {

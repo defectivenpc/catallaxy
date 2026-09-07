@@ -9,6 +9,7 @@
 
 floe.mkFloe {
   name = "redis-operator";
+  summary = "OT-Container-Kit's Redis operator.";
 
   inputs = {
     chart = lib.mkOption {

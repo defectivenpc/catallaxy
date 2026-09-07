@@ -12,6 +12,7 @@
 
 floe.mkFloe {
   name = "tempo";
+  summary = "Tempo, the trace store.";
 
   inputs = {
     chart = lib.mkOption {

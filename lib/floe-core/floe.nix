@@ -23,6 +23,17 @@ rec {
   mkFloe =
     {
       name,
+
+      # One line saying what this floe installs. Required, because Nix cannot
+      # read comments: a floe's header prose reaches no tool, so without this
+      # the generated interface document has no title and the only
+      # machine-readable thing about a floe is its name.
+      #
+      # Defaulted to null and refused below rather than left out of the
+      # pattern, so the pattern stays closed — an unknown key is still an
+      # error — and the author gets a message saying what to write.
+      summary ? null,
+
       inputs ? { },
       requires ? { },
 
@@ -47,6 +58,16 @@ rec {
       modules ? [ ],
     }:
     let
+      _ =
+        if summary == null then
+          throw (
+            "floe '${name}': needs a one-line `summary` saying what it installs. "
+            + "Nix cannot read comments, so the header prose above reaches no tool; "
+            + "this is the line the generated interface document titles it with."
+          )
+        else
+          null;
+
       hasInputs = inputs != { };
 
       # Eager instantiation pre-check: a mini evalModules containing only the
@@ -77,10 +98,11 @@ rec {
             builtins.deepSeq ev.config.floe.inputs ev.config.floe.inputs
           );
 
-      def = {
+      def = builtins.seq _ {
         __floeDef = true;
         inherit
           name
+          summary
           inputs
           requires
           requiresOptional

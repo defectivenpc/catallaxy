@@ -21,6 +21,7 @@
 
 floe.mkFloe {
   name = "grafana";
+  summary = "Grafana, wired to whichever metrics, logs and traces backends the cluster has.";
 
   inputs = {
     chart = lib.mkOption {

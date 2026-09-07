@@ -18,6 +18,7 @@
 
 floe.mkFloe {
   name = "gateway";
+  summary = "Traefik as the Gateway API implementation, and the cluster's one Gateway.";
 
   inputs = {
     chart = lib.mkOption {

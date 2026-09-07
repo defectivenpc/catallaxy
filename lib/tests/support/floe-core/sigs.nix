@@ -11,6 +11,8 @@ in
 {
   INGRESS = floe.mkSig {
     name = "INGRESS";
+    as = "ingress";
+    description = "Fixture: an ingress with a base domain and an assigned address.";
     fields = {
       baseDomain = T.dnsName;
       className = T.str;
@@ -21,6 +23,8 @@ in
 
   OBSERVER = floe.mkSig {
     name = "OBSERVER";
+    as = "observer";
+    description = "Fixture: something that collects dashboards from its peers.";
     fields = {
       ingressUrl = T.url;
       dashboards = T.attrsOf (T.record { url = T.url; });
@@ -29,6 +33,8 @@ in
 
   DASHBOARD_REQ = floe.mkSig {
     name = "DASHBOARD_REQ";
+    as = "dashboard";
+    description = "Fixture: a dashboard a workload asks an observer to render.";
     fields = {
       app = T.k8sName;
       panels = T.listOf T.str;

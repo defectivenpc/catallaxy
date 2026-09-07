@@ -20,6 +20,7 @@
 
 floe.mkFloe {
   name = "podinfo";
+  summary = "podinfo, a small routed workload for proving a cluster serves traffic.";
 
   inputs = {
     namespace = lib.mkOption {

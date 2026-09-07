@@ -63,6 +63,7 @@ let
   e2e-cloud = import ./e2e-cloud.nix { inherit lib pkgs cataWrapped; };
   refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
   refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
+  refresh-floe-docs = import ./refresh-floe-docs.nix { inherit lib pkgs; };
   refresh-plans = import ./refresh-plans.nix {
     inherit lib pkgs;
     cata = cataWrapped;
@@ -80,6 +81,7 @@ in
     cloud-reap
     refresh-digests
     refresh-cli-configs
+    refresh-floe-docs
     refresh-plans
     ;
 }

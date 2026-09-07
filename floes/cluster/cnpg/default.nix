@@ -13,6 +13,7 @@
 
 floe.mkFloe {
   name = "cnpg";
+  summary = "CloudNativePG, the PostgreSQL operator.";
 
   inputs = {
     chart = lib.mkOption {

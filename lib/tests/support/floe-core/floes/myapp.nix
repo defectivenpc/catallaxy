@@ -12,6 +12,7 @@
 
 floe.mkFloe {
   name = "myapp";
+  summary = "Fixture floe for a test suite.";
 
   requires.observer = sigs.OBSERVER;
   provides.dashboardReq = sigs.DASHBOARD_REQ;

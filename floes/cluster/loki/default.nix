@@ -13,6 +13,7 @@
 
 floe.mkFloe {
   name = "loki";
+  summary = "Loki, the log store.";
 
   inputs = {
     chart = lib.mkOption {

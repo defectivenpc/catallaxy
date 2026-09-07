@@ -14,6 +14,7 @@
 
 floe.mkFloe {
   name = "k3d-cluster";
+  summary = "A k3d cluster on the operator's docker host.";
 
   inputs = {
     name = lib.mkOption {

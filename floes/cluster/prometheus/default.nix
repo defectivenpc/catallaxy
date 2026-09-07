@@ -20,6 +20,7 @@
 
 floe.mkFloe {
   name = "prometheus";
+  summary = "Prometheus and its CRDs, as the cluster's metrics store.";
 
   inputs = {
     chart = lib.mkOption {

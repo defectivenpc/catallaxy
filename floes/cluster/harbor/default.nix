@@ -21,6 +21,7 @@
 
 floe.mkFloe {
   name = "harbor";
+  summary = "Harbor, an OCI registry with its own database and cache.";
 
   inputs = {
     chart = lib.mkOption {

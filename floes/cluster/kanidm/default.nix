@@ -20,6 +20,7 @@
 
 floe.mkFloe {
   name = "kanidm";
+  summary = "Kanidm as the lab's OIDC provider, reconciled by kaniop.";
 
   inputs = {
     namespace = lib.mkOption {

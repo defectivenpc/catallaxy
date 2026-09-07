@@ -23,6 +23,7 @@
 
 floe.mkFloe {
   name = "doks";
+  summary = "A DigitalOcean Kubernetes cluster, declared as a resource for a state-based tool.";
 
   inputs = {
     name = lib.mkOption {

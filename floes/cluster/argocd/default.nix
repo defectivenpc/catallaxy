@@ -18,6 +18,7 @@
 
 floe.mkFloe {
   name = "argocd";
+  summary = "Argo CD, which takes ownership of applying the cluster's manifests.";
 
   inputs = {
     chart = lib.mkOption {

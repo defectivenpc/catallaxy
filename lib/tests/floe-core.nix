@@ -9,6 +9,8 @@ let
   T = floe.T;
   SELF = floe.mkSig {
     name = "SELF";
+    as = "self";
+    description = "Fixture: a signature a floe provides and tries to require.";
     fields.v = T.str;
   };
 
@@ -19,6 +21,7 @@ let
       u = floe.mkFloe (
         {
           name = "narcissus";
+          summary = "Fixture floe for a test suite.";
           provides.it = SELF;
           modules = [
             {
@@ -58,6 +61,8 @@ let
   # these tests passed for exactly that reason before the echo existed.
   ECHO = floe.mkSig {
     name = "ECHO";
+    as = "echo";
+    description = "Fixture: echoes back what a hole resolved to, so a silent non-resolution fails.";
     fields.v = T.str;
   };
 
@@ -69,6 +74,7 @@ let
     { name, field }:
     floe.mkFloe {
       inherit name;
+      summary = "Fixture floe for a test suite.";
       requires.ingress = MIXED_INGRESS;
       provides.echo = ECHO;
       modules = [
@@ -94,6 +100,8 @@ let
   # cluster that provided it and means nothing anywhere else.
   MIXED_INGRESS = floe.mkSig {
     name = "INGRESS";
+    as = "ingress";
+    description = "Fixture: an ingress whose fields are half portable and half link-local.";
     fields = fixture.sigs.INGRESS.fields // {
       className = T.local T.str;
     };
@@ -102,6 +110,8 @@ let
   # Every field local, so nothing in it would be readable here.
   ALL_LOCAL = floe.mkSig {
     name = "ALL_LOCAL";
+    as = "allLocal";
+    description = "Fixture: every field local, so the signature cannot cross a link boundary at all.";
     fields.crdKinds = T.local (T.listOf T.str);
   };
 
@@ -477,5 +487,78 @@ lib.runTests {
       }
     );
     expected = true;
+  };
+
+  # ---- the declaration surface is machine-readable -------------------------
+  #
+  # RFC 0001 §260-262 says a floe's complete interface is available from its
+  # declaration header without evaluating the body. These are what make that
+  # true rather than aspirational: every part of it has somewhere to live and
+  # cannot be omitted.
+
+  # Required, not optional. An optional documentation field is one half the
+  # set omits, and a derived interface document with holes in it is one nobody
+  # trusts enough to read.
+  testASignatureMustSayWhatItIsFor = {
+    expr = fails (
+      floe.mkSig {
+        name = "X";
+        as = "x";
+        fields = { };
+      }
+    );
+    expected = true;
+  };
+
+  testASignatureMustSayWhatItIsCalled = {
+    expr = fails (
+      floe.mkSig {
+        name = "X";
+        description = "d";
+        fields = { };
+      }
+    );
+    expected = true;
+  };
+
+  # Nix cannot read comments, so without this a floe's header prose reaches no
+  # tool and the only machine-readable thing about it is its name.
+  testAFloeMustSayWhatItInstalls = {
+    expr = fails (floe.mkFloe { name = "x"; });
+    expected = true;
+  };
+
+  testAnOutputKindMustSayWhatItCarries = {
+    expr = fails (
+      floe.mkOutputKind {
+        name = "x.y";
+        schema = T.any;
+      }
+    );
+    expected = true;
+  };
+
+  # The link result carries each unit's input *declarations* — type, default
+  # and description. RFC 0001 §216 and §337-341 promised this and it was never
+  # built, which is why nothing could answer "what is this floe's interface"
+  # without reading the source.
+  #
+  # The declaration and not the supplied value: the value is a deployer's
+  # choice and belongs to the lab, while these three are the floe's contract
+  # and are the same wherever it is instantiated.
+  testTheLinkResultCarriesInputDocs = {
+    expr = deployment.inputs.grafana.size or null;
+    expected = {
+      type = "string";
+      default = "\"10Gi\"";
+      description = "PVC size for Grafana storage.";
+    };
+  };
+
+  # A required input has no default, and the doc says so rather than
+  # inventing one — which is the difference a deployer needs to see.
+  testARequiredInputHasNoDefault = {
+    expr = deployment.inputs.grafana.adminUser.default or "MISSING";
+    expected = null;
   };
 }

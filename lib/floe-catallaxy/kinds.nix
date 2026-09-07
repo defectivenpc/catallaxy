@@ -176,6 +176,7 @@ componentLib
 
   cluster = floe.mkOutputKind {
     name = "catallaxy.cluster";
+    description = "How a cluster is created and who fronts it — the descriptor `cata` builds it from.";
     schema = clusterSchema;
   };
 }

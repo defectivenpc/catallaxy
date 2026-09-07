@@ -69,11 +69,13 @@ in
 
   resources = floe.mkOutputKind {
     name = "catallaxy.resources";
+    description = "Infrastructure declared for a state-based tool to create, for the case no cluster can own it.";
     schema = T.attrsOf resourceSchema;
   };
 
   publications = floe.mkOutputKind {
     name = "catallaxy.publications";
+    description = "Where a resource's output lands once it exists, as an address in a lab secret store.";
     schema = T.attrsOf publicationSchema;
   };
 }

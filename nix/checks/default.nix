@@ -13,6 +13,7 @@
   e2eLabs,
   cloudE2eLabs,
   cliConfigs,
+  floeInterfaces,
 }:
 
 {
@@ -48,6 +49,11 @@
   ];
 }
 // import ./lab-edge.nix { inherit lib pkgs mkLab; }
+// import ./floe-interface.nix {
+  inherit lib pkgs floeInterfaces;
+  docDir = ../../docs/floes;
+  floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
+}
 // import ./lab-scope.nix {
   inherit
     lib

@@ -14,6 +14,7 @@
 
 floe.mkFloe {
   name = "kaniop";
+  summary = "The kaniop operator, which reconciles Kanidm and its clients.";
 
   inputs = {
     chart = lib.mkOption {

@@ -11,6 +11,7 @@
 
 floe.mkFloe {
   name = "grafana";
+  summary = "Fixture floe for a test suite.";
 
   inputs = {
     size = lib.mkOption {

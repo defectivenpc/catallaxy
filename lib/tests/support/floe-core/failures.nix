@@ -45,6 +45,7 @@ in
     let
       broken = floe.mkFloe {
         name = "broken-observer";
+        summary = "Fixture floe for a test suite.";
         provides.observer = sigs.OBSERVER;
         modules = [
           {
@@ -68,6 +69,7 @@ in
     let
       impatient = floe.mkFloe {
         name = "impatient";
+        summary = "Fixture floe for a test suite.";
         requires.ingress = sigs.INGRESS;
         provides.observer = sigs.OBSERVER;
         modules = [
@@ -93,6 +95,7 @@ in
     let
       prodApp = floe.mkFloe {
         name = "prod-app";
+        summary = "Fixture floe for a test suite.";
         requires.observer = sigs.OBSERVER;
         provides.dashboardReq = sigs.DASHBOARD_REQ;
         out = {

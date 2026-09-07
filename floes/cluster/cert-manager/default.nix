@@ -23,6 +23,7 @@
 
 floe.mkFloe {
   name = "cert-manager";
+  summary = "cert-manager, and an issuer for the lab's own certificates.";
 
   inputs = {
     chart = lib.mkOption {

@@ -16,7 +16,12 @@ in
 {
   T = types;
   inherit (types) checkValue isDeferredToken;
-  inherit (interfaces) mkSig mkOutputKind isUncrossable;
+  inherit (interfaces)
+    mkSig
+    mkOutputKind
+    isUncrossable
+    renderInputs
+    ;
   inherit (floe) mkFloe;
   inherit (link) link;
 }

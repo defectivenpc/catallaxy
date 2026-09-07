@@ -13,6 +13,7 @@
 
 floe.mkFloe {
   name = "openebs";
+  summary = "Rancher's local-path provisioner as the cluster's default StorageClass.";
 
   inputs = {
     chart = lib.mkOption {

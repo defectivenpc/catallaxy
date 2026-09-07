@@ -26,6 +26,7 @@
 
 floe.mkFloe {
   name = "lab-zone";
+  summary = "The lab's DNS zone, offered downward so every cluster resolves against one.";
 
   inputs = {
     zone = lib.mkOption {

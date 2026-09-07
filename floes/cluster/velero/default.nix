@@ -28,6 +28,7 @@
 
 floe.mkFloe {
   name = "velero";
+  summary = "Velero, cluster backup and restore against an object store.";
 
   inputs = {
     chart = lib.mkOption {
