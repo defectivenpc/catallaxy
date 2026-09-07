@@ -12,16 +12,6 @@ let
 
   typesByKind = generatedTypes.typesByKind versionedTypes;
 
-  # Kinds the API server ships, as a set. Everything else needs something to
-  # install its CRD first, which is what makes this the dividing line for a
-  # derived `kind:` requirement. `crds` is excluded on purpose: a vendor CRD
-  # being in the generated schemas says catallaxy can type-check it, not that
-  # any cluster has it.
-  #
-  # The comment lives here rather than beside the definition because that
-  # definition is emitted, and `the_generated_index_carries_no_nix_comment`
-  # keeps generated files comment-free — a generated file that reads like
-  # source invites the hand edit that this function used to be.
   coreKinds = generatedTypes.coreKinds versionedTypes;
 
   metadataType = import ./generated/k8s-api.nix;
@@ -110,14 +100,6 @@ let
     }
   );
 
-  # The generated resource types carry `freeformType = types.attrs`, so this
-  # checks the fields Kubernetes knows about and lets unknown ones through. A
-  # pair outside the committed schemas keeps the untyped spec it had before.
-  #
-  # Resolution is on the (apiVersion, kind) pair because `kind` alone does not
-  # identify a schema. `Cluster` is CloudNativePG's, Cluster API's and
-  # Crossplane's; `Backup` is velero's and CloudNativePG's; `Event` and
-  # `HorizontalPodAutoscaler` each exist twice in core Kubernetes.
   specTypeFor =
     apiVersion: kind:
     let
@@ -507,10 +489,6 @@ let
           type = types.nullOr readyProbeType;
           default = null;
 
-          # Every kind gets every field so the shape is checked, and a
-          # condition probe has no business carrying a null `hostname` into a
-          # rendered tree. Dropping them here means nothing downstream, in
-          # Nix or in the CLI, has to know they were ever there.
           apply = p: if p == null then null else lib.filterAttrs (_: v: v != null) p;
           description = ''
             How to determine this bundle is READY beyond "kubectl apply
@@ -630,10 +608,6 @@ let
 
   bundleType = types.submodule bundleModule;
 
-  # A bundle declared under `floes.<name>.bundles` is that floe's by
-  # construction, so it answers `declaredBy` without anyone stamping it
-  # afterwards. `mkDefault`, so two floes declaring the same bundle key still
-  # collide on who owns it rather than one silently winning.
   bundleTypeOwnedBy =
     owner:
     types.submodule [

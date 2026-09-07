@@ -1,8 +1,4 @@
 # Floe verify checks -> one Chainsaw Test per cluster.
-#
-# `cata lab verify` runs `$out/verify/<cluster>/chainsaw-test.yaml` if it is
-# there and skips the check silently if it is not, so a cluster whose floes
-# declared nothing renders an empty directory rather than an empty Test.
 { lib, pkgs }:
 
 let
@@ -26,9 +22,6 @@ in
         lib.mapAttrsToList (
           name: check:
           verifyTypes.stepsFor {
-            # A Chainsaw step name lands in its output, and the qualified key
-            # is what tells an operator which floe's check failed. Slashes are
-            # legal in it; they are what makes it readable.
             inherit name;
             inherit (check) timeout expect reject;
           }

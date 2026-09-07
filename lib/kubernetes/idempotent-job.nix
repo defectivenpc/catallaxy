@@ -1,13 +1,4 @@
 # A Job that re-runs when what you asked for changes, and not otherwise.
-#
-# Kubernetes has no "run this once, unless the thing it does has changed"
-# primitive. A Job is immutable, so a re-render either collides with the
-# existing one or needs a new name — and naming it after a hash of the
-# *declaration* is what makes the name change exactly when the intent does.
-#
-# The ConfigMap is the other half: it accumulates one key per generation that
-# has been applied, so the set of hashes that ever ran is readable from the
-# cluster rather than inferred from Job names that something may have pruned.
 { lib }:
 
 let
@@ -33,22 +24,10 @@ rec {
       jobAnnotations ? { },
     }:
     let
-      # The hash covers what you declared, not how you implemented it.
-      # Reformatting the payload's script or bumping its base image is not a
-      # change of desired state and must not re-run the Job against a live
-      # API; adding a repository to a list is, and does.
-      #
-      # `behaviourVersion` is the escape hatch for the case declarations
-      # cannot express: you changed what the payload *does* without changing
-      # anything it was given. Bump it and the Job runs again.
       hash = hashContent {
         inherit contentInputs behaviourVersion;
       };
 
-      # The implementation's own hash, recorded but not acted on. It is what
-      # lets a reader, or a check, see that a payload changed while its
-      # declared inputs did not — which is either a cosmetic edit or a
-      # forgotten `behaviourVersion` bump, and the difference matters.
       implementationHash = hashContent { inherit podSpec; };
       jobName = "${name}-${hash}";
       ownerName = "${name}-runs";
@@ -114,10 +93,6 @@ rec {
       inherit hash;
       name = jobName;
 
-      # Selects this generation and no other. Waiting on
-      # `component=<name>` alone also selects every earlier hash, and on the
-      # server-side-apply path nothing prunes them, so one failed Job from a
-      # previous render makes the wait fail forever.
       selector = "app.kubernetes.io/component=${name},catallaxy.io/idempotent-job-hash=${hash}";
 
       resources = {

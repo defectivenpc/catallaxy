@@ -1,3 +1,4 @@
+# The install graph: bundles ordered into waves.
 { lib }:
 
 let
@@ -16,11 +17,6 @@ let
 
   inherit (shared) parseAnchor buildProvidesIdx closureFrom;
 
-  # `kind:` is deliberately absent: it is an ordinary provided name now,
-  # supplied by whoever installs the CRD, so it falls through to the index
-  # below. It used to mean "any bundle holding a resource of this kind",
-  # which reads the same and answers the opposite question - every emitter
-  # of a Certificate rather than the one thing that admits one.
   matchAnchor =
     bundles: providesIdx: body:
     if hasPrefix "floe:" body then
@@ -42,10 +38,6 @@ let
 
   isStepAnchor = a: hasPrefix "step:" (parseAnchor a).body;
 
-  # A `step:` name belongs to the lab's plan, not to this cluster, so there
-  # is no bundle here for it to order against and no index that could answer
-  # it. It is dropped from the edges and collected instead, and the lab
-  # checks that whatever publishes it runs before the manifests are applied.
   stepAnchors =
     bundles:
     lib.concatMap (

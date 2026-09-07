@@ -1,9 +1,6 @@
+# The readiness probe DSL, and the Pod that runs a probe the applier cannot.
 {
   lib,
-  # The images catallaxy's own probe containers run, as assembled references.
-  # These are not any floe's software: they are the kubectl, curl and busybox
-  # that every waiter in every lab rides, which until now were three literals
-  # nothing could reach. `lab.images.wait` sets them.
   images ? { },
 }:
 
@@ -260,30 +257,6 @@ let
   missingFields =
     probe: builtins.filter (f: (probe.${f} or null) == null) (requiredBy.${probe.kind} or [ ]);
 
-  # Workload kinds that carry no `.status.conditions` at all.
-  #
-  # `kubectl wait --for=condition=X` on one of these does not fail fast: it
-  # polls until the timeout and *then* reports the condition was never met, so
-  # a bundle looks like a slow deploy rather than a malformed probe. That cost
-  # cilium ten minutes on a cluster it had already brought up successfully,
-  # and otel-collector's agent the same before it.
-  #
-  # A comment on each floe was the first attempt at preventing this, and it
-  # did not: the same mistake was made three floes after the comment was
-  # written, by the same person. `awaitRollout` is the answer for all of them —
-  # for a DaemonSet it asks the better question anyway, since what matters is
-  # that every node has the pod rather than that some quorum does.
-  # DaemonSets only, and the exclusions matter as much as the entry.
-  #
-  # A Job *does* carry conditions — `Complete` and `Failed` — and
-  # `--for=condition=Complete job/x` is the standard way to wait on one;
-  # openbao's init bundle does exactly that. Listing Jobs here was a guess
-  # that this check itself caught on the first run, which is the argument for
-  # it being a check rather than a comment.
-  #
-  # StatefulSets and Deployments carry conditions too. A DaemonSet is the odd
-  # one: its status is counters (`numberReady`, `desiredNumberScheduled`) and
-  # nothing else, so there is no condition for a wait to match.
   conditionlessKinds = [
     "daemonset"
     "daemonsets"

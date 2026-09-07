@@ -1,16 +1,8 @@
-# The ops channel -> one `<lab>-ops` executable.
+# The ops channel -> one `<lab>-ops <category> <name> [args...]` executable.
 #
-# `cata lab ops -- <args>` runs `cliConfig.opsToolPath` with the arguments
-# after `--` passed through verbatim, so the dispatch lives here rather than
-# in the CLI. The invocation is `<lab>-ops <category> <name> [args...]`, which
-# is the shape `lib/floe-catallaxy/elaborate.nix` keys the channel for.
-#
-# A command says what runs with either `command` (a fixed argv) or `package`
-# (a store path to an executable), and may declare `options` — parsed as
-# `--<name> <value>`, or `--<name>` for a bool — and `args`, which are
-# positional. Options reach the command as `OPT_<NAME>` in the environment,
-# which is what lets a `package` script be an ordinary shell script rather
-# than something that has to re-parse its own flags.
+# A command runs either `command` (a fixed argv) or `package` (an executable),
+# and may declare `options` (`--<name> <value>`, or bare for a bool) and
+# positional `args`. Options reach it as `OPT_<NAME>` in the environment.
 { lib, pkgs }:
 
 let

@@ -6,13 +6,6 @@ let
   T = floe.T;
 in
 {
-  # A cluster is an ordinary floe that happens to provide this. Members read
-  # cluster facts through it rather than from an ambient option tree, so a
-  # floe that touches one has said which.
-  #
-  # Every field is concrete. A manifest is rendered at build time, so a fact a
-  # member interpolates has to be a decision (you choose the service CIDR) and
-  # not a discovery.
   KUBERNETES_CLUSTER = floe.mkSig {
     name = "KUBERNETES_CLUSTER";
     as = "cluster";
@@ -24,32 +17,10 @@ in
       podSubnet = T.local T.str;
       serviceSubnet = T.local T.str;
 
-      # Whether a `LoadBalancer` Service gets an address here.
-      #
-      # k3s ships ServiceLB and binds the node's own ports, so one does. A
-      # bare Talos cluster ships nothing of the kind, and a LoadBalancer there
-      # stays `Pending` forever while port 80 of the node answers nothing —
-      # which is not a failure anything reports, because a Service with no
-      # address is a Service that is still being reconciled.
-      #
-      # A member reads this to decide two things it would otherwise have to
-      # infer from the provisioner's name: whether to ask for a `NodePort`
-      # instead, and whether waiting for `.status.addresses[0]` is waiting for
-      # something that will ever arrive.
       assignsLoadBalancers = T.local T.bool;
     };
   };
 
-  # Installed CRDs, as a signature.
-  #
-  # The shipped tree installs these through `cluster.prerequisites` rather
-  # than from a floe, because gateway and cilium both need them and a bundle
-  # declared twice is a conflicting definition rather than a merge — so the
-  # cluster is made to own it and there is no owner left to disagree about.
-  #
-  # Exactly-one-provider is that rule already. Both floes require this; one
-  # unit provides it; a second provider is a link error naming both. The
-  # prerequisite mechanism has nothing left to do.
   GATEWAY_API = floe.mkSig {
     name = "GATEWAY_API";
     as = "gatewayApi";
@@ -60,17 +31,6 @@ in
     };
   };
 
-  # `parentRef` is the whole point: an HTTPRoute's attachment is a value the
-  # gateway hands out, sealed to these three fields, rather than a hostname
-  # and a namespace the consumer spells for itself off the gateway's options.
-  #
-  # This is the whole of the routing inversion. There was also a ROUTE_REQUEST
-  # that the gateway collected with `requiresMany`, on the theory that the floe
-  # installing a capability is the one that renders resources using it. That is
-  # not how Kubernetes works — a registered CRD is a primitive anyone may use —
-  # and it was not even how this tree worked: consumers already rendered their
-  # own HTTPRoutes from `parentRef` below. The consumer builds one with
-  # `kinds.mkRoute`, which the gateway ships.
   API_GATEWAY = floe.mkSig {
     name = "API_GATEWAY";
     as = "gateway";
@@ -89,28 +49,7 @@ in
   };
 
   # ---- x509 --------------------------------------------------------------
-  #
-  # cert-manager is two signatures, and the split breaks a cycle rather than
-  # being a stylistic choice. In the old tree cert-manager read
-  # trust-manager's export while trust-manager waited on cert-manager's
-  # webhook token — a loop at floe granularity, survivable only because the
-  # edges happened to sit on different bundles.
-  #
-  # Splitting is half the fix. The other half is turning the second edge
-  # around: cert-manager no longer asks trust-manager to distribute its CA,
-  # trust-manager asks cert-manager for the Secret and distributes it. That
-  # is the truer arrangement anyway — handing a bundle to every namespace is
-  # trust-manager's whole job, and cert-manager was only doing it because it
-  # happened to know the Secret's name.
-  #
-  # Split and reversed, `cert-manager -> nothing` and
-  # `trust-manager -> cert-manager`, which is a DAG at any granularity.
 
-  # Entirely local, and the clearest case of it: a webhook serving admission
-  # for CRDs installed here. Offered to another cluster it would name a
-  # namespace that has no such Deployment and kinds the API server has never
-  # heard of, which is why `link` refuses the whole signature at a boundary
-  # rather than waiting for a field to be read.
   X509_WEBHOOK = floe.mkSig {
     name = "X509_WEBHOOK";
     as = "webhook";
@@ -126,10 +65,6 @@ in
     as = "issuance";
     description = "Something that signs certificates, and whether a browser will trust what it signs.";
     fields = {
-      # Whether the issuer's chain is one a public client already trusts. A
-      # self-signed lab CA is not, and a consumer that cares has to be able
-      # to ask rather than assume.
-      # Not local: it is a fact about the chain, true wherever it is asked.
       publicIssuer = T.bool;
 
       # A ClusterIssuer object in this cluster. A Certificate elsewhere naming
@@ -141,13 +76,6 @@ in
         }
       );
 
-      # Where the issuer's own CA certificate lives, for whoever distributes
-      # it. Null when the issuer is a public one and there is nothing to
-      # distribute.
-      # Local for the same reason, and the caveat is worth stating: the CA
-      # *certificate* is perfectly portable, and `lab.secrets.publish` is how
-      # it travels. What cannot travel is this reference to where it happens
-      # to sit here.
       caSecret = T.local (
         T.nullOr (
           T.record {
@@ -160,9 +88,6 @@ in
     };
   };
 
-  # Distributing a CA into every namespace that needs it. Signing and
-  # distributing are different jobs with different operators, and only one of
-  # them is cert-manager's.
   TRUST_BUNDLE = floe.mkSig {
     name = "TRUST_BUNDLE";
     as = "trust";
@@ -170,9 +95,6 @@ in
     fields = {
       namespace = T.local T.k8sName;
 
-      # Whether a Bundle may target a Secret as well as a ConfigMap. Without
-      # it a `target.secret` Bundle stays silently pending: the controller
-      # starts with no Secret-write RBAC.
       secretTargets = T.local T.bool;
 
       # The ConfigMap the bundle lands in, in every namespace. This is what a
@@ -184,14 +106,6 @@ in
         }
       );
 
-      # The same material as a Secret, for a consumer whose chart will only
-      # read one — harbor's `caBundleSecret` is the case. Null when
-      # `secretTargets` is false, because then the distributor has no RBAC to
-      # write it and naming one would promise something that stays pending.
-      #
-      # It exists at all because the Secret variant was already being written
-      # and its name appeared in no signature, so a consumer had to hardcode
-      # `lab-ca-bundle-secret`.
       caBundleSecret = T.local (
         T.nullOr (
           T.record {
@@ -204,10 +118,6 @@ in
   };
 
   # ---- operators ---------------------------------------------------------
-  #
-  # An operator signature says "the controller is running and will reconcile
-  # this kind". A consumer applying a CR of that kind waits on it; nothing
-  # else does.
 
   POSTGRES_OPERATOR = floe.mkSig {
     name = "POSTGRES_OPERATOR";
@@ -236,15 +146,6 @@ in
     };
   };
 
-  # Two capabilities, not one.
-  #
-  # These were a single `SECRET_STORE` carrying `namespace` and `crdKinds` —
-  # which says the controller is running, and says nothing about where to pull
-  # a value from. A floe minting its own credential needs only
-  # the first; a floe reading an external value needs the second, and could
-  # not ask for it. Nothing required the old signature, so splitting it costs
-  # nothing.
-
   # The external-secrets controller and its generator kinds are available, so
   # a floe may mint a credential for itself with `kinds.mkGeneratedSecret`.
   SECRET_GENERATION = floe.mkSig {
@@ -255,19 +156,10 @@ in
       namespace = T.local T.k8sName;
       crdKinds = T.local (T.listOf T.str);
 
-      # The generator API group is versioned separately from the controller's
-      # own, and a `sourceRef.generatorRef` naming the wrong one is admitted
-      # and then never reconciles.
       generatorApiVersion = T.local T.str;
     };
   };
 
-  # A named store to pull values from, or push them to.
-  #
-  # Nothing provides this yet: the external-secrets floe installs a controller
-  # and creates no store. It is declared now because the shape is what decides
-  # whether cross-cluster sharing can be added without reworking every
-  # consumer, and `storeName` is the field the old signature was missing.
   SECRET_STORE = floe.mkSig {
     name = "SECRET_STORE";
     as = "secretStore";
@@ -283,22 +175,10 @@ in
         ]
       );
 
-      # Whether a cluster may write back into it. A store holding values
-      # authored outside the lab is read-only, and a floe publishing into one
-      # would be writing where nothing reads.
       writable = T.local T.bool;
     };
   };
 
-  # A vault-compatible KV server the lab can use as a runtime secret store.
-  #
-  # Distinct from SECRET_STORE, which says the external-secrets controller has
-  # a store *configured* — this says where the values actually live and how to
-  # authenticate to it, which is what `lab.secrets.stores.<n>.vault` needs.
-  #
-  # `tokenSecret` is a reference and not a token: a signature is data that
-  # ends up in the rendered plan, and a credential in there is a credential in
-  # the store. What mints it is a Job, so the value does not exist at eval.
   VAULT_SERVER = floe.mkSig {
     name = "VAULT_SERVER";
     as = "vault";
@@ -325,33 +205,10 @@ in
         }
       );
 
-      # Whether it comes back from a restart on its own. A shamir-sealed
-      # vault does not: it needs somebody to unseal it, and a consumer that
-      # waits for it to answer waits forever rather than failing. Saying so
-      # is the difference between a lab that reports why it is stuck and one
-      # that times out.
       autoUnseals = T.local T.bool;
     };
   };
 
-  # An OIDC issuer, and how to register a client with it.
-  #
-  # Two halves, and the split is not cosmetic. `issuer` and `scopes` are
-  # generic — any OIDC provider answers them, and a consumer configures its
-  # own login with nothing more. `clientCrd` and `ref` are how a *client* gets
-  # created, and that is provider-specific: here it is kaniop's
-  # `KanidmOAuth2Client`, reconciled by an operator watching for it.
-  #
-  # There is deliberately no fan-in. kaniop registers the CRD, so a client is
-  # an ordinary namespaced resource and the consumer renders its own with
-  # `kinds.mkOAuth2Client` — the same shape as a route through the gateway.
-  # The provider does not collect requests, because a registered CRD is a
-  # primitive anyone may use.
-  #
-  # A second provider — Keycloak, Dex — would answer `issuer` and `scopes`
-  # identically and would need `mkOAuth2Client` to grow a branch on
-  # `clientCrd`. That is the honest limit of how swappable this is, and it is
-  # not worth abstracting until there is a second one.
   OIDC_PROVIDER = floe.mkSig {
     name = "OIDC_PROVIDER";
     as = "oidc";
@@ -362,19 +219,6 @@ in
       # client, which is why this is the base and not a full URL.
       issuer = T.str;
 
-      # Where a browser is sent to log in, and where a code is exchanged.
-      #
-      # Both are account-level rather than per-client, which is why they are
-      # here and not on what `mkOAuth2Client` returns. A consumer that does
-      # its own OAuth dance rather than handing off to a library needs them
-      # spelled out: netbird's management config carries an
-      # `AuthorizationEndpoint` and a `TokenEndpoint` and does not read a
-      # discovery document for them.
-      #
-      # The parked netbird floe read these off `floes.kanidm.exports`, which
-      # is the by-name dependency this signature exists to remove — and it is
-      # the reason they are declared even though only one consumer has ever
-      # wanted them.
       authorizationEndpoint = T.str;
       tokenEndpoint = T.str;
 
@@ -390,43 +234,22 @@ in
         }
       );
 
-      # Whether the server reconciles clients outside its own namespace. False
-      # means a consumer's client in the consumer's namespace is silently
-      # ignored — it is admitted, stored, and never reconciled — so a consumer
-      # has to be told rather than left to find out.
       clientsAnyNamespace = T.local T.bool;
     };
   };
 
-  # Somewhere to push and clone git over HTTP.
-  #
-  # Two URLs, because they are read by different things and only one of them
-  # resolves in both places. A CD tool running *in* the cluster clones over the
-  # Service address; a human, and anything outside, needs the routed one. The
-  # parked tree had a single `gitRepo` and consumers picked whichever happened
-  # to work where they were tested.
   GIT_REPOSITORY = floe.mkSig {
     name = "GIT_REPOSITORY";
     as = "git";
     description = "A git remote, addressed differently from inside and outside the cluster.";
     fields = {
 
-      # `http://forgejo-http.forgejo.svc.cluster.local:3000`. No TLS: the
-      # certificate is on the gateway, and an in-cluster client dialling the
-      # Service directly would be dialling past it.
       internalUrl = T.local T.str;
 
       # `https://git.lab.test`. What a clone URL in a manifest should say,
       # because a manifest is also read by people.
       externalUrl = T.str;
 
-      # The repository itself, not the server: `https://git.lab.test/owner/lab.git`.
-      #
-      # Both of the above address the *server*, and everything that clones
-      # needs a repository. `publish-manifests` was handed `externalUrl` and
-      # cloned `https://git.gitops.test/`, which the ingress answered with a
-      # 503 — there is no repository at the root. Only the floe knows what it
-      # bootstrapped, so only the floe can say.
       cloneUrl = T.str;
 
       # Which keys, not just which Secret — the same reason OCI_REGISTRY
@@ -436,10 +259,6 @@ in
           T.record {
             name = T.k8sName;
             namespace = T.k8sName;
-            # The username itself, not just where to read it. A username is not
-            # a secret, and the thing that pushes needs it as a literal — it
-            # goes into a URL, not into a Secret lookup. Passing `usernameKey`
-            # here authenticated as a user called "username".
             username = T.str;
 
             usernameKey = T.str;
@@ -450,9 +269,6 @@ in
     };
   };
 
-  # Workload reload on Secret/ConfigMap rotation. The two annotation keys are
-  # the interface; the old floe also exported a `mkPatches` *function*, which
-  # a signature cannot carry and which `lib/k8s-annotations.nix` replaces.
   CONFIG_RELOAD = floe.mkSig {
     name = "CONFIG_RELOAD";
     as = "reload";
@@ -483,12 +299,6 @@ in
       namespace = T.local T.k8sName;
       s3Endpoint = T.local T.str;
 
-      # Where the keys to reach that endpoint are.
-      #
-      # An address with no credential is not a usable capability: a consumer
-      # given only `s3Endpoint` has to find the chart's generated keys by
-      # reading its templates, which is exactly the hardcoding a signature
-      # exists to remove. Null for a store that genuinely needs none.
       credentials = T.local (
         T.nullOr (
           T.record {
@@ -502,12 +312,6 @@ in
     };
   };
 
-  # A registry inside the cluster that can hold images.
-  #
-  # `pullRef` is the field that matters and the one a consumer gets wrong: an
-  # image reference needs `host:port` with no scheme, which is a different
-  # string from the URL something dials over HTTP. Carrying both means a
-  # consumer never has to strip one to make the other.
   OCI_REGISTRY = floe.mkSig {
     name = "OCI_REGISTRY";
     as = "registry";
@@ -517,19 +321,12 @@ in
       url = T.str;
       pullRef = T.local T.str;
 
-      # Null when the registry takes anything. A consumer pushing to one that
-      # does not has to know before it tries, and finding out from a 401 in a
-      # Job's logs is finding out too late.
       credentials = T.local (
         T.nullOr (
           T.record {
             name = T.k8sName;
             namespace = T.k8sName;
 
-            # Which keys, not just which Secret. A consumer that knows the
-            # Secret and guesses the keys fails at pull time with a 401, which
-            # is the same "finding out too late" the field above exists to
-            # prevent — and every registry spells them differently.
             usernameKey = T.str;
             passwordKey = T.str;
           }
@@ -538,11 +335,6 @@ in
     };
   };
 
-  # Somewhere to send metrics, and the kinds needed to ask for them.
-  #
-  # `crdsEstablished` is local: it names a CRD registered in the cluster this
-  # was provided from, and a consumer elsewhere would be waiting on a kind its
-  # own API server has never heard of.
   METRICS_INGEST = floe.mkSig {
     name = "METRICS_INGEST";
     as = "metrics";
@@ -577,19 +369,6 @@ in
     };
   };
 
-  # The lab's own DNS zone, and where its authoritative server answers.
-  #
-  # The first signature provided by a *lab* rather than by something in a
-  # cluster. It carries a fact the lab decides and every cluster reads —
-  # `lab-dns` teaches each cluster's CoreDNS about the zone, `external-dns`
-  # publishes records into it — and until now each of those took the same
-  # three values as inputs, threaded by hand at every instantiation, with
-  # nothing checking that two floes in one lab were told the same thing.
-  #
-  # Every field is portable. The server is the docker bridge gateway, which
-  # every cluster on the lab's network reaches, and the zone and port are
-  # decisions rather than addresses — so this crosses to every cluster
-  # without a `T.local` anywhere in it.
   DNS_ZONE = floe.mkSig {
     name = "DNS_ZONE";
     as = "zone";
@@ -599,60 +378,26 @@ in
       # routed hostname hangs off.
       zone = T.dnsName;
 
-      # Where the authoritative server answers, as seen from inside the lab
-      # network. The bridge gateway rather than loopback — `127.0.0.1` in a
-      # pod is the pod.
       server = T.str;
       port = T.port;
     };
   };
 
-  # An overlay network peers join, and the control plane that admits them.
-  #
-  # Two URLs for the same server, as `GIT_REPOSITORY` has: a peer outside the
-  # cluster registers over the routed name, and an in-cluster consumer — the
-  # operator that manages mesh state, the agent that joins the cluster to it —
-  # dials the Service, because the routed name leaves the cluster and comes
-  # back through the ingress to reach a pod one hop away.
-  #
-  # What is deliberately absent is anything about *joining*: no setup key, no
-  # group. Those are the operator's, and the operator is the layer of this
-  # floe that is not built yet — so the fields would be promises with nothing
-  # behind them.
   MESH_NETWORK = floe.mkSig {
     name = "MESH_NETWORK";
     as = "mesh";
     description = "A mesh control plane, addressed from inside the cluster running it and from outside.";
 
-    # The point of a mesh is that it spans clusters, and the field types are
-    # what say so: `managementUrl` is a routed name a peer anywhere reaches,
-    # and `managementInternalUrl` is a Service address that resolves in one
-    # cluster only. A consumer elsewhere resolves this and gets the first;
-    # reaching for the second is an error naming it.
     fields = {
       namespace = T.local T.k8sName;
 
       managementUrl = T.str;
       managementInternalUrl = T.local T.str;
 
-      # The UI, which is the same origin as the API: netbird routes all of it
-      # by path off one hostname. A field of its own anyway, because a mesh
-      # implementation that split them would still have to answer this.
       dashboardUrl = T.str;
     };
   };
 
-  # Who may administer the mesh, as a reference to the credential.
-  #
-  # Separate from MESH_NETWORK because the two have opposite reach. The mesh
-  # itself is the thing that spans clusters; the token that configures it is a
-  # Secret in one namespace of one cluster, and a reference to it means nothing
-  # anywhere else. Offering them as one — which is what a unit-level offer
-  # would do — is offering a lie with the truth.
-  #
-  # A reference and not the value: a floe never carries secret material, and
-  # the *value* crosses a cluster boundary the way every other secret does,
-  # through `lab.secrets.{publish,subscribe}`.
   MESH_ADMIN = floe.mkSig {
     name = "MESH_ADMIN";
     as = "meshAdmin";
@@ -668,12 +413,6 @@ in
     };
   };
 
-  # Something in *this* cluster reconciling mesh CRs.
-  #
-  # The counterpart to MESH_NETWORK, and local for the reason every operator
-  # signature is: a CR applied where no controller watches it is admitted by
-  # the API server and then nothing happens. A floe putting its Service on the
-  # mesh needs both — the network to join, and an operator here to do it.
   MESH_OPERATOR = floe.mkSig {
     name = "MESH_OPERATOR";
     as = "meshOperator";
@@ -682,10 +421,6 @@ in
       namespace = T.local T.k8sName;
       crdKinds = T.local (T.listOf T.str);
 
-      # The router every NetworkResource attaches to, which is what makes a
-      # Service reachable from the mesh rather than merely declared on it.
-      # Null until the cluster runs a routing peer, so a consumer can say
-      # "declared but not routed" instead of rendering a dangling reference.
       routerRef = T.local (
         T.nullOr (
           T.record {
@@ -697,9 +432,6 @@ in
     };
   };
 
-  # How the cluster's manifests reach it. A policy value rather than a
-  # component: nothing installs it, and the floes that read it are choosing
-  # between rendering for a CD tool and rendering for a direct apply.
   DELIVERY_POLICY = floe.mkSig {
     name = "DELIVERY_POLICY";
     as = "delivery";

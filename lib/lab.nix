@@ -24,21 +24,11 @@ let
           inherit (catallaxy) floe sigs kinds;
         };
       in
-      # Callable directly: `floes.gateway { baseDomain = …; }` is
-      # `.instantiate`, and the definition is still reachable for anything
-      # that wants the header without an instance.
       def // { __functor = _: def.instantiate; }
     ) set;
 
-  # Flattened across `cluster` and `provisioners`: the split is how the set is
-  # organised on disk, not a namespace a lab has to spell. Names are unique
-  # across both, and `floes/default.nix` is the one place that would notice if
-  # they stopped being.
   floes = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: applyFloes) (import ../floes));
 
-  # `lib.evalModules` plus a strict read of one option path. An assertion that
-  # is collected and never read is a comment; this makes a violated one fail
-  # `nix eval`, which is before anything reaches a cluster.
   evalModule =
     {
       modules,
@@ -71,9 +61,6 @@ let
       specialArgs = labSpecialArgs;
     };
 
-  # `examples/labs/<dir>/lab.nix` crossed with `<dir>/envs/*.nix`, giving
-  # `<dir>.<env>`. The lab file is first in the module list, so it uses
-  # `mkDefault` for anything an environment overrides.
   discoverLabs =
     let
       isEnv = name: kind: kind == "regular" && lib.hasSuffix ".nix" name;
@@ -99,10 +86,6 @@ let
     in
     lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList envsOf labDirs);
 
-  # Labs that exist to be checked rather than run: one file each, named by
-  # its basename, no environments. They render and snapshot like any other
-  # and never enter the e2e set, which is what makes them the cheap place to
-  # pin behaviour no example happens to exercise.
   discoverFixtures =
     let
       dir = examplesPath + "/tests";

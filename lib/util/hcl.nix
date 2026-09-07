@@ -34,13 +34,6 @@ in
 {
   inherit value body;
 
-  # A labelled block: `seal "awskms" { … }`, `storage "raft" { … }`.
-  #
-  # OpenBao's config distinguishes a string from a number from a bool, and the
-  # renderer this replaced put every value through `toString` inside quotes:
-  # an int became a quoted string, `true` became `"1"`, `false` became `""`,
-  # and a nested attrset stringified to garbage. A seal or a raft block with a
-  # port or a flag in it came out wrong.
   block =
     kind: label: attrs:
     "${kind} \"${escape label}\" {\n${body "  " attrs}}\n";

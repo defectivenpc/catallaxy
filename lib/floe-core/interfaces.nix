@@ -57,33 +57,12 @@
           ;
       };
 
-  # Whether a promise of this signature could mean anything in another link.
-  #
-  # Derived from the fields rather than declared beside them, so a signature
-  # that gains a routed address starts crossing without anyone remembering to
-  # say so. `link` refuses such an entry in its scope, and a container that
-  # assembles scopes should refuse the *offer* — which is where whoever wrote
-  # it can do something about it, and is reachable even when no second link
-  # exists yet to be handed one.
   isUncrossable = sig: lib.all (t: types.isLocal t) (lib.attrValues sig.fields);
 
-  # A floe's input declarations, rendered as data.
-  #
-  # The declaration and not the supplied value: the value is a deployer's
-  # choice and belongs to whatever instantiated the floe, while the type,
-  # default and description are the floe's own contract and are the same
-  # wherever it is instantiated.
-  #
-  # Lives here rather than in `link` because two things want it — the link
-  # result (RFC 0001 §216) and the generated interface document — and two
-  # renderings of one thing disagree.
   renderInputs = lib.mapAttrs (
     _: opt: {
       type = opt.type.description or "unknown";
 
-      # `defaultText` when the author wrote one: a default computed from
-      # another option otherwise renders as a store path or a function, which
-      # tells a reader nothing about what they may leave out.
       default =
         if opt ? defaultText then
           opt.defaultText.text or opt.defaultText

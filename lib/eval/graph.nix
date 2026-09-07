@@ -1,3 +1,4 @@
+# Anchor resolution and topological sorting, shared by the install and plan graphs.
 { lib }:
 
 let
@@ -38,9 +39,6 @@ let
       ) acc (nodes.${name}.provides or [ ])
     ) { } (attrNames nodes);
 
-  # `requires` and `after` differ in strength, not in what a name means, so
-  # both resolve here. Deciding it in one place is what stops the two verbs
-  # drifting into two namespaces again.
   resolveAnchorList =
     {
       matchAnchor,
@@ -64,9 +62,6 @@ let
         matches
     ) anchors;
 
-  # A conflict is exclusivity stated the way rpm states it: a provider of an
-  # exclusive name also conflicts with that name, so two providers collide and
-  # one provider does not collide with itself.
   conflictErrors =
     { matchAnchor, onConflict }:
     nodes:
@@ -78,10 +73,6 @@ let
       concatMap (
         conflicted:
         let
-          # When both ends declare the conflict the pair would be reported
-          # twice, so the lexically first speaks for it. Suppressing on order
-          # alone would lose the pair entirely when only one end declares it
-          # and that end sorts later, so the other end has to have said it too.
           alsoConflicts = n: builtins.elem conflicted (nodes.${n}.conflicts or [ ]);
           others = filter (n: n != name && !(alsoConflicts n && n < name)) (
             matchAnchor nodes providesIdx conflicted
@@ -121,11 +112,6 @@ let
       }
     ) (genAttrs names (_: [ ])) allPairs;
 
-  # One ready node at a time, recomputing after each. Distinct from
-  # `kahnWaves`, which takes every ready node together: with wave 0 = {a, z}
-  # where picking `a` frees `b`, this gives a, b, z and flattened waves give
-  # a, z, b. Both are valid topological orders and the callers depend on
-  # theirs, so neither is derived from the other.
   kahnSort =
     { onCycle }:
     edges:

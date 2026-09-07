@@ -1,8 +1,5 @@
 # Lays an elaborated cluster out as numbered wave directories of YAML.
-#
-# Deliberately thin: `lib/render/manifest.nix` already does helm templating,
-# null-stripping, namespace injection and ownership stamping, and doing any of
-# it again here would be a second answer to a question already answered.
+# Templating, null-stripping and ownership stamping are `lib/render/manifest.nix`'s.
 { lib, pkgs }:
 
 let
@@ -10,8 +7,7 @@ let
   yamlUtil = import ../render/yaml.nix { inherit lib pkgs; };
   inherit (import ../eval/bundle-key.nix { }) sanitize;
 
-  # The bundle option type used to supply these; a floe's `mkHelmChart` says
-  # only what varies, so they are filled at the boundary instead.
+  # `mkHelmChart` says only what varies; the rest is filled here.
   toHelmSpec = spec: {
     inherit (spec)
       chart
@@ -28,12 +24,8 @@ let
     };
   };
 
-  # A bundle carries raw YAML as a store path *string*, because `instantiate`
-  # deep-forces a floe's inputs and a derivation is a self-referential attrset
-  # it never comes back from. `renderYamls` branches on `isDerivation` to
-  # split a CRD file per API group, so the string is turned back into one
-  # here. Interpolating it keeps the string context, so the copy is a real
-  # dependency and not a dangling path.
+  # A bundle carries raw YAML as a store path string, not a derivation:
+  # `instantiate` deep-forces inputs and never returns from one.
   materialise =
     path:
     pkgs.runCommand (baseNameOf path) { } ''
@@ -44,11 +36,8 @@ let
 
   waitLib = import ../kubernetes/wait.nix { inherit lib; };
 
-  # The applier's probe enum (`cli/src/io/ssa/probe.rs`) knows these five and
-  # `pod`. `http`, `tcp` and `dns` ask about in-cluster reachability, so they
-  # cannot be run from wherever the CLI happens to be — `wait.nix` renders
-  # them into a one-shot Pod instead, and that lowering happens here rather
-  # than in a floe, which has no business knowing how a probe is executed.
+  # Probe kinds the applier runs directly. `http`, `tcp` and `dns` ask about
+  # in-cluster reachability, so `wait.nix` lowers those into a one-shot Pod.
   nativeProbeKinds = [
     "condition"
     "jsonpath"
@@ -88,10 +77,8 @@ in
 {
   # renderCluster :: { name; cluster; owner ? name } -> derivation
   #
-  # `cluster` is an elaborated cluster from ./elaborate.nix. Waves are an
-  # artifact of the topological sort, not a concept — nothing downstream may
-  # reference a wave index, and the numbering exists only so the directory
-  # listing reads in apply order.
+  # Wave numbering exists so the directory listing reads in apply order.
+  # Nothing downstream may reference a wave index.
   renderCluster =
     {
       name,
@@ -114,11 +101,8 @@ in
         awaitRollout = true;
       };
 
-      # A projection renders nothing at all: the Secret it stands for is
-      # applied by `cata` from the decrypted store, and a value in the
-      # manifest tree is exactly what must not happen. It is in the graph so a
-      # bundle reading it can order against it, and `hasContent` drops it
-      # before any directory is written.
+      # A projection renders nothing: `cata` applies it from the decrypted
+      # store. It is in the graph only so a bundle can order against it.
       isProjection = lib.hasPrefix "projection/";
 
       emptyBundle = {
@@ -147,9 +131,7 @@ in
           drv = render.renderBundle key {
             ownership = {
               lab = owner;
-              # Sanitized, not the raw key: a label value may not contain a
-              # slash, and `<unit>/<bundle>` has one. The API server rejects
-              # the whole object, not just the label.
+              # Sanitized: a label value may not contain a slash.
               bundle = sanitize key;
             };
             helmCharts = lib.mapAttrs (_: toHelmSpec) (b.helmCharts or { });
@@ -172,26 +154,16 @@ in
         ) cluster.waves
       );
 
-      # The index the applier walks. Its absence is a hard error rather than
-      # an empty apply, so it is the one file here that is not optional.
+      # The index the applier walks; its absence is a hard error.
       #
-      # `key` is sanitized, and that is not cosmetic. Pruning compares a
-      # resource's `catallaxy.io/bundle` label against these keys and against
-      # `.declared-bundles` (`cli/src/domain/prune.rs:125`). A label value may
-      # not contain a slash, so the label is `gateway__controller` while the
-      # elaborator's key is `gateway/controller`; writing the raw form here
-      # made every applied resource read as belonging to no declared bundle,
-      # and the prune pass deleted the whole cluster it had just built.
+      # `key` must be sanitized to match the `catallaxy.io/bundle` label that
+      # pruning compares it against. The raw form makes every resource read as
+      # undeclared, and prune deletes the cluster it just built.
       waveMeta.waves = lib.imap0 (i: wave: {
         index = i;
         bundles = map (entry: {
-          # Sanitized for everything with resources, raw for a projection.
-          # The applier finds the Secrets it has to inject by looking for the
-          # literal `projection/` prefix on this field
-          # (`cli/src/io/ssa/mod.rs:212`), so sanitizing it here means no
-          # projection is ever applied and nothing says so. A projection
-          # renders no resources, so no label ever carries its name and the
-          # prune comparison below is unaffected either way.
+          # Raw for a projection: the applier finds injectable Secrets by the
+          # literal `projection/` prefix. Sanitizing it silently applies none.
           key = if isProjection entry.name then entry.name else sanitize entry.name;
           dir = "${pad i}-wave/${sanitize entry.name}";
           hasContent = hasContent entry.name;
@@ -201,15 +173,11 @@ in
         }) wave;
       }) cluster.waves;
 
-      # Every bundle the cluster declares, not only the ones with content.
-      # Sanitized for the same reason `key` is: this list is compared against
-      # the `catallaxy.io/bundle` label, and a resource whose bundle is absent
-      # from it is deleted as no longer declared.
+      # Every declared bundle, not only those with content. Sanitized to
+      # match the label; anything missing here is pruned as undeclared.
       declaredBundles = lib.concatMap (w: map (e: sanitize e.name) w) cluster.waves;
 
-      # `renderResources` writes JSON, which is legal YAML but unreadable and
-      # unreviewable in a diff. The lab renderer normalises at the same point
-      # for the same reason.
+      # `renderResources` writes JSON — legal YAML, but unreadable in a diff.
       assembled =
         pkgs.runCommand "floe-cluster-${name}-raw"
           {
@@ -231,17 +199,14 @@ in
             ${lib.concatStringsSep "\n" (lib.sort (a: b: a < b) declaredBundles)}
             DECLARED
 
-            # Read only by the kapp applier, which the kubectl-ssa path
-            # returns before reaching. Emitted anyway: it is two lines, and a
-            # lab that later flips `cd.bootstrap` would otherwise fail at
-            # apply on a missing file rather than here.
+            # Only kapp reads this. Emitted anyway so flipping `cd.bootstrap`
+            # later fails here rather than at apply.
             cat > $out/.deploy-config <<'EOF'
             waitTimeout: ${waitTimeout}
             EOF
 
-            # A CRD is applyable before it is established, so a bundle whose
-            # successors use the kind has to wait. Found by scanning rather
-            # than declared, because a chart's CRDs are not visible to eval.
+            # A CRD is applyable before it is established. Scanned rather
+            # than declared: a chart's CRDs are invisible to eval.
             find "$out" -mindepth 2 -maxdepth 2 -type d | while read -r bdir; do
               crds="$(
                 find "$bdir" -name '*.yaml' -type f -exec \

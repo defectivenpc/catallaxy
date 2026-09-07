@@ -1,13 +1,4 @@
 # The lint channel -> executables under `$out/lint/<cluster>/`.
-#
-# `cata lab lint` walks that directory, takes each file name as the check
-# name, and looks that name up in `metadata.json` to learn its severity,
-# scope and output format (`cli/src/lint/mod.rs:271`). A check whose file name
-# and metadata key disagree still runs, but silently as a per-file exit-code
-# warning — so both sides sanitize through `bundle-key.nix` and nowhere else.
-#
-# Each script is run with `CLUSTER` and `MANIFEST_DIR` in the environment. A
-# `per-file` check is additionally given the manifest path as `$1`.
 { lib, pkgs }:
 
 let

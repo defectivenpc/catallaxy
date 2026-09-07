@@ -1,3 +1,4 @@
+# CIDR arithmetic.
 { lib }:
 
 let
@@ -32,13 +33,6 @@ rec {
 
   formatIPv4 = octets: lib.concatStringsSep "." (map toString octets);
 
-  # The address after a subnet's own, which is the docker bridge gateway and
-  # the first assignable host in a cluster's range.
-  #
-  # Three places derived this by hand while this one had no callers at all,
-  # and only one of the three noticed when the input was not a dotted quad;
-  # the others produced a nonsense address or failed inside `toInt`. The check
-  # lives here so every caller gets it.
   cidrFirstIP =
     cidr:
     let

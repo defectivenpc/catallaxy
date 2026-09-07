@@ -1,7 +1,5 @@
 # Floe core: mixin linking over `lib.evalModules` (RFC 0001). Contains no
 # Kubernetes — signatures, kinds and policies belong to a distribution.
-#
-#   floe = import ./lib/floe-core { inherit lib; };   # lib = nixpkgs lib
 { lib }:
 
 let

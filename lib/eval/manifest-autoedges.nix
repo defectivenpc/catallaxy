@@ -1,3 +1,5 @@
+# Ordering edges derived from what a resource structurally needs — its
+# namespace, its CRD, the Secret it reads.
 { lib }:
 
 let
@@ -12,10 +14,6 @@ let
 
   resKind = r: r.kind or "";
 
-  # Group-qualified, because `kind` alone does not identify anything.
-  # `Cluster` is CloudNativePG's, Cluster API's and Crossplane's; `Backup` is
-  # velero's and CloudNativePG's. `specTypeFor` resolves on the same pair for
-  # the same reason.
   groupOf =
     apiVersion:
     let
@@ -29,9 +27,6 @@ let
   isNamespace = r: resKind r == "Namespace";
   isCRD = r: resKind r == "CustomResourceDefinition";
 
-  # kapp reads its own `Config` out of the manifest stream and never applies
-  # it, so nothing installs the kind and waiting for one deadlocks. The
-  # argocd renderer already strips these for the same reason.
   isApplierConfig = r: groupOf (r.apiVersion or "") == "kapp.k14s.io";
   isSecretStore =
     r:
@@ -46,10 +41,6 @@ let
 
   secretRefs = import ./secret-refs.nix { inherit lib; };
 
-  # What a bundle causes to exist, and what it reads. Both are the union of
-  # what eval can see in `resources` and what the bundle had to say out loud
-  # because a chart or a Helm value hides it — the same split `crds` already
-  # makes for kinds a chart installs.
   secretsMadeBy =
     bundle:
     unique (
@@ -64,9 +55,6 @@ let
       lib.concatMap secretRefs.secretsUsedBy (resourcesOf bundle) ++ (bundle.needsSecrets or [ ])
     );
 
-  # One provider per name, not one per declarer. Several bundles list the same
-  # namespace in `createNamespaces`, and if each of them provided it, any two
-  # that also put something in it would wait on each other.
   indexBy =
     bundles: pick:
     foldl' (
@@ -110,10 +98,6 @@ let
     providers: bundleName: prefix:
     map (key: "${prefix}:${key}") (filter (key: providers.${key} == bundleName) (attrNames providers));
 
-  # Ordering only. A namespace has to exist before something lands in it, and a
-  # store before the ExternalSecret naming it, but neither has a readiness of
-  # its own worth waiting on. `optional:` because a namespace nothing in the
-  # lab creates is one the cluster already had.
   autoAfter =
     bundle:
     let
@@ -127,11 +111,6 @@ let
         )
       );
 
-      # `ExternalSecret` names one store in `secretStoreRef`; `PushSecret`
-      # names a list in `secretStoreRefs`. Reading only the singular form is
-      # why the parked design had to write the publication bundle's edge to
-      # its store out by hand — and a publication that applies before its
-      # store is rejected by the admission webhook rather than retried.
       consumedStores = unique (
         filter (n: n != null) (
           map (r: r.spec.secretStoreRef.name or null) (filter isExternalSecret resources)
@@ -144,11 +123,6 @@ let
     map (n: "optional:namespace:${n}") consumedNamespaces
     ++ map (n: "optional:secretstore:${n}") consumedStores;
 
-  # A resource of a kind Kubernetes does not ship is only applyable once
-  # something has installed the CRD and, where there is one, brought up the
-  # admission webhook fronting it. That is a readiness edge rather than an
-  # ordering one, and it is the edge eleven floes wrote by hand and four
-  # forgot.
   autoRequires =
     coreKinds: bundle:
     let

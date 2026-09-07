@@ -1,8 +1,4 @@
 # bundles + link edges -> cluster metadata.
-#
-# Core collects outputs keyed by unit and does not merge them, which is what
-# keeps the linker domain-agnostic. A cluster is not a pile of units, so the
-# join belongs here, in the domain. Another domain joins differently.
 { lib }:
 
 let
@@ -20,10 +16,6 @@ let
   # that both name a namespace do not end up waiting on each other.
   namespaceAggregate = "namespaces";
 
-  # A Secret the lab projects gets a bundle that renders nothing and provides
-  # it, so a consumer's `secret:` edge resolves against something in the
-  # graph. The prefix is a CLI contract, not a naming choice: `cata` finds the
-  # projections to inject by scanning wave keys for it.
   projectionPrefix = "projection/";
 
   # Namespaces every cluster already has. A resource in one of these is not
@@ -58,25 +50,8 @@ in
       linkResult,
       coreKinds ? { },
 
-      # Secrets the lab lands in this cluster from its own stores, as
-      # `<projection name> -> <namespace>`. The projection's name is the
-      # Secret's name; `inject_projections` renders `metadata.name` from it.
-      #
-      # One pseudo-bundle each, not one aggregate: the CLI finds the work by
-      # scanning the wave layout for bundles keyed `projection/<name>`
-      # (`cli/src/io/ssa/mod.rs:212`) and injects each at the wave it appears
-      # in. An aggregate matches nothing and silently applies no Secret.
       projectedSecrets ? { },
 
-      # Bundles the lab owns rather than any floe. Cross-cluster secret
-      # sharing is the case this exists for: which cluster publishes what and
-      # who subscribes is wiring *between* clusters, which a floe-core link
-      # cannot express because it only ever sees one cluster's units.
-      #
-      # Bundle-shaped, and joined before the cross-floe pass, so they get the
-      # same derived edges and the same coherence checks as anything a floe
-      # contributed. `declaredBy = "cluster"` is what keeps them out of the
-      # per-floe ordering lookup.
       extraBundles ? { },
 
       defaultOwner ? {
@@ -97,33 +72,9 @@ in
       backs = joined.backs;
 
       # ---- 2. cross-floe edges --------------------------------------------
-      #
-      # A consumer never names a producer's bundle. The linker knows A
-      # resolved hole `h` to B's provide `i`; `backs."B/i"` says which of B's
-      # bundles have to be ready before that promise is good. With no `backs`
-      # entry the answer is all of them: coarse, but correct, and a floe that
-      # never writes `backs` still orders.
 
-      # Over the joined bundles, not `bundles`: only a floe's bundles belong
-      # to a unit. Lab-owned bundles carry `declaredBy = "cluster"` as the
-      # "no floe wrote this" sentinel, and a lab is free to *name* a unit
-      # `cluster` — the example labs do, for the k3d floe. Reading the merged
-      # set here handed every floe requiring KUBERNETES_CLUSTER an upstream
-      # edge to every lab-owned bundle, and the lab bundles depend on the
-      # floes, so the whole graph became one cycle.
       bundlesOfUnit = unit: lib.attrNames (lib.filterAttrs (_: b: b.declaredBy == unit) joined.bundles);
 
-      # unit -> the qualified bundle names its requirements must follow.
-      #
-      # Both hole kinds, because both mean the same thing about order: this
-      # unit depends on that one. An optional hole that resolved to nothing is
-      # `null` and contributes no edge, which is the only difference.
-      #
-      # This read exactly-one holes alone while `requiresMany` existed, on the
-      # theory that a fan-in always ran the other way. It did for the gateway
-      # collecting routes and for nothing else — otel-collector rendered three
-      # waves before the Prometheus it remote-writes to, because consuming a
-      # fan-in produced no edge at all.
       upstreamOf =
         unit:
         let
@@ -131,19 +82,9 @@ in
             (linkResult.wiring.one.${unit} or { })
             // lib.filterAttrs (_: p: p != null) (linkResult.wiring.optional.${unit} or { });
         in
-        # Sorted, because this is a *set* of things to wait for and it reaches
-        # a rendered artifact (`.wave-meta`). Unsorted, its order came from
-        # the order of the consumer's holes — so renaming a hole reordered a
-        # file, moved a manifest digest, and said a lab's output had changed
-        # when the only thing that moved was one floe's private naming.
         lib.sort (a: b: a < b) (
           lib.unique (
             lib.concatLists (
-              # No self-resolution case to handle: `lib/floe-core/link.nix`
-              # refuses a unit that satisfies its own hole outright, so
-              # `p.unit` is never `unit`. This used to carry a branch dropping
-              # the edge for that shape, which was a workaround for something
-              # the linker should not have permitted.
               lib.mapAttrsToList (_hole: p: backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)) holes
             )
           )
@@ -158,10 +99,6 @@ in
       ) bundles;
 
       # ---- 3. lower onto the graph's vocabulary ---------------------------
-      #
-      # `manifest-graph.nix` and `manifest-autoedges.nix` read a token
-      # vocabulary. `needs` and the derived cross-floe edges lower onto it,
-      # which is why both files are reused unchanged rather than reimplemented.
 
       probeOf =
         name: b:
@@ -184,10 +121,6 @@ in
           else
             b.ready;
 
-      # `*/<name>` means every namespace this cluster has. Expanded here
-      # because the namespace set is a fact the cluster holds and the floe
-      # that declared the wildcard does not — a trust-manager Bundle with an
-      # empty `namespaceSelector` genuinely cannot name them.
       expandSecretWildcards = lib.concatMap (
         s:
         let
@@ -200,9 +133,6 @@ in
       );
 
       rawBundles = lib.mapAttrs (name: b: {
-        # `needs` is intra-floe and already qualified; requires is `READY`,
-        # after is sequence-only. A sibling this bundle names must be ready,
-        # not merely applied, so both land in `requires`.
         requires = map (n: "bundle:${n}") b.needs ++ b.requires;
         after = [ ];
         provides = map (k: "kind:${k}") b.crds;
@@ -256,9 +186,6 @@ in
         lib.nameValuePair "${projectionPrefix}${name}" {
           requires = [ ];
 
-          # The Secret has to land after the namespace holding it exists, and
-          # before anything reading it. The first is an edge; the second falls
-          # out of the `secret:` token below.
           after = [ "optional:namespace:${namespace}" ];
           provides = [ ];
           conflicts = [ ];
@@ -287,9 +214,6 @@ in
       waves = manifestGraph.computeWaves { bundles = graphBundles; };
 
       # ---- 4. lift the operator surface -----------------------------------
-      #
-      # Written on the bundle for locality, read at the cluster. The key is
-      # already unit-qualified, so two floes cannot collide.
 
       liftChannel =
         channel:
@@ -299,16 +223,6 @@ in
           ) bundles
         );
 
-      # Ops are keyed category-then-name, and the invocation is
-      # `<lab>-ops <category> <name>`, so the category has to survive the lift
-      # and the qualifier goes on the name. A slash would not survive an
-      # argv position, so it becomes a dash.
-      # `command` and `package` are the two ways to say what runs, and a
-      # command with neither is dispatchable but unrunnable: the generated
-      # tool would match the branch and `exec` nothing. Checked here rather
-      # than in the renderer because every cluster elaborates and only a lab
-      # with ops renders, so a floe with a malformed command would otherwise
-      # go unnoticed until something happened to use it.
       checkRunnable =
         bundle: category: n: v:
         let
@@ -322,11 +236,6 @@ in
         else
           v;
 
-      # `<unit>/<bundle>` with a dash for the slash, which an argv position
-      # would not carry. A floe whose only bundle is named after itself —
-      # velero, and most single-bundle floes — would otherwise reach the
-      # operator as `velero-velero-create`, and this is the one surface where
-      # the name is something a person types.
       opsPrefix =
         name:
         let
@@ -363,10 +272,6 @@ in
       );
 
       # ---- secrets ---------------------------------------------------------
-      #
-      # Same shape of problem as a namespace with no creator, same place to
-      # catch it. A floe reading a Secret is usually not the floe that makes
-      # one, so this is only answerable once the components are joined.
 
       secretsMade = lib.unique (
         lib.mapAttrsToList (name: namespace: secretAddress namespace name) projectedSecrets
@@ -391,11 +296,6 @@ in
         "TLSRoute"
       ];
 
-      # A record per hostname, not a bare string: `cata lab verify` probes
-      # these, and a failing probe has to be able to name the bundle that
-      # declared the route. `paths` matters too — probing `/` on a host whose
-      # route only matches `/api` proves nothing, and the gateway is right to
-      # refuse it.
       routePaths =
         r:
         lib.unique (
@@ -416,9 +316,6 @@ in
                   inherit host;
                   namespace = r.metadata.namespace or "default";
                   bundle = name;
-                  # Every route is public until there is an internal tier to
-                  # put one behind. Saying "public" when we cannot tell would
-                  # be a lie; there is currently only one tier.
                   tier = "public";
                   paths = routePaths r;
                 }) (lib.filter (h: !(lib.hasInfix "*" h)) (r.spec.hostnames or [ ]))
@@ -428,11 +325,6 @@ in
           ) bundles
         )
         ++ lib.concatLists (
-          # Hosts an operator routes on the bundle's behalf. Nothing in
-          # `resources` names them, so the walk above finds nothing — and the
-          # lab's ingress builds its host map from this list, so a host missing
-          # here is one the proxy answers 503 for while the cluster serves it
-          # perfectly well.
           lib.mapAttrsToList (
             name: b:
             map (host: {
@@ -489,17 +381,10 @@ in
         graphBundles = graphBundles;
         namespaces = created;
 
-        # Secrets that reach the cluster from outside the manifest stream.
-        # `cata lab lint`'s dangling-reference rule takes its escape hatch
-        # from this, so the CLI and the elaborator agree on what is allowed to
-        # be missing rather than each keeping its own list.
         runtimeMaterialised = lib.unique (lib.concatMap (b: b.externalSecrets) (lib.attrValues bundles));
         lint = liftChannel "lint";
         verify = liftChannel "verify";
 
-        # Per-floe facts, keyed by unit rather than merged: two floes' netpol
-        # declarations are two declarations, and the policy synthesiser reads
-        # them side by side.
         inherit (joined)
           network
           steps
@@ -508,10 +393,6 @@ in
           warnings
           drift
           ;
-
-        # A floe that says nothing about its network is not the same as one
-        # that needs nothing, and the difference is why `declared` exists.
-        # Naming them is all this does; refusing them is a lab's decision.
 
         images = lib.foldl' lib.mergeAttrs { } (
           lib.mapAttrsToList (
@@ -523,10 +404,6 @@ in
 
         cluster = linkResult.out."catallaxy.cluster" or { };
 
-        # RFC 0003's camp, collected the same way and joined by nothing: a
-        # unit's resources are its own, and a stack is keyed by the unit that
-        # declared them (RFC 0003 §5). Passing them through per unit rather
-        # than merging is what keeps that key available at all.
         resources = linkResult.out."catallaxy.resources" or { };
         publications = linkResult.out."catallaxy.publications" or { };
       };

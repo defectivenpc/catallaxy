@@ -1,13 +1,5 @@
 # mkFloe: a unit with declared surfaces (inputs, requires, requiresOptional,
 # provides, out) and a body of ordinary NixOS-style modules.
-#
-# Surfaces by writer:
-#   floe.inputs    written by the deployer (instantiate), read-only to the body
-#   floe.requires  written by the linker, read-only to the body
-#   floe.provides  written by the body, sealed against signatures at link
-#   floe.out.<k>   written by the body, checked against kind schemas at link
-#
-# Input types are native NixOS option declarations (lib.mkOption / lib.types).
 { lib, types }:
 
 rec {
@@ -24,34 +16,11 @@ rec {
     {
       name,
 
-      # One line saying what this floe installs. Required, because Nix cannot
-      # read comments: a floe's header prose reaches no tool, so without this
-      # the generated interface document has no title and the only
-      # machine-readable thing about a floe is its name.
-      #
-      # Defaulted to null and refused below rather than left out of the
-      # pattern, so the pattern stays closed — an unknown key is still an
-      # error — and the author gets a message saying what to write.
       summary ? null,
 
       inputs ? { },
       requires ? { },
 
-      # Zero-or-one. Resolves to `null` when nothing provides the signature,
-      # refuses two providers exactly as `requires` does, and orders the same
-      # way — the consumer follows whatever satisfied it.
-      #
-      # This replaced `requiresMany`, a fan-in that collected every provider.
-      # Two things were wrong with that. It carried no ordering: the elaborator
-      # derived edges from exactly-one holes only, on the theory that a fan-in
-      # always runs the other way — true for the gateway collecting routes,
-      # false for a collector consuming its backends, which rendered three
-      # waves before the Prometheus it wrote to. And the collection model
-      # itself said only the floe installing a capability may render resources
-      # using it, which is not how Kubernetes works: a registered CRD is a
-      # primitive anyone may use. A floe now ships a constructor
-      # (`kinds.mkRoute`, `kinds.mkGeneratedSecret`) and the consumer emits
-      # the resource into its own bundle.
       requiresOptional ? { },
       provides ? { },
       out ? { },
@@ -70,10 +39,6 @@ rec {
 
       hasInputs = inputs != { };
 
-      # Eager instantiation pre-check: a mini evalModules containing only the
-      # input declarations and the supplied definitions, deep-forced. Errors
-      # are the module system's own (missing required input, unknown input,
-      # type mismatch), wrapped in the floe's name. No body modules run here.
       checkInputs =
         supplied:
         if !hasInputs then
