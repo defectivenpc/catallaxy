@@ -20,6 +20,51 @@ let
     values = T.attrsOf T.any;
   };
 
+  # An image, from the ref an operator would type.
+  #
+  # Every one of the 49 declarations in the tree wrote the four fields out by
+  # hand and 48 of them ended `digest = null;`. The grammar here is the
+  # inverse of what `nix/checks/floe-gates.nix` builds to compare against
+  # scraped YAML — `"${registry}/${repository}:${tag}"` plus `"@${digest}"` —
+  # so declaration and comparison are now one spelling instead of two.
+  #
+  # The registry is required rather than inferred. `docker.io/traefik` and
+  # `traefik` are the same image and the gate normalises them away at compare
+  # time; refusing the second here makes the ambiguity unrepresentable at the
+  # point someone writes it, which is the only place they can act on it.
+  mkImage =
+    ref:
+    let
+      atParts = lib.splitString "@" ref;
+      beforeDigest = lib.head atParts;
+      digest = if lib.length atParts > 1 then lib.last atParts else null;
+
+      # Rightmost colon, because a registry may carry a port and a tag may not
+      # contain one.
+      slashParts = lib.splitString "/" beforeDigest;
+      registry = lib.head slashParts;
+      rest = lib.concatStringsSep "/" (lib.tail slashParts);
+      colonParts = lib.splitString ":" rest;
+      repository = lib.head colonParts;
+      tag = if lib.length colonParts > 1 then lib.last colonParts else null;
+    in
+    if lib.length slashParts < 2 || !(lib.hasInfix "." registry || lib.hasInfix ":" registry) then
+      throw (
+        "image '${ref}': needs an explicit registry. A first segment with no dot or port is a "
+        + "Docker Hub namespace, so `traefik` and `docker.io/traefik` are the same image spelled "
+        + "two ways — and a floe's declaration is compared against what its manifests actually "
+        + "pull, where only one of the two appears."
+      )
+    else
+      {
+        inherit
+          registry
+          repository
+          tag
+          digest
+          ;
+      };
+
   imageSchema = T.record {
     registry = T.str;
     repository = T.str;
@@ -270,6 +315,40 @@ rec {
   };
 
   inherit (verifyTypes) conditionIsNot fieldIsNot;
+  inherit mkImage;
+
+  # A readiness probe, for the shape 26 of 32 bundles were writing out.
+  #
+  # The timeout defaults and every other value is written down, which turns
+  # "3m, 5m and 10m with no stated rule" into a column a reader can audit —
+  # `docs/floes/<name>.md` shows every bundle's probe at a glance, so a floe
+  # waiting ten minutes is now visibly waiting ten minutes *on purpose*.
+  readyCondition =
+    {
+      resource,
+      condition,
+      namespace ? null,
+      timeout ? "5m",
+    }:
+    {
+      kind = "condition";
+      inherit resource condition timeout;
+    }
+    // lib.optionalAttrs (namespace != null) { inherit namespace; };
+
+  # The overwhelmingly common one: a Deployment reporting Available.
+  readyDeployment =
+    {
+      name,
+      namespace,
+      timeout ? "5m",
+    }:
+    {
+      kind = "condition";
+      resource = "deployment/${name}";
+      condition = "Available";
+      inherit namespace timeout;
+    };
 
   # ---- constructors ------------------------------------------------------
   #

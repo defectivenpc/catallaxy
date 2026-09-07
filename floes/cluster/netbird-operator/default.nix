@@ -214,23 +214,15 @@ catallaxy.mkComponentFloe {
             # The chart's own image, declared because a chart is opaque until
             # apply and an operator mirroring this lab into an airgap gets
             # what was declared and nothing else.
-            images.operator = {
-              registry = "ghcr.io";
-              repository = "netbirdio/netbird-operator";
-              tag = "v0.7.0";
-              digest = null;
-            };
+            images.operator = kinds.mkImage "ghcr.io/netbirdio/netbird-operator:v0.7.0";
 
             # From the chart, so a CR of these kinds is ordered after it by the
             # derived `kind:` edge rather than by anything written here.
             crds = crdKinds;
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/netbird-operator";
+            ready = kinds.readyDeployment {
+              name = "netbird-operator";
               namespace = ns;
-              condition = "Available";
-              timeout = "5m";
             };
           };
 

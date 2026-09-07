@@ -205,30 +205,14 @@ catallaxy.mkComponentFloe {
             # and will drift silently when it is bumped. `prometheus.tag` is
             # pinned there; the config reloader's is empty and falls back to
             # `Chart.yaml`'s `appVersion`, which is the operator's version.
-            images.operator = {
-              registry = "quay.io";
-              repository = "prometheus-operator/prometheus-operator";
-              tag = "v0.82.2";
-              digest = null;
-            };
-            images.prometheus = {
-              registry = "quay.io";
-              repository = "prometheus/prometheus";
-              tag = "v3.4.0";
-              digest = null;
-            };
-            images.configReloader = {
-              registry = "quay.io";
-              repository = "prometheus-operator/prometheus-config-reloader";
-              tag = "v0.82.2";
-              digest = null;
-            };
+            images.operator = kinds.mkImage "quay.io/prometheus-operator/prometheus-operator:v0.82.2";
+            images.prometheus = kinds.mkImage "quay.io/prometheus/prometheus:v3.4.0";
+            images.configReloader = kinds.mkImage "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2";
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "statefulset/${statefulSet}";
-              namespace = inputs.namespace;
               condition = "Available";
+              namespace = inputs.namespace;
               timeout = "10m";
             };
 

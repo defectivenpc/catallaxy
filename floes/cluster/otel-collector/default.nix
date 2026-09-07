@@ -219,11 +219,9 @@ catallaxy.mkComponentFloe {
                 };
               };
 
-              ready = {
-                kind = "condition";
-                resource = "deployment/${release}-opentelemetry-collector";
+              ready = kinds.readyDeployment {
+                name = "${release}-opentelemetry-collector";
                 namespace = inputs.namespace;
-                condition = "Available";
                 timeout = "3m";
               };
             };

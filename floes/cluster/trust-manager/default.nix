@@ -129,24 +129,12 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.controller = {
-              registry = "quay.io";
-              repository = "jetstack/trust-manager";
-              tag = "v0.22.1";
-              digest = null;
-            };
-            images.defaultCAs = {
-              registry = "quay.io";
-              repository = "jetstack/trust-pkg-debian-bookworm";
-              tag = "20230311-deb12u1.6";
-              digest = null;
-            };
+            images.controller = kinds.mkImage "quay.io/jetstack/trust-manager:v0.22.1";
+            images.defaultCAs = kinds.mkImage "quay.io/jetstack/trust-pkg-debian-bookworm:20230311-deb12u1.6";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/trust-manager";
+            ready = kinds.readyDeployment {
+              name = "trust-manager";
               namespace = inputs.namespace;
-              condition = "Available";
               timeout = "3m";
             };
           };
@@ -225,8 +213,7 @@ catallaxy.mkComponentFloe {
             # `cata lab lint`'s ready-probe rule said so. `Synced` is the
             # signal trust-manager publishes when the distribution is done,
             # which is the thing actually being waited for.
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "bundle/${inputs.bundleName}";
               condition = "Synced";
               timeout = "3m";

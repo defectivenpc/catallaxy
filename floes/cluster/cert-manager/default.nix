@@ -164,41 +164,18 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.controller = {
-              registry = "quay.io";
-              repository = "jetstack/cert-manager-controller";
-              tag = "v1.17.2";
-              digest = null;
-            };
-            images.webhook = {
-              registry = "quay.io";
-              repository = "jetstack/cert-manager-webhook";
-              tag = "v1.17.2";
-              digest = null;
-            };
-            images.cainjector = {
-              registry = "quay.io";
-              repository = "jetstack/cert-manager-cainjector";
-              tag = "v1.17.2";
-              digest = null;
-            };
-            images.startupapicheck = {
-              registry = "quay.io";
-              repository = "jetstack/cert-manager-startupapicheck";
-              tag = "v1.17.2";
-              digest = null;
-            };
+            images.controller = kinds.mkImage "quay.io/jetstack/cert-manager-controller:v1.17.2";
+            images.webhook = kinds.mkImage "quay.io/jetstack/cert-manager-webhook:v1.17.2";
+            images.cainjector = kinds.mkImage "quay.io/jetstack/cert-manager-cainjector:v1.17.2";
+            images.startupapicheck = kinds.mkImage "quay.io/jetstack/cert-manager-startupapicheck:v1.17.2";
 
             # Available says the pods are up; it does not say the webhook is
             # answering. Applying a Certificate before it is gets refused by
             # the API server, which is why the issuers below are a separate
             # bundle gated on this.
-            ready = {
-              kind = "condition";
-              resource = "deployment/cert-manager-webhook";
+            ready = kinds.readyDeployment {
+              name = "cert-manager-webhook";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
           };
 
@@ -262,11 +239,10 @@ catallaxy.mkComponentFloe {
                 };
               };
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "clusterissuer/${inputs.issuerName}";
-              namespace = inputs.namespace;
               condition = "Ready";
+              namespace = inputs.namespace;
               timeout = "3m";
             };
 

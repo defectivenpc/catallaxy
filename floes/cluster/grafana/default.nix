@@ -209,12 +209,7 @@ catallaxy.mkComponentFloe {
             # The chart's init container, which chowns the data volume before
             # Grafana starts. Not optional and not obvious from the values —
             # the image gate found it.
-            images.init = {
-              registry = "docker.io";
-              repository = "library/busybox";
-              tag = "1.31.1";
-              digest = null;
-            };
+            images.init = kinds.mkImage "docker.io/library/busybox:1.31.1";
 
             resources =
               admin.resources
@@ -283,12 +278,9 @@ catallaxy.mkComponentFloe {
             # without the generated Secret, so `awaitRollout` already blocks
             # until external-secrets has written it — and what a consumer of
             # Grafana cares about is Grafana answering, not a Secret existing.
-            ready = {
-              kind = "condition";
-              resource = "deployment/grafana";
+            ready = kinds.readyDeployment {
+              name = "grafana";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
           };
 

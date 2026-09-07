@@ -65,18 +65,12 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.tempo = {
-              registry = "docker.io";
-              repository = "grafana/tempo";
-              tag = "2.7.1";
-              digest = null;
-            };
+            images.tempo = kinds.mkImage "docker.io/grafana/tempo:2.7.1";
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "statefulset/tempo";
-              namespace = inputs.namespace;
               condition = "Available";
+              namespace = inputs.namespace;
               timeout = "10m";
             };
           };

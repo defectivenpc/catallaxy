@@ -191,8 +191,7 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "clustersecretstore/${storeName}";
               condition = "Ready";
               timeout = "3m";

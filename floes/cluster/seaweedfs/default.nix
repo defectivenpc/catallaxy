@@ -115,11 +115,9 @@ catallaxy.mkComponentFloe {
               digest = null;
             };
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/seaweedfs-s3";
+            ready = kinds.readyDeployment {
+              name = "seaweedfs-s3";
               namespace = inputs.namespace;
-              condition = "Available";
               timeout = "10m";
             };
           };

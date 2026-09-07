@@ -334,12 +334,7 @@ catallaxy.mkComponentFloe {
           bundles.init = kinds.mkBundle {
             needs = [ "server" ];
 
-            images.init = {
-              registry = "docker.io";
-              repository = "alpine/k8s";
-              tag = "1.31.4";
-              digest = null;
-            };
+            images.init = kinds.mkImage "docker.io/alpine/k8s:1.31.4";
 
             resources = {
               "${initSa}" = {
@@ -360,11 +355,10 @@ catallaxy.mkComponentFloe {
             # coherence check knows it will exist.
             secrets = [ "${inputs.secretNamespace}/${inputs.tokenSecret}" ];
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "job/${job.name}";
-              namespace = inputs.namespace;
               condition = "Complete";
+              namespace = inputs.namespace;
               timeout = "10m";
             };
 

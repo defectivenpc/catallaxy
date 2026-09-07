@@ -120,19 +120,12 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.zot = {
-              registry = "ghcr.io";
-              repository = "project-zot/zot";
-              tag = "v2.1.16";
-              digest = null;
-            };
+            images.zot = kinds.mkImage "ghcr.io/project-zot/zot:v2.1.16";
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "statefulset/zot";
-              namespace = inputs.namespace;
               condition = "Available";
-              timeout = "5m";
+              namespace = inputs.namespace;
             };
           };
         };

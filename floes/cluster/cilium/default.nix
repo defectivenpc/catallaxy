@@ -127,30 +127,15 @@ let
               # Digests, because the chart pins them and the rendered refs
               # carry both — a declaration with `digest = null` does not match
               # what is deployed, and the image gate says so.
-              images.agent = {
-                registry = "quay.io";
-                repository = "cilium/cilium";
-                tag = "v1.17.2";
-                digest = "sha256:3c4c9932b5d8368619cb922a497ff2ebc8def5f41c18e410bcc84025fcd385b1";
-              };
-              images.operator = {
-                registry = "quay.io";
-                repository = "cilium/operator-generic";
-                tag = "v1.17.2";
-                digest = "sha256:81f2d7198366e8dec2903a3a8361e4c68d47d19c68a0d42f0b7b6e3f0523f249";
-              };
+              images.agent = kinds.mkImage "quay.io/cilium/cilium:v1.17.2@sha256:3c4c9932b5d8368619cb922a497ff2ebc8def5f41c18e410bcc84025fcd385b1";
+              images.operator = kinds.mkImage "quay.io/cilium/operator-generic:v1.17.2@sha256:81f2d7198366e8dec2903a3a8361e4c68d47d19c68a0d42f0b7b6e3f0523f249";
 
               # A second DaemonSet, not an option. Since 1.16 the agent runs
               # its L7 proxy in a separate pod by default, so a cluster that
               # declared only the agent and the operator would mirror into an
               # airgap and find half the datapath missing. The gate caught
               # exactly that.
-              images.envoy = {
-                registry = "quay.io";
-                repository = "cilium/cilium-envoy";
-                tag = "v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211";
-                digest = "sha256:377c78c13d2731f3720f931721ee309159e782d882251709cb0fac3b42c03f4b";
-              };
+              images.envoy = kinds.mkImage "quay.io/cilium/cilium-envoy:v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211@sha256:377c78c13d2731f3720f931721ee309159e782d882251709cb0fac3b42c03f4b";
 
               # No `ready` probe, and the reason is the same one otel-collector
               # already records: a DaemonSet has no conditions, so

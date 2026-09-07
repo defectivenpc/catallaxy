@@ -96,36 +96,15 @@ catallaxy.mkComponentFloe {
             # an nginx gateway beside Loki itself, and an operator mirroring
             # this into an airgap gets whatever is declared here and a
             # workload that cannot pull whatever is not.
-            images.loki = {
-              registry = "docker.io";
-              repository = "grafana/loki";
-              tag = "3.5.0";
-              digest = null;
-            };
-            images.canary = {
-              registry = "docker.io";
-              repository = "grafana/loki-canary";
-              tag = "3.5.0";
-              digest = null;
-            };
-            images.sidecar = {
-              registry = "docker.io";
-              repository = "kiwigrid/k8s-sidecar";
-              tag = "1.30.3";
-              digest = null;
-            };
-            images.gateway = {
-              registry = "docker.io";
-              repository = "nginxinc/nginx-unprivileged";
-              tag = "1.28-alpine";
-              digest = null;
-            };
+            images.loki = kinds.mkImage "docker.io/grafana/loki:3.5.0";
+            images.canary = kinds.mkImage "docker.io/grafana/loki-canary:3.5.0";
+            images.sidecar = kinds.mkImage "docker.io/kiwigrid/k8s-sidecar:1.30.3";
+            images.gateway = kinds.mkImage "docker.io/nginxinc/nginx-unprivileged:1.28-alpine";
 
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "statefulset/loki";
-              namespace = inputs.namespace;
               condition = "Available";
+              namespace = inputs.namespace;
               timeout = "10m";
             };
           };

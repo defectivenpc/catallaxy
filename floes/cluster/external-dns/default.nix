@@ -277,12 +277,7 @@ catallaxy.mkComponentFloe {
             # controller that starts and is refused by the DNS server.
             needsSecrets = [ inputs.tsigSecretRef ];
 
-            images.controller = {
-              registry = "registry.k8s.io";
-              repository = "external-dns/external-dns";
-              tag = "v0.16.1";
-              digest = null;
-            };
+            images.controller = kinds.mkImage "registry.k8s.io/external-dns/external-dns:v0.16.1";
 
             helmCharts.external-dns = {
               chart = inputs.chart;
@@ -326,11 +321,9 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/external-dns";
+            ready = kinds.readyDeployment {
+              name = "external-dns";
               namespace = inputs.namespace;
-              condition = "Available";
               timeout = "3m";
             };
 

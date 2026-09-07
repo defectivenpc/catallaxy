@@ -81,19 +81,11 @@ catallaxy.mkComponentFloe {
               values = { };
             };
 
-            images.operator = {
-              registry = "ghcr.io";
-              repository = "pando85/kaniop";
-              tag = "0.11.1";
-              digest = null;
-            };
+            images.operator = kinds.mkImage "ghcr.io/pando85/kaniop:0.11.1";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/kaniop";
+            ready = kinds.readyDeployment {
+              name = "kaniop";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
           };
         };

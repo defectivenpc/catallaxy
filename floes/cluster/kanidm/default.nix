@@ -324,12 +324,10 @@ catallaxy.mkComponentFloe {
             # The operator sets this once the server answers. Waiting on the
             # StatefulSet instead would report ready while kanidm was still
             # replaying its database.
-            ready = {
-              kind = "condition";
+            ready = kinds.readyCondition {
               resource = "kanidm/${name}";
-              namespace = inputs.namespace;
               condition = "Available";
-              timeout = "5m";
+              namespace = inputs.namespace;
             };
           };
 

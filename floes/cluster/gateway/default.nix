@@ -279,19 +279,11 @@ catallaxy.mkComponentFloe {
                 };
               };
 
-              images.traefik = {
-                registry = "docker.io";
-                repository = "traefik";
-                tag = "v3.3.6";
-                digest = null;
-              };
+              images.traefik = kinds.mkImage "docker.io/traefik:v3.3.6";
 
-              ready = {
-                kind = "condition";
-                resource = "deployment/traefik";
+              ready = kinds.readyDeployment {
+                name = "traefik";
                 namespace = inputs.namespace;
-                condition = "Available";
-                timeout = "5m";
               };
 
               ops.gateway.listeners = kinds.mkOpsCommand {

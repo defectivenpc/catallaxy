@@ -96,19 +96,11 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.controller = {
-              registry = "oci.external-secrets.io";
-              repository = "external-secrets/external-secrets";
-              tag = "v0.15.0";
-              digest = null;
-            };
+            images.controller = kinds.mkImage "oci.external-secrets.io/external-secrets/external-secrets:v0.15.0";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/external-secrets-webhook";
+            ready = kinds.readyDeployment {
+              name = "external-secrets-webhook";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
           };
         };

@@ -68,19 +68,11 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.localPathProvisioner = {
-              registry = "docker.io";
-              repository = "rancher/local-path-provisioner";
-              tag = "v0.0.28";
-              digest = null;
-            };
+            images.localPathProvisioner = kinds.mkImage "docker.io/rancher/local-path-provisioner:v0.0.28";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/openebs-localpv-provisioner";
+            ready = kinds.readyDeployment {
+              name = "openebs-localpv-provisioner";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
           };
         };

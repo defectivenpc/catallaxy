@@ -178,54 +178,14 @@ catallaxy.mkComponentFloe {
 
             # All eight at the chart's appVersion. v2.13.1 was a guess and the
             # image gate named every one of them.
-            images.core = {
-              registry = "docker.io";
-              repository = "goharbor/harbor-core";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.portal = {
-              registry = "docker.io";
-              repository = "goharbor/harbor-portal";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.jobservice = {
-              registry = "docker.io";
-              repository = "goharbor/harbor-jobservice";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.registry = {
-              registry = "docker.io";
-              repository = "goharbor/registry-photon";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.registryctl = {
-              registry = "docker.io";
-              repository = "goharbor/harbor-registryctl";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.database = {
-              registry = "docker.io";
-              repository = "goharbor/harbor-db";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.redis = {
-              registry = "docker.io";
-              repository = "goharbor/redis-photon";
-              tag = "v2.15.1";
-              digest = null;
-            };
-            images.nginx = {
-              registry = "docker.io";
-              repository = "goharbor/nginx-photon";
-              tag = "v2.15.1";
-              digest = null;
-            };
+            images.core = kinds.mkImage "docker.io/goharbor/harbor-core:v2.15.1";
+            images.portal = kinds.mkImage "docker.io/goharbor/harbor-portal:v2.15.1";
+            images.jobservice = kinds.mkImage "docker.io/goharbor/harbor-jobservice:v2.15.1";
+            images.registry = kinds.mkImage "docker.io/goharbor/registry-photon:v2.15.1";
+            images.registryctl = kinds.mkImage "docker.io/goharbor/harbor-registryctl:v2.15.1";
+            images.database = kinds.mkImage "docker.io/goharbor/harbor-db:v2.15.1";
+            images.redis = kinds.mkImage "docker.io/goharbor/redis-photon:v2.15.1";
+            images.nginx = kinds.mkImage "docker.io/goharbor/nginx-photon:v2.15.1";
 
             resources =
               lib.foldl' (acc: g: acc // g.resources) { } generated
@@ -288,11 +248,9 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/harbor-core";
+            ready = kinds.readyDeployment {
+              name = "harbor-core";
               namespace = ns;
-              condition = "Available";
               timeout = "10m";
             };
           };

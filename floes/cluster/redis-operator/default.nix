@@ -58,18 +58,11 @@ catallaxy.mkComponentFloe {
               values = { };
             };
 
-            images.operator = {
-              registry = "ghcr.io";
-              repository = "ot-container-kit/redis-operator/redis-operator";
-              tag = "v0.18.0";
-              digest = null;
-            };
+            images.operator = kinds.mkImage "ghcr.io/ot-container-kit/redis-operator/redis-operator:v0.18.0";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/redis-operator";
+            ready = kinds.readyDeployment {
+              name = "redis-operator";
               namespace = inputs.namespace;
-              condition = "Available";
               timeout = "3m";
             };
           };

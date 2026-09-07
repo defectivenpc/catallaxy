@@ -66,19 +66,11 @@ catallaxy.mkComponentFloe {
               values = { };
             };
 
-            images.operator = {
-              registry = "ghcr.io";
-              repository = "cloudnative-pg/cloudnative-pg";
-              tag = "1.25.0";
-              digest = null;
-            };
+            images.operator = kinds.mkImage "ghcr.io/cloudnative-pg/cloudnative-pg:1.25.0";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/cnpg-cloudnative-pg";
+            ready = kinds.readyDeployment {
+              name = "cnpg-cloudnative-pg";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
           };
         };

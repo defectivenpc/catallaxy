@@ -110,11 +110,9 @@ catallaxy.mkComponentFloe {
               digest = null;
             };
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/podinfo";
+            ready = kinds.readyDeployment {
+              name = "podinfo";
               namespace = inputs.namespace;
-              condition = "Available";
               timeout = "3m";
             };
 

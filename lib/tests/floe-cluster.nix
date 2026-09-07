@@ -676,4 +676,51 @@ lib.runTests {
     expr = waveOf wildcardSatisfiesEveryNamespace "broken/reader" != null;
     expected = true;
   };
+
+  # ---- images --------------------------------------------------------------
+  #
+  # The declaration is a ref an operator would type, and the gate compares it
+  # against refs scraped out of rendered YAML. One spelling on both sides.
+
+  testAnImageIsReadOffTheRefAnOperatorWouldType = {
+    expr = kinds.mkImage "quay.io/jetstack/trust-manager:v0.22.1";
+    expected = {
+      registry = "quay.io";
+      repository = "jetstack/trust-manager";
+      tag = "v0.22.1";
+      digest = null;
+    };
+  };
+
+  # A repository with slashes in it, and a digest, which is the shape a chart
+  # that pins its own images hands over.
+  testADigestPinnedRefKeepsBothHalves = {
+    expr = kinds.mkImage "quay.io/cilium/cilium:v1.17.2@sha256:deadbeef";
+    expected = {
+      registry = "quay.io";
+      repository = "cilium/cilium";
+      tag = "v1.17.2";
+      digest = "sha256:deadbeef";
+    };
+  };
+
+  # A registry may carry a port and a tag may not, so the split is on the
+  # rightmost colon rather than the first.
+  testARegistryPortIsNotMistakenForATag = {
+    expr = (kinds.mkImage "localhost:5000/app:v1").registry;
+    expected = "localhost:5000";
+  };
+
+  # `traefik` and `docker.io/traefik` are the same image spelled two ways, and
+  # the gate normalises them away when it compares. Refusing the short form
+  # here makes the ambiguity unrepresentable where someone can act on it.
+  testARefWithNoRegistryIsRefused = {
+    expr = fails (kinds.mkImage "traefik:v3.3.6");
+    expected = true;
+  };
+
+  testADockerHubNamespaceIsNotARegistry = {
+    expr = fails (kinds.mkImage "chrislusf/seaweedfs:4.0.0");
+    expected = true;
+  };
 }

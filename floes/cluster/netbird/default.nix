@@ -436,12 +436,9 @@ catallaxy.mkComponentFloe {
                 wait = imageParts "busybox" "1.36";
               };
 
-              ready = {
-                kind = "condition";
-                resource = "deployment/netbird-management";
+              ready = kinds.readyDeployment {
+                name = "netbird-management";
                 namespace = ns;
-                condition = "Available";
-                timeout = "5m";
               };
 
               ops.mesh = {
@@ -484,12 +481,9 @@ catallaxy.mkComponentFloe {
 
               images.dashboard = imageParts "netbirdio/dashboard" inputs.dashboardVersion;
 
-              ready = {
-                kind = "condition";
-                resource = "deployment/netbird-dashboard";
+              ready = kinds.readyDeployment {
+                name = "netbird-dashboard";
                 namespace = ns;
-                condition = "Available";
-                timeout = "5m";
               };
             };
 

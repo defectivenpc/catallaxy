@@ -150,12 +150,7 @@ catallaxy.mkComponentFloe {
             # The chart pulls Redis from ECR, not Docker Hub, and the
             # repository path carries `docker/` in front of `library/`. Both
             # halves were wrong in the first draft and the gate named the ref.
-            images.redis = {
-              registry = "public.ecr.aws";
-              repository = "docker/library/redis";
-              tag = "7.2.8-alpine";
-              digest = null;
-            };
+            images.redis = kinds.mkImage "public.ecr.aws/docker/library/redis:7.2.8-alpine";
 
             resources =
               admin.resources
@@ -246,11 +241,9 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/argocd-server";
+            ready = kinds.readyDeployment {
+              name = "argocd-server";
               namespace = ns;
-              condition = "Available";
               timeout = "10m";
             };
 

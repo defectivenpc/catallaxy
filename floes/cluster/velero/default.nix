@@ -280,25 +280,12 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.velero = {
-              registry = "docker.io";
-              repository = "velero/velero";
-              tag = "v1.16.0";
-              digest = null;
-            };
-            images.awsPlugin = {
-              registry = "docker.io";
-              repository = "velero/velero-plugin-for-aws";
-              tag = "v1.12.0";
-              digest = null;
-            };
+            images.velero = kinds.mkImage "docker.io/velero/velero:v1.16.0";
+            images.awsPlugin = kinds.mkImage "docker.io/velero/velero-plugin-for-aws:v1.12.0";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/velero";
+            ready = kinds.readyDeployment {
+              name = "velero";
               namespace = inputs.namespace;
-              condition = "Available";
-              timeout = "5m";
             };
 
             ops.backup = {

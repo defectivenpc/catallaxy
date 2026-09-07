@@ -62,18 +62,11 @@ catallaxy.mkComponentFloe {
               };
             };
 
-            images.controller = {
-              registry = "ghcr.io";
-              repository = "stakater/reloader";
-              tag = "v1.4.19";
-              digest = null;
-            };
+            images.controller = kinds.mkImage "ghcr.io/stakater/reloader:v1.4.19";
 
-            ready = {
-              kind = "condition";
-              resource = "deployment/reloader-reloader";
+            ready = kinds.readyDeployment {
+              name = "reloader-reloader";
               namespace = inputs.namespace;
-              condition = "Available";
               timeout = "3m";
             };
           };

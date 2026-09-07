@@ -274,12 +274,7 @@ catallaxy.mkComponentFloe {
           bundles.bootstrap = kinds.mkBundle {
             needs = [ "forgejo" ];
 
-            images.bootstrap = {
-              registry = "docker.io";
-              repository = "curlimages/curl";
-              tag = "8.11.1";
-              digest = null;
-            };
+            images.bootstrap = kinds.mkImage "docker.io/curlimages/curl:8.11.1";
 
             resources =
               (idempotent.mkIdempotentJob {
