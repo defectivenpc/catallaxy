@@ -9,12 +9,24 @@
   packages,
   treefmtEval,
   labDefs,
+  exampleLabs,
   mkLab,
   e2eLabs,
   cloudE2eLabs,
   cliConfigs,
   floeInterfaces,
 }:
+
+let
+  # The floe set with its groups flattened — the set a lab actually sees,
+  # since `lib/lab.nix` flattens before handing it over. Three checks read it
+  # and each used to spell the fold itself, which is three chances to disagree
+  # about what "every floe" means.
+  #
+  # `floe-gates.nix` deliberately takes only `.cluster`; it is about what a
+  # cluster component must declare, and a provisioner is not one.
+  allFloes = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
+in
 
 {
   cli = packages.cataWrapped;
@@ -51,6 +63,12 @@
 // import ./lab-edge.nix { inherit lib pkgs mkLab; }
 // import ./floe-headers.nix { inherit lib pkgs; }
 // import ./rfc-refs.nix { inherit lib pkgs; }
+// import ./step-kind-producers.nix { inherit lib pkgs; }
+// import ./counts.nix {
+  inherit lib pkgs;
+  floeSet = allFloes;
+  labDefs = exampleLabs;
+}
 // import ./docs.nix {
   inherit lib pkgs;
   inherit (packages) docs;
@@ -58,12 +76,12 @@
 // import ./floe-names.nix {
   inherit lib pkgs;
   catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
-  floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
+  floeSet = allFloes;
 }
 // import ./floe-interface.nix {
   inherit lib pkgs floeInterfaces;
   docDir = ../../docs/floes;
-  floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
+  floeSet = allFloes;
 }
 // import ./lab-scope.nix {
   inherit

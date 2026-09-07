@@ -98,20 +98,31 @@ interface, and each would be written against RFC 0001 rather than ported:
   category is exercised entirely on providers that reach no network
   (`local`, `random`), which is what makes it iterable without an account.
 
-  What remains orphaned is the Crossplane half: `pivot`,
-  `release-cluster-cloud-resources` and
-  `{reconcile,delete}-managed-resource` are shipped, implemented in the CLI,
-  and **emitted by nothing**, because the channel that would emit them — a
-  cluster declaring which _other_ clusters it brings into existence — does
-  not exist yet. `bootstrap-argocd-helm`, `sync-kubeconfig`,
-  `colima-network-route`, `host-trust-install` and `publish-images` are
-  orphaned the same way.
+  The channel that would drive a cluster provisioned by another now exists:
+  a cluster declares its `provisions`, and
+  `modules/lab/planner/provisions.nix` turns that into apply-order edges. So
+  `release-cluster-cloud-resources`, `{reconcile,delete}-managed-resource`
+  and `sync-kubeconfig` are all emitted, and this file said otherwise for
+  longer than it was true.
 
-- **The book.** `docs/` is `rfcs/` and this file. `pkgs/default.nix` has no
-  docs target.
+  What remains orphaned is now decided by a check rather than by this
+  paragraph — `nix/checks/step-kind-producers.nix` holds the list with a
+  reason per entry, and fails both ways: on a kind nothing emits that is not
+  listed, and on a listed kind that something has started emitting. Prose
+  drifted in both directions at once here, naming four kinds that were fine
+  and missing two that were not.
+
+- **The option reference.** The book is back (`docs/book/`,
+  `nix build .#docs`), and the per-floe pages are generated. What is still
+  parked is the `nixosOptionsDoc` generator for `lab.*` — the splicer
+  survives as `cata-build docs render` and `cli/src/docs/options.rs`, but
+  nothing produces the `options.json` it consumes.
 
 - **The out-of-tree consumer story.** `templates/consumer` and the
-  `hello-floe` example — how someone writes a floe outside this repo.
+  `hello-floe` example — how someone writes a floe outside this repo. The
+  flake declares no `templates` output at all, so
+  `nix flake init -t …#consumer` cannot work and the README no longer
+  suggests it.
 
 - **A standalone `delivery` floe.** `DELIVERY_POLICY` has a consumer
   (`modules/lab/cd.nix`) and one producer (`argocd`). The floe that answered

@@ -5,8 +5,9 @@
 # adding a line here, which is what keeps a check able to say which floes it
 # checked.
 #
-# `lib/lab.nix` flattens the two groups — the split is how the set is
-# organised on disk, not a namespace a lab has to spell.
+# `lib/lab.nix` flattens the groups — `cluster`, `lab` and `provisioners` —
+# because the split is how the set is organised on disk, not a namespace a
+# lab has to spell.
 {
   cluster = {
     argocd = ./cluster/argocd;

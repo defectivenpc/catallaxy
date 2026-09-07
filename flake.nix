@@ -232,6 +232,11 @@
           packages = packages';
           inherit labDefs;
 
+          # `labDefs` includes fixtures, which are not example labs — a
+          # fixture exists to be rendered and checked, never stood up. The
+          # count check is about the ones a reader can run.
+          inherit exampleLabs;
+
           # A check that a *wrong* lab is refused has to build one, and only
           # `mkLab` can: the refusal is an assertion inside the module tree,
           # so there is nothing to inspect without evaluating it.

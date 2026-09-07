@@ -11,60 +11,65 @@ functional programmers make about **local reasoning**: if every part can be
 understood on its own, composing them is safe and the global structure need
 not be authored by hand.
 
-So no part here knows the deployment plan. Each declares its own options,
-the manifests it emits, and the conditions it needs, and the install order
-is _derived_ from those declarations rather than typed as a sequence of
+So no part here knows the deployment plan. Each declares its own inputs, the
+manifests it emits, and the capabilities it needs, and the install order is
+_derived_ from those declarations rather than typed as a sequence of
 numbers.
 
-> **Rebuilt on RFC 0001.** The floe interface is
+> **Built on RFC 0001.** The floe interface is
 > [RFC 0001](docs/rfcs/0001-floes.md) (`lib/floe-core/`), and the shipped
-> tree runs on it: eight example labs, thirty-three floes, host DNS, the
-> registry, the proxy and secrets. Cloud provisioning — `cluster-api`,
-> `crossplane`, Talos — is the one feature family not yet rebuilt. Two
-> earlier implementations preceded this one; what they cost is recorded in
+> tree runs on it: nine example labs, 37 floes, host DNS, the registry, the
+> proxy and secrets. Two earlier implementations preceded this one; what
+> they cost is recorded in
 > [`docs/prior-implementations.md`](docs/prior-implementations.md).
 
 **[Documentation](https://onepunchtech.github.io/catallaxy)**
 
 ---
 
-The unit is a **floe**: a self-contained module with an option surface, the
-manifests it emits, and a typed interface other floes can read.
+The unit is a **floe**: a typed interface with an implementation behind it.
+It declares the capabilities it needs by name, and the linker finds whatever
+provides them.
 
 ```nix
-floes.cert-manager.enable = true;
-
-floes.forgejo = {
-  enable = true;
-  domain = "git.${lab.dns.zone}";
-  tls.issuerRef = config.floes.cert-manager.exports.defaultIssuerRef;
+lab.clusters.core.floes = {
+  cluster      = floes.k3d-cluster  { name = "core"; instanceName = "homelab-core"; };
+  cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
+  gateway      = floes.gateway      { chart = "${cataCharts.traefik.chart}"; };
+  forgejo      = floes.forgejo      { chart = "${cataCharts.forgejo.chart}"; oidc = true; };
 };
 ```
 
-That last line is the argument: one component reading another's computed
-output, checked at evaluation. No string templating, no values file
-duplicated in two places, no sync-wave number chosen by looking at the
-neighbouring numbers.
+What is **not** there is the argument. Nothing says `forgejo` comes after
+`gateway`, nothing passes the gateway's address into it, and nothing names
+an issuer. `forgejo` declares `requires.gateway = sigs.API_GATEWAY`; exactly
+one floe in that cluster provides it, checked at evaluation, and the
+ordering edge falls out. No string templating, no values file duplicated in
+two places, no sync-wave number chosen by looking at the neighbouring
+numbers.
 
 ## Quick start
 
 ```bash
 nix develop
 
-cata --flake ./examples/labs#minimal.local lab plan     # read it first
-cata --flake ./examples/labs#minimal.local lab up
-cata --flake ./examples/labs#minimal.local lab topology --format table
+cata-dev --flake ./examples/labs#minimal.local lab plan     # read it first
+cata-dev --flake ./examples/labs#minimal.local lab up
+cata-dev --flake ./examples/labs#minimal.local lab topology --format table
+cata-dev --flake ./examples/labs#minimal.local lab verify
 
-curl http://podinfo.minimal.test
-
-cata --flake ./examples/labs#minimal.local lab destroy
+cata-dev --flake ./examples/labs#minimal.local lab destroy
 ```
 
-`minimal.local` is one k3d cluster with a gateway and one app (podinfo),
-served over plain HTTP so it comes up on any machine. `homelab.local` adds
-identity, observability and GitOps over TLS. `mesh.local` is reachable only
-from a WireGuard mesh, and is where the lab CA and host trust are
-demonstrated.
+`nix develop` gives you `cata-dev`, which runs the CLI from source. For the
+released binary, `nix run .#cata`.
+
+`minimal.local` is one k3d cluster with a gateway and one app (podinfo). It
+runs no host ingress and no host DNS, so it comes up on any machine but is
+not reachable from outside the cluster — `lab verify` checks it from within.
+`minimal.tls` adds the proxy and a CA it mints; `homelab.local` adds
+identity, observability and GitOps; `homelab.mesh` is reachable only from a
+WireGuard mesh.
 
 Walkthrough:
 [Run the Example Lab](https://onepunchtech.github.io/catallaxy/start-here/first-lab.html).
@@ -72,41 +77,46 @@ Walkthrough:
 ## What it does
 
 - **A plan you read before it runs.** `cata lab plan` prints the ordered
-  step list `cata lab up` will execute, provisioning, host DNS and TLS,
-  secret projections, your own hooks.
-- **Install order that is derived.** Bundles declare what they need and what
-  they offer. Waves fall out. Nothing carries a number.
-- **Failures that happen early.** Types, assertions, graph contracts, lint
-  over rendered manifests, snapshot tests over the plan.
-- **27 built-in floes**. CNI, gateway, PKI, identity, observability,
-  databases, registries, GitOps, backup, and yours built the same way, in
-  your own repository.
-- **Bootstrap and pivot.** Cloud clusters provisioned by Crossplane from a
-  throwaway local one, which is then destroyed.
-- **kapp, ArgoCD or Fleet**, with the handoff between imperative bootstrap
-  and GitOps steady state modelled rather than scripted.
+  step list `cata lab up` will execute: provisioning, host DNS and TLS,
+  secret projections, cross-cluster copies.
+- **Install order that is derived.** A floe says which capabilities it
+  needs. Waves fall out. Nothing carries a number, and cross-floe ordering
+  is not expressible by hand.
+- **Failures that happen early.** Types, link errors naming both floes, lint
+  over rendered manifests, and snapshot tests over the plan — none of which
+  needs a cluster.
+- **37 floes.** CNI, gateway, PKI, identity, observability, databases,
+  registries, GitOps, backup, and yours built the same way, in your own
+  repository. Each has a generated interface page under
+  [`docs/floes/`](docs/floes/) that a check keeps honest.
+- **Cloud clusters.** `doks` provisions a DigitalOcean cluster through
+  OpenTofu ([RFC 0003](docs/rfcs/0003-resources.md)); `talos-cluster` and
+  `external-cluster` cover bare metal and one you already have. A cluster
+  elsewhere is its own edge, so the lab does not assume it can route to it.
+- **Secrets that stay out of the store.** A credential is minted in the
+  cluster that needs it, and moving one between clusters goes through a lab
+  secret store rather than through Nix.
 
 ## Your own lab
 
-```bash
-nix flake init -t github:onepunchtech/catallaxy#consumer
-```
-
-You never fork catallaxy, your flake takes it as an input. See
+Your flake takes catallaxy as an input; you never fork it. `examples/labs/`
+is the worked reference, and CI builds every lab in it. See
 [Build Your Own Lab](https://onepunchtech.github.io/catallaxy/start-here/your-own-lab.html).
 
 ## Development
 
 ```bash
-nix develop                       # cata, cata-dev, and every runtime tool
+nix develop                       # cata-dev, and every runtime tool
 cargo build                       # the CLI
 nix flake check                   # everything: tests, lint, snapshots, docs
 nix fmt                           # nixfmt, rustfmt, yamlfmt
 nix build .#docs                  # the book
 ```
 
-[Contributing](https://onepunchtech.github.io/catallaxy/contributing.html) ·
-[Conventions](https://onepunchtech.github.io/catallaxy/contributing.html#conventions)
+`nix flake check` needs the sandbox permitted to fetch; an in-sandbox run
+evaluates a stale tree and its green is not meaningful.
+
+[Contributing](https://onepunchtech.github.io/catallaxy/contributing.html)
 
 ## License
 

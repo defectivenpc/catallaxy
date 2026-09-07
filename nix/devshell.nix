@@ -10,7 +10,6 @@ pkgs.mkShell {
     pkgs.bacon
     pkgs.rust-analyzer
     pkgs.mdbook
-    pkgs.mdbook-mermaid
 
     (pkgs.writeShellScriptBin "cata-dev" ''
       exec cargo run --manifest-path "''${CATALLAXY_ROOT:-$(git rev-parse --show-toplevel)}/cli/Cargo.toml" -- "$@"

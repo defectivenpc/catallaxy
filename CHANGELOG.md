@@ -7,47 +7,6 @@ The format is based on
 
 ## [Unreleased]
 
-### Removed
-
-- **`old-floes/` is gone.** 454 files, two superseded floe implementations
-  and everything written against them. The shipped tree runs on RFC 0001 and
-  has for a while: eight example labs, thirty-three floes, 282 checks, and
-  six of seven e2e-eligible labs verified up-verified-idempotent-destroyed
-  on this branch. Nothing outside the directory imported it; the nine
-  references were all prose.
-
-  What was worth keeping is in `docs/prior-implementations.md` — the two
-  structural failures (a `length == 1` filter that silently dropped a
-  contested capability, and a `collectChannel` that returned an `mkMerge`
-  rather than a value), the `submoduleWith`/specialArgs trap that makes
-  `importApply` the only workable extension point, and what was carried
-  forward unchanged. The code is in git.
-
-  That file also carries what the deletion does _not_ resolve. Cloud
-  provisioning — `cluster-api`, `crossplane`, the `infra` lab, Talos — was
-  never rebuilt, and `modules/lab/planner/kinds/` still ships nine step
-  kinds with no producer anywhere in the tree. The CLI implements them. That
-  is a claim the tree makes and cannot currently honour, and it is written
-  down rather than left to be rediscovered.
-
-### Fixed
-
-- **kanidm is reachable through the gateway, for the first time.** Its route
-  existed but every request through it failed the backend handshake: traefik
-  validated the certificate against the _pod IP_
-  (`x509: cannot validate certificate for 10.244.0.x because it doesn't contain any IP SANs`)
-  because no `BackendTLSPolicy` told it which hostname to check.
-
-  `kaniop.rs/Kanidm` has a `spec.gateway.backendTlsPolicy` field that
-  accepts exactly such a policy and produces nothing — the CRD declares it,
-  the value validates, and no object is ever created. The floe renders the
-  policy itself now, where its absence is visible. Confirmed live:
-  `https://idm.<zone>/status` answers 200 where it answered 500.
-
-  The previous diagnosis recorded against `homelab.mesh` — that Gateway
-  API's experimental CRD channel was missing — was wrong. That channel is
-  what `gateway-api-crds` installs.
-
 ### Added
 
 - **netbird's operator is a floe of its own, and it runs in both clusters.**
@@ -71,139 +30,6 @@ The format is based on
   ask would start branching on it. Proven by pointing the chart at the
   internal URL, which fails with
   `'MESH_NETWORK.managementInternalUrl' is local to the link that provided it (cluster 'core', unit 'netbird') ... Fields that do travel: dashboardUrl, managementUrl.`
-
-### Changed
-
-- **A cluster offers promises, not units.** `lab.clusters.<c>.provides` was
-  a list of unit names and is now `<unit>/<provide>`. netbird is the case
-  that forced it: it promises `MESH_NETWORK`, which is the mesh and spans
-  clusters, and `MESH_ADMIN`, which is a reference to the Secret holding the
-  token that administers it and can never mean anything anywhere else.
-  Offering the unit offered both, and `link` was right to refuse.
-
-  The refusal also moved to where the line is written. `floe.isUncrossable`
-  is one predicate in floe-core now, used by `link` when it is handed a
-  scope and by the lab when it assembles one — so an un-offerable promise is
-  refused at the offer, in a lab with one cluster, instead of at whichever
-  sibling first resolved against it.
-
-- **The token crosses as a value, not as configuration.** `MESH_ADMIN` is
-  where netbird put the personal access token; `netbird-operator` resolves
-  it for free beside the control plane and takes `tokenSecret` as a lab
-  input everywhere else, while the token itself travels through
-  `lab.secrets.{publish,subscribe}` as every value does. Two mechanisms, and
-  the split is the rule that no floe carries secret material: a signature
-  carries an address, a subscription carries content.
-
-  The floe refuses both answers at once and neither, rather than picking:
-  naming the Secret beside the control plane is a second place to be wrong,
-  and naming it nowhere in a second cluster is an operator that never
-  starts.
-
-- **The lab is a scope, and provides into it.** A cluster's link is given
-  the lab's provides plus every other cluster's offered ones, resolved
-  nearer-first: a unit of the cluster answers a hole if it can, and the
-  scope is consulted only if none does. Cross-cluster resolution shipped as
-  flat threading where an offered provide _competed_ with a cluster's own,
-  so exporting a gateway from `mgmt` refused every cluster that had one.
-
-  The other direction is new. `lab.provides` takes floe instances that
-  install nothing — there is no cluster for them to render into — and exist
-  to answer a signature. `floes/lab/zone.nix` is the first: `lab.dns.*`
-  stays the surface an environment writes, the lab builds one `lab-zone` out
-  of the merged result, and `lab-dns`, `external-dns` and `gateway` require
-  `DNS_ZONE` instead of taking a zone, a server and a port as hand-passed
-  inputs.
-
-  That was six arguments across three floes with nothing checking they
-  agreed, and they did not: `every-floe` pointed external-dns at
-  `--rfc2136-port=53` while the lab's Knot listened on 5354. It renders and
-  never runs, so nothing had ever noticed. Every other rendered byte is
-  unchanged — the digest diff for `homelab.dns` is `metadata.json` alone.
-
-  Two properties hold by construction rather than by a rule: the lab's own
-  provides are linked with no scope, so they cannot depend on a cluster (RFC
-  0005 §6.2's stratification); and a cluster's own offers are excluded from
-  its own scope, which is what breaks the evaluation cycle a cluster reading
-  its own link result would form.
-
-- **`X509_WEBHOOK` and two thirds of `X509_ISSUANCE` are link-local.** They
-  were missed when locality was classified per field. A webhook serving
-  admission for CRDs installed _here_ is the clearest thing that cannot
-  cross a cluster boundary, and an `issuerRef` names a ClusterIssuer object
-  that exists in one cluster — a Certificate elsewhere naming it stays
-  pending forever. `publicIssuer` stays portable, because whether a chain is
-  publicly trusted is true wherever it is asked.
-
-  The consequence is that `cert-manager` cannot be offered to another
-  cluster at all: `X509_WEBHOOK` is now entirely local, and `link` refuses
-  such a signature as a scope entry up front rather than at whichever field
-  a consumer touched first. That is the right answer — its CRDs are not
-  installed there and its webhook does not run there.
-
-- **`k8sName` is out of floe-core.** It lived in the type prelude and was
-  the one thing making the header's "contains no Kubernetes" false; RFC 0001
-  even listed it in the prelude two paragraphs after making the claim. It is
-  in `lib/floe-catallaxy/prelude.nix` now, and the RFC says that a
-  distribution extends the prelude — which was always true and never written
-  down.
-
-- **`homelab.mesh`'s reason is the real one.** netbird's operator needs a
-  personal access token, minting one needs an identity netbird will accept,
-  and kanidm 1.6.4 cannot issue this platform one without a human: its token
-  endpoint supports `authorization_code`, `client_credentials`,
-  `refresh_token` and `device_code`, and not the `token-exchange` grant the
-  parked floe used. `client_credentials` is the only non-interactive one
-  left and it needs a _confidential_ client, while netbird's must be public
-  so the dashboard can use PKCE — one audience, two incompatible
-  requirements.
-
-  Verified working up to that point on a live cluster: the service account
-  reconciles, kaniop mints and rotates its API token, and the token step
-  reads it and reaches the endpoint.
-
-### Changed
-
-- **Locality is a field type, not a flag on the signature.** Cross-cluster
-  resolution shipped with `mkSig { crossCluster = true; }`, which was wrong
-  three ways: it named a Kubernetes concept in a layer whose premise is that
-  it has none, it sat beside `fields` as a second kind of thing in what is
-  otherwise a record type, and it measured a per-field property at signature
-  granularity. Every signature in the distribution is a mix, so the claim
-  was false in both directions — `MESH_NETWORK` was marked as travelling
-  while carrying `managementInternalUrl`, and `GIT_REPOSITORY` had been
-  carrying the distinction in prose ("only one of them resolves in both
-  places") for want of a type to put it in.
-
-  `T.local` is the sibling of `T.deferred` on a different axis: `deferred`
-  says _when_ a value is usable, this says _where_. Inside its own link it
-  is transparent; a provide arriving from another link has its local fields
-  replaced by a throw naming the field and its origin. Reading one is the
-  error and not reading it is fine, which is the granularity a flag cannot
-  reach — `OIDC_PROVIDER` now lets a floe in another cluster validate a
-  token against the issuer while refusing to let it render a client there,
-  and both halves are true at once.
-
-  The refusal is derived rather than declared: a signature whose fields are
-  _all_ local promises nothing readable elsewhere, so `link` refuses it as
-  an external outright. `TRUST_BUNDLE`, `GATEWAY_API`, `STORAGE_CLASS`,
-  `SECRET_GENERATION` and the three operator signatures fall out that way
-  without anyone setting a flag — and one that gains a routed address starts
-  crossing without anyone remembering to.
-
-### Removed
-
-- **`readyToken`, from 20 of the 21 signatures.** Declared everywhere and
-  read by nobody: every occurrence in the tree was a provider defining its
-  own. The ordering it was meant to express is derived instead, from
-  `upstreamOf` crossed with `backs`. Dead surface of the worst kind, because
-  it reads as meaningful and each new signature copied it.
-
-  The proof it ordered nothing is that `refresh-plans` and `refresh-digests`
-  produce **no diff at all** across ten labs — every wave, every step and
-  every rendered byte identical.
-
-### Added
 
 - **netbird's control plane, and a lab that runs it.**
   `floes/cluster/netbird` is management, signal, relay and dashboard — 1,112
@@ -236,162 +62,6 @@ The format is based on
   this by reading `floes.kanidm.exports` — the by-name dependency the
   signature exists to remove. `MESH_NETWORK` is new and carries both ways to
   reach management, for the operator and agent that will need them.
-
-### Fixed
-
-- **One hostname across several backends was probed at whichever rule came
-  first.** netbird fans `netbird.<zone>` out to five backends by path, and
-  its first rule is `/api` — where a bare GET is a 404, which is also what a
-  gateway with _no_ route answers. `lab verify` could not tell the two apart
-  and reported a working mesh as broken. `ExposedHost::probe_path` prefers
-  the root where the route has one, and a host that genuinely serves only a
-  prefix still says so by having no `/` rule.
-
-- **Every image a lab pulls comes from a registry its cache mirrors,
-  checked.** `lab.registry.upstreams` is both the zot sync sources and the
-  `mirrors:` entries in the `registries.yaml` every node mounts, and its own
-  docstring says "add one when a floe pulls from an upstream not listed
-  here" — which nothing enforced. An image from a registry with no entry is
-  not merely uncached: containerd goes to the public registry directly and
-  has to resolve the name itself, which a node cannot do once the lab runs
-  its own DNS, so the pull fails on a name that resolves perfectly well from
-  the host. `<lab>-images-are-cacheable` reads `images.txt` — the same list
-  `warm-cache` iterates, so it includes what was scraped out of charts no
-  floe declared — and refuses any registry the lab does not mirror. Every
-  lab passes today; it exists for the floe that adds a registry and not the
-  entry.
-
-- **A lab can say it is mid-migration, and the check knows the difference.**
-  `lab.unstable` is a string or null: why this lab is not expected to stand
-  up, or nothing. It joins `lab.out.selfContained.reasons`, so the e2e
-  runner skips the lab and prints it, while every check that does not need a
-  cluster — render, lint, digest, plan snapshot — still applies. A string
-  rather than a bool, because "unstable" with no reason is a note to nobody.
-
-  `nix/checks/self-contained.nix` pins it, and distinguishes the two kinds
-  of ineligible: a lab held out because its secrets live in sops works and
-  is not runnable _here_; a lab held out because it is mid-migration is one
-  nobody claims works at all. It also refuses a lab that is marked unstable
-  and eligible anyway, which is what a marker wired to nothing looks like.
-
-- **`external-dns` has a lab.** `homelab.dns` is `homelab.local` plus a DNS
-  controller publishing into the lab's own Knot:
-  `up in 430s, verified, idempotent, destroyed clean`. Until now the floe
-  was rendered only by `every-floe`, which never runs — and rendered there
-  with a _generated_ TSIG key, which cannot be the one Knot was configured
-  with, so the controller would have been refused every update it ever made.
-
-  The key is held twice, because a lab has no way to project a value out of
-  its own configuration: `lab.secrets.managed` reads from a store, and this
-  one is a literal in the lab. `lab-tsig-key-agrees` compares the env file
-  against `lab.dns.tsigSecret` so the pair that would otherwise fail with a
-  bare NOTAUTH — which external-dns logs below its default level — fails at
-  `nix flake check` instead. The fix is a way to project a value the lab
-  holds; that is a design question and the wart is checked rather than
-  hidden until it is answered.
-
-- **A lab with two clusters, and it stands up.** `examples/labs/homelab` is
-  `core` — identity, source control, a registry, trust, routing, backups —
-  and `obs` — metrics, logs, traces and a dashboard over them. It is the
-  first runnable lab with more than one cluster and the first with an
-  identity provider in it, so one docker network in front of two gateways,
-  two kubeconfigs, a plan interleaving both clusters' waves, and kanidm
-  minting clients that forgejo and harbor each render for themselves are all
-  exercised for real rather than only rendered.
-  `up in 307s, verified, idempotent, destroyed clean`.
-
-  What it deliberately does not do is written in the lab file, with the
-  reason for each: no cross-cluster telemetry and no OIDC on `obs`'s
-  Grafana, because a link is per-cluster (RFC 0005 §3.1) and configuration
-  does not cross between clusters even though secrets do; no Argo, because
-  delivery is a lab-wide decision and a two-cluster gitops lab is a shape
-  nobody has run.
-
-- **Two lab-scope checks RFC 0005 §5 named and nothing had.**
-  `lab-cluster-ranges` refuses two clusters on one docker network whose pod
-  or service ranges overlap, or either overlapping the network itself.
-  `lab-routed-hosts-are-unique` refuses two clusters routing one hostname —
-  the ingress emits a `use_backend` per exposed host and the first match
-  wins, so the second cluster's route is unreachable and nothing reports it.
-  Neither could fire while every runnable lab had one cluster. The first one
-  written immediately found `secret-sharing`'s two clusters both taking the
-  default pod and service ranges.
-
-### Changed
-
-- **RFC 0005 says what the tree does.** Its §1 opened "A lab is a floe. So
-  is a cluster", and `modules/lab/types.nix` opens "A lab is a NixOS module,
-  not a floe". The implementation's argument wins and the RFC is amended to
-  it: containment is `environment → lab module → cluster → component floes`,
-  and only the innermost depth is the floe mechanism. §1.1 gives the reason
-  — you want hiding and exactly-one resolution _between_ components and
-  merge-everything _within_ a lab, and those are different mechanisms — and
-  §2.1, §3.1 and §3.2 name what it costs: an appliance is an option surface
-  rather than a signature, a link is per-cluster with no outer scope, and
-  configuration does not cross between clusters even though secrets do. The
-  examples in §1–§4 are now the shipped tree rather than a sketch.
-
-  `staging/` is gone. Nothing imported it, and its README listed as "still
-  missing" four things that have shipped since. `nix/devshell.nix`
-  advertised `nix build .#staging-cluster-manifests`, an output the flake
-  does not have.
-
-### Fixed
-
-- **Three floes were wrong in ways only applying them could show, and the
-  two lints that should have caught them were silent.** `homelab.local` is
-  the first runnable lab with kanidm and harbor in it, and it found all five
-  on its first run.
-
-  `kanidm` rendered `spec.version` on its `Kanidm` CR. kaniop v1beta1 has no
-  such field; under server-side apply the whole object is rejected with
-  `.spec.version: field not declared in schema`, so the floe installed
-  nothing, thirty times over three minutes. It sets `spec.image` now, which
-  is the field the CRD has — and because this floe picks the image rather
-  than an operator picking it from a version string, `imagesComplete` is
-  true and the image is declared, so the cache warms it.
-
-  `mkOAuth2Client` set `spec.secretName` on every `KanidmOAuth2Client`,
-  which is not a field either, for the same reason and with the same result.
-  The Secret's name is the operator's convention —
-  `<client>-kanidm-oauth2-credentials`, verified against kaniop 0.11.1 by
-  applying a client and reading back what appeared — and is now written in
-  one place.
-
-  `harbor` targeted three of its six generated Secrets at names the chart
-  also renders. external-secrets defaults to `creationPolicy: Owner`, which
-  replaces a Secret's contents rather than merging, so `POSTGRESQL_PASSWORD`
-  and `REGISTRY_CREDENTIAL_PASSWORD` were deleted after an apply that
-  reported success — and harbor-core crash-looped on
-  `password authentication failed for user "postgres"` with nothing upstream
-  of the pod logs saying why.
-
-  `crd-schema` walked every field of a custom resource and silently skipped
-  any the CRD did not declare, which is the one error class it most
-  obviously exists for. It reports them now, naming what the schema does
-  have, and knows about `x-kubernetes-preserve-unknown-fields` and the
-  fields the API server owns so it says nothing where there is nothing to
-  say. `secret-ownership` is new and refuses an ExternalSecret whose target
-  — explicit or defaulted from its own name — is a Secret something else in
-  the same manifest set renders.
-
-- **A second cluster running the same floe was refused outright.** Ops
-  commands merge across clusters because `<lab>-ops <category> <name>` has
-  no room for a cluster, so two clusters with a gateway each collided on
-  `gateway-controller-listeners` and the lab failed to evaluate. The cluster
-  goes in the name now — `core-gateway-controller-listeners` — for every
-  lab, not only the ones with two: a name that changes when a cluster is
-  added is a name an operator's notes stop matching.
-
-- **Two floes had no isolation suite, and nothing could say so.**
-  `nix/checks/lib-tests.nix` discovers `floes/tests/*.nix` rather than
-  listing them, which catches a suite nothing runs and misses a floe nothing
-  tests. `lab-dns` and `k3d-cluster` had sat unchecked since they were
-  written. Both now have one, and the check asserts the two sets are equal
-  in both directions. `support.nix` flattens the floe set the way
-  `lib/lab.nix` does, so a provisioner floe can be named by a suite at all.
-
-### Added
 
 - **A floe interface prototype, and one cluster built on it.**
   `lib/floe-core/` is a mixin linking layer over `lib.evalModules` (RFC
@@ -457,17 +127,6 @@ The format is based on
   gateway. `minimal.local` stays plain HTTP so the untrusted path is still
   covered. Every floe also ships an isolation check at
   `floes/tests/<name>.nix`, discovered rather than listed.
-
-### Fixed
-
-- **A fan-in hole no longer orders its collector last.** `link` returned
-  `wiring` with exactly-one and fan-in holes flattened together, and the
-  elaborator derived install order from both — so a gateway was ordered
-  after the routes that attach to it, which is a cycle wherever the routes
-  also depend on the gateway. They always do. The two kinds stay apart now,
-  and only exactly-one holes carry ordering.
-
-### Added
 
 - **A lab, and `cata` runs it.** `modules/lab/` is a NixOS module that takes
   clusters built from composed floes and emits the two things the CLI
@@ -571,278 +230,6 @@ The format is based on
   State lives outside the lab's state directory, and `cata lab cleanup`
   refuses while a stack still holds resources.
 
-### Changed
-
-- **The netbird floe is split into files you can read one at a time.**
-  `default.nix` was 3264 lines and `options.nix` 1194, the only two files in
-  the tree past the 1000-line rule. `default.nix` is now 544 lines and
-  `options.nix` 976, with the floe spread across sixteen files that each
-  answer one question: `management.nix`, `signal.nix`, `relay.nix`,
-  `routes.nix` and `dashboard.nix` build the control plane; `bootstrap.nix`,
-  `routing.nix`, `admin-reconciler.nix` and `agent.nix` each own their
-  bundles; `ops.nix`, `ops-login.nix` and `ops-check-config.nix` hold the
-  host-side shell; `assertions.nix`, `exports.nix`, `lib.nix` and
-  `names.nix` carry the rest.
-
-  Nothing it renders changed. Every step was checked against
-  `manifest-digest-mesh.local` and `manifest-digest-every-floe`, which hash
-  every rendered file, and the fixtures were never refreshed.
-
-  Two things fell out of the move. The four HTTPRoutes and two Certificates
-  now go through `mkHttpRoute`, `mkGatewayParent` and `mkCertificate` in
-  `lib/k8s-helpers.nix` rather than being written out six times, and the
-  `peers` and `routes` ops commands, which differed only in an API path,
-  collapse onto one builder.
-
-  `assertions` stayed a builder rather than becoming a module: it is a
-  merged list, so contributing it from a second module reorders it, and
-  `metadata.json` records the order.
-
-- **`mkFloe` and `mkLabFloe` are gone. A floe is an ordinary NixOS module.**
-  Everything that made a floe a floe already lived in a shared options
-  module; the constructors had shrunk to forwarding three arguments and
-  re-applying module arguments the module system had already supplied.
-
-  A floe now imports `floeOptions` (or `labFloeOptions`) and is otherwise
-  plain module syntax. This is a breaking change for out-of-tree floes.
-  `catallaxy.lib.floe` exports
-  `{ floeOptions, labFloeOptions, evalFloe, gatewayOptions, refs }`.
-
-  To migrate, per floe:
-  1. `mkFloe` becomes `floeOptions` where you inherit it
-  2. drop the `}@__floeModuleArgs` capture and the trailing
-     `}) __floeModuleArgs`, and add to the file's formals whatever the
-     `module` body named and the file did not
-  3. bind `cfg = config.floes.<name>;` in the `let`
-  4. `name`, `version` and `drift` move into a `floeOptions { ... }` entry
-     in `imports`, beside whatever `imports` already held
-  5. `exports = { ... }` becomes `options.floes.<name>.exports = { ... }`
-  6. `module = args: BODY` becomes `config = lib.mkIf cfg.enable BODY`
-
-  ```nix
-  { config, lib, ... }:
-  let
-    inherit (catallaxy.lib.floe) floeOptions;
-    cfg = config.floes.hello;
-  in
-  {
-    imports = [
-      (floeOptions {
-        name = "hello";
-        version = "1.0.0";
-      })
-      ./options.nix
-    ];
-
-    options.floes.hello.exports.url = lib.mkOption { type = lib.types.str; };
-
-    config = lib.mkIf cfg.enable { };
-  }
-  ```
-
-  `exports` is no longer a single submodule-typed option built from an
-  `exports` argument. A floe declares the fields it offers as ordinary
-  nested options, so a type error names the field. Anything reading a floe's
-  whole `exports` should write `floe.exports or { }`, since a floe that
-  offers nothing no longer has the attribute.
-
-  One thing this fixes rather than moves: `mkFloe` required a floe to name
-  `lab` in its formals, and a floe that did not silently got image
-  retargeting that did nothing. `floeOptions` reads `lab` itself, so
-  retargeting no longer depends on what the floe file happens to name.
-
-  The `cata floe new` scaffold also wrote a flat `bundles.<name>`, which has
-  been an eval error since `declaredBy` became required. It now writes
-  `floes.<name>.bundles.<name>`.
-
-### Removed
-
-- **The platform is being re-architected on the RFC-0001 floe interface, and
-  everything built on the two earlier ones is parked in `old-floes/`.**
-  Three floe implementations had accumulated side by side: the original
-  option-declaring one under `lib/floe/` + `modules/`, an ML-style mixin
-  spike (`interface`/`registry`/`fold`/`wiring`), and `lib/floe-core/`. Only
-  the third is being taken forward.
-
-  Parked, not deleted: `lib/floe/`, `modules/`, `floes/` (29 shipped floes
-  and their tests), `examples/`, `templates/`, `docs/book/`, `secrets/`, and
-  the parts of `lib/`, `nix/checks/`, `pkgs/` and `.github/workflows/` that
-  exist only to evaluate or test a lab. Paths mirror where each file came
-  from and `old-floes/README.md` records what each implementation got right
-  and where it fell down.
-
-  **`labs` and `labPackages` are gone from the flake, so `cata` has nothing
-  to evaluate.** That is the expected state until `staging/` grows into the
-  contract. The CLI is untouched and its contract is unchanged.
-  `nix flake check` covers what remains: the CLI, formatting, and the three
-  checks over the new implementation.
-
-  Four things were pulled _out_ of the parked area because the new
-  implementation needs them and they are domain infrastructure rather than
-  floe interface: the generated Kubernetes and CRD schemas
-  (`modules/lab/cluster/lib/kubernetes/` -> `lib/kubernetes/`),
-  `verify-types.nix`, the gateway's route lint script, and the subset of
-  `lib/{eval,render,util}/` holding the graph algorithms, the bundle
-  renderer and the readiness-probe DSL.
-
-- **`cata new floe` is gone.** Scaffolding a floe from a template the CLI
-  carried was a second copy of what `nix flake init -t` already does, and it
-  kept a third copy of the floe skeleton in `cli/src/commands/templates/`
-  that nothing evaluated. That copy had already drifted: the registry line
-  it wrote passed `mkFloe`, which its own template stopped taking when the
-  constructor was deleted, so a scaffolded floe failed evaluation on an
-  undefined variable.
-
-  The consumer template is the one copy now, and it is a real lab that
-  `nix flake check` builds, so it cannot rot the same way:
-
-  ```bash
-  nix flake init -t github:onepunchtech/catallaxy#consumer
-  ```
-
-  Adding a second floe to a lab you already have is copying
-  `floes/hello-world` and adding a line to `floes/default.nix`, which is
-  what the command did.
-
-### Fixed
-
-- **A hand-set OIDC `clientSecretRef` reads the key kanidm actually
-  writes.** `floes.{grafana,zot,argocd,forgejo}.oidc.clientSecretRef.key`
-  defaulted to `client-secret`. Nothing in the tree writes that key — kanidm
-  materialises the client secret under `CLIENT_SECRET`, which is what harbor
-  already defaulted to — so a lab that named a Secret without naming a key
-  read an absent key and got an empty client secret. All four now default to
-  `CLIENT_SECRET`. A lab that hand-made a Secret keyed `client-secret` and
-  relied on the old default has to say so explicitly.
-
-- **No credential is generated while rendering a manifest.** Grafana's admin
-  password and four of Harbor's internal secrets (`CSRF_KEY`, the core
-  secret, `JOBSERVICE_SECRET`, `REGISTRY_HTTP_SECRET`) were left to their
-  charts, which mint them with Helm's `randAlphaNum` when nothing is
-  supplied. Rendering happens at build time here, so each value landed in
-  the rendered manifest, in the digest that pins it and in the Nix store —
-  and changed on every re-render, so re-applying a lab silently rotated it.
-  A rotating `REGISTRY_HTTP_SECRET` invalidates uploads in flight; a
-  rotating Grafana admin password locks the operator out of the account they
-  were handed.
-
-  All five are now minted in the cluster through `secrets.generate` and
-  reached with the charts' own `existingSecret` settings, the way Harbor's
-  admin password and `secretKey` already were.
-  `checks.<lab>-renders-no-secret-material` fails any lab whose rendered
-  manifests carry a value shaped like a generated one, so this cannot come
-  back quietly.
-
-  `secrets.generate` gained `extraData` for the case that forced it: Grafana
-  reads `admin-user` and `admin-password` from one Secret and will not start
-  without both, and a username is not a secret, so there is nothing to
-  generate for it.
-
-  **Enabling `floes.grafana` now requires `floes.external-secrets`**, which
-  reconciles the generator — the same requirement Harbor already had. Set
-  `floes.grafana.adminCredentialsSecret` to keep using a Secret you manage
-  yourself, in which case nothing is minted.
-
-- **An export without a default is refused for every floe, not just the
-  listed ones.** `checks.every-floe-export-has-a-default` reads every floe's
-  exports with nothing enabled and names any floe that cannot answer. The
-  rule was documented as enforced, but the check behind it spot-checked
-  particular fields on five floes, so a new floe could ship an unreadable
-  export and break a lab that never enabled it.
-
-- **The BGP router container now carries its lab's name.** It defaulted to a
-  bare `catallaxy-router`, which no lab claimed: `lab list` could not say
-  whose a running one was, and `lab cleanup` could not remove it as part of
-  a lab. This does not make two BGP labs co-runnable — the router is
-  host-networked and binds BGP/179 either way — but a running one can now be
-  attributed. `lab up` refuses to start beside a surviving
-  `catallaxy-router` rather than leaving two FRR daemons contending for the
-  port, and names `cata lab cleanup --orphans`.
-
-- **The port-conflict refusal names the lab holding the port.** It named
-  only the container, and never said the conflict could be resolved by
-  removing the other lab. It now reads the owner off the container's label,
-  falls back to the name shape for containers created before labels, and
-  gives both remedies: clean the other lab up, or give this one its own
-  ports.
-
-- **The image cache reported "skipped" for two different things.** An image
-  the lab publishes itself needs no mirroring; an image whose registry has
-  no configured upstream is pulled from the public internet when the cluster
-  deploys. Both counted as "skipped" and neither was named. When such a
-  registry is unreachable the workload sits in ImagePullBackOff and surfaces
-  minutes later as a readyProbe timeout against the deployment, which points
-  at the wrong thing entirely. The unmirrored images are now listed, with
-  what it means and the option that fixes it.
-
-- **`lab up` refused to start a lab that uses port 80.** The preflight
-  tested a port by binding it, and read any bind failure as "something else
-  holds this". A port below 1024 refuses a non-root bind with
-  `PermissionDenied` whether or not anything holds it, and docker publishes
-  those ports as root regardless — so the check reported a conflict that did
-  not exist and refused to run a lab that would have worked. Only
-  `AddrInUse` is a conflict now; anything else is "cannot tell", which is
-  not a reason to stop.
-
-### Changed
-
-- **`cata lab up` converges cluster shape, or says exactly why it cannot.**
-  It used to compare two of roughly twelve declared fields — worker count
-  and the k3s image tag — so changing a port, a volume, an apiserver arg, a
-  subnet, a CNI flag or the control-plane count produced a green run and an
-  unchanged cluster, while the executor and the docs both promised
-  idempotent convergence.
-
-  Running `lab up` twice with an unchanged declaration is still a no-op.
-  What changed is what happens when the declaration moved:
-  - **Adding workers is done in place.** k3d grows a cluster without
-    disturbing what is on the other nodes. Removing them is not, because k3d
-    deletes a node without draining it.
-  - **Everything else needs the cluster rebuilt**, since it is baked into
-    the node containers at creation. `lab up` reports which options drifted
-    and stops; `lab up --recreate <cluster>` destroys and rebuilds it.
-    Naming the cluster is deliberate — everything on it is lost.
-
-  Most of those fields cannot be read back off a live k3d cluster without
-  parsing k3d's own internals, so the shape a cluster was built from is
-  recorded when it is built and compared against the declaration on the next
-  run. A cluster predating the record is adopted when the fields a running
-  cluster _can_ answer for agree, and says plainly that it is asserting the
-  rest rather than verifying them.
-
-- **Host service containers are recreated when they no longer match.** The
-  proxy, DNS and registry containers were compared only against the content
-  of their config files, never against their image or published ports, so
-  bumping an image tag in Nix printed "already running" in green and kept
-  serving the old image. They are recreated rather than refused, since they
-  are containers on the operator's workstation rather than cluster state,
-  and the drifted fields are printed so the recreation is visible.
-
-- **`cata lab destroy` now exits non-zero when it could not confirm a
-  release.** A cluster that was in kubeconfig but did not answer was read as
-  "assuming already gone" and recorded no failure, so teardown exited 0
-  while the LoadBalancer Services and PersistentVolumes that step exists to
-  delete were left paid-for. It is now a recorded failure, like the case
-  where the cluster is missing from kubeconfig already was. CI that treats
-  `lab destroy` as infallible will start seeing that failure, which is the
-  point: the resources were leaking before, silently.
-
-- **A kube context that does not resolve is an error, not the operator's
-  current cluster.** kubectl reads an empty `--context` as unset and falls
-  back to `current-context`, so a lab missing a `runtimeContexts` entry ran
-  against whatever cluster you were pointed at. `lab status` reported such a
-  lab as reachable. Every path that builds a `--context` is now checked.
-
-- **`cata lab diff` refuses a GitOps lab** unless `--force`, the way
-  `lab apply` already did, instead of failing with a message about the
-  manifest tree being rendered by an older catallaxy.
-
-- **A generated secret with `length: 0` is refused** rather than minting an
-  empty credential, and a length above 4096 is refused rather than
-  attempting the allocation.
-
-### Added
-
 - **`cata lab cleanup`, and `cata lab list` now shows what is running
   here.** A lab left behind by a failed `lab up`, or one this flake no
   longer defines, used to be both invisible and unremovable: `lab list` only
@@ -875,230 +262,6 @@ The format is based on
   artefact by digest and a tag cannot stand in for one; `cata images lock`
   is what turns purls on. See `docs/book/src/reference/sbom.md`, a page that
   has not been written back.
-
-### Fixed
-
-- **A bundle declared in a floe's imported submodule carried no provenance
-  stamp.** `mkFloe` stamped only its own module body, so `forgejo-bootstrap`
-  and `kanidm-admin-heal` belonged to no floe as far as anything reading the
-  stamp was concerned. Both floes claim `imagesComplete`, and
-  `cluster.out.imageCompleteness` finds a floe's rendered bundles by that
-  stamp, so `image-sets-are-complete` had never checked either one. Imports
-  are now stamped the same way the module body is. Both bundles turn out to
-  have been honest; they were simply never asked.
-
-### Removed
-
-- **`cluster.out.sbom`, and `clusters.<name>.sbom` from `metadata.json`.**
-  It reported each floe's name and version and nothing else, which made it a
-  copy of `cluster.out.topology.components` with a different second field.
-  It had no consumer in this repo. `sbom.json` replaces it and answers the
-  question the option was named for; `topology` still answers what runs
-  where.
-
-- **`io/openssl.rs`.** `host/pki.rs` was its only caller.
-
-- **`CataError`.** It was used in four files while the other twenty in `io/`
-  returned `anyhow`, three of its seven variants were dead, and nothing ever
-  matched on one: every value became an `anyhow::Error` at the first
-  boundary, so the type was a message prefix with a `thiserror` dependency
-  behind it. The prefixes are `.context()` strings now and the messages are
-  unchanged. `thiserror` is gone from the CLI's dependencies.
-
-- **`cross-cluster-secret-copy` is gone.** It read a Secret from one cluster
-  and wrote it into another, from the operator's machine, once, at deploy
-  time. Nothing kept the two in step afterwards, and it needed simultaneous
-  credentialed access to both clusters from a laptop.
-
-  Most secrets that look like they need transporting are authored: they
-  exist before the lab does. Those belong in a store and are projected into
-  every cluster that needs them, which is the path the lab CA already took.
-  The mesh example was the only user of the step, and its netbird setup key
-  is exactly that kind of value; it now lives in an env-backed store.
-
-  `lab.secrets.stores.<n>.direction` names the distinction that decides
-  which is which. `sops` and `env` are `authored`, read-only and top-down.
-  `vault` and `external` are `runtime`, and a cluster can publish into them,
-  which is what a genuinely runtime-minted secret needs in order to reach
-  another cluster at all.
-
-  Removing the step also let the netbird agent on a peer cluster stop opting
-  out of readiness: `awaitRollout = false` existed because the key arrived
-  after the deploy. It arrives during the deploy now, so the bundle waits on
-  the Secret with a `readyProbe` like anything else.
-
-### Fixed
-
-- **A CronJob's init containers were lockable but unlintable.** The scrape
-  that feeds `cata images lock` read
-  `spec.jobTemplate.spec.template.spec.initContainers` and the `image-pin`
-  lint did not, so the lock rewrote a digest into images `requireDigest`
-  could never have flagged. homelab and mesh both render a CronJob through
-  that path. A check now compares the two lists across Nix and Rust, which
-  is what a comment used to claim.
-
-- **OpenBao's init Job could exit successfully having done nothing.** It
-  guarded on whether the vault was initialised, which is a different
-  question from whether the Job had finished. A run interrupted after
-  `operator init` but before it wrote the token came back, saw an
-  initialised vault and succeeded, leaving no KV mount and no token; the
-  bundle then waited for a Secret that was never coming. It guards on the
-  token Secret, and says what to do with the recovery keys when a vault is
-  initialised without one.
-
-- **The init Job is not emitted for a hand-unsealed vault.** A Shamir vault
-  is sealed the instant it is initialised, so mounting KV, writing the
-  policy and minting a token all fail against it. Running anyway consumed
-  the one root token nobody kept. `seal = { }` means you initialise it too.
-
-- **A digest-pinned image asked the registry for the wrong repository.**
-  `parse_image_ref` split on `@` and nothing else, so
-  `nginx:1.27@sha256:...` left the tag stuck to the repository and produced
-  `library/nginx:1.27`. Nothing rendered a reference in that shape until
-  digest pinning arrived, so it had never been reachable.
-
-  The same reference also reported uncached on every `cata images prefetch`,
-  because a tag list never contains a digest. The cache asks about the tag
-  the reference also carries.
-
-- **A floe writing `bundles.<n> = mkIf cond { … }` got the bundle stamped
-  into existence** even when the condition was false, carrying nothing but
-  its floe name. The provenance walk inherited a condition on the fragment
-  but not one on the bundle itself.
-
-- **`floes.openbao.seal = { }` claimed the vault was unsealed.** That value
-  is the documented escape hatch for unsealing by hand, and it is not null,
-  so the nullness test that decided "is this auto-unsealed" answered yes.
-  The floe reported `sealed = false` and waited for a vault nobody was going
-  to unseal.
-
-- **`floes.openbao.ui = false` still served the UI.** It reached the chart's
-  UI Service only; the server's own config hardcoded `ui = true`.
-
-- **A seal block lost the type of every value in it.** They went through
-  `toString` inside quotes, so an int arrived as a string, `true` arrived as
-  `"1"`, `false` as `""`, and a nested block stringified to nothing usable.
-  Values are rendered by `lib/util/hcl.nix` now, which also escapes quotes
-  and backslashes.
-
-- **OpenBao's ready probe asked a StatefulSet for a condition it does not
-  have.** `Available` is a Deployment condition. It worked only because the
-  CLI silently rewrites that case into a `readyReplicas` jsonpath, and the
-  renderer behind `mkWaitInitContainer` does not, so the same shape in an
-  init container hangs until timeout. The probe says what it means now.
-
-- **A custom lint check walking the manifest tree inspected nothing.** A
-  wave directory is a symlink into the store and `find` does not descend
-  into one without `-L`, so `find "$MANIFEST_DIR" -name '*.yaml'` matched no
-  files and the check passed by having nothing to look at. The homelab
-  example's `no-latest-tag` had this, and had never inspected a manifest.
-
-- **`floe:` anchors work.** `after = [ "floe:cert-manager" ]` orders against
-  every bundle that floe declared. Provenance is stamped where `mkFloe`
-  merges a floe's module output, so a floe author never sets it and cannot
-  forget to; a bundle a lab declares directly carries none.
-
-- **`kind:` anchors work.** They were implemented in the resolver and inert,
-  because the graph builder passed `null` for the field they read. A bundle
-  now carries the kinds its `resources` declare, so
-  `after = [ "kind:CustomResourceDefinition" ]` orders against every CRD
-  bundle without naming each one.
-
-  The field is a list, not the scalar it started as: a bundle holds
-  resources of many kinds, so the scalar could only ever have described a
-  bundle holding one thing. A kind inside a `helmCharts` or `yamls` entry is
-  not eval-visible, so a chart-only bundle answers no `kind:` anchor.
-
-- **kubectl was spawned two different ways**, and the difference was whether
-  the subprocess got the lab's merged CA bundle. Which callers had it was
-  historical rather than decided, and it had produced two readers,
-  `resource_json` and `resource_json_trusted`, that differed in nothing
-  else. Every kubectl goes through `io::kubectl::command()`; the bundle is a
-  union of the system roots and the lab CA, so handing it over is never a
-  narrowing. There is one reader again, and a `kubectl-is-spawned-one-way`
-  check.
-
-- **The `resource-types` check would have passed with every CRD schema
-  disconnected.** It exercised a core `apps/v1` Deployment only, and the CRD
-  schemas load through a different path. It now checks that a well-formed
-  `ExternalSecret` and `Certificate` evaluate and that a wrongly typed field
-  in each does not. Removing two schemas from `generated/index.nix` fails
-  it, which is how that was confirmed.
-
-- **`cata pki init` minted a CA that could not sign what the lab's own CA
-  could.** It repeated rcgen's parameters inline instead of calling the
-  function that mints the lab CA, and the two copies had drifted: this one
-  left out `DigitalSignature`. It calls that function now, and a test states
-  the key usages so a third copy cannot appear quietly.
-
-- **A bundle whose only workload was a Job was not waited on.** The fallback
-  recognised Deployments, StatefulSets and DaemonSets, so the next wave
-  started while the Job was still running. A Job is waited on for
-  `condition=complete`, since it is never Available.
-
-- **Waiting on a Job selected every generation of it.** `mkIdempotentJob`
-  labelled each Job with its hash and nothing selected on it, so on the
-  server-side-apply path, which prunes nothing, one failed Job from an
-  earlier render made the wait fail forever. The helper exposes a `selector`
-  that pins the generation. Netbird renders one routing Job per network and
-  a label selector cannot say "any of these hashes", so those Jobs share a
-  generation label derived from the routing configuration.
-
-- **The certificate expiry check worked only on Linux.** It asked `openssl`
-  for the date and then GNU `date -d` to turn it into a timestamp, which is
-  not a flag macOS `date` has. It returned nothing there, and the check
-  reads "nothing" as "no finding" — so it silently passed on every mac. It
-  parses the certificate with `x509-parser`, already a dependency, and
-  spawns no subprocess at all. `None` now means "this is not a certificate",
-  never "I could not tell".
-
-- **The Colima VM's forwarding settings failed silently.** Four ssh calls
-  discarded their results inside a function returning `()`, so a lab could
-  come up fully and not carry traffic. Failures are named, along with what
-  they mean. The two `iptables -C` probes stay ignored, because a probe
-  failing is how it reports the rule is absent.
-
-- **Malformed kubectl JSON read as success.** `copy_external_names` parsed
-  with `unwrap_or_default()`, and an empty document has no items, so a parse
-  failure was indistinguishable from nothing to copy.
-
-- **Lint reports listed clusters in a different order each run**, because
-  they were grouped through a `HashMap`.
-
-- **`cata lab up` asked docker twice per port.** By the second call every
-  publisher was already known to be the lab's own.
-
-- **`io/fs.rs` removed a temp file inside the closure that formats an
-  error.** It worked, and it would have stopped working the day someone
-  swapped `with_context` for `context`.
-
-- **Reformatting a script no longer re-runs a bootstrap Job.** The hash that
-  names an idempotent Job covered `contentInputs` and the entire pod spec,
-  so an image tag bump or a whitespace change re-ran the payload against a
-  live API. That is why `shfmt` was not in `shell-scripts-are-clean`.
-
-  The hash covers what you declared, not how you implemented it. Two netbird
-  call sites also listed `script` and `image` as content by hand, which put
-  the implementation back in; they no longer do.
-
-  Dropping the implementation from the hash means a payload could change
-  what it _does_ without anything noticing, so `behaviourVersion` is the
-  lever for that case: bump it and the Job runs again. Because it can be
-  forgotten, the implementation's own hash is recorded in a
-  `catallaxy.io/implementation-hash` annotation. It triggers nothing; it is
-  there so a reader or a check can tell a reformat from a forgotten bump.
-
-  `shfmt` now runs over the scripts, and the proof is that the Job names did
-  not move across the reformat.
-
-- **A store shared by two clusters must be reachable from both.** The
-  external-secrets work landed with `homelab` pointing its
-  `ClusterSecretStore` at an in-cluster DNS name, which resolves only inside
-  the cluster running OpenBao, so `obs` would have waited forever. The floe
-  exports an `externalAddress`, and an assertion refuses an in-cluster
-  address once a second cluster uses the store.
-
-### Added
 
 - **`lab.images.wait`.** The kubectl, curl and busybox that every probe
   container catallaxy renders runs. They were three literals in a shared
@@ -1489,209 +652,276 @@ The format is based on
   provisioning, appeared nowhere in the prose. `docs-summary-resolves` now
   fails when a nav entry resolves to nothing.
 
-### Fixed
-
-- **`cata lab destroy` no longer reports success while cloud resources
-  leak.** It printed its non-fatal failure list and returned Ok, which the
-  binary maps to exit 0, so `cata lab destroy && ...` proceeded with a live
-  cluster still billing. The summary also sat after the step loop, so a hard
-  failure or `--up-to` skipped it: a destroy that leaked across six clusters
-  and then failed on the seventh printed none of the six.
-
-- **`lab.destroy.rescueHints` is printed.** Documented as printed verbatim
-  by `cata lab destroy`, parsed into `LabSpec`, and read by nothing.
-
-- **A CAPI pivot no longer destroys the bootstrap cluster when the state
-  migration never ran.** `.status()` returns `Err` for a missing binary and
-  the guard was `if let Ok(s) = status && !s.success()`, so an absent
-  `clusterctl` was discarded and control fell through to
-  `deprovision_cluster`. CAPI state never moved and the only management
-  plane for the workload cluster was deleted. The unknown-provisioner arm
-  warned and destroyed too.
-
-- **Teardown distinguishes "gone" from "cannot tell".**
-  `wait-for-cluster-gone` matched nine English kubectl substrings and read
-  an unreachable apiserver as proof of deletion, so a network blip or an
-  expired token deleted the kubeconfig context and reported success.
-  `release-cluster-cloud-resources` counted a failed `kubectl get` as zero
-  remaining and printed "Cloud resources released" having verified nothing.
-
-- **`strip_finalizers_in_terminating_namespaces` checks for terminating.**
-  The name promised a phase guard the body did not have. It patched every CR
-  in the given namespaces, Crossplane managed resources included, whose
-  controllers then never ran their deprovision path, orphaning the cloud
-  resource while the CLI printed "stripped finalizers" as progress.
-
-- **`secrets generate --force` keeps hand-entered values.** It replaced
-  every operator-supplied value with the literal
-  `PLACEHOLDER_USE_SECRETS_EDIT`, unrecoverably, and `validate_store` only
-  checked missing and blank, so that string deployed into clusters as a real
-  Secret value. `--force` now regenerates only generator-backed keys, and
-  the placeholder is rejected before it can reach a cluster.
-
-- **`merge_kubeconfig` no longer risks the whole kubeconfig.** A plain
-  `fs::write` over `~/.kube/config` meant an interrupt destroyed every
-  cluster entry the user had. Writes go through a temp file and rename.
-  `HOME` defaulting to `/tmp` is gone from eight sites that silently
-  relocated lab state and credentials; it is validated once at startup.
-
-- **`images mirror` fails when a copy fails.** It printed "All images
-  mirrored" and exited 0, so a CI job seeding an air-gapped registry could
-  fail on half its images and report success.
-
-- **The k3d apiserver arguments and volumes Nix computes are emitted.**
-  `extraApiServerArgs` and `extraVolumes` were populated from
-  `cluster.apiserver.{oidc,pki}` and `cluster.security.auditLogging`,
-  carried into the CLI's typed config, and read by nothing, so enabling OIDC
-  produced a cluster with no OIDC and reported success. The new
-  `cli-parses-nothing-it-ignores` check fails when a field is parsed and
-  referenced nowhere; it also found `opsToolPath`, `selfContained` and
-  `provisioner.docker.waitTimeout`.
-
-- **Manifests are parsed as YAML rather than scanned as text.** The rollout
-  wait failed open four ways: the await-rollout opt-out was a substring
-  search over the whole document, documents were split on `"\n---"` which
-  also splits inside block scalars, name extraction required exactly
-  two-space indentation, and a missing namespace defaulted to `default`.
-  `wait_workloads_ready` also returned Ok unconditionally, so a Deployment
-  in CrashLoopBackOff produced a yellow line and a successful `lab up`.
-
-- **Failed commands say what failed.** `io::process` reported
-  `Command failed with status: exit status: 1` with no program, no args and
-  no stderr, and these are the workhorses for kapp, docker, k3d, talos and
-  hooks. Failed steps now carry their step number, kind and name.
-
-- **A lab-name typo lists the labs that exist.** It printed the raw nix
-  attribute path, then `nix eval failed (exit exit status: 1)`. A cluster
-  typo was already clean.
-
-- **The flake fragment names a lab, and cluster-scoped commands say so.**
-  `cluster`, `apply` and `pki` resolved the fragment as a cluster name, so
-  `cata --flake .#minimal.local cluster status` looked for a cluster called
-  `minimal.local` and failed. They now follow `diagnose`: read the lab from
-  the fragment, use its only cluster, or list the candidates.
-
-- **`lab verify --check declared` and `lab topology --format` are real
-  enums.** `declared` was advertised in the help and rejected by the parser,
-  and `--format` had `type Err = Infallible` with a catch-all, so
-  `--format jsno` printed a table and exited 0.
-
-- **`--flake` is global**, so it can follow the subcommand as `-v` already
-  could.
-
-- **`lab status` says when the docker daemon is unreachable** instead of
-  reporting every service stopped and every cluster not ready, which is
-  indistinguishable from a lab that was never started.
-
-- **The ingress private key is no longer world-readable.** `lab.pem` held
-  the key at 0644 while the same key in `lab.key` was correctly 0600. The
-  365-day leaf also never renewed, because the function returned early on
-  file existence; it is reissued within 30 days of expiry or after a CA
-  rotation.
-
-- **`cata diagnose` no longer renders an unreachable cluster as a healthy
-  one.** Its four collectors returned an empty vector when kubectl failed.
-  `wait_crossplane_healthy` waited five minutes in silence and timed out
-  without naming a provider, though it had just parsed which were unhealthy.
-
-- **`import_lab_ca` no longer leaves a cluster with no CA secret.** It
-  deleted the secret, then swallowed the create failure and returned Ok.
-
-- **A missing manifest directory is an error.** The subdirectory is chosen
-  by deploy strategy, so a mismatch turned the central deploy step into a
-  no-op that reported success.
-
-- **`lab list` says why a lab cannot be stood up here**, using the
-  self-containedness reasons Nix already computes, so `mesh.local` no longer
-  looks like an ordinary first choice.
-
-- **The straggler check uses the k3d cluster name from the spec**, as its
-  sibling already did, rather than rebuilding `k3d-{lab}-{cluster}-` by
-  hand, which matched nothing under any `contextPrefix` customization and
-  let destroy report clean with containers still running.
-
-- **`cata diagnose` prints floe health again, and reports on the cluster it
-  was asked about.** `print_component_health` read `config["components"]`, a
-  key `cliConfig` stopped emitting when components became floes, so the
-  lookup missed on every cluster and the section silently never appeared.
-  Separately, `diagnose` carried its own copy of the kube-context resolver
-  with the `runtimeContexts` clause dropped, so in a lab that pivots a
-  cluster it dialled whatever the provisioner-baked context still reached.
-
-- **`cata kubeconfig show` reports the context a cluster actually uses.** It
-  derived the name itself, handled only k3d, and ignored the `kubeContext`
-  the module system computes, so a Talos or Crossplane cluster was listed
-  under its bare cluster name and then reported "not reachable" whether or
-  not it was.
-
-- **The lab proxy routes a floe that names its hostname under `gateway`.**
-  `modules/lab/host/proxy.nix` built its HAProxy host map from each floe's
-  top-level `domain`, so `floes.prometheus` and `floes.otel-collector`,
-  which declare theirs at `gateway.domain`, were never given a backend. A
-  request to `prometheus-rw.<zone>` reached HAProxy's default backend and
-  came back 503 without ever leaving the host, which is what
-  `homelab.local`'s verify had been failing on. The map now takes
-  `gateway.domain` when it is set and the top-level `domain` otherwise.
-
-  `example-lab-routed-hosts-are-proxied` keeps it honest: for every example
-  lab it compares the hostnames with a public route inside a cluster against
-  the hostnames the proxy has a backend for, and fails naming any that are
-  routed but unreachable. Reverting the one-line fix makes it name
-  `prometheus-rw.homelab.test` on both homelab labs.
-
-- **`cata lab verify` probes a host where its route actually routes.** It
-  asked every public host for `/`. `prometheus-rw.<zone>` matches only
-  `PathPrefix: /api/v1/write`, so the probe asked for a path the gateway is
-  right to refuse, and `homelab.local` failed verify on every run.
-  `cluster.out.exposedHosts` now carries each route's path prefixes and the
-  check uses the first one. 405 joins 401 and 403 as an answer: a write-only
-  endpoint replies 405 to the GET this check makes, and only the workload
-  itself can.
-
-- **`publish-manifests` no longer needs the operator's git identity.** It
-  commits into the lab's own Forgejo, so it now identifies itself as
-  `catallaxy <catallaxy@invalid>` through `GIT_AUTHOR_*` and
-  `GIT_COMMITTER_*` rather than falling back to `git config`. On a fresh
-  runner there is none, and the step died with "Author identity unknown"
-  after the lab was already up. A machine-made commit should not depend on
-  who happens to be logged in.
-
-### Removed
-
-- **`cata cluster kubeconfig sync` is gone.** It read its list of workload
-  clusters from `floes.cluster-api.clusters`, an option that does not exist:
-  the cluster-api floe describes the shape of a workload cluster
-  (`controlPlane`, `workers`, CIDRs) and never carried a list of them. The
-  lookup missed every time, so the command could only ever fail. It was the
-  last remnant of CAPI as a provisioner, a concept `cluster.provisioner`
-  dropped when it settled on `k3d | talos | crossplane | external`, and the
-  same vestige as the `Capi` variant removed from the CLI's provisioner enum
-  above.
-
-  Nothing replaces it because nothing needs to: the planner already emits a
-  `sync-kubeconfig` step per provisioning cluster, with the target list
-  derived from the provisioner graph rather than hand-written, ordered after
-  provisioning and skipped when the cluster already answers.
-  `io::kubectl::get_capi_kubeconfig`, `io::clusterctl::is_cluster_ready` and
-  `io::clusterctl::wait_cluster_ready` went with it, having had no other
-  caller, as did a `--timeout` parser that turned anything it could not read
-  (`5h`, say) into ten minutes without saying so.
-
-- **`cata lab ops -- trust init-ca` and `trust init-intermediate` are
-  gone**, replaced by the two `cata secrets` commands above. `trust setup`,
-  `browser`, `teardown` and `export` are unchanged. A CA minted by the old
-  script keeps working; nothing rereads it. The new one is P-256 rather than
-  RSA-4096, because that is what rcgen generates and what the rest of the
-  CLI's PKI already uses; `secrets generate --force` rotates if you would
-  rather have the new one.
-
-- **`nix run .#e2e` no longer mints an age key or rewrites `.sops.yaml`.**
-  It used to merge a throwaway rule into the repo's own file and restore it
-  on exit, which never worked in CI (there is no file to merge into) and
-  edited a developer's real `.sops.yaml` when run by hand. The runner now
-  loads the lab's `envFile` and nothing else.
-
 ### Changed
+
+- **A cluster offers promises, not units.** `lab.clusters.<c>.provides` was
+  a list of unit names and is now `<unit>/<provide>`. netbird is the case
+  that forced it: it promises `MESH_NETWORK`, which is the mesh and spans
+  clusters, and `MESH_ADMIN`, which is a reference to the Secret holding the
+  token that administers it and can never mean anything anywhere else.
+  Offering the unit offered both, and `link` was right to refuse.
+
+  The refusal also moved to where the line is written. `floe.isUncrossable`
+  is one predicate in floe-core now, used by `link` when it is handed a
+  scope and by the lab when it assembles one — so an un-offerable promise is
+  refused at the offer, in a lab with one cluster, instead of at whichever
+  sibling first resolved against it.
+
+- **The token crosses as a value, not as configuration.** `MESH_ADMIN` is
+  where netbird put the personal access token; `netbird-operator` resolves
+  it for free beside the control plane and takes `tokenSecret` as a lab
+  input everywhere else, while the token itself travels through
+  `lab.secrets.{publish,subscribe}` as every value does. Two mechanisms, and
+  the split is the rule that no floe carries secret material: a signature
+  carries an address, a subscription carries content.
+
+  The floe refuses both answers at once and neither, rather than picking:
+  naming the Secret beside the control plane is a second place to be wrong,
+  and naming it nowhere in a second cluster is an operator that never
+  starts.
+
+- **The lab is a scope, and provides into it.** A cluster's link is given
+  the lab's provides plus every other cluster's offered ones, resolved
+  nearer-first: a unit of the cluster answers a hole if it can, and the
+  scope is consulted only if none does. Cross-cluster resolution shipped as
+  flat threading where an offered provide _competed_ with a cluster's own,
+  so exporting a gateway from `mgmt` refused every cluster that had one.
+
+  The other direction is new. `lab.provides` takes floe instances that
+  install nothing — there is no cluster for them to render into — and exist
+  to answer a signature. `floes/lab/zone.nix` is the first: `lab.dns.*`
+  stays the surface an environment writes, the lab builds one `lab-zone` out
+  of the merged result, and `lab-dns`, `external-dns` and `gateway` require
+  `DNS_ZONE` instead of taking a zone, a server and a port as hand-passed
+  inputs.
+
+  That was six arguments across three floes with nothing checking they
+  agreed, and they did not: `every-floe` pointed external-dns at
+  `--rfc2136-port=53` while the lab's Knot listened on 5354. It renders and
+  never runs, so nothing had ever noticed. Every other rendered byte is
+  unchanged — the digest diff for `homelab.dns` is `metadata.json` alone.
+
+  Two properties hold by construction rather than by a rule: the lab's own
+  provides are linked with no scope, so they cannot depend on a cluster (RFC
+  0005 §6.2's stratification); and a cluster's own offers are excluded from
+  its own scope, which is what breaks the evaluation cycle a cluster reading
+  its own link result would form.
+
+- **`X509_WEBHOOK` and two thirds of `X509_ISSUANCE` are link-local.** They
+  were missed when locality was classified per field. A webhook serving
+  admission for CRDs installed _here_ is the clearest thing that cannot
+  cross a cluster boundary, and an `issuerRef` names a ClusterIssuer object
+  that exists in one cluster — a Certificate elsewhere naming it stays
+  pending forever. `publicIssuer` stays portable, because whether a chain is
+  publicly trusted is true wherever it is asked.
+
+  The consequence is that `cert-manager` cannot be offered to another
+  cluster at all: `X509_WEBHOOK` is now entirely local, and `link` refuses
+  such a signature as a scope entry up front rather than at whichever field
+  a consumer touched first. That is the right answer — its CRDs are not
+  installed there and its webhook does not run there.
+
+- **`k8sName` is out of floe-core.** It lived in the type prelude and was
+  the one thing making the header's "contains no Kubernetes" false; RFC 0001
+  even listed it in the prelude two paragraphs after making the claim. It is
+  in `lib/floe-catallaxy/prelude.nix` now, and the RFC says that a
+  distribution extends the prelude — which was always true and never written
+  down.
+
+- **`homelab.mesh`'s reason is the real one.** netbird's operator needs a
+  personal access token, minting one needs an identity netbird will accept,
+  and kanidm 1.6.4 cannot issue this platform one without a human: its token
+  endpoint supports `authorization_code`, `client_credentials`,
+  `refresh_token` and `device_code`, and not the `token-exchange` grant the
+  parked floe used. `client_credentials` is the only non-interactive one
+  left and it needs a _confidential_ client, while netbird's must be public
+  so the dashboard can use PKCE — one audience, two incompatible
+  requirements.
+
+  Verified working up to that point on a live cluster: the service account
+  reconciles, kaniop mints and rotates its API token, and the token step
+  reads it and reaches the endpoint.
+
+- **Locality is a field type, not a flag on the signature.** Cross-cluster
+  resolution shipped with `mkSig { crossCluster = true; }`, which was wrong
+  three ways: it named a Kubernetes concept in a layer whose premise is that
+  it has none, it sat beside `fields` as a second kind of thing in what is
+  otherwise a record type, and it measured a per-field property at signature
+  granularity. Every signature in the distribution is a mix, so the claim
+  was false in both directions — `MESH_NETWORK` was marked as travelling
+  while carrying `managementInternalUrl`, and `GIT_REPOSITORY` had been
+  carrying the distinction in prose ("only one of them resolves in both
+  places") for want of a type to put it in.
+
+  `T.local` is the sibling of `T.deferred` on a different axis: `deferred`
+  says _when_ a value is usable, this says _where_. Inside its own link it
+  is transparent; a provide arriving from another link has its local fields
+  replaced by a throw naming the field and its origin. Reading one is the
+  error and not reading it is fine, which is the granularity a flag cannot
+  reach — `OIDC_PROVIDER` now lets a floe in another cluster validate a
+  token against the issuer while refusing to let it render a client there,
+  and both halves are true at once.
+
+  The refusal is derived rather than declared: a signature whose fields are
+  _all_ local promises nothing readable elsewhere, so `link` refuses it as
+  an external outright. `TRUST_BUNDLE`, `GATEWAY_API`, `STORAGE_CLASS`,
+  `SECRET_GENERATION` and the three operator signatures fall out that way
+  without anyone setting a flag — and one that gains a routed address starts
+  crossing without anyone remembering to.
+
+- **RFC 0005 says what the tree does.** Its §1 opened "A lab is a floe. So
+  is a cluster", and `modules/lab/types.nix` opens "A lab is a NixOS module,
+  not a floe". The implementation's argument wins and the RFC is amended to
+  it: containment is `environment → lab module → cluster → component floes`,
+  and only the innermost depth is the floe mechanism. §1.1 gives the reason
+  — you want hiding and exactly-one resolution _between_ components and
+  merge-everything _within_ a lab, and those are different mechanisms — and
+  §2.1, §3.1 and §3.2 name what it costs: an appliance is an option surface
+  rather than a signature, a link is per-cluster with no outer scope, and
+  configuration does not cross between clusters even though secrets do. The
+  examples in §1–§4 are now the shipped tree rather than a sketch.
+
+  `staging/` is gone. Nothing imported it, and its README listed as "still
+  missing" four things that have shipped since. `nix/devshell.nix`
+  advertised `nix build .#staging-cluster-manifests`, an output the flake
+  does not have.
+
+- **The netbird floe is split into files you can read one at a time.**
+  `default.nix` was 3264 lines and `options.nix` 1194, the only two files in
+  the tree past the 1000-line rule. `default.nix` is now 544 lines and
+  `options.nix` 976, with the floe spread across sixteen files that each
+  answer one question: `management.nix`, `signal.nix`, `relay.nix`,
+  `routes.nix` and `dashboard.nix` build the control plane; `bootstrap.nix`,
+  `routing.nix`, `admin-reconciler.nix` and `agent.nix` each own their
+  bundles; `ops.nix`, `ops-login.nix` and `ops-check-config.nix` hold the
+  host-side shell; `assertions.nix`, `exports.nix`, `lib.nix` and
+  `names.nix` carry the rest.
+
+  Nothing it renders changed. Every step was checked against
+  `manifest-digest-mesh.local` and `manifest-digest-every-floe`, which hash
+  every rendered file, and the fixtures were never refreshed.
+
+  Two things fell out of the move. The four HTTPRoutes and two Certificates
+  now go through `mkHttpRoute`, `mkGatewayParent` and `mkCertificate` in
+  `lib/k8s-helpers.nix` rather than being written out six times, and the
+  `peers` and `routes` ops commands, which differed only in an API path,
+  collapse onto one builder.
+
+  `assertions` stayed a builder rather than becoming a module: it is a
+  merged list, so contributing it from a second module reorders it, and
+  `metadata.json` records the order.
+
+- **`mkFloe` and `mkLabFloe` are gone. A floe is an ordinary NixOS module.**
+  Everything that made a floe a floe already lived in a shared options
+  module; the constructors had shrunk to forwarding three arguments and
+  re-applying module arguments the module system had already supplied.
+
+  A floe now imports `floeOptions` (or `labFloeOptions`) and is otherwise
+  plain module syntax. This is a breaking change for out-of-tree floes.
+  `catallaxy.lib.floe` exports
+  `{ floeOptions, labFloeOptions, evalFloe, gatewayOptions, refs }`.
+
+  To migrate, per floe:
+  1. `mkFloe` becomes `floeOptions` where you inherit it
+  2. drop the `}@__floeModuleArgs` capture and the trailing
+     `}) __floeModuleArgs`, and add to the file's formals whatever the
+     `module` body named and the file did not
+  3. bind `cfg = config.floes.<name>;` in the `let`
+  4. `name`, `version` and `drift` move into a `floeOptions { ... }` entry
+     in `imports`, beside whatever `imports` already held
+  5. `exports = { ... }` becomes `options.floes.<name>.exports = { ... }`
+  6. `module = args: BODY` becomes `config = lib.mkIf cfg.enable BODY`
+
+  ```nix
+  { config, lib, ... }:
+  let
+    inherit (catallaxy.lib.floe) floeOptions;
+    cfg = config.floes.hello;
+  in
+  {
+    imports = [
+      (floeOptions {
+        name = "hello";
+        version = "1.0.0";
+      })
+      ./options.nix
+    ];
+
+    options.floes.hello.exports.url = lib.mkOption { type = lib.types.str; };
+
+    config = lib.mkIf cfg.enable { };
+  }
+  ```
+
+  `exports` is no longer a single submodule-typed option built from an
+  `exports` argument. A floe declares the fields it offers as ordinary
+  nested options, so a type error names the field. Anything reading a floe's
+  whole `exports` should write `floe.exports or { }`, since a floe that
+  offers nothing no longer has the attribute.
+
+  One thing this fixes rather than moves: `mkFloe` required a floe to name
+  `lab` in its formals, and a floe that did not silently got image
+  retargeting that did nothing. `floeOptions` reads `lab` itself, so
+  retargeting no longer depends on what the floe file happens to name.
+
+  The `cata floe new` scaffold also wrote a flat `bundles.<name>`, which has
+  been an eval error since `declaredBy` became required. It now writes
+  `floes.<name>.bundles.<name>`.
+
+- **`cata lab up` converges cluster shape, or says exactly why it cannot.**
+  It used to compare two of roughly twelve declared fields — worker count
+  and the k3s image tag — so changing a port, a volume, an apiserver arg, a
+  subnet, a CNI flag or the control-plane count produced a green run and an
+  unchanged cluster, while the executor and the docs both promised
+  idempotent convergence.
+
+  Running `lab up` twice with an unchanged declaration is still a no-op.
+  What changed is what happens when the declaration moved:
+  - **Adding workers is done in place.** k3d grows a cluster without
+    disturbing what is on the other nodes. Removing them is not, because k3d
+    deletes a node without draining it.
+  - **Everything else needs the cluster rebuilt**, since it is baked into
+    the node containers at creation. `lab up` reports which options drifted
+    and stops; `lab up --recreate <cluster>` destroys and rebuilds it.
+    Naming the cluster is deliberate — everything on it is lost.
+
+  Most of those fields cannot be read back off a live k3d cluster without
+  parsing k3d's own internals, so the shape a cluster was built from is
+  recorded when it is built and compared against the declaration on the next
+  run. A cluster predating the record is adopted when the fields a running
+  cluster _can_ answer for agree, and says plainly that it is asserting the
+  rest rather than verifying them.
+
+- **Host service containers are recreated when they no longer match.** The
+  proxy, DNS and registry containers were compared only against the content
+  of their config files, never against their image or published ports, so
+  bumping an image tag in Nix printed "already running" in green and kept
+  serving the old image. They are recreated rather than refused, since they
+  are containers on the operator's workstation rather than cluster state,
+  and the drifted fields are printed so the recreation is visible.
+
+- **`cata lab destroy` now exits non-zero when it could not confirm a
+  release.** A cluster that was in kubeconfig but did not answer was read as
+  "assuming already gone" and recorded no failure, so teardown exited 0
+  while the LoadBalancer Services and PersistentVolumes that step exists to
+  delete were left paid-for. It is now a recorded failure, like the case
+  where the cluster is missing from kubeconfig already was. CI that treats
+  `lab destroy` as infallible will start seeing that failure, which is the
+  point: the resources were leaking before, silently.
+
+- **A kube context that does not resolve is an error, not the operator's
+  current cluster.** kubectl reads an empty `--context` as unset and falls
+  back to `current-context`, so a lab missing a `runtimeContexts` entry ran
+  against whatever cluster you were pointed at. `lab status` reported such a
+  lab as reachable. Every path that builds a `--context` is now checked.
+
+- **`cata lab diff` refuses a GitOps lab** unless `--force`, the way
+  `lab apply` already did, instead of failing with a message about the
+  manifest tree being rendered by an older catallaxy.
+
+- **A generated secret with `length: 0` is refused** rather than minting an
+  empty credential, and a length above 4096 is refused rather than
+  attempting the allocation.
 
 - **Floe image options are replaced by `images.<label>`.** Gone, in favour
   of a label on the floe: `floes.harbor.bootstrapImage`,
@@ -2094,6 +1324,733 @@ The format is based on
   eval naming the name. The registry stays the source of truth, without the
   failure mode a hand-maintained registry usually carries, which is a test
   that silently never runs.
+
+### Fixed
+
+- **kanidm is reachable through the gateway, for the first time.** Its route
+  existed but every request through it failed the backend handshake: traefik
+  validated the certificate against the _pod IP_
+  (`x509: cannot validate certificate for 10.244.0.x because it doesn't contain any IP SANs`)
+  because no `BackendTLSPolicy` told it which hostname to check.
+
+  `kaniop.rs/Kanidm` has a `spec.gateway.backendTlsPolicy` field that
+  accepts exactly such a policy and produces nothing — the CRD declares it,
+  the value validates, and no object is ever created. The floe renders the
+  policy itself now, where its absence is visible. Confirmed live:
+  `https://idm.<zone>/status` answers 200 where it answered 500.
+
+  The previous diagnosis recorded against `homelab.mesh` — that Gateway
+  API's experimental CRD channel was missing — was wrong. That channel is
+  what `gateway-api-crds` installs.
+
+- **One hostname across several backends was probed at whichever rule came
+  first.** netbird fans `netbird.<zone>` out to five backends by path, and
+  its first rule is `/api` — where a bare GET is a 404, which is also what a
+  gateway with _no_ route answers. `lab verify` could not tell the two apart
+  and reported a working mesh as broken. `ExposedHost::probe_path` prefers
+  the root where the route has one, and a host that genuinely serves only a
+  prefix still says so by having no `/` rule.
+
+- **Every image a lab pulls comes from a registry its cache mirrors,
+  checked.** `lab.registry.upstreams` is both the zot sync sources and the
+  `mirrors:` entries in the `registries.yaml` every node mounts, and its own
+  docstring says "add one when a floe pulls from an upstream not listed
+  here" — which nothing enforced. An image from a registry with no entry is
+  not merely uncached: containerd goes to the public registry directly and
+  has to resolve the name itself, which a node cannot do once the lab runs
+  its own DNS, so the pull fails on a name that resolves perfectly well from
+  the host. `<lab>-images-are-cacheable` reads `images.txt` — the same list
+  `warm-cache` iterates, so it includes what was scraped out of charts no
+  floe declared — and refuses any registry the lab does not mirror. Every
+  lab passes today; it exists for the floe that adds a registry and not the
+  entry.
+
+- **A lab can say it is mid-migration, and the check knows the difference.**
+  `lab.unstable` is a string or null: why this lab is not expected to stand
+  up, or nothing. It joins `lab.out.selfContained.reasons`, so the e2e
+  runner skips the lab and prints it, while every check that does not need a
+  cluster — render, lint, digest, plan snapshot — still applies. A string
+  rather than a bool, because "unstable" with no reason is a note to nobody.
+
+  `nix/checks/self-contained.nix` pins it, and distinguishes the two kinds
+  of ineligible: a lab held out because its secrets live in sops works and
+  is not runnable _here_; a lab held out because it is mid-migration is one
+  nobody claims works at all. It also refuses a lab that is marked unstable
+  and eligible anyway, which is what a marker wired to nothing looks like.
+
+- **`external-dns` has a lab.** `homelab.dns` is `homelab.local` plus a DNS
+  controller publishing into the lab's own Knot:
+  `up in 430s, verified, idempotent, destroyed clean`. Until now the floe
+  was rendered only by `every-floe`, which never runs — and rendered there
+  with a _generated_ TSIG key, which cannot be the one Knot was configured
+  with, so the controller would have been refused every update it ever made.
+
+  The key is held twice, because a lab has no way to project a value out of
+  its own configuration: `lab.secrets.managed` reads from a store, and this
+  one is a literal in the lab. `lab-tsig-key-agrees` compares the env file
+  against `lab.dns.tsigSecret` so the pair that would otherwise fail with a
+  bare NOTAUTH — which external-dns logs below its default level — fails at
+  `nix flake check` instead. The fix is a way to project a value the lab
+  holds; that is a design question and the wart is checked rather than
+  hidden until it is answered.
+
+- **A lab with two clusters, and it stands up.** `examples/labs/homelab` is
+  `core` — identity, source control, a registry, trust, routing, backups —
+  and `obs` — metrics, logs, traces and a dashboard over them. It is the
+  first runnable lab with more than one cluster and the first with an
+  identity provider in it, so one docker network in front of two gateways,
+  two kubeconfigs, a plan interleaving both clusters' waves, and kanidm
+  minting clients that forgejo and harbor each render for themselves are all
+  exercised for real rather than only rendered.
+  `up in 307s, verified, idempotent, destroyed clean`.
+
+  What it deliberately does not do is written in the lab file, with the
+  reason for each: no cross-cluster telemetry and no OIDC on `obs`'s
+  Grafana, because a link is per-cluster (RFC 0005 §3.1) and configuration
+  does not cross between clusters even though secrets do; no Argo, because
+  delivery is a lab-wide decision and a two-cluster gitops lab is a shape
+  nobody has run.
+
+- **Two lab-scope checks RFC 0005 §5 named and nothing had.**
+  `lab-cluster-ranges` refuses two clusters on one docker network whose pod
+  or service ranges overlap, or either overlapping the network itself.
+  `lab-routed-hosts-are-unique` refuses two clusters routing one hostname —
+  the ingress emits a `use_backend` per exposed host and the first match
+  wins, so the second cluster's route is unreachable and nothing reports it.
+  Neither could fire while every runnable lab had one cluster. The first one
+  written immediately found `secret-sharing`'s two clusters both taking the
+  default pod and service ranges.
+
+- **Three floes were wrong in ways only applying them could show, and the
+  two lints that should have caught them were silent.** `homelab.local` is
+  the first runnable lab with kanidm and harbor in it, and it found all five
+  on its first run.
+
+  `kanidm` rendered `spec.version` on its `Kanidm` CR. kaniop v1beta1 has no
+  such field; under server-side apply the whole object is rejected with
+  `.spec.version: field not declared in schema`, so the floe installed
+  nothing, thirty times over three minutes. It sets `spec.image` now, which
+  is the field the CRD has — and because this floe picks the image rather
+  than an operator picking it from a version string, `imagesComplete` is
+  true and the image is declared, so the cache warms it.
+
+  `mkOAuth2Client` set `spec.secretName` on every `KanidmOAuth2Client`,
+  which is not a field either, for the same reason and with the same result.
+  The Secret's name is the operator's convention —
+  `<client>-kanidm-oauth2-credentials`, verified against kaniop 0.11.1 by
+  applying a client and reading back what appeared — and is now written in
+  one place.
+
+  `harbor` targeted three of its six generated Secrets at names the chart
+  also renders. external-secrets defaults to `creationPolicy: Owner`, which
+  replaces a Secret's contents rather than merging, so `POSTGRESQL_PASSWORD`
+  and `REGISTRY_CREDENTIAL_PASSWORD` were deleted after an apply that
+  reported success — and harbor-core crash-looped on
+  `password authentication failed for user "postgres"` with nothing upstream
+  of the pod logs saying why.
+
+  `crd-schema` walked every field of a custom resource and silently skipped
+  any the CRD did not declare, which is the one error class it most
+  obviously exists for. It reports them now, naming what the schema does
+  have, and knows about `x-kubernetes-preserve-unknown-fields` and the
+  fields the API server owns so it says nothing where there is nothing to
+  say. `secret-ownership` is new and refuses an ExternalSecret whose target
+  — explicit or defaulted from its own name — is a Secret something else in
+  the same manifest set renders.
+
+- **A second cluster running the same floe was refused outright.** Ops
+  commands merge across clusters because `<lab>-ops <category> <name>` has
+  no room for a cluster, so two clusters with a gateway each collided on
+  `gateway-controller-listeners` and the lab failed to evaluate. The cluster
+  goes in the name now — `core-gateway-controller-listeners` — for every
+  lab, not only the ones with two: a name that changes when a cluster is
+  added is a name an operator's notes stop matching.
+
+- **Two floes had no isolation suite, and nothing could say so.**
+  `nix/checks/lib-tests.nix` discovers `floes/tests/*.nix` rather than
+  listing them, which catches a suite nothing runs and misses a floe nothing
+  tests. `lab-dns` and `k3d-cluster` had sat unchecked since they were
+  written. Both now have one, and the check asserts the two sets are equal
+  in both directions. `support.nix` flattens the floe set the way
+  `lib/lab.nix` does, so a provisioner floe can be named by a suite at all.
+
+- **A fan-in hole no longer orders its collector last.** `link` returned
+  `wiring` with exactly-one and fan-in holes flattened together, and the
+  elaborator derived install order from both — so a gateway was ordered
+  after the routes that attach to it, which is a cycle wherever the routes
+  also depend on the gateway. They always do. The two kinds stay apart now,
+  and only exactly-one holes carry ordering.
+
+- **A hand-set OIDC `clientSecretRef` reads the key kanidm actually
+  writes.** `floes.{grafana,zot,argocd,forgejo}.oidc.clientSecretRef.key`
+  defaulted to `client-secret`. Nothing in the tree writes that key — kanidm
+  materialises the client secret under `CLIENT_SECRET`, which is what harbor
+  already defaulted to — so a lab that named a Secret without naming a key
+  read an absent key and got an empty client secret. All four now default to
+  `CLIENT_SECRET`. A lab that hand-made a Secret keyed `client-secret` and
+  relied on the old default has to say so explicitly.
+
+- **No credential is generated while rendering a manifest.** Grafana's admin
+  password and four of Harbor's internal secrets (`CSRF_KEY`, the core
+  secret, `JOBSERVICE_SECRET`, `REGISTRY_HTTP_SECRET`) were left to their
+  charts, which mint them with Helm's `randAlphaNum` when nothing is
+  supplied. Rendering happens at build time here, so each value landed in
+  the rendered manifest, in the digest that pins it and in the Nix store —
+  and changed on every re-render, so re-applying a lab silently rotated it.
+  A rotating `REGISTRY_HTTP_SECRET` invalidates uploads in flight; a
+  rotating Grafana admin password locks the operator out of the account they
+  were handed.
+
+  All five are now minted in the cluster through `secrets.generate` and
+  reached with the charts' own `existingSecret` settings, the way Harbor's
+  admin password and `secretKey` already were.
+  `checks.<lab>-renders-no-secret-material` fails any lab whose rendered
+  manifests carry a value shaped like a generated one, so this cannot come
+  back quietly.
+
+  `secrets.generate` gained `extraData` for the case that forced it: Grafana
+  reads `admin-user` and `admin-password` from one Secret and will not start
+  without both, and a username is not a secret, so there is nothing to
+  generate for it.
+
+  **Enabling `floes.grafana` now requires `floes.external-secrets`**, which
+  reconciles the generator — the same requirement Harbor already had. Set
+  `floes.grafana.adminCredentialsSecret` to keep using a Secret you manage
+  yourself, in which case nothing is minted.
+
+- **An export without a default is refused for every floe, not just the
+  listed ones.** `checks.every-floe-export-has-a-default` reads every floe's
+  exports with nothing enabled and names any floe that cannot answer. The
+  rule was documented as enforced, but the check behind it spot-checked
+  particular fields on five floes, so a new floe could ship an unreadable
+  export and break a lab that never enabled it.
+
+- **The BGP router container now carries its lab's name.** It defaulted to a
+  bare `catallaxy-router`, which no lab claimed: `lab list` could not say
+  whose a running one was, and `lab cleanup` could not remove it as part of
+  a lab. This does not make two BGP labs co-runnable — the router is
+  host-networked and binds BGP/179 either way — but a running one can now be
+  attributed. `lab up` refuses to start beside a surviving
+  `catallaxy-router` rather than leaving two FRR daemons contending for the
+  port, and names `cata lab cleanup --orphans`.
+
+- **The port-conflict refusal names the lab holding the port.** It named
+  only the container, and never said the conflict could be resolved by
+  removing the other lab. It now reads the owner off the container's label,
+  falls back to the name shape for containers created before labels, and
+  gives both remedies: clean the other lab up, or give this one its own
+  ports.
+
+- **The image cache reported "skipped" for two different things.** An image
+  the lab publishes itself needs no mirroring; an image whose registry has
+  no configured upstream is pulled from the public internet when the cluster
+  deploys. Both counted as "skipped" and neither was named. When such a
+  registry is unreachable the workload sits in ImagePullBackOff and surfaces
+  minutes later as a readyProbe timeout against the deployment, which points
+  at the wrong thing entirely. The unmirrored images are now listed, with
+  what it means and the option that fixes it.
+
+- **`lab up` refused to start a lab that uses port 80.** The preflight
+  tested a port by binding it, and read any bind failure as "something else
+  holds this". A port below 1024 refuses a non-root bind with
+  `PermissionDenied` whether or not anything holds it, and docker publishes
+  those ports as root regardless — so the check reported a conflict that did
+  not exist and refused to run a lab that would have worked. Only
+  `AddrInUse` is a conflict now; anything else is "cannot tell", which is
+  not a reason to stop.
+
+- **A bundle declared in a floe's imported submodule carried no provenance
+  stamp.** `mkFloe` stamped only its own module body, so `forgejo-bootstrap`
+  and `kanidm-admin-heal` belonged to no floe as far as anything reading the
+  stamp was concerned. Both floes claim `imagesComplete`, and
+  `cluster.out.imageCompleteness` finds a floe's rendered bundles by that
+  stamp, so `image-sets-are-complete` had never checked either one. Imports
+  are now stamped the same way the module body is. Both bundles turn out to
+  have been honest; they were simply never asked.
+
+- **A CronJob's init containers were lockable but unlintable.** The scrape
+  that feeds `cata images lock` read
+  `spec.jobTemplate.spec.template.spec.initContainers` and the `image-pin`
+  lint did not, so the lock rewrote a digest into images `requireDigest`
+  could never have flagged. homelab and mesh both render a CronJob through
+  that path. A check now compares the two lists across Nix and Rust, which
+  is what a comment used to claim.
+
+- **OpenBao's init Job could exit successfully having done nothing.** It
+  guarded on whether the vault was initialised, which is a different
+  question from whether the Job had finished. A run interrupted after
+  `operator init` but before it wrote the token came back, saw an
+  initialised vault and succeeded, leaving no KV mount and no token; the
+  bundle then waited for a Secret that was never coming. It guards on the
+  token Secret, and says what to do with the recovery keys when a vault is
+  initialised without one.
+
+- **The init Job is not emitted for a hand-unsealed vault.** A Shamir vault
+  is sealed the instant it is initialised, so mounting KV, writing the
+  policy and minting a token all fail against it. Running anyway consumed
+  the one root token nobody kept. `seal = { }` means you initialise it too.
+
+- **A digest-pinned image asked the registry for the wrong repository.**
+  `parse_image_ref` split on `@` and nothing else, so
+  `nginx:1.27@sha256:...` left the tag stuck to the repository and produced
+  `library/nginx:1.27`. Nothing rendered a reference in that shape until
+  digest pinning arrived, so it had never been reachable.
+
+  The same reference also reported uncached on every `cata images prefetch`,
+  because a tag list never contains a digest. The cache asks about the tag
+  the reference also carries.
+
+- **A floe writing `bundles.<n> = mkIf cond { … }` got the bundle stamped
+  into existence** even when the condition was false, carrying nothing but
+  its floe name. The provenance walk inherited a condition on the fragment
+  but not one on the bundle itself.
+
+- **`floes.openbao.seal = { }` claimed the vault was unsealed.** That value
+  is the documented escape hatch for unsealing by hand, and it is not null,
+  so the nullness test that decided "is this auto-unsealed" answered yes.
+  The floe reported `sealed = false` and waited for a vault nobody was going
+  to unseal.
+
+- **`floes.openbao.ui = false` still served the UI.** It reached the chart's
+  UI Service only; the server's own config hardcoded `ui = true`.
+
+- **A seal block lost the type of every value in it.** They went through
+  `toString` inside quotes, so an int arrived as a string, `true` arrived as
+  `"1"`, `false` as `""`, and a nested block stringified to nothing usable.
+  Values are rendered by `lib/util/hcl.nix` now, which also escapes quotes
+  and backslashes.
+
+- **OpenBao's ready probe asked a StatefulSet for a condition it does not
+  have.** `Available` is a Deployment condition. It worked only because the
+  CLI silently rewrites that case into a `readyReplicas` jsonpath, and the
+  renderer behind `mkWaitInitContainer` does not, so the same shape in an
+  init container hangs until timeout. The probe says what it means now.
+
+- **A custom lint check walking the manifest tree inspected nothing.** A
+  wave directory is a symlink into the store and `find` does not descend
+  into one without `-L`, so `find "$MANIFEST_DIR" -name '*.yaml'` matched no
+  files and the check passed by having nothing to look at. The homelab
+  example's `no-latest-tag` had this, and had never inspected a manifest.
+
+- **`floe:` anchors work.** `after = [ "floe:cert-manager" ]` orders against
+  every bundle that floe declared. Provenance is stamped where `mkFloe`
+  merges a floe's module output, so a floe author never sets it and cannot
+  forget to; a bundle a lab declares directly carries none.
+
+- **`kind:` anchors work.** They were implemented in the resolver and inert,
+  because the graph builder passed `null` for the field they read. A bundle
+  now carries the kinds its `resources` declare, so
+  `after = [ "kind:CustomResourceDefinition" ]` orders against every CRD
+  bundle without naming each one.
+
+  The field is a list, not the scalar it started as: a bundle holds
+  resources of many kinds, so the scalar could only ever have described a
+  bundle holding one thing. A kind inside a `helmCharts` or `yamls` entry is
+  not eval-visible, so a chart-only bundle answers no `kind:` anchor.
+
+- **kubectl was spawned two different ways**, and the difference was whether
+  the subprocess got the lab's merged CA bundle. Which callers had it was
+  historical rather than decided, and it had produced two readers,
+  `resource_json` and `resource_json_trusted`, that differed in nothing
+  else. Every kubectl goes through `io::kubectl::command()`; the bundle is a
+  union of the system roots and the lab CA, so handing it over is never a
+  narrowing. There is one reader again, and a `kubectl-is-spawned-one-way`
+  check.
+
+- **The `resource-types` check would have passed with every CRD schema
+  disconnected.** It exercised a core `apps/v1` Deployment only, and the CRD
+  schemas load through a different path. It now checks that a well-formed
+  `ExternalSecret` and `Certificate` evaluate and that a wrongly typed field
+  in each does not. Removing two schemas from `generated/index.nix` fails
+  it, which is how that was confirmed.
+
+- **`cata pki init` minted a CA that could not sign what the lab's own CA
+  could.** It repeated rcgen's parameters inline instead of calling the
+  function that mints the lab CA, and the two copies had drifted: this one
+  left out `DigitalSignature`. It calls that function now, and a test states
+  the key usages so a third copy cannot appear quietly.
+
+- **A bundle whose only workload was a Job was not waited on.** The fallback
+  recognised Deployments, StatefulSets and DaemonSets, so the next wave
+  started while the Job was still running. A Job is waited on for
+  `condition=complete`, since it is never Available.
+
+- **Waiting on a Job selected every generation of it.** `mkIdempotentJob`
+  labelled each Job with its hash and nothing selected on it, so on the
+  server-side-apply path, which prunes nothing, one failed Job from an
+  earlier render made the wait fail forever. The helper exposes a `selector`
+  that pins the generation. Netbird renders one routing Job per network and
+  a label selector cannot say "any of these hashes", so those Jobs share a
+  generation label derived from the routing configuration.
+
+- **The certificate expiry check worked only on Linux.** It asked `openssl`
+  for the date and then GNU `date -d` to turn it into a timestamp, which is
+  not a flag macOS `date` has. It returned nothing there, and the check
+  reads "nothing" as "no finding" — so it silently passed on every mac. It
+  parses the certificate with `x509-parser`, already a dependency, and
+  spawns no subprocess at all. `None` now means "this is not a certificate",
+  never "I could not tell".
+
+- **The Colima VM's forwarding settings failed silently.** Four ssh calls
+  discarded their results inside a function returning `()`, so a lab could
+  come up fully and not carry traffic. Failures are named, along with what
+  they mean. The two `iptables -C` probes stay ignored, because a probe
+  failing is how it reports the rule is absent.
+
+- **Malformed kubectl JSON read as success.** `copy_external_names` parsed
+  with `unwrap_or_default()`, and an empty document has no items, so a parse
+  failure was indistinguishable from nothing to copy.
+
+- **Lint reports listed clusters in a different order each run**, because
+  they were grouped through a `HashMap`.
+
+- **`cata lab up` asked docker twice per port.** By the second call every
+  publisher was already known to be the lab's own.
+
+- **`io/fs.rs` removed a temp file inside the closure that formats an
+  error.** It worked, and it would have stopped working the day someone
+  swapped `with_context` for `context`.
+
+- **Reformatting a script no longer re-runs a bootstrap Job.** The hash that
+  names an idempotent Job covered `contentInputs` and the entire pod spec,
+  so an image tag bump or a whitespace change re-ran the payload against a
+  live API. That is why `shfmt` was not in `shell-scripts-are-clean`.
+
+  The hash covers what you declared, not how you implemented it. Two netbird
+  call sites also listed `script` and `image` as content by hand, which put
+  the implementation back in; they no longer do.
+
+  Dropping the implementation from the hash means a payload could change
+  what it _does_ without anything noticing, so `behaviourVersion` is the
+  lever for that case: bump it and the Job runs again. Because it can be
+  forgotten, the implementation's own hash is recorded in a
+  `catallaxy.io/implementation-hash` annotation. It triggers nothing; it is
+  there so a reader or a check can tell a reformat from a forgotten bump.
+
+  `shfmt` now runs over the scripts, and the proof is that the Job names did
+  not move across the reformat.
+
+- **A store shared by two clusters must be reachable from both.** The
+  external-secrets work landed with `homelab` pointing its
+  `ClusterSecretStore` at an in-cluster DNS name, which resolves only inside
+  the cluster running OpenBao, so `obs` would have waited forever. The floe
+  exports an `externalAddress`, and an assertion refuses an in-cluster
+  address once a second cluster uses the store.
+
+- **`cata lab destroy` no longer reports success while cloud resources
+  leak.** It printed its non-fatal failure list and returned Ok, which the
+  binary maps to exit 0, so `cata lab destroy && ...` proceeded with a live
+  cluster still billing. The summary also sat after the step loop, so a hard
+  failure or `--up-to` skipped it: a destroy that leaked across six clusters
+  and then failed on the seventh printed none of the six.
+
+- **`lab.destroy.rescueHints` is printed.** Documented as printed verbatim
+  by `cata lab destroy`, parsed into `LabSpec`, and read by nothing.
+
+- **A CAPI pivot no longer destroys the bootstrap cluster when the state
+  migration never ran.** `.status()` returns `Err` for a missing binary and
+  the guard was `if let Ok(s) = status && !s.success()`, so an absent
+  `clusterctl` was discarded and control fell through to
+  `deprovision_cluster`. CAPI state never moved and the only management
+  plane for the workload cluster was deleted. The unknown-provisioner arm
+  warned and destroyed too.
+
+- **Teardown distinguishes "gone" from "cannot tell".**
+  `wait-for-cluster-gone` matched nine English kubectl substrings and read
+  an unreachable apiserver as proof of deletion, so a network blip or an
+  expired token deleted the kubeconfig context and reported success.
+  `release-cluster-cloud-resources` counted a failed `kubectl get` as zero
+  remaining and printed "Cloud resources released" having verified nothing.
+
+- **`strip_finalizers_in_terminating_namespaces` checks for terminating.**
+  The name promised a phase guard the body did not have. It patched every CR
+  in the given namespaces, Crossplane managed resources included, whose
+  controllers then never ran their deprovision path, orphaning the cloud
+  resource while the CLI printed "stripped finalizers" as progress.
+
+- **`secrets generate --force` keeps hand-entered values.** It replaced
+  every operator-supplied value with the literal
+  `PLACEHOLDER_USE_SECRETS_EDIT`, unrecoverably, and `validate_store` only
+  checked missing and blank, so that string deployed into clusters as a real
+  Secret value. `--force` now regenerates only generator-backed keys, and
+  the placeholder is rejected before it can reach a cluster.
+
+- **`merge_kubeconfig` no longer risks the whole kubeconfig.** A plain
+  `fs::write` over `~/.kube/config` meant an interrupt destroyed every
+  cluster entry the user had. Writes go through a temp file and rename.
+  `HOME` defaulting to `/tmp` is gone from eight sites that silently
+  relocated lab state and credentials; it is validated once at startup.
+
+- **`images mirror` fails when a copy fails.** It printed "All images
+  mirrored" and exited 0, so a CI job seeding an air-gapped registry could
+  fail on half its images and report success.
+
+- **The k3d apiserver arguments and volumes Nix computes are emitted.**
+  `extraApiServerArgs` and `extraVolumes` were populated from
+  `cluster.apiserver.{oidc,pki}` and `cluster.security.auditLogging`,
+  carried into the CLI's typed config, and read by nothing, so enabling OIDC
+  produced a cluster with no OIDC and reported success. The new
+  `cli-parses-nothing-it-ignores` check fails when a field is parsed and
+  referenced nowhere; it also found `opsToolPath`, `selfContained` and
+  `provisioner.docker.waitTimeout`.
+
+- **Manifests are parsed as YAML rather than scanned as text.** The rollout
+  wait failed open four ways: the await-rollout opt-out was a substring
+  search over the whole document, documents were split on `"\n---"` which
+  also splits inside block scalars, name extraction required exactly
+  two-space indentation, and a missing namespace defaulted to `default`.
+  `wait_workloads_ready` also returned Ok unconditionally, so a Deployment
+  in CrashLoopBackOff produced a yellow line and a successful `lab up`.
+
+- **Failed commands say what failed.** `io::process` reported
+  `Command failed with status: exit status: 1` with no program, no args and
+  no stderr, and these are the workhorses for kapp, docker, k3d, talos and
+  hooks. Failed steps now carry their step number, kind and name.
+
+- **A lab-name typo lists the labs that exist.** It printed the raw nix
+  attribute path, then `nix eval failed (exit exit status: 1)`. A cluster
+  typo was already clean.
+
+- **The flake fragment names a lab, and cluster-scoped commands say so.**
+  `cluster`, `apply` and `pki` resolved the fragment as a cluster name, so
+  `cata --flake .#minimal.local cluster status` looked for a cluster called
+  `minimal.local` and failed. They now follow `diagnose`: read the lab from
+  the fragment, use its only cluster, or list the candidates.
+
+- **`lab verify --check declared` and `lab topology --format` are real
+  enums.** `declared` was advertised in the help and rejected by the parser,
+  and `--format` had `type Err = Infallible` with a catch-all, so
+  `--format jsno` printed a table and exited 0.
+
+- **`--flake` is global**, so it can follow the subcommand as `-v` already
+  could.
+
+- **`lab status` says when the docker daemon is unreachable** instead of
+  reporting every service stopped and every cluster not ready, which is
+  indistinguishable from a lab that was never started.
+
+- **The ingress private key is no longer world-readable.** `lab.pem` held
+  the key at 0644 while the same key in `lab.key` was correctly 0600. The
+  365-day leaf also never renewed, because the function returned early on
+  file existence; it is reissued within 30 days of expiry or after a CA
+  rotation.
+
+- **`cata diagnose` no longer renders an unreachable cluster as a healthy
+  one.** Its four collectors returned an empty vector when kubectl failed.
+  `wait_crossplane_healthy` waited five minutes in silence and timed out
+  without naming a provider, though it had just parsed which were unhealthy.
+
+- **`import_lab_ca` no longer leaves a cluster with no CA secret.** It
+  deleted the secret, then swallowed the create failure and returned Ok.
+
+- **A missing manifest directory is an error.** The subdirectory is chosen
+  by deploy strategy, so a mismatch turned the central deploy step into a
+  no-op that reported success.
+
+- **`lab list` says why a lab cannot be stood up here**, using the
+  self-containedness reasons Nix already computes, so `mesh.local` no longer
+  looks like an ordinary first choice.
+
+- **The straggler check uses the k3d cluster name from the spec**, as its
+  sibling already did, rather than rebuilding `k3d-{lab}-{cluster}-` by
+  hand, which matched nothing under any `contextPrefix` customization and
+  let destroy report clean with containers still running.
+
+- **`cata diagnose` prints floe health again, and reports on the cluster it
+  was asked about.** `print_component_health` read `config["components"]`, a
+  key `cliConfig` stopped emitting when components became floes, so the
+  lookup missed on every cluster and the section silently never appeared.
+  Separately, `diagnose` carried its own copy of the kube-context resolver
+  with the `runtimeContexts` clause dropped, so in a lab that pivots a
+  cluster it dialled whatever the provisioner-baked context still reached.
+
+- **`cata kubeconfig show` reports the context a cluster actually uses.** It
+  derived the name itself, handled only k3d, and ignored the `kubeContext`
+  the module system computes, so a Talos or Crossplane cluster was listed
+  under its bare cluster name and then reported "not reachable" whether or
+  not it was.
+
+- **The lab proxy routes a floe that names its hostname under `gateway`.**
+  `modules/lab/host/proxy.nix` built its HAProxy host map from each floe's
+  top-level `domain`, so `floes.prometheus` and `floes.otel-collector`,
+  which declare theirs at `gateway.domain`, were never given a backend. A
+  request to `prometheus-rw.<zone>` reached HAProxy's default backend and
+  came back 503 without ever leaving the host, which is what
+  `homelab.local`'s verify had been failing on. The map now takes
+  `gateway.domain` when it is set and the top-level `domain` otherwise.
+
+  `example-lab-routed-hosts-are-proxied` keeps it honest: for every example
+  lab it compares the hostnames with a public route inside a cluster against
+  the hostnames the proxy has a backend for, and fails naming any that are
+  routed but unreachable. Reverting the one-line fix makes it name
+  `prometheus-rw.homelab.test` on both homelab labs.
+
+- **`cata lab verify` probes a host where its route actually routes.** It
+  asked every public host for `/`. `prometheus-rw.<zone>` matches only
+  `PathPrefix: /api/v1/write`, so the probe asked for a path the gateway is
+  right to refuse, and `homelab.local` failed verify on every run.
+  `cluster.out.exposedHosts` now carries each route's path prefixes and the
+  check uses the first one. 405 joins 401 and 403 as an answer: a write-only
+  endpoint replies 405 to the GET this check makes, and only the workload
+  itself can.
+
+- **`publish-manifests` no longer needs the operator's git identity.** It
+  commits into the lab's own Forgejo, so it now identifies itself as
+  `catallaxy <catallaxy@invalid>` through `GIT_AUTHOR_*` and
+  `GIT_COMMITTER_*` rather than falling back to `git config`. On a fresh
+  runner there is none, and the step died with "Author identity unknown"
+  after the lab was already up. A machine-made commit should not depend on
+  who happens to be logged in.
+
+### Removed
+
+- **`old-floes/` is gone.** 454 files, two superseded floe implementations
+  and everything written against them. The shipped tree runs on RFC 0001 and
+  has for a while: nine example labs, 37 floes, and six of seven
+  e2e-eligible labs verified up-verified-idempotent-destroyed on this
+  branch. Nothing outside the directory imported it; the nine references
+  were all prose.
+
+  What was worth keeping is in `docs/prior-implementations.md` — the two
+  structural failures (a `length == 1` filter that silently dropped a
+  contested capability, and a `collectChannel` that returned an `mkMerge`
+  rather than a value), the `submoduleWith`/specialArgs trap that makes
+  `importApply` the only workable extension point, and what was carried
+  forward unchanged. The code is in git.
+
+  That file also carries what the deletion does _not_ resolve. At the time
+  of writing that was cloud provisioning and a set of step kinds with no
+  producer; both have moved since — RFC 0003's `resources` category is
+  built, `talos-cluster` and `doks` ship, and what remains orphaned is now
+  held by `nix/checks/step-kind-producers.nix` rather than by prose.
+
+- **`readyToken`, from 20 of the 21 signatures.** Declared everywhere and
+  read by nobody: every occurrence in the tree was a provider defining its
+  own. The ordering it was meant to express is derived instead, from
+  `upstreamOf` crossed with `backs`. Dead surface of the worst kind, because
+  it reads as meaningful and each new signature copied it.
+
+  The proof it ordered nothing is that `refresh-plans` and `refresh-digests`
+  produce **no diff at all** across ten labs — every wave, every step and
+  every rendered byte identical.
+
+- **The platform is being re-architected on the RFC-0001 floe interface, and
+  everything built on the two earlier ones is parked in `old-floes/`.**
+  Three floe implementations had accumulated side by side: the original
+  option-declaring one under `lib/floe/` + `modules/`, an ML-style mixin
+  spike (`interface`/`registry`/`fold`/`wiring`), and `lib/floe-core/`. Only
+  the third is being taken forward.
+
+  Parked, not deleted: `lib/floe/`, `modules/`, `floes/` (29 shipped floes
+  and their tests), `examples/`, `templates/`, `docs/book/`, `secrets/`, and
+  the parts of `lib/`, `nix/checks/`, `pkgs/` and `.github/workflows/` that
+  exist only to evaluate or test a lab. Paths mirror where each file came
+  from and `old-floes/README.md` records what each implementation got right
+  and where it fell down.
+
+  **`labs` and `labPackages` are gone from the flake, so `cata` has nothing
+  to evaluate.** That is the expected state until `staging/` grows into the
+  contract. The CLI is untouched and its contract is unchanged.
+  `nix flake check` covers what remains: the CLI, formatting, and the three
+  checks over the new implementation.
+
+  Four things were pulled _out_ of the parked area because the new
+  implementation needs them and they are domain infrastructure rather than
+  floe interface: the generated Kubernetes and CRD schemas
+  (`modules/lab/cluster/lib/kubernetes/` -> `lib/kubernetes/`),
+  `verify-types.nix`, the gateway's route lint script, and the subset of
+  `lib/{eval,render,util}/` holding the graph algorithms, the bundle
+  renderer and the readiness-probe DSL.
+
+- **`cata new floe` is gone.** Scaffolding a floe from a template the CLI
+  carried was a second copy of what `nix flake init -t` already does, and it
+  kept a third copy of the floe skeleton in `cli/src/commands/templates/`
+  that nothing evaluated. That copy had already drifted: the registry line
+  it wrote passed `mkFloe`, which its own template stopped taking when the
+  constructor was deleted, so a scaffolded floe failed evaluation on an
+  undefined variable.
+
+  The consumer template is the one copy now, and it is a real lab that
+  `nix flake check` builds, so it cannot rot the same way:
+
+  ```bash
+  nix flake init -t github:onepunchtech/catallaxy#consumer
+  ```
+
+  Adding a second floe to a lab you already have is copying
+  `floes/hello-world` and adding a line to `floes/default.nix`, which is
+  what the command did.
+
+- **`cluster.out.sbom`, and `clusters.<name>.sbom` from `metadata.json`.**
+  It reported each floe's name and version and nothing else, which made it a
+  copy of `cluster.out.topology.components` with a different second field.
+  It had no consumer in this repo. `sbom.json` replaces it and answers the
+  question the option was named for; `topology` still answers what runs
+  where.
+
+- **`io/openssl.rs`.** `host/pki.rs` was its only caller.
+
+- **`CataError`.** It was used in four files while the other twenty in `io/`
+  returned `anyhow`, three of its seven variants were dead, and nothing ever
+  matched on one: every value became an `anyhow::Error` at the first
+  boundary, so the type was a message prefix with a `thiserror` dependency
+  behind it. The prefixes are `.context()` strings now and the messages are
+  unchanged. `thiserror` is gone from the CLI's dependencies.
+
+- **`cross-cluster-secret-copy` is gone.** It read a Secret from one cluster
+  and wrote it into another, from the operator's machine, once, at deploy
+  time. Nothing kept the two in step afterwards, and it needed simultaneous
+  credentialed access to both clusters from a laptop.
+
+  Most secrets that look like they need transporting are authored: they
+  exist before the lab does. Those belong in a store and are projected into
+  every cluster that needs them, which is the path the lab CA already took.
+  The mesh example was the only user of the step, and its netbird setup key
+  is exactly that kind of value; it now lives in an env-backed store.
+
+  `lab.secrets.stores.<n>.direction` names the distinction that decides
+  which is which. `sops` and `env` are `authored`, read-only and top-down.
+  `vault` and `external` are `runtime`, and a cluster can publish into them,
+  which is what a genuinely runtime-minted secret needs in order to reach
+  another cluster at all.
+
+  Removing the step also let the netbird agent on a peer cluster stop opting
+  out of readiness: `awaitRollout = false` existed because the key arrived
+  after the deploy. It arrives during the deploy now, so the bundle waits on
+  the Secret with a `readyProbe` like anything else.
+
+- **`cata cluster kubeconfig sync` is gone.** It read its list of workload
+  clusters from `floes.cluster-api.clusters`, an option that does not exist:
+  the cluster-api floe describes the shape of a workload cluster
+  (`controlPlane`, `workers`, CIDRs) and never carried a list of them. The
+  lookup missed every time, so the command could only ever fail. It was the
+  last remnant of CAPI as a provisioner, a concept `cluster.provisioner`
+  dropped when it settled on `k3d | talos | crossplane | external`, and the
+  same vestige as the `Capi` variant removed from the CLI's provisioner enum
+  above.
+
+  Nothing replaces it because nothing needs to: the planner already emits a
+  `sync-kubeconfig` step per provisioning cluster, with the target list
+  derived from the provisioner graph rather than hand-written, ordered after
+  provisioning and skipped when the cluster already answers.
+  `io::kubectl::get_capi_kubeconfig`, `io::clusterctl::is_cluster_ready` and
+  `io::clusterctl::wait_cluster_ready` went with it, having had no other
+  caller, as did a `--timeout` parser that turned anything it could not read
+  (`5h`, say) into ten minutes without saying so.
+
+- **`cata lab ops -- trust init-ca` and `trust init-intermediate` are
+  gone**, replaced by the two `cata secrets` commands above. `trust setup`,
+  `browser`, `teardown` and `export` are unchanged. A CA minted by the old
+  script keeps working; nothing rereads it. The new one is P-256 rather than
+  RSA-4096, because that is what rcgen generates and what the rest of the
+  CLI's PKI already uses; `secrets generate --force` rotates if you would
+  rather have the new one.
+
+- **`nix run .#e2e` no longer mints an age key or rewrites `.sops.yaml`.**
+  It used to merge a throwaway rule into the repo's own file and restore it
+  on exit, which never worked in CI (there is no file to merge into) and
+  edited a developer's real `.sops.yaml` when run by hand. The runner now
+  loads the lab's `envFile` and nothing else.
 
 ## [0.7.0] - 2026-08-11
 

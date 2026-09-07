@@ -12,8 +12,8 @@ let
 
   # The shipped set, with the framework arguments already applied, so a lab
   # writes `floes.cert-manager { }` rather than importing and applying each
-  # one by hand. That boilerplate was four lines for four floes; `every-floe`
-  # has ten and the full catalogue has twenty-nine.
+  # one by hand — which would be a line of boilerplate per floe, in every lab
+  # that used one.
   #
   # `pkgs` is a definition-time argument, not a floe input: a floe that has to
   # derive something at build time — pulling a CRD file out of its chart, say
