@@ -8,7 +8,7 @@
 let
   render = import ../render/manifest.nix { inherit lib pkgs; };
   yamlUtil = import ../render/yaml.nix { inherit lib pkgs; };
-  inherit (import ../render/bundle-key.nix { }) sanitize;
+  inherit (import ../eval/bundle-key.nix { }) sanitize;
 
   # The bundle option type used to supply these; a floe's `mkHelmChart` says
   # only what varies, so they are filled at the boundary instead.

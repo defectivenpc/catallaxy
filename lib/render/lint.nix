@@ -11,7 +11,7 @@
 { lib, pkgs }:
 
 let
-  inherit (import ./bundle-key.nix { }) sanitize;
+  inherit (import ../eval/bundle-key.nix { }) sanitize;
 in
 {
   inherit sanitize;

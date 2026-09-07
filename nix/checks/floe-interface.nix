@@ -12,7 +12,7 @@
 # All of those reach an operator or another floe, and all of them were
 # previously checked by nobody.
 #
-# Diffed against `nix/floe-interface.nix` rather than recomputed, so this and
+# Diffed against `nix/floe-docs.nix` rather than recomputed, so this and
 # `refresh-floe-docs` read one store path instead of two pipelines that can
 # disagree — the same construction `cliConfig-<lab>` uses.
 {

@@ -138,7 +138,7 @@ let
   secretMaterialCheck =
     name: lab:
     pkgs.runCommand "${name}-renders-no-secret-material" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-      python3 ${../../lib/checks/secret-material.py} ${lab.config.lab.out.package}
+      python3 ${./secret-material.py} ${lab.config.lab.out.package}
       touch $out
     '';
 

@@ -103,7 +103,7 @@
         # interface, which the check diffs against and `refresh-floe-docs`
         # copies out of — so the fixture and the check cannot be produced by
         # two pipelines that disagree.
-        floeInterfaces = import ./nix/floe-interface.nix {
+        floeInterfaces = import ./nix/floe-docs.nix {
           inherit lib pkgs labDefs;
           catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs; };
           # Flattened, the way `lib/lab.nix` flattens it: the three groups are

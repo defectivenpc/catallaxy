@@ -39,7 +39,7 @@ gateway = floes.gateway { chart = "…"; tlsEnable = true; };
 
 Each floe's inputs, with types and defaults, are on its own generated page
 under **Floes** in the navigation. Those pages are generated from the floe
-definitions by `nix/floe-interface.nix`, and each is diff-checked by its own
+definitions by `nix/floe-docs.nix`, and each is diff-checked by its own
 flake check — so a floe whose interface changes and whose page does not is a
 failing build, not a stale page.
 

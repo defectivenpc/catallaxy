@@ -130,11 +130,11 @@ are spliced in at build time by `pkgs/docs.nix`.
 nix build .#docs && open result/index.html
 ```
 
-The 37 per-floe pages come from `docs/floes/`, which
-`nix/floe-interface.nix` generates and 37 checks diff. `pkgs/docs.nix`
-copies them in, derives an index and the `SUMMARY.md` nav entries from the
-file list, and appends the repo's `CHANGELOG.md`. So adding a floe adds a
-page and a nav entry with no edit to anything.
+The 37 per-floe pages come from `docs/floes/`, which `nix/floe-docs.nix`
+generates and 37 checks diff. `pkgs/docs.nix` copies them in, derives an
+index and the `SUMMARY.md` nav entries from the file list, and appends the
+repo's `CHANGELOG.md`. So adding a floe adds a page and a nav entry with no
+edit to anything.
 
 Two checks hold it. `book.toml` sets `create-missing = false`, so a
 `SUMMARY.md` entry with no file fails the build rather than rendering a

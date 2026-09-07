@@ -20,7 +20,7 @@ let
 
   clusters = config.lab.clusters;
 
-  imageUtil = import ../../lib/render/images.nix { inherit lib; };
+  imageUtil = import ../../lib/eval/images.nix { inherit lib; };
   infraLib = import ../../lib/render/infra.nix { inherit lib; };
   tofuProviders = import ../../lib/tofu-providers.nix { inherit lib pkgs; };
 

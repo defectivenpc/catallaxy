@@ -1,0 +1,32 @@
+# Generated files, and which of them a reviewer is meant to read.
+#
+# `linguist-generated` does two things on GitHub: it drops the path out of
+# language statistics, and it collapses the file in a diff by default. The
+# second is the one that matters, and it is why this file is short. Most of
+# what is generated here is generated *so that it can be read in a diff*, and
+# collapsing it would remove the whole point of committing it.
+
+# 42 MB of Kubernetes and CRD schemas, emitted by `cata-build generate` from
+# upstream OpenAPI. Nobody reviews these; a bump is reviewed by looking at
+# which chart moved. Left un-collapsed, a version bump buries every other
+# change in the pull request.
+lib/kubernetes/generated/** linguist-generated=true
+
+# Lockfiles: mechanical, and reviewed by what they pin rather than line by
+# line.
+flake.lock linguist-generated=true
+cli/Cargo.lock linguist-generated=true
+
+# --------------------------------------------------------------------------
+# Deliberately NOT marked, though every one of them is generated:
+#
+#   examples/labs/tests/plan-snapshots/**   `nix run .#refresh-plans`
+#   examples/labs/tests/manifest-digests/** `nix run .#refresh-digests`
+#   examples/labs/tests/cli-configs/**      `nix run .#refresh-cli-configs`
+#   docs/floes/**                           `nix run .#refresh-floe-docs`
+#
+# These exist to be read in a diff. The install order is derived rather than
+# written, so the snapshot is the only place a reordering becomes visible —
+# `refresh-plans` says as much when it runs, and so does `refresh-floe-docs`.
+# Collapsing them by default would hide exactly the change they were
+# committed to surface.

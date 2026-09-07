@@ -16,7 +16,7 @@
 }:
 
 let
-  schema = import ../../lib/eval/step-kind-schema.nix { inherit lib; };
+  schema = import ./step-kind-schema.nix { inherit lib; };
   generated = pkgs.writeText "step-kinds.json" (builtins.toJSON schema);
 in
 {
@@ -43,7 +43,7 @@ in
           echo "stale fixture proves it against a table nobody ships." >&2
           echo "" >&2
           echo "Refresh it:" >&2
-          echo "  nix eval --json --impure --expr '(import ./lib/eval/step-kind-schema.nix" >&2
+          echo "  nix eval --json --impure --expr '(import ./nix/checks/step-kind-schema.nix" >&2
           echo "    { lib = (import <nixpkgs> {}).lib; })' | jq -S . > cli/tests/fixtures/step-kinds.json" >&2
           exit 1
         fi

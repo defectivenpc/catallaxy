@@ -3,7 +3,7 @@
 # The source under `docs/book/src` is hand-written, and three things are
 # spliced in at build time rather than committed:
 #
-#   - the 37 per-floe pages from `docs/floes/`, which `nix/floe-interface.nix`
+#   - the 37 per-floe pages from `docs/floes/`, which `nix/floe-docs.nix`
 #     generates and 37 flake checks diff. Copying them here means the book
 #     cannot show a stale interface: the page it renders is the page the check
 #     compares, or the build that produced it already failed.

@@ -27,7 +27,7 @@
 }:
 
 let
-  imageUtil = import ../../lib/render/images.nix { inherit lib; };
+  imageUtil = import ../../lib/eval/images.nix { inherit lib; };
 
   # Only the floes that install something into a cluster.
   #
