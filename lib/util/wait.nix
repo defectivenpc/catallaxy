@@ -8,6 +8,8 @@
 }:
 
 let
+  inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
+
   inherit (lib)
     concatStringsSep
     optionalAttrs
@@ -365,10 +367,7 @@ in
     }:
     let
       rendered = renderProbe probe;
-      commonLabels = {
-        "app.kubernetes.io/managed-by" = "catallaxy";
-      }
-      // labels;
+      commonLabels = catallaxyManaged // labels;
       podSpec = {
         inherit serviceAccountName;
         restartPolicy = "OnFailure";

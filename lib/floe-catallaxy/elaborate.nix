@@ -14,6 +14,7 @@ let
   waitUtil = import ../util/wait.nix { inherit lib; };
   manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };
   autoedges = import ../eval/manifest-autoedges.nix { inherit lib; };
+  inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;
 
   # The aggregate bundle every `createNamespaces` resolves to, so two bundles
   # that both name a namespace do not end up waiting on each other.
@@ -270,7 +271,7 @@ in
           resourceCount = 0;
           hasReadyProbe = false;
           readyProbe = null;
-          secrets = [ "${namespace}/${name}" ];
+          secrets = [ (secretAddress namespace name) ];
           needsSecrets = [ ];
           externalSecrets = [ ];
           routedHosts = [ ];
@@ -368,7 +369,7 @@ in
       # one, so this is only answerable once the components are joined.
 
       secretsMade = lib.unique (
-        lib.mapAttrsToList (name: namespace: "${namespace}/${name}") projectedSecrets
+        lib.mapAttrsToList (name: namespace: secretAddress namespace name) projectedSecrets
         ++ lib.concatMap (b: expandSecretWildcards (autoedges.secretsMadeBy b)) (
           lib.attrValues withCrossFloeEdges
         )

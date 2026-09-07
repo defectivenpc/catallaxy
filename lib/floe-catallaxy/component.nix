@@ -7,6 +7,8 @@ let
   T = floe.T;
 
   stepType = import ../eval/step-type.nix { inherit lib; };
+  inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;
+  inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
 
   # Store paths, not derivations. A kind schema must hold pure data: the
   # linker's scan walks every output recursively, `nix eval --json` has to
@@ -510,7 +512,7 @@ rec {
         kind = "HTTPRoute";
         metadata = {
           inherit name namespace;
-          labels."app.kubernetes.io/managed-by" = "catallaxy";
+          labels = catallaxyManaged;
         };
         spec = {
           parentRefs = [ gateway.parentRef ];
@@ -595,7 +597,7 @@ rec {
           kind = lib.last (lib.splitString "/" provider.clientCrd);
           metadata = {
             inherit name namespace;
-            labels."app.kubernetes.io/managed-by" = "catallaxy";
+            labels = catallaxyManaged;
           };
           spec = {
             kanidmRef = provider.ref;
@@ -695,7 +697,7 @@ rec {
           kind = "KanidmServiceAccount";
           metadata = {
             inherit name namespace;
-            labels."app.kubernetes.io/managed-by" = "catallaxy";
+            labels = catallaxyManaged;
           };
           spec = {
             kanidmRef = provider.ref;
@@ -796,13 +798,13 @@ rec {
       # the generator's one output and has nowhere to put a second key.
       usesTemplate = encoding == "base64" || extraData != { };
 
-      managed.labels."app.kubernetes.io/managed-by" = "catallaxy";
+      managed.labels = catallaxyManaged;
     in
     {
       # The ExternalSecret's target is readable off `resources`, so this is
       # belt and braces — but a floe reading its own generated credential
       # through a Helm value has no other way to be believed.
-      secrets = [ "${namespace}/${secret}" ];
+      secrets = [ (secretAddress namespace secret) ];
 
       resources = {
         "${secret}-generator" = {

@@ -14,8 +14,7 @@
 { lib }:
 
 let
-  # `<namespace>/<name>` is the key the graph uses, so building it lives here
-  # rather than at each call site.
+  # secretAddress :: Namespace -> Name -> "<ns>/<name>"
   key = namespace: name: "${namespace}/${name}";
 
   # A resource with no namespace of its own is skipped on both sides.
@@ -99,4 +98,6 @@ in
   # secretsUsedBy :: resource -> [ "<ns>/<name>" ]
   secretsUsedBy =
     res: if nsOf res == null then [ ] else lib.unique (map (key (nsOf res)) (present (walk res)));
+
+  secretAddress = key;
 }

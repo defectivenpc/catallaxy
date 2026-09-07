@@ -10,6 +10,9 @@
 # cluster rather than inferred from Job names that something may have pruned.
 { lib }:
 
+let
+  inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
+in
 rec {
 
   hashContent = inputs: lib.substring 0 10 (builtins.hashString "sha256" (builtins.toJSON inputs));
@@ -50,12 +53,13 @@ rec {
       jobName = "${name}-${hash}";
       ownerName = "${name}-runs";
 
-      commonLabels = {
-        "app.kubernetes.io/managed-by" = "catallaxy";
-        "app.kubernetes.io/component" = name;
-        "catallaxy.io/idempotent-job" = "true";
-      }
-      // extraLabels;
+      commonLabels =
+        catallaxyManaged
+        // {
+          "app.kubernetes.io/component" = name;
+          "catallaxy.io/idempotent-job" = "true";
+        }
+        // extraLabels;
 
       ownerConfigMap = {
         apiVersion = "v1";

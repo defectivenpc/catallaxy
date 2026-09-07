@@ -75,26 +75,6 @@ catallaxy.mkComponentFloe {
         selector."app.kubernetes.io/name" = "podinfo";
         host = "podinfo.${gateway.baseDomain}";
 
-        # The image arrives as one string because that is how a deployer thinks
-        # of it, and the image set wants it in parts. Split here, from the same
-        # binding the container uses, so the declaration and what is deployed
-        # cannot name different things.
-        #
-        # Digest-pinned refs are not handled: nothing here passes one, and
-        # guessing at `@sha256:` would put a wrong tag in the declaration
-        # rather than fail.
-        imageParts =
-          let
-            slash = lib.splitString "/" inputs.image;
-            registry = lib.head slash;
-            rest = lib.concatStringsSep "/" (lib.tail slash);
-            colon = lib.splitString ":" rest;
-          in
-          {
-            inherit registry;
-            repository = lib.head colon;
-            tag = if lib.length colon > 1 then lib.last colon else null;
-          };
       in
       {
 
@@ -105,10 +85,7 @@ catallaxy.mkComponentFloe {
           bundles.podinfo = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            images.podinfo = {
-              inherit (imageParts) registry repository tag;
-              digest = null;
-            };
+            images.podinfo = kinds.mkImage inputs.image;
 
             ready = kinds.readyDeployment {
               name = "podinfo";
