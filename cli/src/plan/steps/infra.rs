@@ -110,6 +110,30 @@ impl Stack {
 
 pub fn plan(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
     let stack = Stack::resolve(sctx, p)?;
+
+    // Gated like `apply` and `destroy`, and the reason is worth stating
+    // because it is not obvious: a plan is read-only, but it is not *inert*.
+    // `tofu init` downloads nothing here — the providers are vendored — but
+    // `tofu plan` authenticates and calls the provider's API to read current
+    // state. RFC 0003 §8: "A plan is not inert. It needs credentials and it
+    // talks to a provider's API… it must not run under a flag that an
+    // operator reads as 'nothing will happen'."
+    //
+    // This step is also `dryRunSafe = false` in
+    // `modules/lab/planner/kinds/infra-plan.nix`. Both are needed: the flag
+    // covers `--dry-run`, this covers a run without `--infra`.
+    if !sctx.allow_infra {
+        println!(
+            "{} stack '{}' not planned. A plan is read-only but it \
+             authenticates and calls the provider's API, so it runs only when \
+             asked for.\n      \
+             Pass `--infra` to plan it.",
+            style("skipped").yellow(),
+            style(&stack.name).bold(),
+        );
+        return Ok(());
+    }
+
     println!(
         "{} planning stack '{}'",
         style(">>>").cyan(),
@@ -246,4 +270,34 @@ async fn publish(sctx: &StepContext<'_>, stack: &Stack, outputs: &serde_json::Va
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::step_kind::StepKind;
+
+    /// All three infra steps reach a provider's API, so all three are gated
+    /// the same way. `plan` was the exception: it was `dryRunSafe = true` and
+    /// ungated, so `cata lab up --dry-run` authenticated to a real cloud
+    /// account and read its state — under a flag whose whole meaning is that
+    /// nothing happens. RFC 0003 §8 and §12.8.
+    ///
+    /// Asserted against the registry rather than by reading the source,
+    /// because the Nix side of the flag lives in
+    /// `modules/lab/planner/kinds/infra-plan.nix` and the two are compared by
+    /// `nix/checks/step-kinds.nix`.
+    #[test]
+    fn no_infra_step_is_safe_under_a_dry_run() {
+        for kind in [
+            StepKind::InfraPlan,
+            StepKind::InfraApply,
+            StepKind::InfraDestroy,
+        ] {
+            assert!(
+                !kind.dry_run_safe(),
+                "{kind:?} is dry-run safe, so `--dry-run` would really run it \
+                 against a provider's API"
+            );
+        }
+    }
 }

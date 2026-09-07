@@ -127,7 +127,8 @@ impl StepKind {
             | StepKind::InfraDestroy
             | StepKind::RemoveNetwork
             | StepKind::RemoveServices => Idempotency::Destructive,
-            StepKind::SetupServices
+            StepKind::InfraPlan
+            | StepKind::SetupServices
             | StepKind::DockerNetworkCreate
             | StepKind::CertGenerate
             | StepKind::TrustBundle
@@ -151,7 +152,6 @@ impl StepKind {
             | StepKind::RunScript
             | StepKind::WaitForClusterGone
             | StepKind::ReconcileManagedResource
-            | StepKind::InfraPlan
             | StepKind::InfraApply
             | StepKind::ReleaseClusterCloudResources => Idempotency::Idempotent,
         }
@@ -203,9 +203,9 @@ impl StepKind {
         match self {
             StepKind::WaitForResources
             | StepKind::VerifyArgocdReachable
-            | StepKind::InfraPlan
             | StepKind::WaitForClusterGone => true,
-            StepKind::SetupServices
+            StepKind::InfraPlan
+            | StepKind::SetupServices
             | StepKind::DockerNetworkCreate
             | StepKind::CertGenerate
             | StepKind::TrustBundle
