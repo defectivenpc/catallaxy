@@ -87,7 +87,7 @@ catallaxy.mkComponentFloe {
         host = "git.${gateway.baseDomain}";
 
         adminSecret = "forgejo-admin";
-        idempotent = import ../../../lib/util/idempotent-job.nix { inherit lib; };
+        idempotent = import ../../../lib/kubernetes/idempotent-job.nix { inherit lib; };
 
         # `extraData` for the username, the same shape grafana and harbor use:
         # a consumer cloning from here needs both, and a username is not a

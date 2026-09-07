@@ -229,7 +229,7 @@ let
     routedHosts = T.listOf T.str;
 
     # readiness — RFC 0002 §4. Free-form because the fields a probe needs
-    # depend on its `kind`; `lib/util/wait.nix:requiredBy` is the table that
+    # depend on its `kind`; `lib/kubernetes/wait.nix:requiredBy` is the table that
     # says which, and the elaborator checks against it.
     ready = T.nullOr (T.attrsOf T.any);
     awaitRollout = T.bool;

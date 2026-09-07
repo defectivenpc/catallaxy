@@ -11,7 +11,7 @@ let
     floe = import ../floe-core { inherit lib; };
   };
 
-  waitUtil = import ../util/wait.nix { inherit lib; };
+  waitUtil = import ../kubernetes/wait.nix { inherit lib; };
   manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };
   autoedges = import ../eval/manifest-autoedges.nix { inherit lib; };
   inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;

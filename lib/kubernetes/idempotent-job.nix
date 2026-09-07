@@ -11,7 +11,7 @@
 { lib }:
 
 let
-  inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
+  inherit (import ./labels.nix { }) catallaxyManaged;
 in
 rec {
 

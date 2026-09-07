@@ -120,7 +120,7 @@ let
     inherit volumes;
   };
 
-  idempotent = import ../../../lib/util/idempotent-job.nix { inherit lib; };
+  idempotent = import ../../../lib/kubernetes/idempotent-job.nix { inherit lib; };
 
   # Named after a hash of what it was *asked for*, so it runs again when the
   # intent changes and not when the script is reformatted. A Job is immutable;

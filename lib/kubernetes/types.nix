@@ -158,7 +158,7 @@ let
           type = types.enum (lib.attrNames probeRequires);
           description = ''
             Which probe shape this is. Every kind but `kubectl-wait` is
-            rendered by `lib/util/wait.nix`, which refuses a probe missing a
+            rendered by `lib/kubernetes/wait.nix`, which refuses a probe missing a
             field its kind needs; `kubectl-wait` passes `args` through.
           '';
         };
@@ -514,7 +514,7 @@ let
           apply = p: if p == null then null else lib.filterAttrs (_: v: v != null) p;
           description = ''
             How to determine this bundle is READY beyond "kubectl apply
-            returned 0". Uses the probe DSL from `lib/util/wait.nix`,
+            returned 0". Uses the probe DSL from `lib/kubernetes/wait.nix`,
             any tagged shape it accepts (`condition`, `jsonpath`,
             `exists`, `http`, `tcp`, `dns`, `script`), plus a
             `kubectl-wait` escape hatch taking free-form `args`.

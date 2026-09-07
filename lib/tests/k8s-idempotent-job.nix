@@ -7,7 +7,7 @@
 { lib }:
 
 let
-  job = import ../util/idempotent-job.nix { inherit lib; };
+  job = import ../kubernetes/idempotent-job.nix { inherit lib; };
 
   base = {
     name = "openbao-init";

@@ -2,7 +2,7 @@
 
 # One reading of `5m`.
 #
-# There used to be two: `lib/util/wait.nix` and the external-dns floe each
+# There used to be two: `lib/kubernetes/wait.nix` and the external-dns floe each
 # carried the same `([0-9]+)(s|m|h)` and disagreed about what a string that
 # did not match meant. wait.nix threw; external-dns silently substituted 60
 # and carried on, so a typo in `floes.external-dns.interval` reached a

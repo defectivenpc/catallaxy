@@ -42,7 +42,7 @@ let
 
   pad = i: lib.fixedWidthString 2 "0" (toString i);
 
-  waitLib = import ../util/wait.nix { inherit lib; };
+  waitLib = import ../kubernetes/wait.nix { inherit lib; };
 
   # The applier's probe enum (`cli/src/io/ssa/probe.rs`) knows these five and
   # `pod`. `http`, `tcp` and `dns` ask about in-cluster reachability, so they

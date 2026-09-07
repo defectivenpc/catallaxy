@@ -128,7 +128,7 @@ catallaxy.mkComponentFloe {
       type = lib.types.nullOr lib.types.attrs;
       default = null;
       description = ''
-        Readiness probe for the app, in the shape `lib/util/wait.nix` takes.
+        Readiness probe for the app, in the shape `lib/kubernetes/wait.nix` takes.
         Null waits only for the rollout of whatever workloads it rendered.
       '';
     };

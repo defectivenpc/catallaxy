@@ -14,7 +14,7 @@ An arbitrary set of resources, optionally routed and OIDC-registered.
 | namespace | string | *(required)* | Namespace it installs into. The floe creates this. Required. |
 | oidc | boolean | `false` | Register an OAuth2 client for this app with the lab's issuer.  The client resource lands in this app's own namespace and the operator writes its credentials to `<name>-kanidm-oauth2-credentials` beside it — the operator's own naming, which nothing can override. What the app does with them is the app's business: this floe renders no configuration, because a `custom` app's config is whatever its `resources` say.  |
 | path | string | `"/"` | Path prefix the route matches.  It reaches `exposedHosts`, so `cata lab verify` probes this rather than `/` — probing a path the route does not match proves nothing, and the gateway is right to refuse it.  |
-| ready | null or (attribute set) | `null` | Readiness probe for the app, in the shape `lib/util/wait.nix` takes. Null waits only for the rollout of whatever workloads it rendered.  |
+| ready | null or (attribute set) | `null` | Readiness probe for the app, in the shape `lib/kubernetes/wait.nix` takes. Null waits only for the rollout of whatever workloads it rendered.  |
 | resources | attribute set of (attribute set) | `{}` | Kubernetes resources, keyed by a name local to this app. |
 | serviceName | null or string | `the app's name` | Service the route sends to. Defaults to the app's name. |
 | servicePort | 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `80` | Port on that Service. |

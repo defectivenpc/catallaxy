@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  wait = import ../util/wait.nix { inherit lib; };
+  wait = import ../kubernetes/wait.nix { inherit lib; };
   inherit (wait) mkWaitInitContainer mkWaitJob renderProbe;
 
   hasSubstr = substr: str: lib.hasInfix substr str;

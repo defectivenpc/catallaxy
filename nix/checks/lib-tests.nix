@@ -41,8 +41,8 @@ let
     util-network = testsDir + "/util-network.nix";
     util-duration = testsDir + "/util-duration.nix";
     util-hcl = testsDir + "/util-hcl.nix";
-    util-idempotent-job = testsDir + "/util-idempotent-job.nix";
-    util-wait = testsDir + "/util-wait.nix";
+    k8s-idempotent-job = testsDir + "/k8s-idempotent-job.nix";
+    k8s-wait = testsDir + "/k8s-wait.nix";
     manifest-graph = testsDir + "/manifest-graph.nix";
     manifest-autoedges = testsDir + "/manifest-autoedges.nix";
     plan-graph = testsDir + "/plan-graph.nix";
