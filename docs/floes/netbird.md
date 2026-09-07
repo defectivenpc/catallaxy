@@ -22,7 +22,7 @@ A NetBird control plane: management, signal, dashboard and its identity setup.
 | cluster | KUBERNETES_CLUSTER | The cluster a member installs into: its name, version, context and address ranges. |
 | gateway | API_GATEWAY | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 | generation | SECRET_GENERATION | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
-| identity | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
+| identityOperator | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
 | oidc | OIDC_PROVIDER | An OIDC issuer, its endpoints, and the CR a consumer registers a client with. |
 | trust | TRUST_BUNDLE | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |
 
@@ -30,8 +30,8 @@ A NetBird control plane: management, signal, dashboard and its identity setup.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| admin | MESH_ADMIN | The credential that administers the mesh, as a Secret only its own cluster can read. |
 | mesh | MESH_NETWORK | A mesh control plane, addressed from inside the cluster running it and from outside. |
+| meshAdmin | MESH_ADMIN | The credential that administers the mesh, as a Secret only its own cluster can read. |
 
 ## Emits
 
@@ -50,12 +50,6 @@ A NetBird control plane: management, signal, dashboard and its identity setup.
 
 ## Provides, as linked
 
-### `admin` — MESH_ADMIN
-
-| field | value |  |
-| --- | --- | --- |
-| tokenSecret | `{"key":"token","name":"netbird-api-token","namespace":"netbird"}` | link-local |
-
 ### `mesh` — MESH_NETWORK
 
 | field | value |  |
@@ -64,6 +58,12 @@ A NetBird control plane: management, signal, dashboard and its identity setup.
 | managementInternalUrl | `"http://netbird-management.netbird.svc.cluster.local:80"` | link-local |
 | managementUrl | `"https://netbird.every-floe.test"` | travels |
 | namespace | `"netbird"` | link-local |
+
+### `meshAdmin` — MESH_ADMIN
+
+| field | value |  |
+| --- | --- | --- |
+| tokenSecret | `{"key":"token","name":"netbird-api-token","namespace":"netbird"}` | link-local |
 
 
 ## Operator commands

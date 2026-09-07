@@ -32,7 +32,7 @@ lib.runTests {
   };
 
   testProvidesTheVersionItInstalled = {
-    expr = r.provides.api.version;
+    expr = r.provides.gatewayApi.version;
     expected = "v1.2.1";
   };
 }

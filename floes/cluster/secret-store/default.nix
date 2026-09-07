@@ -143,7 +143,7 @@ catallaxy.mkComponentFloe {
   # the webhook answers is rejected outright.
   requires.generation = sigs.SECRET_GENERATION;
 
-  provides.store = sigs.SECRET_STORE;
+  provides.secretStore = sigs.SECRET_STORE;
 
   modules = [
     (
@@ -157,14 +157,14 @@ catallaxy.mkComponentFloe {
 
       in
       {
-        config.floe.provides.store = {
+        config.floe.provides.secretStore = {
           inherit storeName;
           storeKind = "ClusterSecretStore";
           inherit (inputs) writable;
         };
 
         config.floe.out.component = kinds.mkComponent {
-          backs.store = [ "store" ];
+          backs.secretStore = [ "store" ];
           imagesComplete = true;
 
           bundles.store = kinds.mkBundle {

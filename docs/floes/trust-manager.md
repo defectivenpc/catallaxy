@@ -24,7 +24,7 @@ trust-manager, distributing the lab's CA into every namespace that needs it.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| distribution | TRUST_BUNDLE | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |
+| trust | TRUST_BUNDLE | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |
 
 ## Emits
 
@@ -41,7 +41,7 @@ trust-manager, distributing the lab's CA into every namespace that needs it.
 
 ## Provides, as linked
 
-### `distribution` — TRUST_BUNDLE
+### `trust` — TRUST_BUNDLE
 
 | field | value |  |
 | --- | --- | --- |

@@ -105,9 +105,9 @@ catallaxy.mkComponentFloe {
   # in every cluster but one, nothing here can know — and `requiresOptional` is
   # how a floe says "resolve this if the link can" without a lab having to
   # tell it whether the link can.
-  requiresOptional.admin = sigs.MESH_ADMIN;
+  requiresOptional.meshAdmin = sigs.MESH_ADMIN;
 
-  provides.operator = sigs.MESH_OPERATOR;
+  provides.meshOperator = sigs.MESH_OPERATOR;
 
   modules = [
     (
@@ -117,7 +117,7 @@ catallaxy.mkComponentFloe {
         mesh = config.floe.requires.mesh;
         # An unfilled optional hole is simply absent, so `or null` is how a
         # floe asks "did this link have one".
-        admin = config.floe.requires.admin or null;
+        admin = config.floe.requires.meshAdmin or null;
 
         ns = inputs.namespace;
 
@@ -159,7 +159,7 @@ catallaxy.mkComponentFloe {
         ];
       in
       {
-        config.floe.provides.operator = {
+        config.floe.provides.meshOperator = {
           namespace = ns;
           inherit crdKinds;
 
@@ -268,7 +268,7 @@ catallaxy.mkComponentFloe {
 
           # A consumer resolving MESH_OPERATOR waits for the controller,
           # because what it is about to do is apply a CR it reconciles.
-          backs.operator = [ "operator" ];
+          backs.meshOperator = [ "operator" ];
         };
       }
     )

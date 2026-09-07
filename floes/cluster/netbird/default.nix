@@ -150,7 +150,7 @@ catallaxy.mkComponentFloe {
   # is never written. Required rather than assumed: the floe that installs the
   # operator and the floe that installs the issuer are different floes, and a
   # lab can have the second without the first.
-  requires.identity = sigs.IDENTITY_OPERATOR;
+  requires.identityOperator = sigs.IDENTITY_OPERATOR;
 
   provides.mesh = sigs.MESH_NETWORK;
 
@@ -159,7 +159,7 @@ catallaxy.mkComponentFloe {
   # mesh spans clusters and this is a Secret in one namespace of one of them.
   # `netbird-operator` resolves this when it runs beside the control plane and
   # is told where the token is when it does not.
-  provides.admin = sigs.MESH_ADMIN;
+  provides.meshAdmin = sigs.MESH_ADMIN;
 
   modules = [
     (
@@ -382,7 +382,7 @@ catallaxy.mkComponentFloe {
           dashboardUrl = "https://${apiDomain}";
         };
 
-        config.floe.provides.admin.tokenSecret = {
+        config.floe.provides.meshAdmin.tokenSecret = {
           namespace = ns;
           name = nb.patSecret;
           key = nb.patKey;
@@ -526,7 +526,7 @@ catallaxy.mkComponentFloe {
           # resolving MESH_ADMIN waits for the Job that mints the token, which
           # is a longer wait and only for whoever actually needs it.
           backs.mesh = [ "server" ];
-          backs.admin = [ "automation" ];
+          backs.meshAdmin = [ "automation" ];
         };
       }
     )

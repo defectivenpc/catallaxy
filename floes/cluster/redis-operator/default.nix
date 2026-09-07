@@ -24,7 +24,7 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  provides.operator = sigs.REDIS_OPERATOR;
+  provides.redisOperator = sigs.REDIS_OPERATOR;
 
   modules = [
     (
@@ -33,7 +33,7 @@ catallaxy.mkComponentFloe {
         inputs = config.floe.inputs;
       in
       {
-        config.floe.provides.operator = {
+        config.floe.provides.redisOperator = {
           crdKinds = [
             "redis.redis.opstreelabs.in/Redis"
             "redis.redis.opstreelabs.in/RedisCluster"
@@ -41,7 +41,7 @@ catallaxy.mkComponentFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
-          backs.operator = [ "redis-operator" ];
+          backs.redisOperator = [ "redis-operator" ];
           imagesComplete = true;
 
           bundles.redis-operator = kinds.mkBundle {

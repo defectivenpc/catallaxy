@@ -32,7 +32,7 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  provides.api = sigs.GATEWAY_API;
+  provides.gatewayApi = sigs.GATEWAY_API;
 
   modules = [
     (
@@ -60,7 +60,7 @@ catallaxy.mkComponentFloe {
         ];
       in
       {
-        config.floe.provides.api = {
+        config.floe.provides.gatewayApi = {
           inherit (inputs) version;
           crdKinds = infraKinds ++ routeKinds;
         };
@@ -72,7 +72,7 @@ catallaxy.mkComponentFloe {
           # has looked at.
           imagesComplete = true;
 
-          backs.api = [ "crds" ];
+          backs.gatewayApi = [ "crds" ];
 
           bundles.crds = kinds.mkBundle {
             yamls = [ inputs.manifest ];

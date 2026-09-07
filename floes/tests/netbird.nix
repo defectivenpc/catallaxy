@@ -456,7 +456,7 @@ lib.runTests {
   # is `floes/cluster/netbird-operator` now and may be in another cluster
   # entirely; what stays here is minting the token and promising its address.
   testItPromisesWhereTheTokenLanded = {
-    expr = r.provides.admin.tokenSecret;
+    expr = r.provides.meshAdmin.tokenSecret;
     expected = {
       namespace = "netbird";
       name = "netbird-api-token";
@@ -500,7 +500,7 @@ lib.runTests {
     expr = r.component.backs;
     expected = {
       mesh = [ "server" ];
-      admin = [ "automation" ];
+      meshAdmin = [ "automation" ];
     };
   };
 

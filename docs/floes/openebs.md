@@ -22,7 +22,7 @@ Rancher's local-path provisioner as the cluster's default StorageClass.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| storage | STORAGE_CLASS | A StorageClass a PVC can name, and whether it is the cluster's default. |
+| storageClass | STORAGE_CLASS | A StorageClass a PVC can name, and whether it is the cluster's default. |
 
 ## Emits
 
@@ -38,7 +38,7 @@ Rancher's local-path provisioner as the cluster's default StorageClass.
 
 ## Provides, as linked
 
-### `storage` — STORAGE_CLASS
+### `storageClass` — STORAGE_CLASS
 
 | field | value |  |
 | --- | --- | --- |

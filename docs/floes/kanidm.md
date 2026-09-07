@@ -22,8 +22,8 @@ Kanidm as the lab's OIDC provider, reconciled by kaniop.
 | --- | --- | --- |
 | cluster | KUBERNETES_CLUSTER | The cluster a member installs into: its name, version, context and address ranges. |
 | gateway | API_GATEWAY | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
+| identityOperator | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
 | issuance | X509_ISSUANCE | Something that signs certificates, and whether a browser will trust what it signs. |
-| operator | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
 | trust | TRUST_BUNDLE | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |
 
 ## Provides

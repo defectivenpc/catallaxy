@@ -28,7 +28,7 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  provides.operator = sigs.POSTGRES_OPERATOR;
+  provides.postgresOperator = sigs.POSTGRES_OPERATOR;
 
   modules = [
     (
@@ -37,7 +37,7 @@ catallaxy.mkComponentFloe {
         inputs = config.floe.inputs;
       in
       {
-        config.floe.provides.operator = {
+        config.floe.provides.postgresOperator = {
           crdKinds = [
             "postgresql.cnpg.io/Cluster"
             "postgresql.cnpg.io/Pooler"
@@ -47,7 +47,7 @@ catallaxy.mkComponentFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
-          backs.operator = [ "cnpg" ];
+          backs.postgresOperator = [ "cnpg" ];
           imagesComplete = true;
 
           bundles.cnpg = kinds.mkBundle {

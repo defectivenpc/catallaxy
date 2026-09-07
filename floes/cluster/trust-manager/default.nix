@@ -46,7 +46,7 @@ catallaxy.mkComponentFloe {
   requires.webhook = sigs.X509_WEBHOOK;
   requires.issuance = sigs.X509_ISSUANCE;
 
-  provides.distribution = sigs.TRUST_BUNDLE;
+  provides.trust = sigs.TRUST_BUNDLE;
 
   modules = [
     (
@@ -64,7 +64,7 @@ catallaxy.mkComponentFloe {
         secretBundleName = "${inputs.bundleName}-secret";
       in
       {
-        config.floe.provides.distribution = {
+        config.floe.provides.trust = {
           inherit (inputs) namespace;
           secretTargets = true;
           caBundle = {
@@ -91,7 +91,7 @@ catallaxy.mkComponentFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
-          backs.distribution = [ "bundles" ];
+          backs.trust = [ "bundles" ];
           imagesComplete = true;
 
           # A public issuer has no CA to hand out, so there is nothing to

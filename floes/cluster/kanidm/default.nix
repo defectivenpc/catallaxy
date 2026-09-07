@@ -113,7 +113,7 @@ catallaxy.mkComponentFloe {
 
   # The CRD and something reconciling it. Without both, the CR below is a
   # resource of an unknown kind or a resource nothing acts on.
-  requires.operator = sigs.IDENTITY_OPERATOR;
+  requires.identityOperator = sigs.IDENTITY_OPERATOR;
 
   # Kanidm serves TLS and will not start without a certificate. It is one of
   # the few servers with no plaintext mode at all — WebAuthn requires a secure
@@ -127,7 +127,7 @@ catallaxy.mkComponentFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        operator = config.floe.requires.operator;
+        operator = config.floe.requires.identityOperator;
         issuance = config.floe.requires.issuance;
         gateway = config.floe.requires.gateway;
         trust = config.floe.requires.trust;

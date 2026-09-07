@@ -34,7 +34,7 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  provides.storage = sigs.STORAGE_CLASS;
+  provides.storageClass = sigs.STORAGE_CLASS;
 
   modules = [
     (
@@ -47,13 +47,13 @@ catallaxy.mkComponentFloe {
         # would be a race. The old tree said so with `conflicts` on a bundle;
         # here exactly-one-provider says it, and a second provider of
         # STORAGE_CLASS is a link error naming both.
-        config.floe.provides.storage = {
+        config.floe.provides.storageClass = {
           inherit (inputs) className;
           isDefault = true;
         };
 
         config.floe.out.component = kinds.mkComponent {
-          backs.storage = [ "openebs" ];
+          backs.storageClass = [ "openebs" ];
           imagesComplete = true;
 
           bundles.openebs = kinds.mkBundle {

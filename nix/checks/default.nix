@@ -49,6 +49,11 @@
   ];
 }
 // import ./lab-edge.nix { inherit lib pkgs mkLab; }
+// import ./floe-names.nix {
+  inherit lib pkgs;
+  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
+  floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
+}
 // import ./floe-interface.nix {
   inherit lib pkgs floeInterfaces;
   docDir = ../../docs/floes;

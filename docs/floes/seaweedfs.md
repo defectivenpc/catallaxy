@@ -22,7 +22,7 @@ SeaweedFS, an S3-compatible object store.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| store | OBJECT_STORE | An S3-compatible endpoint and the credentials, if any, needed to reach it. |
+| objectStore | OBJECT_STORE | An S3-compatible endpoint and the credentials, if any, needed to reach it. |
 
 ## Emits
 
@@ -38,7 +38,7 @@ SeaweedFS, an S3-compatible object store.
 
 ## Provides, as linked
 
-### `store` — OBJECT_STORE
+### `objectStore` — OBJECT_STORE
 
 | field | value |  |
 | --- | --- | --- |

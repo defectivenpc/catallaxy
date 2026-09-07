@@ -94,14 +94,14 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  requires.store = sigs.OBJECT_STORE;
+  requires.objectStore = sigs.OBJECT_STORE;
 
   modules = [
     (
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        store = config.floe.requires.store;
+        store = config.floe.requires.objectStore;
         cluster = config.floe.requires.cluster;
 
         credentialsSecret = "velero-credentials";

@@ -30,7 +30,7 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  provides.store = sigs.OBJECT_STORE;
+  provides.objectStore = sigs.OBJECT_STORE;
 
   modules = [
     (
@@ -40,7 +40,7 @@ catallaxy.mkComponentFloe {
         image = "chrislusf/seaweedfs:${inputs.version}";
       in
       {
-        config.floe.provides.store = {
+        config.floe.provides.objectStore = {
           inherit (inputs) namespace;
           s3Endpoint = "http://seaweedfs-s3.${inputs.namespace}.svc.cluster.local:8333";
 
@@ -58,7 +58,7 @@ catallaxy.mkComponentFloe {
         };
 
         config.floe.out.component = kinds.mkComponent {
-          backs.store = [ "seaweedfs" ];
+          backs.objectStore = [ "seaweedfs" ];
           imagesComplete = true;
 
           bundles.seaweedfs = kinds.mkBundle {

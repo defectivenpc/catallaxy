@@ -153,7 +153,7 @@ lib.runTests {
   # floe installs no routing peer — so a consumer can see that rather than
   # render a reference the operator rejects.
   testItPromisesNoRouterUntilOneRuns = {
-    expr = r.provides.operator.routerRef;
+    expr = r.provides.meshOperator.routerRef;
     expected = null;
   };
 

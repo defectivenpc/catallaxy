@@ -21,7 +21,7 @@ OT-Container-Kit's Redis operator.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| operator | REDIS_OPERATOR | The Redis operator's CRDs are registered, so Redis CRs have a type. |
+| redisOperator | REDIS_OPERATOR | The Redis operator's CRDs are registered, so Redis CRs have a type. |
 
 ## Emits
 
@@ -37,7 +37,7 @@ OT-Container-Kit's Redis operator.
 
 ## Provides, as linked
 
-### `operator` — REDIS_OPERATOR
+### `redisOperator` — REDIS_OPERATOR
 
 | field | value |  |
 | --- | --- | --- |

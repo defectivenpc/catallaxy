@@ -20,7 +20,7 @@ Velero, cluster backup and restore against an object store.
 | hole | signature | what it is |
 | --- | --- | --- |
 | cluster | KUBERNETES_CLUSTER | The cluster a member installs into: its name, version, context and address ranges. |
-| store | OBJECT_STORE | An S3-compatible endpoint and the credentials, if any, needed to reach it. |
+| objectStore | OBJECT_STORE | An S3-compatible endpoint and the credentials, if any, needed to reach it. |
 
 ## Emits
 

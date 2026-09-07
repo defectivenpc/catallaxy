@@ -130,14 +130,21 @@ in
             (linkResult.wiring.one.${unit} or { })
             // lib.filterAttrs (_: p: p != null) (linkResult.wiring.optional.${unit} or { });
         in
-        lib.unique (
-          lib.concatLists (
-            # No self-resolution case to handle: `lib/floe-core/link.nix`
-            # refuses a unit that satisfies its own hole outright, so `p.unit`
-            # is never `unit`. This used to carry a branch dropping the edge
-            # for that shape, which was a workaround for something the linker
-            # should not have permitted.
-            lib.mapAttrsToList (_hole: p: backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)) holes
+        # Sorted, because this is a *set* of things to wait for and it reaches
+        # a rendered artifact (`.wave-meta`). Unsorted, its order came from
+        # the order of the consumer's holes — so renaming a hole reordered a
+        # file, moved a manifest digest, and said a lab's output had changed
+        # when the only thing that moved was one floe's private naming.
+        lib.sort (a: b: a < b) (
+          lib.unique (
+            lib.concatLists (
+              # No self-resolution case to handle: `lib/floe-core/link.nix`
+              # refuses a unit that satisfies its own hole outright, so
+              # `p.unit` is never `unit`. This used to carry a branch dropping
+              # the edge for that shape, which was a workaround for something
+              # the linker should not have permitted.
+              lib.mapAttrsToList (_hole: p: backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)) holes
+            )
           )
         );
 

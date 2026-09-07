@@ -21,7 +21,7 @@ CloudNativePG, the PostgreSQL operator.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| operator | POSTGRES_OPERATOR | The PostgreSQL operator's CRDs are registered, so a Cluster CR has a type. |
+| postgresOperator | POSTGRES_OPERATOR | The PostgreSQL operator's CRDs are registered, so a Cluster CR has a type. |
 
 ## Emits
 
@@ -37,7 +37,7 @@ CloudNativePG, the PostgreSQL operator.
 
 ## Provides, as linked
 
-### `operator` — POSTGRES_OPERATOR
+### `postgresOperator` — POSTGRES_OPERATOR
 
 | field | value |  |
 | --- | --- | --- |

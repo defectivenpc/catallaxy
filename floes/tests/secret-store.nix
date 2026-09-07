@@ -22,7 +22,7 @@ lib.runTests {
   };
 
   testTheProvideNamesTheSameObject = {
-    expr = r.provides.store.storeName;
+    expr = r.provides.secretStore.storeName;
     expected = store.metadata.name;
   };
 
@@ -48,7 +48,7 @@ lib.runTests {
   };
 
   testWritableByDefault = {
-    expr = r.provides.store.writable;
+    expr = r.provides.secretStore.writable;
     expected = true;
   };
 }

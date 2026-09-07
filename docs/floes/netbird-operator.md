@@ -24,13 +24,13 @@ The NetBird operator, which joins this cluster to a mesh another one runs.
 
 | hole | signature | what it is |
 | --- | --- | --- |
-| admin | MESH_ADMIN | The credential that administers the mesh, as a Secret only its own cluster can read. |
+| meshAdmin | MESH_ADMIN | The credential that administers the mesh, as a Secret only its own cluster can read. |
 
 ## Provides
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| operator | MESH_OPERATOR | The mesh operator's CRDs are registered, and the router its resources attach to. |
+| meshOperator | MESH_OPERATOR | The mesh operator's CRDs are registered, and the router its resources attach to. |
 
 ## Emits
 
@@ -46,7 +46,7 @@ The NetBird operator, which joins this cluster to a mesh another one runs.
 
 ## Provides, as linked
 
-### `operator` — MESH_OPERATOR
+### `meshOperator` — MESH_OPERATOR
 
 | field | value |  |
 | --- | --- | --- |

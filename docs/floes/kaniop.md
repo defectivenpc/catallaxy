@@ -21,7 +21,7 @@ The kaniop operator, which reconciles Kanidm and its clients.
 
 | promise | signature | what it is |
 | --- | --- | --- |
-| operator | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
+| identityOperator | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
 
 ## Emits
 
@@ -38,7 +38,7 @@ The kaniop operator, which reconciles Kanidm and its clients.
 
 ## Provides, as linked
 
-### `operator` — IDENTITY_OPERATOR
+### `identityOperator` — IDENTITY_OPERATOR
 
 | field | value |  |
 | --- | --- | --- |

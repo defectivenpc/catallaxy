@@ -30,7 +30,7 @@ catallaxy.mkComponentFloe {
     };
   };
 
-  provides.operator = sigs.IDENTITY_OPERATOR;
+  provides.identityOperator = sigs.IDENTITY_OPERATOR;
 
   modules = [
     (
@@ -47,14 +47,14 @@ catallaxy.mkComponentFloe {
         '';
       in
       {
-        config.floe.provides.operator = {
+        config.floe.provides.identityOperator = {
           inherit crdsEstablished;
         };
 
         config.floe.out.component = kinds.mkComponent {
           # Both, and in that order: a consumer of IDENTITY_OPERATOR wants the
           # kind to exist *and* something reconciling it.
-          backs.operator = [
+          backs.identityOperator = [
             "crds"
             "kaniop"
           ];
