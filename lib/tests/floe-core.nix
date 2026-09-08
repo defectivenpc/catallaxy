@@ -150,6 +150,35 @@ let
 in
 lib.runTests {
 
+  # The two halves of the type boundary. Both used to fail deep inside
+  # nixpkgs or `checkValue` with a message naming neither the floe nor the
+  # field: `attribute 'deprecationMessage' missing` and `attribute 'tag'
+  # missing`.
+  testAFloeTypeInAnInputIsRefused = {
+    expr = fails (
+      floe.mkFloe {
+        name = "wrong-way-round";
+        summary = "Fixture: declares an input with a floe data schema.";
+        inputs.replicas = lib.mkOption {
+          type = T.int;
+          default = 2;
+        };
+      }
+    );
+    expected = true;
+  };
+
+  testANixosTypeWhereAFloeTypeBelongsIsRefused = {
+    expr = fails (T.checkValue [ "fixture" ] lib.types.str "x");
+    expected = true;
+  };
+
+  # `T.moduleType` is the sanctioned crossing: its inner *is* a NixOS type.
+  testModuleTypeStillTakesANixosType = {
+    expr = T.checkValue [ "fixture" ] (T.moduleType lib.types.str) "x";
+    expected = "x";
+  };
+
   testNodesAreTheUnitNames = {
     expr = deployment.graph.nodes;
     expected = [

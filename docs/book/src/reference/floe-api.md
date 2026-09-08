@@ -21,7 +21,7 @@ mkFloe { name, summary, inputs ? {}, requires ? {}, requiresOptional ? {},
 | ------------------ | -------- | ----------------------- | ----------------------------------------------------- |
 | `name`             | yes      | kebab-case string       | the floe's identity                                   |
 | `summary`          | yes      | string                  | one line saying what it installs                      |
-| `inputs`           | no       | attrset of `mkOption`s  | what the deployer decides                             |
+| `inputs`           | no       | attrset of `mkOption`s  | what the deployer decides — native NixOS option types |
 | `requires`         | no       | attrset of signatures   | exactly one provider each                             |
 | `requiresOptional` | no       | attrset of signatures   | zero or one; resolves to `null` when nothing provides |
 | `provides`         | no       | attrset of signatures   | what it offers back                                   |
@@ -84,16 +84,34 @@ both would fail to link. The nominal distinction _is_ the mechanism.
 
 ## The type language, `T`
 
-| Constructor                                   | Is                                         |
-| --------------------------------------------- | ------------------------------------------ |
-| `T.str`, `T.int`, `T.bool`, `T.port`          | scalars                                    |
-| `T.url`, `T.dnsName`                          | scalars with a shape                       |
-| `T.enum`, `T.nullOr`, `T.listOf`, `T.attrsOf` | the usual combinators                      |
-| `T.record`                                    | a fixed set of named fields                |
-| `T.taggedUnion`                               | externally tagged; matches serde's default |
-| `T.local`                                     | **does not cross a cluster boundary**      |
-| `T.deferred`                                  | a value not known until apply              |
-| `T.moduleType`                                | a NixOS type, for a field that is a schema |
+**Why there are two.** A value a deployer writes — a floe input — is
+described by a native NixOS option type. A value that _crosses a floe
+boundary_ — a signature field, an output-kind schema — is described by a
+floe data schema, `T`. That is the whole rule, and both halves are enforced
+where they are used: `mkFloe` refuses a `T` in `inputs`, and `checkValue`
+refuses a `lib.types` in anything that crosses.
+
+`lib.types` cannot do the crossing side, for three reasons:
+
+- **Locality is per field.** `T.local` marks a field that does not travel to
+  another cluster, and the linker, `isUncrossable` and the generated floe
+  pages all read it. A NixOS type has nowhere to carry it.
+- **Sealing drops, it does not error.** A provider may compute more than its
+  signature promises; `T.record` returns only the declared fields.
+  `lib.types.submodule` refuses the whole value instead.
+- **A NixOS type holds functions.** `merge`, `check`, `substSubModules` — so
+  it cannot be serialized, and a schema here has to be inert data.
+
+| Constructor                                   | Is                                                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `T.str`, `T.int`, `T.bool`, `T.port`          | scalars                                                                                                            |
+| `T.url`, `T.dnsName`                          | scalars with a shape                                                                                               |
+| `T.enum`, `T.nullOr`, `T.listOf`, `T.attrsOf` | the usual combinators                                                                                              |
+| `T.record`                                    | a fixed set of named fields                                                                                        |
+| `T.taggedUnion`                               | externally tagged; matches serde's default                                                                         |
+| `T.local`                                     | **does not cross a cluster boundary**                                                                              |
+| `T.deferred`                                  | a value not known until apply. No shipped signature declares one; the token half is live in `lib/render/infra.nix` |
+| `T.moduleType`                                | a NixOS type, for a field that is a schema                                                                         |
 
 `k8sName` is **not** in that list. It lives in
 `lib/floe-catallaxy/prelude.nix`, because it was the one thing making core's

@@ -1,4 +1,10 @@
-# Floe type universe.
+# Data schemas for values that cross a floe boundary: signature fields and
+# output-kind schemas. A floe's `inputs` use native NixOS option types instead.
+#
+# The split is not stylistic. These carry `T.local` per field, seal by dropping
+# undeclared fields rather than erroring, and hold no functions so they survive
+# serialization. A `lib.types` value does none of the three. `T.moduleType` is
+# the one sanctioned crossing.
 { lib }:
 
 let
@@ -131,7 +137,15 @@ rec {
       where = if path == [ ] then "<value>" else lib.concatStringsSep "." path;
       fail = msg: throw "floe type error at ${where}: ${msg}";
     in
-    if ty.tag == "any" then
+    if isAttrs ty && (ty._type or null) == "option-type" then
+      fail (
+        "declared with `lib.types.${ty.name or "?"}`, a NixOS option type. A value "
+        + "that crosses a floe boundary is declared with `T`; only a floe's `inputs` "
+        + "use NixOS types. See lib/floe-core/types.nix."
+      )
+    else if !(ty ? tag) then
+      fail "declared with something that is not a floe type"
+    else if ty.tag == "any" then
       v
     else if ty.tag == "local" then
       checkValue path ty.inner v

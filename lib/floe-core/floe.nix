@@ -39,6 +39,25 @@ rec {
 
       hasInputs = inputs != { };
 
+      # An input is what a deployer writes, so it takes a NixOS option type.
+      # Handed a floe data schema the module system fails inside nixpkgs with
+      # `attribute 'deprecationMessage' missing`, which names neither the floe
+      # nor the input.
+      floeTypedInputs = lib.attrNames (
+        lib.filterAttrs (_: opt: lib.isAttrs opt && ((opt.type or null) ? tag)) inputs
+      );
+
+      _inputTypes =
+        if floeTypedInputs == [ ] then
+          null
+        else
+          throw (
+            "floe '${name}': input(s) ${lib.concatStringsSep ", " floeTypedInputs} are "
+            + "declared with `T`, the floe data schema. An input is what a deployer "
+            + "writes, so it takes a NixOS option type — `lib.types.str`, not `T.str`. "
+            + "`T` is for values that cross a floe boundary."
+          );
+
       checkInputs =
         supplied:
         if !hasInputs then
@@ -63,27 +82,29 @@ rec {
             builtins.deepSeq ev.config.floe.inputs ev.config.floe.inputs
           );
 
-      def = builtins.seq _ {
-        __floeDef = true;
-        inherit
-          name
-          summary
-          inputs
-          requires
-          requiresOptional
-          provides
-          out
-          modules
-          ;
+      def = builtins.seq _ (
+        builtins.seq _inputTypes {
+          __floeDef = true;
+          inherit
+            name
+            summary
+            inputs
+            requires
+            requiresOptional
+            provides
+            out
+            modules
+            ;
 
-        # instantiate :: attrset -> instance
-        # inputsChecked carries the validated, defaults-filled inputs.
-        instantiate = supplied: {
-          __floeInstance = true;
-          inherit def;
-          inputsChecked = checkInputs supplied;
-        };
-      };
+          # instantiate :: attrset -> instance
+          # inputsChecked carries the validated, defaults-filled inputs.
+          instantiate = supplied: {
+            __floeInstance = true;
+            inherit def;
+            inputsChecked = checkInputs supplied;
+          };
+        }
+      );
     in
     def;
 
