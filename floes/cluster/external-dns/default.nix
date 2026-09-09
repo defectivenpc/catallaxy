@@ -223,19 +223,46 @@ catallaxy.mkComponentFloe {
               [ -n "$value" ] && awk -v v="$value" 'BEGIN { exit (v + 0 == 0) ? 0 : 1 }'
             }
 
+            # Last seen, so the timeout below can say which of the two
+            # failures this was: metrics that never became zero, or metrics
+            # that were never readable. Both used to print the same line.
+            reads=0
+            last_registry="" last_source=""
+
             deadline=$(( $(date +%s) + ${toString drainDeadline} ))
             while [ "$(date +%s)" -lt "$deadline" ]; do
               m=$(metrics) || m=""
-              if [ -n "$m" ] \
-                && metric_is_zero "$m" external_dns_registry_endpoints_total \
-                && metric_is_zero "$m" external_dns_source_endpoints_total; then
-                echo "external-dns reports no endpoints; records drained"
-                exit 0
+              if [ -n "$m" ]; then
+                reads=$(( reads + 1 ))
+                last_registry=$(metric "$m" external_dns_registry_endpoints_total)
+                last_source=$(metric "$m" external_dns_source_endpoints_total)
+                # The registry alone. It counts the records external-dns
+                # *owns*, which is the question this step asks. Sources count
+                # what it would create next, and one survives on purpose: the
+                # loop above skips LoadBalancer Services in system namespaces,
+                # because deleting kube-dns mid-teardown breaks the lookups
+                # this wait depends on. Requiring both to be zero failed every
+                # run with `registry=0 source=1` — a clean zone, reported as a
+                # leak.
+                if metric_is_zero "$m" external_dns_registry_endpoints_total; then
+                  echo "external-dns owns no records; zone drained (sources still ''${last_source:-0})"
+                  exit 0
+                fi
               fi
               sleep 5
             done
 
-            echo "external-dns did not report an empty registry within ${toString drainDeadline}s" >&2
+            if [ "$reads" -eq 0 ]; then
+              echo "could not read external-dns metrics in ${toString drainDeadline}s:" >&2
+              echo "  ${inputs.namespace}/external-dns:7979/proxy/metrics answered nothing" >&2
+              echo "so whether the records drained is unknown, not known to be false" >&2
+            else
+              echo "external-dns still owns records after ${toString drainDeadline}s" >&2
+              echo "  registry_endpoints_total=''${last_registry:-<absent>}" >&2
+              echo "  source_endpoints_total=''${last_source:-<absent>}" >&2
+              echo "read the metrics $reads time(s); an absent series means the" >&2
+              echo "exporter renamed it and this waited out the deadline for nothing" >&2
+            fi
             echo "records may be left in the zone" >&2
             exit 1
           '';
