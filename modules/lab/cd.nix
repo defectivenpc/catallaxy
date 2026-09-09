@@ -18,7 +18,7 @@
 
 let
   t = import ../../lib/plan-tokens.nix { inherit lib; };
-  inherit (t) needs wants;
+  inherit (import ../../lib/eval/anchors.nix { }) needs wants;
 
   clusters = config.lab.clusters;
   clusterNames = lib.attrNames clusters;

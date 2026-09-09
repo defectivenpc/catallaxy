@@ -18,7 +18,7 @@
 
 let
   t = import ../../lib/plan-tokens.nix { inherit lib; };
-  inherit (t) needs wants;
+  inherit (import ../../lib/eval/anchors.nix { }) needs wants;
 
   clusters = config.lab.clusters;
   clusterNames = lib.attrNames clusters;
@@ -96,7 +96,7 @@ let
           # A plan is read-only but it is not inert: it needs credentials and
           # it talks to a provider's API, so it must not run under a flag an
           # operator reads as "nothing will happen" (RFC 0003 §8).
-          provides = [ "stack/${stackName}/planned" ];
+          provides = [ (t.stack stackName).planned ];
           after = map (d: needs (t.stack d).applied) deps ++ afterClusters;
           before = map (a: wants a) againstClusters;
           params.stack = stackName;
@@ -106,7 +106,7 @@ let
           kind = "infra-apply";
           description = "Apply stack '${stackName}'";
           provides = [ (t.stack stackName).applied ];
-          after = [ (needs "stack/${stackName}/planned") ];
+          after = [ (needs (t.stack stackName).planned) ];
           before = map (a: wants a) againstClusters;
           params.stack = stackName;
         };

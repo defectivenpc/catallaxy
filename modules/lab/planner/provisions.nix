@@ -116,7 +116,7 @@ let
           # After every apply, because the publication that produces it is
           # part of one. `wants`, since a lab may have stacks that publish
           # nothing and there is then no anchor to need.
-          after = map (s: wants "stack/${s}/applied") stackNames;
+          after = map (s: wants (t.stack s).applied) stackNames;
           params = {
             target = name;
             clusters = [ name ];
@@ -216,7 +216,7 @@ let
         kind = "reconcile-managed-resource";
         description = "Adopt the '${target}' cluster resource on '${e.mgmt}'";
         cluster = e.mgmt;
-        provides = [ "cluster/${target}/mr-reconciled" ];
+        provides = [ (t.cluster target).managedResourceReconciled ];
         after = [ (wants (t.cluster target).cloudReleased) ];
         params = resourceParams;
       };
@@ -226,7 +226,7 @@ let
         description = "Delete the '${target}' cluster resource on '${e.mgmt}'";
         cluster = e.mgmt;
         provides = [ (t.cluster target).managedResourceDeleted ];
-        after = [ (needs "cluster/${target}/mr-reconciled") ];
+        after = [ (needs (t.cluster target).managedResourceReconciled) ];
         params = resourceParams;
       };
 

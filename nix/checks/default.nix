@@ -59,6 +59,7 @@ in
 // import ./floe-headers.nix { inherit lib pkgs; }
 // import ./rfc-refs.nix { inherit lib pkgs; }
 // import ./step-kind-producers.nix { inherit lib pkgs; }
+// import ./plan-tokens.nix { inherit lib pkgs; }
 // import ./counts.nix {
   inherit lib pkgs;
   floeSet = allFloes;

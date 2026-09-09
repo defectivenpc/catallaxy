@@ -31,6 +31,7 @@
 
 let
   t = import ../../../lib/plan-tokens.nix { inherit lib; };
+  anchors = import ../../../lib/eval/anchors.nix { };
   duration = import ../../../lib/util/duration.nix { inherit lib; };
 in
 
@@ -257,7 +258,7 @@ catallaxy.mkComponentFloe {
 
               # Before the cluster goes: the drain wait reads external-dns's
               # own metrics endpoint, which needs the controller running.
-              before = [ (t.wants (t.cluster cluster.name).destroyed) ];
+              before = [ (anchors.wants (t.cluster cluster.name).destroyed) ];
 
               # A zone left dirty is bad; a lab that cannot be destroyed is
               # worse. This is the one step whose failure must not stop the

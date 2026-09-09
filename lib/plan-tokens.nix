@@ -1,27 +1,26 @@
 # The readiness tokens a cluster's lifecycle publishes.
+#
+# One spelling per token, because a producer and a consumer have to agree on
+# the exact string and an `optional:` anchor that matches nothing fails
+# silently. `checks.plan-tokens` refuses a token literal written anywhere else.
 { lib }:
 
 let
   clusterTokens = name: {
     created = "cluster/${name}/created";
-    reachable = "cluster/${name}/reachable";
-    bootstrapDeployed = "cluster/${name}/bootstrap-deployed";
-    provisionerDone = "cluster/${name}/provisioner-done";
-    kubeconfigSynced = "cluster/${name}/kubeconfig-synced";
-    pivoted = "cluster/${name}/pivoted";
     deployed = "cluster/${name}/deployed";
-    argocdInstalled = "cluster/${name}/argocd-installed";
-    forgejoBootstrapped = "cluster/${name}/forgejo-bootstrapped";
-    gitReady = "cluster/${name}/git-ready";
-    gitopsStarted = "cluster/${name}/gitops-started";
+    kubeconfigSynced = "cluster/${name}/kubeconfig-synced";
     cleanup = "cluster/${name}/cleanup";
     cloudReleased = "cluster/${name}/cloud-released";
     managedResourceAdopted = "cluster/${name}/mr-adopted";
+    managedResourceReconciled = "cluster/${name}/mr-reconciled";
     managedResourceDeleted = "cluster/${name}/mr-deleted";
     gone = "cluster/${name}/gone";
     destroyed = "cluster/${name}/destroyed";
   };
+
   stackTokens = name: {
+    planned = "stack/${name}/planned";
     applied = "stack/${name}/applied";
     destroyed = "stack/${name}/destroyed";
   };
@@ -31,12 +30,8 @@ in
   stack = stackTokens;
 
   lab = {
-    preflightOk = "lab/preflight-ok";
     network = "lab/network";
-    hostNetwork = "lab/host-network";
     ingressCa = "lab/ingress-ca";
-    hostTrust = "host/trust";
-    hostTrustOs = "host/trust/os";
     hostDns = "host/dns";
     hostDnsRemoved = "host/dns-removed";
     registryConfig = "lab/registry-config";
@@ -54,9 +49,4 @@ in
     servicesRemoved = "lab/services-removed";
     networkRemoved = "lab/network-removed";
   };
-
-  needs = token: "provides:${token}";
-  wants = token: "optional:provides:${token}";
-  wantsAll = tokens: map (token: "optional:provides:${token}") tokens;
-  wantsKind = kind: "optional:kind:${kind}";
 }
