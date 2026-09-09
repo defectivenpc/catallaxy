@@ -7,6 +7,8 @@ The format is based on
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-09
+
 ### Added
 
 - **netbird's operator is a floe of its own, and it runs in both clusters.**
