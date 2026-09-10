@@ -1,19 +1,73 @@
 # Cluster Security
 
-> **The `cluster.security.*` options this page described are not built.** It
-> documented three opt-in controls — Pod Security Admission labelling,
-> default-deny NetworkPolicies, and API server audit logging — under
-> `cluster.security.podSecurity`, `.networkPolicies` and `.auditLogging`.
-> None of those option paths exists, and neither does `mkNetworkPolicy`.
-> They are named here because "the option is missing" is more useful to a
-> reader than a page that quietly omits the subject.
+Three opt-in controls, under `lab.clusters.<c>.security`. All three are off
+by default: each can refuse something that was working, and that refusal
+should be somebody's decision.
 
-There is no NetworkPolicy renderer anywhere in the tree. A `network` channel
-on a component carried a `declared` flag that 31 of 31 floes set to `true`
-and that nothing ever read; it was deleted rather than defaulted, because a
-claim nobody acts on is worse than no claim.
+## Pod Security Admission
 
-## What does exist
+`security.podSecurity` labels every namespace the cluster creates. It is in
+the API server, so it needs no CNI support and behaves identically on k3d
+and on a cloud cluster.
+
+```nix
+security.podSecurity = {
+  enable = true;
+  enforce = "baseline";          # what the API server refuses below
+  warn = "restricted";           # what it reports without refusing
+  override.podinfo = "restricted";
+};
+```
+
+`warn` defaults stricter than `enforce` on purpose: the warnings are what
+tell you whether raising `enforce` would break anything. `minimal.local`
+runs with this on, and the first run reported that `podinfo` itself violated
+`restricted` on four counts. It now sets them and is held to `restricted` by
+`override` while the rest of the cluster stays at `baseline` — which is the
+whole loop, and the reason `warn` is worth its noise.
+
+`override` reads in both directions. Down for a CNI or storage driver that
+genuinely needs host access, up for a workload that has earned it.
+
+## Audit logging
+
+`security.auditLogging` records what the API server was asked to do. k3d
+only: a managed control plane logs through its provider, and a cluster the
+lab did not make has no server to pass flags to.
+
+```nix
+security.auditLogging.enable = true;   # level defaults to Metadata
+```
+
+`Metadata` is who, what and when. `Request` and `RequestResponse` add the
+submitted and returned objects, both of which write Secret contents to disk,
+which is why neither is the default. The policy drops `get`, `list` and
+`watch` before anything else — on `minimal.local` that is what takes a run
+from unreadable to 1846 events, none of them reads.
+
+## Default-deny NetworkPolicies
+
+`security.networkPolicies.defaultDeny` takes a list of namespaces, not a
+flag, and that is the honest shape rather than a smaller one.
+
+A NetworkPolicy is additive: once any policy selects a pod, only what some
+policy allows gets through. So denying a namespace means every floe
+installing into it has to declare the traffic it needs — and **no floe
+declares any today**. Naming one namespace at a time makes that a decision
+per namespace instead of an outage. DNS to `kube-system` is excepted,
+because a namespace whose pods cannot resolve turns every failure into a
+name error.
+
+It is refused outright on a cluster running k3d's default Flannel, which
+implements no policy engine. The policy would apply, report healthy, and
+deny nothing — which teaches that it worked. `disableFlannel = true` plus
+the `cilium` floe is the combination that enforces, and `minimal.cilium`
+exists to be it.
+
+`kinds.mkNetworkPolicy` renders one; `kinds.mkDefaultDeny` renders the deny
+above.
+
+## What else exists
 
 | Concern                            | Where                                                       |
 | ---------------------------------- | ----------------------------------------------------------- |
@@ -39,10 +93,8 @@ and refuses one that nothing does.
 hostname at construction, so a workload cannot claim a name the lab does not
 serve.
 
-## If you want the missing controls
+## What is still missing
 
-Pod Security Admission is namespace labels, so a floe can emit them today
-with no framework support at all. Default-deny NetworkPolicies would need a
-renderer that does not exist and a CNI that enforces them — Cilium does,
-k3d's default Flannel does not, which is why a policy applied on a local lab
-would be inert and would teach the wrong lesson about whether it worked.
+Per-floe traffic declarations. Until a floe can say what it needs to reach,
+`defaultDeny` on a namespace running anything real means writing the allow
+rules by hand.

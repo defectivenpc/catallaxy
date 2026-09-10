@@ -10,14 +10,13 @@ mkdir my-platform && cd my-platform
 nix flake init -t github:onepunchtech/catallaxy#consumer
 ```
 
-Five files:
+Four files:
 
 ```
 flake.nix                          catallaxy input, mkLab, outputs
 lab.nix                            your topology
 floes/default.nix                  your floe registry
 floes/hello-world/default.nix      a worked example floe
-floes/hello-world/options.nix      its option surface
 ```
 
 ## The flake
@@ -33,14 +32,11 @@ floes/hello-world/options.nix      its option surface
   outputs = { nixpkgs, flake-utils, catallaxy, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        lib = nixpkgs.lib;
+        cata = catallaxy.legacyPackages.${system};
 
-        myFloes = import ./floes {
-          inherit lib;
-          inherit (catallaxy.lib.floe) mkFloe;
-        };
+        myFloes = cata.mkFloes (import ./floes);
 
-        lab = catallaxy.legacyPackages.${system}.mkLab {
+        lab = cata.mkLab {
           modules = [ (import ./lab.nix { inherit myFloes; }) ];
         };
       in {
@@ -82,10 +78,15 @@ lab as an ordinary argument. See [Write a Floe](../using/writing-a-floe.md).
       instanceName = "my-platform-app";
     };
 
+    gateway-api = floes.gateway-api-crds {
+      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
+      version  = "v1.2.1";
+    };
+
     cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
     gateway      = floes.gateway      { chart = "${cataCharts.traefik.chart}"; };
 
-    hello-world = myFloes.hello-world { replicas = 2; };
+    hello = myFloes.hello-world { replicas = 2; };
   };
 }
 ```
@@ -141,19 +142,12 @@ from
 The scaffold ships one:
 
 ```nix
-checks.lab-eval =
-  let forced = builtins.toJSON lab.config.lab.out.manifests;
-  in pkgs.runCommand "lab-eval" { } ''
-    cat > /dev/null <<'JSON'
-    ${forced}
-    JSON
-    echo "my-platform evaluated" > $out
-  '';
+checks.lab-renders = lab.config.lab.out.package;
 ```
 
-Forcing the manifest tree touches every option, so an unmet `requires`, a
-bad `exports` read, or a broken anchor fails in CI rather than at `lab up`.
-Add [plan snapshots](../understanding/how-it-works.md) next, they turn any
+Rendering the lab touches every option, so an unmet `requires`, a bad
+`exports` read, or a broken anchor fails in CI rather than at `lab up`. Add
+[plan snapshots](../understanding/how-it-works.md) next, they turn any
 change in deploy ordering into a reviewable diff.
 
 ## Next

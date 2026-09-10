@@ -7,6 +7,120 @@ The format is based on
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-10
+
+### Added
+
+- **Crossplane is a second provisioning camp, with a loop that costs
+  nothing.** OpenTofu had `provisioned`, whose `local` and `random`
+  providers reach no network, so the whole `resources` path ran inside
+  `nix flake check` with no account. Crossplane had the plan machinery, the
+  chart pin and `sync-kubeconfig`, and no floe — nothing installed it,
+  nothing installed a provider, and nothing rendered the CR that
+  `provisions.<name>.resourceKind` names.
+
+  Three floes now do: `crossplane`, `crossplane-provider-nop`, and
+  `nop-resource`, whose `NopResource` reports Ready on a timer and creates
+  nothing. `examples/labs/crossplane` runs all three on one k3d cluster and
+  joins the e2e matrix.
+
+  Nothing in the lab names crossplane. The provider requires a control
+  plane, the resource requires a provider, and the linker matches both, so
+  swapping in a cloud provider is a one-line change. What it does not cover
+  is the cross-cluster half: a nop resource emits only the connection
+  details it was handed, so `sync-kubeconfig` still needs a real provider.
+  The ordering stays pinned where it already was, by rendering.
+
+  The lab earned its keep on the first run, and not by passing. It stood up
+  and then failed applying its `NopResource` — the webhook service had no
+  endpoints. Not timing: provider-nop v0.5.0 is built for Crossplane v2,
+  whose rbac-manager grants a provider read on `customresourcedefinitions`.
+  1.18.2's does not, so v0.5.0's `crd-gate` controller timed out syncing its
+  CRD informer and the process exited 1 every two minutes, taking the
+  webhook endpoint with it. The `Provider` reported `Healthy: True`
+  throughout, because that condition describes the package revision and not
+  a serving controller — **no probe on it could have caught this, and no
+  render-time check could either.** v0.4.0 matches the pin, and its
+  `NopResource` is cluster-scoped, read off the package rather than
+  recalled.
+
+- **The consumer template exists.** `your-own-lab.md` walked through a
+  scaffold in detail, and running its instructions produced nothing: there
+  was no `templates/` directory, no `templates` flake output, and no
+  consumer surface at all. Every path it named was wrong —
+  `catallaxy.lib.floe.mkFloe` (no `lib` output),
+  `legacyPackages.<sys>.mkLab` (internal), `lab.out.manifests` (`out` has
+  `package`/`cliConfig`), and per-floe `options.nix` (no floe splits one).
+
+  `mkLab` is exported and `mkFloes` is new — the same `applyFloes` the
+  built-in set is built with, so a floe outside the repo is handed exactly
+  what one inside it gets and there is no second calling convention.
+  `nix/checks/consumer-template.nix` builds the template's lab package, not
+  just its config: `lab.out.manifests` was wrong for two releases because
+  nothing built it.
+
+- **The option reference is generated.** The generator was not parked so
+  much as unfinished from one end — `cata-build docs render` was complete,
+  tested and reachable, and what was missing was the `options.json` to feed
+  it. `nixosOptionsDoc` over the tree `mkLab` evaluates supplies it, so the
+  reference cannot describe an option a lab does not have. 126 options
+  across five pages, diffed by `option-docs` and refreshed by
+  `nix run .#refresh-option-docs`.
+
+  `option-descriptions` is a second check reading `undescribed.txt`, which
+  the generator has always written and nothing has ever read.
+
+- **`cluster.security`: Pod Security Admission, audit logging, and
+  default-deny NetworkPolicies.** All three off by default, because each can
+  refuse something that was working.
+
+  PSA is namespace labels applied where the namespaces are made. `warn`
+  defaults stricter than `enforce`, which paid for itself immediately: it
+  reported that `podinfo` violated `restricted` on four counts. podinfo now
+  sets all four and `minimal.local` holds it to `restricted` through
+  `override` while the rest of the cluster stays at `baseline`.
+
+  Audit logging needed no new plumbing — `extraApiServerArgs` and
+  `extraVolumes` were on the k3d spec and hardcoded empty. The policy drops
+  `get`/`list`/`watch` first, which is the difference between a readable log
+  and an unreadable one.
+
+  `defaultDeny` takes a list of namespaces rather than a flag, because a
+  NetworkPolicy is additive and no floe declares the traffic it needs. It is
+  refused outright on a cluster still running Flannel, which implements no
+  policy engine: the policy would apply, report healthy, and deny nothing.
+
+### Changed
+
+- **A chart's non-test lifecycle hooks are declared replaced, or the build
+  fails.** A Helm hook does work catallaxy does elsewhere, and silently
+  dropping one meant a chart that looked installed and was not.
+
+- **The lab's zone stops answering for a cluster it is not the edge for.**
+  The wildcard was blanket; it now mirrors the proxy's `edge.mode` filter.
+
+- **A floe names a moment in the teardown, not a lab plan token.**
+  `teardown` lowers to an anchor in the planner, so a floe no longer spells
+  a token that belongs to the lab.
+
+- **The plan that was shown is the plan that is applied.** `infra-plan`
+  writes `-out` and `infra-apply` consumes it.
+
+- **Destroying a stack takes back what it published.**
+
+### Removed
+
+- **Five step kinds nothing emits.** `bootstrap-argocd-helm`,
+  `colima-network-route`, `host-trust-install`, `trust-bundle` and
+  `verify-argocd-reachable`, with their Rust variants, params structs,
+  executor arms and reference rows. 34 kinds to 29, agreed by
+  `StepKind::ALL`, the Nix registry and the regenerated fixture. No plan
+  digest moved.
+
+  `pivot` and `publish-images` stay: they are the Crossplane half, and with
+  `examples/labs/crossplane` running they are declared future work rather
+  than dead weight.
+
 ## [0.8.0] - 2026-09-09
 
 ### Added

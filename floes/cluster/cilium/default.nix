@@ -117,7 +117,7 @@ let
             bundles.cilium = kinds.mkBundle {
               # No `createNamespaces`: kube-system is one the cluster ships
               # with, and emitting a Namespace for it has the applier adopt it.
-              helmCharts.cilium = {
+              helmCharts.cilium = kinds.mkHelmChart {
                 inherit (inputs) chart;
                 releaseName = "cilium";
                 namespace = "kube-system";

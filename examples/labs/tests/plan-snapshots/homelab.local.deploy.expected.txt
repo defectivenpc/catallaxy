@@ -1,7 +1,7 @@
 [001] cert-generate name=cert-generate params.zone=homelab.test
 [002] docker-network-create name=docker-network-create params.gateway=172.34.0.1 params.name=homelab.local params.subnet=172.34.0.0/16
 [003] setup-services name=setup-services
-[004] registry-setup name=registry-setup params.port=5056 params.upstreams=["codeberg.org","registry.k8s.io","ghcr.io","quay.io","docker.io","public.ecr.aws","oci.external-secrets.io"] params.zone=homelab.test
+[004] registry-setup name=registry-setup params.port=5056 params.upstreams=["codeberg.org","registry.k8s.io","ghcr.io","quay.io","docker.io","public.ecr.aws","xpkg.upbound.io","oci.external-secrets.io"] params.zone=homelab.test
 [005] warm-cache name=warm-cache
 [006] create-cluster name=create-cluster-core cluster=core params.name=core params.provisioner=k3d
 [007] create-cluster name=create-cluster-obs cluster=obs params.name=obs params.provisioner=k3d

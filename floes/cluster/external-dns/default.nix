@@ -30,8 +30,6 @@
 }:
 
 let
-  t = import ../../../lib/plan-tokens.nix { inherit lib; };
-  anchors = import ../../../lib/eval/anchors.nix { };
   duration = import ../../../lib/util/duration.nix { inherit lib; };
 in
 
@@ -281,11 +279,11 @@ catallaxy.mkComponentFloe {
               kind = "run-script";
               direction = "teardown";
               description = "Delete external-dns-watched objects and wait for records to drain";
-              provides = [ t.lab.cleanup ];
-
               # Before the cluster goes: the drain wait reads external-dns's
-              # own metrics endpoint, which needs the controller running.
-              before = [ (anchors.wants (t.cluster cluster.name).destroyed) ];
+              # own metrics endpoint, which needs the controller running. The
+              # planner turns this into the anchor; this floe has no name for
+              # the cluster it is on.
+              teardown = "before-cluster-destroy";
 
               # A zone left dirty is bad; a lab that cannot be destroyed is
               # worse. This is the one step whose failure must not stop the
@@ -307,7 +305,7 @@ catallaxy.mkComponentFloe {
 
             images.controller = kinds.mkImage "registry.k8s.io/external-dns/external-dns:v0.16.1";
 
-            helmCharts.external-dns = {
+            helmCharts.external-dns = kinds.mkHelmChart {
               chart = inputs.chart;
               releaseName = "external-dns";
               namespace = inputs.namespace;

@@ -180,6 +180,22 @@ let
       };
     };
 
+    controlPlane = {
+      sig = sigs.MANAGED_RESOURCE_CONTROL_PLANE;
+      value = {
+        namespace = "crossplane-system";
+        providerKind = "pkg.crossplane.io/Provider";
+      };
+    };
+
+    resourceProvider = {
+      sig = sigs.MANAGED_RESOURCE_PROVIDER;
+      value = {
+        crdKinds = [ "nop.crossplane.io/NopResource" ];
+        healthy = "stub/provider/healthy";
+      };
+    };
+
     identityOperator = {
       sig = sigs.IDENTITY_OPERATOR;
       value = {

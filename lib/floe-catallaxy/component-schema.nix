@@ -11,6 +11,14 @@ let
     releaseName = T.str;
     namespace = T.k8sName;
     values = T.attrsOf T.any;
+
+    # `<hook name> -> what does the job instead`. Install order here comes
+    # from the wave graph, so a chart's lifecycle hooks are dropped; saying so
+    # is what keeps the drop a decision rather than an accident. Keyed by name
+    # because a hook is a Job and its RBAC sharing one. Test hooks are dropped
+    # without asking; `lib/render/manifest.nix` refuses any other undeclared
+    # one.
+    replacedHooks = T.attrsOf T.str;
   };
 
   imageSchema = T.record {

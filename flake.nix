@@ -65,6 +65,13 @@
             craneLib
             rustToolchain
             ;
+
+          # `let` is recursive: `labs` is defined below and the option tree
+          # comes from the same `mkLab` a consumer calls.
+          optionsJSON = import ./nix/option-docs.nix {
+            inherit lib pkgs;
+            inherit (labs) mkLab;
+          };
         };
 
         labs = import ./lib/lab.nix {
@@ -115,6 +122,13 @@
         legacyPackages = {
           charts = cataCharts;
 
+          # What `refresh-option-docs` copies out of and `option-docs` diffs.
+          inherit (packages') optionDocs;
+
+          # The two a consumer flake calls. `mkLab` is here rather than in
+          # `packages` because a lab is not a derivation.
+          inherit (labs) mkLab mkFloes;
+
           # The two the CLI resolves, and the only two.
           labs = lib.mapAttrs (_: l: l.config.lab.out.cliConfig) exampleLabs;
           labPackages = lib.mapAttrs (_: l: l.config.lab.out.package) labDefs;
@@ -162,6 +176,7 @@
             refresh-digests
             refresh-cli-configs
             refresh-floe-docs
+            refresh-option-docs
             refresh-plans
             docs
             ;
@@ -210,6 +225,11 @@
           program = "${packages'.refresh-floe-docs}/bin/refresh-floe-docs";
         };
 
+        apps.refresh-option-docs = {
+          type = "app";
+          program = "${packages'.refresh-option-docs}/bin/refresh-option-docs";
+        };
+
         apps.refresh-plans = {
           type = "app";
           program = "${packages'.refresh-plans}/bin/refresh-plans";
@@ -238,7 +258,8 @@
           # A check that a *wrong* lab is refused has to build one, and only
           # `mkLab` can: the refusal is an assertion inside the module tree,
           # so there is nothing to inspect without evaluating it.
-          inherit (labs) mkLab;
+          inherit (labs) mkLab mkFloes;
+          inherit (packages') optionDocs;
           inherit
             e2eLabs
             cloudE2eLabs
@@ -247,5 +268,14 @@
             ;
         };
       }
-    );
+    )
+    // {
+      # `nix flake init -t github:onepunchtech/catallaxy#consumer` — the
+      # scaffold `docs/book/src/start-here/your-own-lab.md` walks through.
+      # System-independent, so it sits outside `eachDefaultSystem`.
+      templates.consumer = {
+        path = ./templates/consumer;
+        description = "A lab in your own flake, with catallaxy as an input.";
+      };
+    };
 }

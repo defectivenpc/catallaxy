@@ -1,0 +1,478 @@
+
+=== lab up ===
+>>> Preflight passed
+catallaxy Deploying lab 'crossplane.nop' (6 steps)
+
+>>> Building lab manifests...
+>>> Lab package built
+
+>>> Step 1/6: Create docker network 'crossplane.nop'
+>>> Ensuring 'crossplane.nop' network exists (subnet: 172.44.0.0/16)...
+
+>>> Step 2/6: Start lab infrastructure services
+>>> Starting Zot OCI registry (image cache)...
+d0f93ae8e8697fee1f10817f2a19ede6a9413917f6fbbf3ae28bd44492ae65ec
+>>> Waiting for Zot OCI registry (image cache) to serve http://127.0.0.1:5060/v2/
+>>> Zot OCI registry (image cache) started
+
+>>> Step 3/6: Write registries.yaml + certs.d + lab-resolv.conf
+Warning: Lab CA missing at /home/whitehead/.local/share/catallaxy/labs/crossplane.nop/proxy/ca.crt; registry pulls will fail until cert-generate produces it.
+Warning: Could not resolve lab DNS container IP; cluster nodes will fall back to Docker DNS (lab hostnames won't resolve)
+
+>>> Step 4/6: Pre-warm the lab registry with every declared image
+catallaxy Warming 1 images via localhost:5060
+>>> xpkg.upbound.io/crossplane/crossplane:v1.18.2... warmed
+
+>>> Cache: 1 ready, 0 skipped
+
+>>> Step 5/6: Create k3d cluster 'control'
+>>> Creating k3d cluster 'crossplane-nop-control'...
+[36mINFO[0m[0000] Prep: Network                                
+[36mINFO[0m[0000] Re-using existing network 'crossplane.nop' (6d2029b1e1dc4fdde72e04e25e2763e79c394ededd83e20f09c31bf384e1e163) 
+[36mINFO[0m[0000] Created image volume k3d-crossplane-nop-control-images 
+[36mINFO[0m[0000] Starting new tools node...                   
+[36mINFO[0m[0000] Starting node 'k3d-crossplane-nop-control-tools' 
+[36mINFO[0m[0001] Creating node 'k3d-crossplane-nop-control-server-0' 
+[36mINFO[0m[0001] Creating LoadBalancer 'k3d-crossplane-nop-control-serverlb' 
+[36mINFO[0m[0001] Using the k3d-tools node to gather environment information 
+[36mINFO[0m[0001] HostIP: using network gateway 172.44.0.1 address 
+[36mINFO[0m[0001] Starting cluster 'crossplane-nop-control'    
+[36mINFO[0m[0001] Starting servers...                          
+[36mINFO[0m[0001] Starting node 'k3d-crossplane-nop-control-server-0' 
+[36mINFO[0m[0003] All agents already running.                  
+[36mINFO[0m[0003] Starting helpers...                          
+[36mINFO[0m[0003] Starting node 'k3d-crossplane-nop-control-serverlb' 
+[36mINFO[0m[0010] Injecting records for hostAliases (incl. host.k3d.internal) and for 2 network members into CoreDNS configmap... 
+[36mINFO[0m[0012] Cluster 'crossplane-nop-control' created successfully! 
+[36mINFO[0m[0012] You can now use it like this:                
+export KUBECONFIG=$(k3d kubeconfig write crossplane-nop-control)
+kubectl cluster-info
+>>> Cluster ready (context: k3d-crossplane-nop-control)
+
+>>> Step 6/6: Deploy manifests to 'control'
+>>> Applying 4 wave(s) via kubectl SSA on 'k3d-crossplane-nop-control' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/compositeresourcedefinitions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositionrevisions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/environmentconfigs.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/usages.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurationrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurations.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/controllerconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/deploymentruntimeconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functionrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/imageconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/locks.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providerrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providers.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/storeconfigs.secrets.crossplane.io serverside-applied
+>>> Applied bundle 'crossplane__crds'
+>>> Waiting for 16 CRD(s) from 'crossplane__crds' to be Established
+  CRD compositeresourcedefinitions.apiextensions.crossplane.io established
+  CRD compositionrevisions.apiextensions.crossplane.io established
+  CRD compositions.apiextensions.crossplane.io established
+  CRD configurationrevisions.pkg.crossplane.io established
+  CRD configurations.pkg.crossplane.io established
+  CRD controllerconfigs.pkg.crossplane.io established
+  CRD deploymentruntimeconfigs.pkg.crossplane.io established
+  CRD environmentconfigs.apiextensions.crossplane.io established
+  CRD functionrevisions.pkg.crossplane.io established
+  CRD functions.pkg.crossplane.io established
+  CRD imageconfigs.pkg.crossplane.io established
+  CRD locks.pkg.crossplane.io established
+  CRD providerrevisions.pkg.crossplane.io established
+  CRD providers.pkg.crossplane.io established
+  CRD storeconfigs.secrets.crossplane.io established
+  CRD usages.apiextensions.crossplane.io established
+namespace/crossplane-system serverside-applied
+namespace/nop serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/rbac-manager serverside-applied
+serviceaccount/crossplane serverside-applied
+secret/crossplane-root-ca serverside-applied
+secret/crossplane-tls-server serverside-applied
+secret/crossplane-tls-client serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:system:aggregate-to-crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:allowed-provider-permissions serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-browse serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-browse serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+service/crossplane-webhooks serverside-applied
+deployment.apps/crossplane serverside-applied
+deployment.apps/crossplane-rbac-manager serverside-applied
+>>> Applied bundle 'crossplane__crossplane'
+>>> Waiting for 2 workload(s) in /nix/store/i94qh0ka49mndxvyxl5g5zc47ziv2c5v-lab-crossplane.nop/manifests/control/01-wave/crossplane__crossplane (timeout: 600s)
+Waiting for deployment "crossplane" rollout to finish: 0 of 1 updated replicas are available...
+deployment "crossplane" successfully rolled out
+deployment "crossplane-rbac-manager" successfully rolled out
+>>> Waiting on readyProbe for 'crossplane__crossplane' → deployment/crossplane condition=Available
+deployment.apps/crossplane condition met
+deployment.apps/crossplane condition met
+
+>>> Wave 003 (1 bundle)
+provider.pkg.crossplane.io/provider-nop serverside-applied
+>>> Applied bundle 'provider__provider'
+>>> Waiting on readyProbe for 'provider__provider' → provider/provider-nop condition=Healthy
+provider.pkg.crossplane.io/provider-nop condition met
+provider.pkg.crossplane.io/provider-nop condition met
+
+>>> Wave 004 (1 bundle)
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 1, 0s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 2, 6s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 3, 12s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 4, 18s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 5, 24s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 6, 30s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 7, 36s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 8, 42s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 9, 48s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 10, 54s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 11, 60s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 12, 66s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 13, 72s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 14, 78s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 15, 84s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 16, 90s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 17, 96s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 18, 102s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 19, 108s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 20, 114s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 21, 120s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 22, 126s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 23, 132s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 24, 138s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 25, 144s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 26, 150s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 27, 156s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 28, 162s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 29, 168s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> attempt 2/3 after 1s (last error: kubectl apply of bundle 'workload__nop' failed after 30 attempts over 174s: kubectl apply exited with exit status: 1)
+>>> Applying 4 wave(s) via kubectl SSA on 'k3d-crossplane-nop-control' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/compositeresourcedefinitions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositionrevisions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/environmentconfigs.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/usages.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurationrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurations.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/controllerconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/deploymentruntimeconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functionrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/imageconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/locks.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providerrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providers.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/storeconfigs.secrets.crossplane.io serverside-applied
+>>> Applied bundle 'crossplane__crds'
+>>> Waiting for 16 CRD(s) from 'crossplane__crds' to be Established
+  CRD compositeresourcedefinitions.apiextensions.crossplane.io established
+  CRD compositionrevisions.apiextensions.crossplane.io established
+  CRD compositions.apiextensions.crossplane.io established
+  CRD configurationrevisions.pkg.crossplane.io established
+  CRD configurations.pkg.crossplane.io established
+  CRD controllerconfigs.pkg.crossplane.io established
+  CRD deploymentruntimeconfigs.pkg.crossplane.io established
+  CRD environmentconfigs.apiextensions.crossplane.io established
+  CRD functionrevisions.pkg.crossplane.io established
+  CRD functions.pkg.crossplane.io established
+  CRD imageconfigs.pkg.crossplane.io established
+  CRD locks.pkg.crossplane.io established
+  CRD providerrevisions.pkg.crossplane.io established
+  CRD providers.pkg.crossplane.io established
+  CRD storeconfigs.secrets.crossplane.io established
+  CRD usages.apiextensions.crossplane.io established
+namespace/crossplane-system serverside-applied
+namespace/nop serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/rbac-manager serverside-applied
+serviceaccount/crossplane serverside-applied
+secret/crossplane-root-ca serverside-applied
+secret/crossplane-tls-server serverside-applied
+secret/crossplane-tls-client serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:system:aggregate-to-crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:allowed-provider-permissions serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-browse serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-browse serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+service/crossplane-webhooks serverside-applied
+deployment.apps/crossplane serverside-applied
+deployment.apps/crossplane-rbac-manager serverside-applied
+>>> Applied bundle 'crossplane__crossplane'
+>>> Waiting for 2 workload(s) in /nix/store/i94qh0ka49mndxvyxl5g5zc47ziv2c5v-lab-crossplane.nop/manifests/control/01-wave/crossplane__crossplane (timeout: 600s)
+deployment "crossplane" successfully rolled out
+deployment "crossplane-rbac-manager" successfully rolled out
+>>> Waiting on readyProbe for 'crossplane__crossplane' → deployment/crossplane condition=Available
+deployment.apps/crossplane condition met
+deployment.apps/crossplane condition met
+
+>>> Wave 003 (1 bundle)
+provider.pkg.crossplane.io/provider-nop serverside-applied
+>>> Applied bundle 'provider__provider'
+>>> Waiting on readyProbe for 'provider__provider' → provider/provider-nop condition=Healthy
+provider.pkg.crossplane.io/provider-nop condition met
+provider.pkg.crossplane.io/provider-nop condition met
+
+>>> Wave 004 (1 bundle)
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 1, 0s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 2, 6s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 3, 12s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 4, 18s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 5, 24s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 6, 30s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 7, 36s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 8, 42s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 9, 48s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 10, 54s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 11, 60s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 12, 66s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 13, 72s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 14, 78s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 15, 84s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 16, 90s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 17, 96s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 18, 102s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 19, 108s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 20, 114s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 21, 120s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 22, 126s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 23, 132s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 24, 138s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 25, 144s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 26, 150s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 27, 156s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 28, 162s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 29, 168s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> attempt 3/3 after 2s (last error: kubectl apply of bundle 'workload__nop' failed after 30 attempts over 174s: kubectl apply exited with exit status: 1)
+>>> Applying 4 wave(s) via kubectl SSA on 'k3d-crossplane-nop-control' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/compositeresourcedefinitions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositionrevisions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/environmentconfigs.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/usages.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurationrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurations.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/controllerconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/deploymentruntimeconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functionrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/imageconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/locks.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providerrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providers.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/storeconfigs.secrets.crossplane.io serverside-applied
+>>> Applied bundle 'crossplane__crds'
+>>> Waiting for 16 CRD(s) from 'crossplane__crds' to be Established
+  CRD compositeresourcedefinitions.apiextensions.crossplane.io established
+  CRD compositionrevisions.apiextensions.crossplane.io established
+  CRD compositions.apiextensions.crossplane.io established
+  CRD configurationrevisions.pkg.crossplane.io established
+  CRD configurations.pkg.crossplane.io established
+  CRD controllerconfigs.pkg.crossplane.io established
+  CRD deploymentruntimeconfigs.pkg.crossplane.io established
+  CRD environmentconfigs.apiextensions.crossplane.io established
+  CRD functionrevisions.pkg.crossplane.io established
+  CRD functions.pkg.crossplane.io established
+  CRD imageconfigs.pkg.crossplane.io established
+  CRD locks.pkg.crossplane.io established
+  CRD providerrevisions.pkg.crossplane.io established
+  CRD providers.pkg.crossplane.io established
+  CRD storeconfigs.secrets.crossplane.io established
+  CRD usages.apiextensions.crossplane.io established
+namespace/crossplane-system serverside-applied
+namespace/nop serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/rbac-manager serverside-applied
+serviceaccount/crossplane serverside-applied
+secret/crossplane-root-ca serverside-applied
+secret/crossplane-tls-server serverside-applied
+secret/crossplane-tls-client serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:system:aggregate-to-crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:allowed-provider-permissions serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-browse serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-browse serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+service/crossplane-webhooks serverside-applied
+deployment.apps/crossplane serverside-applied
+deployment.apps/crossplane-rbac-manager serverside-applied
+>>> Applied bundle 'crossplane__crossplane'
+>>> Waiting for 2 workload(s) in /nix/store/i94qh0ka49mndxvyxl5g5zc47ziv2c5v-lab-crossplane.nop/manifests/control/01-wave/crossplane__crossplane (timeout: 600s)
+deployment "crossplane" successfully rolled out
+deployment "crossplane-rbac-manager" successfully rolled out
+>>> Waiting on readyProbe for 'crossplane__crossplane' → deployment/crossplane condition=Available
+deployment.apps/crossplane condition met
+deployment.apps/crossplane condition met
+
+>>> Wave 003 (1 bundle)
+provider.pkg.crossplane.io/provider-nop serverside-applied
+>>> Applied bundle 'provider__provider'
+>>> Waiting on readyProbe for 'provider__provider' → provider/provider-nop condition=Healthy
+provider.pkg.crossplane.io/provider-nop condition met
+provider.pkg.crossplane.io/provider-nop condition met
+
+>>> Wave 004 (1 bundle)
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 1, 0s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 2, 6s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 3, 12s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 4, 18s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 5, 24s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 6, 30s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 7, 36s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 8, 42s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 9, 48s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 10, 54s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 11, 60s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 12, 66s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 13, 72s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 14, 78s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 15, 84s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 16, 90s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 17, 96s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 18, 102s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 19, 108s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 20, 114s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 21, 120s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 22, 126s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 23, 132s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 24, 138s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 25, 144s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 26, 150s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 27, 156s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": proxy error from 127.0.0.1:6443 while dialing 10.244.0.7:9443, code 502: 502 Bad Gateway
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 28, 162s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+>>> kubectl apply of bundle 'workload__nop' failed (attempt 29, 168s of 180s); sleeping 6s and retrying.
+Error from server (InternalError): Internal error occurred: failed calling webhook "nopresources.nop.crossplane.io": failed to call webhook: Post "https://provider-nop.crossplane-system.svc:9443/validate-nop-crossplane-io-v1alpha1-nopresource?timeout=10s": no endpoints available for service "provider-nop"
+
+>>> Steps are idempotent, so re-running picks up where this stopped: fix the cause above and run `cata lab up` again. `--up-to=<kind>` stops after the last step of a kind if you want to go one stage at a time.
+step 6/6 failed: Deploy manifests to 'control': kubectl apply of bundle 'workload__nop' failed after 30 attempts over 174s: kubectl apply exited with exit status: 1

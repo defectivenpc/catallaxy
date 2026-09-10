@@ -19,6 +19,8 @@ let
   inherit (lib) mkOption types;
 
   stepTypes = import ../../../lib/eval/step-type.nix { inherit lib; };
+  t = import ../../../lib/plan-tokens.nix { inherit lib; };
+  inherit (import ../../../lib/eval/anchors.nix { }) wants;
   planGraph = import ../../../lib/eval/plan-graph.nix { inherit lib; };
   kindTable = import ./kinds { inherit lib; };
 
@@ -44,10 +46,17 @@ let
             in
             {
               name = "${clusterName}-${stepName}";
-              value = step // {
-                cluster = clusterName;
-                inherit origin;
-              };
+              value =
+                (builtins.removeAttrs step [ "teardown" ])
+                // {
+                  cluster = clusterName;
+                  inherit origin;
+                }
+                # A floe says *when*, not *what*: it has no name for the
+                # cluster it is on, so it cannot write this anchor itself.
+                // lib.optionalAttrs (step.teardown or null == "before-cluster-destroy") {
+                  before = (step.before or [ ]) ++ [ (wants (t.cluster clusterName).destroyed) ];
+                };
             }
           ) steps
         ) (cluster.out.steps or { })

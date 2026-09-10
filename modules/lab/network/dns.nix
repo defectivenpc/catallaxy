@@ -26,6 +26,26 @@ let
 
   cfg = config.lab.dns;
 
+  # Public hostnames the lab is the edge for, and whether it is the edge for
+  # every cluster. Same filter as `modules/lab/host/proxy.nix`: a cluster with
+  # `edge.mode != "proxy"` is reached at its own address, so pointing its
+  # hostname at the lab bridge sends traffic to a proxy with no backend for it.
+  proxiedHosts = lib.unique (
+    lib.concatLists (
+      lib.mapAttrsToList (
+        _: c:
+        lib.optionals (c.edge.mode == "proxy") (
+          map (h: h.host) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
+        )
+      ) config.lab.clusters
+    )
+  );
+
+  labIsEveryEdge = lib.all (c: c.edge.mode == "proxy") (lib.attrValues config.lab.clusters);
+
+  # `foo.zone.test.` -> `foo`, because the zone file has an $ORIGIN.
+  relativeTo = host: lib.removeSuffix ".${cfg.zone}" host;
+
   knotConf = ''
     server:
       listen: 0.0.0.0@53
@@ -65,18 +85,28 @@ let
 
     @   IN  NS  ns1.${cfg.zone}.
     ns1 IN  A   127.0.0.1
-    ${lib.optionalString config.lab.proxy.enable ''
+    ${
+      lib.optionalString (config.lab.proxy.enable && labIsEveryEdge) ''
 
-      ; Every host-facing endpoint arrives through the ingress, which routes
-      ; by Host header, so one wildcard answers for all of them. The target is
-      ; the docker bridge gateway because the same zone is served to the host
-      ; and to pods, and that address reaches the ingress's published port
-      ; from both.
-      ;
-      ; A more specific record always wins, so a DNS controller keeps control
-      ; of anything it publishes. Without this a lab that runs no such
-      ; controller resolves nothing at all.
-      *   IN  A   ${cfg.server}''}
+        ; Every host-facing endpoint arrives through the ingress, which routes
+        ; by Host header, so one wildcard answers for all of them. The target is
+        ; the docker bridge gateway because the same zone is served to the host
+        ; and to pods, and that address reaches the ingress's published port
+        ; from both.
+        ;
+        ; A more specific record always wins, so a DNS controller keeps control
+        ; of anything it publishes. Without this a lab that runs no such
+        ; controller resolves nothing at all.
+        *   IN  A   ${cfg.server}''
+    }${
+      lib.optionalString (config.lab.proxy.enable && !labIsEveryEdge) ''
+
+        ; No wildcard: some cluster here is its own edge, and a wildcard would
+        ; answer for its hostnames too — sending them to a proxy that has no
+        ; backend for them (RFC 0005 §6.4). One record per hostname the lab
+        ; really is the edge for, and nothing for the rest.
+        ${lib.concatMapStringsSep "\n      " (h: "${relativeTo h}   IN  A   ${cfg.server}") proxiedHosts}''
+    }
   '';
 in
 {

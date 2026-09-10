@@ -175,11 +175,8 @@ pub enum StepParams {
     SetupServices(SetupServicesParams),
     DockerNetworkCreate(DockerNetworkCreateParams),
     CertGenerate(CertGenerateParams),
-    TrustBundle(TrustBundleParams),
-    HostTrustInstall(HostTrustInstallParams),
     DnsSetup(DnsSetupParams),
     DnsTeardown(DnsTeardownParams),
-    ColimaNetworkRoute(ColimaNetworkRouteParams),
     RegistrySetup(RegistrySetupParams),
     WarmCache(WarmCacheParams),
     CreateCluster(CreateClusterParams),
@@ -193,8 +190,6 @@ pub enum StepParams {
     ApplyRootApplication(ApplyRootApplicationParams),
     BootstrapForgejoRepos(BootstrapForgejoReposParams),
     BootstrapArgocdKubectlSsa(BootstrapArgocdKubectlSsaParams),
-    BootstrapArgocdHelm(BootstrapArgocdHelmParams),
-    VerifyArgocdReachable(VerifyArgocdReachableParams),
     RunScript(RunScriptParams),
     InfraPlan(InfraParams),
     InfraApply(InfraParams),
@@ -226,12 +221,6 @@ pub struct CertGenerateParams {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct TrustBundleParams {}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct HostTrustInstallParams {}
-
-#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DnsSetupParams {
     pub host: String,
@@ -243,13 +232,6 @@ pub struct DnsSetupParams {
 #[serde(rename_all = "camelCase")]
 pub struct DnsTeardownParams {
     pub zone: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ColimaNetworkRouteParams {
-    pub subnet: String,
-    pub profile: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -386,31 +368,6 @@ pub struct BootstrapArgocdKubectlSsaParams {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BootstrapArgocdHelmParams {
-    pub target: String,
-    pub values_path: String,
-    pub chart_ref: String,
-    pub release_name: String,
-    #[serde(default)]
-    pub kube_context: Option<String>,
-    #[serde(default)]
-    pub namespace: Option<String>,
-    #[serde(default)]
-    pub wait_timeout_seconds: Option<u64>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct VerifyArgocdReachableParams {
-    pub target: String,
-    #[serde(default)]
-    pub kube_context: Option<String>,
-    #[serde(default)]
-    pub namespace: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RunScriptParams {
     pub bin: String,
     #[serde(default)]
@@ -537,8 +494,6 @@ impl StepParams {
                 .unwrap_or_default(),
             StepParams::ReleaseClusterCloudResources(p) => vec![("target", &p.target)],
             StepParams::BootstrapArgocdKubectlSsa(p) => vec![("target", &p.target)],
-            StepParams::BootstrapArgocdHelm(p) => vec![("target", &p.target)],
-            StepParams::VerifyArgocdReachable(p) => vec![("target", &p.target)],
 
             // A stack name is not a cluster name — see `stack_refs`. Nothing
             // validates it here because it is derived in one Nix expression
@@ -551,11 +506,8 @@ impl StepParams {
             | StepParams::SetupServices(_)
             | StepParams::DockerNetworkCreate(_)
             | StepParams::CertGenerate(_)
-            | StepParams::TrustBundle(_)
-            | StepParams::HostTrustInstall(_)
             | StepParams::DnsSetup(_)
             | StepParams::DnsTeardown(_)
-            | StepParams::ColimaNetworkRoute(_)
             | StepParams::RegistrySetup(_)
             | StepParams::WarmCache(_)
             | StepParams::EnsureSecrets(_)
@@ -571,11 +523,8 @@ impl StepParams {
             StepParams::SetupServices(_) => StepKind::SetupServices,
             StepParams::DockerNetworkCreate(_) => StepKind::DockerNetworkCreate,
             StepParams::CertGenerate(_) => StepKind::CertGenerate,
-            StepParams::TrustBundle(_) => StepKind::TrustBundle,
-            StepParams::HostTrustInstall(_) => StepKind::HostTrustInstall,
             StepParams::DnsSetup(_) => StepKind::DnsSetup,
             StepParams::DnsTeardown(_) => StepKind::DnsTeardown,
-            StepParams::ColimaNetworkRoute(_) => StepKind::ColimaNetworkRoute,
             StepParams::RegistrySetup(_) => StepKind::RegistrySetup,
             StepParams::WarmCache(_) => StepKind::WarmCache,
             StepParams::CreateCluster(_) => StepKind::CreateCluster,
@@ -589,8 +538,6 @@ impl StepParams {
             StepParams::ApplyRootApplication(_) => StepKind::ApplyRootApplication,
             StepParams::BootstrapForgejoRepos(_) => StepKind::BootstrapForgejoRepos,
             StepParams::BootstrapArgocdKubectlSsa(_) => StepKind::BootstrapArgocdKubectlSsa,
-            StepParams::BootstrapArgocdHelm(_) => StepKind::BootstrapArgocdHelm,
-            StepParams::VerifyArgocdReachable(_) => StepKind::VerifyArgocdReachable,
             StepParams::RunScript(_) => StepKind::RunScript,
             StepParams::InfraPlan(_) => StepKind::InfraPlan,
             StepParams::InfraApply(_) => StepKind::InfraApply,

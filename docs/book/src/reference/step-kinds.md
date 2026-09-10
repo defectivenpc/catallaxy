@@ -27,9 +27,7 @@ intent, but the executor reads this table.
 | ----------------------- | --------------------------- | ----------- | ---------- |
 | `setup-services`        | n/a                         | ,           | Idempotent |
 | `docker-network-create` | `name`, `subnet`, `gateway` | n/a         | Idempotent |
-| `colima-network-route`  | `subnet`, `profile`         | n/a         | Idempotent |
 | `cert-generate`         | `zone`                      | n/a         | Idempotent |
-| `host-trust-install`    | n/a                         | ,           | Idempotent |
 | `dns-setup`             | `host`, `port`, `zone`      | n/a         | Idempotent |
 | `registry-setup`        | `port`, `zone`              | `upstreams` | Idempotent |
 | `warm-cache`            | n/a                         | ,           | Idempotent |
@@ -46,22 +44,19 @@ intent, but the executor reads this table.
 
 ## Manifests and delivery
 
-| Kind                           | Required params                                   | Optional                                                         | Class       |
-| ------------------------------ | ------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| `deploy-manifests`             | `target`                                          | `bootstrap`, `skipIfReachable`, `kubeContext`                    | Idempotent  |
-| `pivot-bundles`                | `target`                                          | `kubeContext`, `kappApps`                                        | **OneShot** |
-| `publish-manifests`            | n/a                                               | ,                                                                | Idempotent  |
-| `publish-images`               | `sourceCluster`                                   | `images`                                                         | Idempotent  |
-| `apply-root-application`       | `target`                                          | `namespace`, `manifestPath`, `kubeContext`                       | Idempotent  |
-| `bootstrap-argocd-kubectl-ssa` | `target`, `manifestRoot`                          | `kubeContext`, `fieldManager`, `namespace`, `waitTimeoutSeconds` | Idempotent  |
-| `bootstrap-argocd-helm`        | `target`, `valuesPath`, `chartRef`, `releaseName` | `kubeContext`, `namespace`, `waitTimeoutSeconds`                 | Idempotent  |
-| `verify-argocd-reachable`      | `target`                                          | `kubeContext`, `namespace`                                       | Idempotent  |
-| `bootstrap-forgejo-repos`      | `target`                                          | `namespace`, `jobLabelSelector`, `kubeContext`                   | Idempotent  |
+| Kind                           | Required params          | Optional                                                         | Class       |
+| ------------------------------ | ------------------------ | ---------------------------------------------------------------- | ----------- |
+| `deploy-manifests`             | `target`                 | `bootstrap`, `skipIfReachable`, `kubeContext`                    | Idempotent  |
+| `pivot-bundles`                | `target`                 | `kubeContext`, `kappApps`                                        | **OneShot** |
+| `publish-manifests`            | n/a                      | ,                                                                | Idempotent  |
+| `publish-images`               | `sourceCluster`          | `images`                                                         | Idempotent  |
+| `apply-root-application`       | `target`                 | `namespace`, `manifestPath`, `kubeContext`                       | Idempotent  |
+| `bootstrap-argocd-kubectl-ssa` | `target`, `manifestRoot` | `kubeContext`, `fieldManager`, `namespace`, `waitTimeoutSeconds` | Idempotent  |
+| `bootstrap-forgejo-repos`      | `target`                 | `namespace`, `jobLabelSelector`, `kubeContext`                   | Idempotent  |
 
-The three `bootstrap-argocd-*` / `verify-argocd-reachable` kinds are
-variants of one logical step selected by `lab.cd.bootstrap`. All three
-publish `cluster/<n>/argocd-installed`, so anchor on the token rather than
-on any one kind, or list all three with `optional:`.
+`bootstrap-argocd-kubectl-ssa` publishes `cluster/<n>/argocd-installed`.
+Anchor on that token rather than on the kind, so a second install path can
+be added without moving anchors.
 
 ## Secrets
 

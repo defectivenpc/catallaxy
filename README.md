@@ -18,7 +18,7 @@ numbers.
 
 > **Built on RFC 0001.** The floe interface is
 > [RFC 0001](docs/rfcs/0001-floes.md) (`lib/floe-core/`), and the shipped
-> tree runs on it: nine example labs, 37 floes, host DNS, the registry, the
+> tree runs on it: ten example labs, 40 floes, host DNS, the registry, the
 > proxy and secrets. Two earlier implementations preceded this one; what
 > they cost is recorded in
 > [`docs/prior-implementations.md`](docs/prior-implementations.md).
@@ -85,7 +85,7 @@ Walkthrough:
 - **Failures that happen early.** Types, link errors naming both floes, lint
   over rendered manifests, and snapshot tests over the plan — none of which
   needs a cluster.
-- **37 floes.** CNI, gateway, PKI, identity, observability, databases,
+- **40 floes.** CNI, gateway, PKI, identity, observability, databases,
   registries, GitOps, backup, and yours built the same way, in your own
   repository. Each has a generated interface page under
   [`docs/floes/`](docs/floes/) that a check keeps honest.

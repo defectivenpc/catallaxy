@@ -127,8 +127,17 @@
         "k3d": {
           "autoDeployManifests": [],
           "clusterName": "minimal-local-app",
-          "extraApiServerArgs": [],
-          "extraVolumes": [],
+          "extraApiServerArgs": [
+            "--audit-policy-file=/etc/rancher/k3s/audit-policy.yaml",
+            "--audit-log-path=/var/log/kubernetes/audit.log",
+            "--audit-log-maxage=7"
+          ],
+          "extraVolumes": [
+            {
+              "containerPath": "/etc/rancher/k3s/audit-policy.yaml",
+              "hostPath": "/nix/store/HASH-audit-policy.yaml"
+            }
+          ],
           "image": "rancher/k3s:v1.31.4-k3s1",
           "network": "minimal.local",
           "noFlannel": false,
@@ -164,6 +173,7 @@
     "quay.io",
     "docker.io",
     "public.ecr.aws",
+    "xpkg.upbound.io",
     "oci.external-secrets.io"
   ],
   "runtimeContexts": {
@@ -193,7 +203,7 @@
       },
       "volumes": {
         "/etc/zot/config.json": {
-          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
+          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://xpkg.upbound.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
         },
         "/var/lib/zot": {
           "persist": "data"

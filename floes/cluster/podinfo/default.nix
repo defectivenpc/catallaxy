@@ -121,10 +121,19 @@ catallaxy.mkComponentFloe {
                   selector.matchLabels = selector;
                   template = {
                     metadata.labels = selector;
+                    spec.securityContext = {
+                      runAsNonRoot = true;
+                      runAsUser = 65534;
+                      seccompProfile.type = "RuntimeDefault";
+                    };
                     spec.containers = [
                       {
                         name = "podinfo";
                         inherit (inputs) image;
+                        securityContext = {
+                          allowPrivilegeEscalation = false;
+                          capabilities.drop = [ "ALL" ];
+                        };
                         ports = [
                           {
                             name = "http";

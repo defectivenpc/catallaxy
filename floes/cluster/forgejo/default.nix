@@ -182,7 +182,7 @@ catallaxy.mkComponentFloe {
             inherit (admin) secrets;
             externalSecrets = lib.optional (client != { }) "${ns}/${client.secret.name}";
 
-            helmCharts.forgejo = {
+            helmCharts.forgejo = kinds.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "forgejo";
               namespace = ns;

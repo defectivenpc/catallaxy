@@ -1,0 +1,184 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {},
+    "strategy": "kapp"
+  },
+  "clusterNames": [
+    "control"
+  ],
+  "clusters": {
+    "control": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-crossplane-nop-control-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [],
+      "floes": {
+        "cluster": {
+          "enable": true
+        },
+        "crossplane": {
+          "enable": true
+        },
+        "provider": {
+          "enable": true
+        },
+        "workload": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "k3d-crossplane-nop-control",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "crossplane.nop",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "crossplane/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "crossplane/crossplane",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "provider/provider",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "workload/nop",
+            "resourceCount": 1
+          }
+        ]
+      ],
+      "name": "control",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {},
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [],
+          "clusterName": "crossplane-nop-control",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "crossplane.nop",
+          "noFlannel": false,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": null,
+  "infraPublications": [],
+  "labName": "crossplane.nop",
+  "labNamespaces": {
+    "control": [
+      "crossplane-system"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.44.0.0/16",
+    "name": "crossplane.nop"
+  },
+  "opsToolPath": null,
+  "registryPort": 5060,
+  "registryUpstreams": [
+    "codeberg.org",
+    "registry.k8s.io",
+    "ghcr.io",
+    "quay.io",
+    "docker.io",
+    "public.ecr.aws",
+    "xpkg.upbound.io",
+    "oci.external-secrets.io"
+  ],
+  "runtimeContexts": {
+    "control": "k3d-crossplane-nop-control"
+  },
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {},
+    "stores": {}
+  },
+  "services": {
+    "registry": {
+      "container": "catallaxy-crossplane.nop-registry",
+      "description": "Zot OCI registry (image cache)",
+      "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "ports": [
+        "5060:5000"
+      ],
+      "readyProbe": {
+        "expectedStatus": 200,
+        "host": "127.0.0.1",
+        "kind": "http",
+        "path": "/v2/",
+        "port": 5060,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/etc/zot/config.json": {
+          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://xpkg.upbound.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
+        },
+        "/var/lib/zot": {
+          "persist": "data"
+        }
+      }
+    }
+  },
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": false
+    }
+  }
+}

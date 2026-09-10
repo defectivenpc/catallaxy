@@ -227,6 +227,14 @@
 
     # ---- operators ------------------------------------------------------
     cnpg = floes.cnpg { chart = "${cataCharts.cnpg.chart}"; };
+
+    crossplane-provider-nop = floes.crossplane-provider-nop { };
+    nop-resource = floes.nop-resource { };
+
+    crossplane = floes.crossplane {
+      chart = "${cataCharts.crossplane.chart}";
+      crds = "${cataCharts.crossplane.crds}";
+    };
     kaniop = floes.kaniop { chart = "${cataCharts.kaniop.chart}"; };
     redis-operator = floes.redis-operator { chart = "${cataCharts.redis-operator.chart}"; };
     reloader = floes.reloader { chart = "${cataCharts.reloader.chart}"; };

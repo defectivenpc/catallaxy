@@ -76,6 +76,11 @@ catallaxy.mkComponentFloe {
             createNamespaces = [ inputs.namespace ];
 
             helmCharts.kaniop = kinds.mkHelmChart {
+              replacedHooks = {
+                kaniop-crd-migrate = "the floe installs the CRDs itself, from the chart's own `crds/`, in `bundles.crds`";
+                kaniop-crd-migrator = "as above";
+                kaniop-crd-verify = "as above; `crdsEstablished` is what consumers wait on";
+              };
               inherit (inputs) chart namespace;
               releaseName = "kaniop";
               values = { };

@@ -107,6 +107,144 @@ types.submodule (
         description = "How long a bundle may take to reconcile before the apply gives up.";
       };
 
+      security.networkPolicies = {
+        defaultDeny = mkOption {
+          type = types.listOf types.str;
+          default = [ ];
+          example = [ "podinfo" ];
+          description = ''
+            Namespaces that deny all traffic except what a policy allows.
+            DNS to kube-system is excepted, because a namespace whose pods
+            cannot resolve turns every failure into a name error.
+
+            A list rather than a flag, and not the whole cluster: a
+            NetworkPolicy is additive, so denying a namespace means every
+            floe installing into it must declare the traffic it needs. No
+            floe declares any today. Naming one namespace at a time is what
+            makes that a decision per namespace instead of an outage.
+
+            Refused on a cluster whose CNI does not enforce policy — see the
+            assertion below.
+          '';
+        };
+      };
+
+      security.auditLogging = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = ''
+            Record what the API server was asked to do.
+
+            Off by default: it is the one control here that costs something
+            at runtime, and on a laptop lab the log is usually read never.
+            Turned on, it is the only way to answer what changed a resource
+            after the fact.
+
+            k3d only. A managed control plane logs through its provider, and
+            a cluster this lab did not make has no server to pass flags to.
+          '';
+        };
+
+        level = mkOption {
+          type = types.enum [
+            "Metadata"
+            "Request"
+            "RequestResponse"
+          ];
+          default = "Metadata";
+          description = ''
+            How much of each request is recorded.
+
+            `Metadata` is who, what and when. `Request` adds the submitted
+            object and `RequestResponse` the returned one — both of which
+            write Secret contents to the log, which is why neither is the
+            default.
+          '';
+        };
+
+        maxAgeDays = mkOption {
+          type = types.ints.positive;
+          default = 7;
+          description = "How long a rotated audit log is kept.";
+        };
+      };
+
+      security.podSecurity = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = ''
+            Label every namespace this cluster creates for Pod Security
+            Admission.
+
+            Off by default because turning it on can refuse a workload that
+            was running, and that refusal should be somebody's decision. It
+            costs nothing to run: PSA is in the API server, so unlike a
+            NetworkPolicy it needs no CNI support and is enforced identically
+            on k3d and on a cloud cluster.
+          '';
+        };
+
+        enforce = mkOption {
+          type = types.enum [
+            "privileged"
+            "baseline"
+            "restricted"
+          ];
+          default = "baseline";
+          description = ''
+            The level the API server refuses pods below.
+
+            `baseline` blocks the known privilege escalations and admits most
+            upstream charts unchanged. `restricted` additionally requires
+            non-root, a seccomp profile and dropped capabilities, which many
+            charts need values changes to satisfy.
+          '';
+        };
+
+        warn = mkOption {
+          type = types.enum [
+            "privileged"
+            "baseline"
+            "restricted"
+          ];
+          default = "restricted";
+          description = ''
+            The level a violation is warned about at, without being refused.
+
+            Defaulted stricter than `enforce` on purpose: the warnings are
+            what tells you whether raising `enforce` would break anything,
+            and they cost nothing until you read them.
+          '';
+        };
+
+        override = mkOption {
+          type = types.attrsOf (
+            types.enum [
+              "privileged"
+              "baseline"
+              "restricted"
+            ]
+          );
+          default = { };
+          example = {
+            cilium = "privileged";
+            podinfo = "restricted";
+          };
+          description = ''
+            Namespaces that enforce a level other than `enforce`, keyed by
+            namespace. It reads in both directions.
+
+            Down, because a CNI or a storage driver genuinely needs host
+            access, and the alternative is turning the whole cluster down to
+            the level its most privileged component needs. Up, because a
+            workload that already satisfies `restricted` should be held to
+            it rather than to the cluster default.
+          '';
+        };
+      };
+
       # Where this cluster's edge is — RFC 0005 §6.4.
       #
       # Every field is read off the descriptor the provisioner emitted,
@@ -679,6 +817,28 @@ types.submodule (
             entry = v;
           }) config.secrets.subscribe;
 
+        # A NetworkPolicy on a CNI that does not enforce one is applied,
+        # reported healthy, and does nothing — which teaches that the policy
+        # works. k3d ships Flannel, which has no policy engine; a cluster
+        # that turned Flannel off has something else, and that something is
+        # the lab's choice to have made.
+        policyAssertions =
+          let
+            descriptor = lib.head (lib.attrValues config.out.cluster);
+            k3d = descriptor.config.k3d or null;
+            enforces = k3d == null || k3d.noFlannel;
+            asked = config.security.networkPolicies.defaultDeny;
+          in
+          lib.optional (asked != [ ] && !enforces) {
+            assertion = false;
+            message =
+              "security.networkPolicies.defaultDeny names ${toString (lib.length asked)} namespace(s) "
+              + "(${lib.concatStringsSep ", " asked}), but this cluster runs k3d's default Flannel, "
+              + "which has no policy engine. The policies would apply, report healthy, and deny "
+              + "nothing. Run a CNI that enforces them — the `cilium` floe, with "
+              + "`disableFlannel = true` on the provisioner.";
+          };
+
         sharingAssertions =
           # Which store, when there is no obvious one.
           lib.concatMap (
@@ -818,7 +978,7 @@ types.submodule (
         # The sharing bundles above are filtered to the entries that resolve, so
         # a misconfigured one reports its own problem rather than rendering a
         # resource that names nothing and failing much later.
-        assertions = config.out.assertions ++ sharingAssertions;
+        assertions = config.out.assertions ++ sharingAssertions ++ policyAssertions;
         warnings = config.out.warnings;
 
         manifests = catallaxy.renderCluster {
@@ -826,6 +986,27 @@ types.submodule (
           owner = lab.name;
           cluster = config.out;
           inherit (config) waitTimeout;
+
+          # PSA is namespace labels and nothing else, so it is applied where
+          # the namespaces are made rather than by a floe that would have to
+          # be added to every cluster that wants it.
+          namespaceLabels =
+            let
+              psa = config.security.podSecurity;
+              levelFor = ns: psa.override.${ns} or psa.enforce;
+            in
+            lib.optionalAttrs psa.enable (
+              lib.genAttrs config.out.namespaces (ns: {
+                "pod-security.kubernetes.io/enforce" = levelFor ns;
+                "pod-security.kubernetes.io/warn" = psa.warn;
+              })
+            );
+
+          # Applied with the namespaces rather than after them, so a
+          # namespace is never briefly open.
+          namespaceResources = map (
+            ns: catallaxy.kinds.mkDefaultDeny { namespace = ns; }
+          ) config.security.networkPolicies.defaultDeny;
         };
 
         # `catallaxy.cluster` already tracks `ClusterSpec`'s field names, so
@@ -848,8 +1029,56 @@ types.submodule (
             # The k3d floe leaves `network` null because which docker network
             # a cluster joins is a fact about what else is on the host.
             # `docker-network-create` makes this one first.
+            # The audit policy, and the flags that point the server at it.
+            # A store path rather than a file the CLI writes: the policy is
+            # part of what the lab declares, so it belongs in the digest.
+            audit = config.security.auditLogging;
+
+            auditPolicy = pkgs.writeText "audit-policy.yaml" (
+              builtins.toJSON {
+                apiVersion = "audit.k8s.io/v1";
+                kind = "Policy";
+                rules = [
+                  # Reads are the bulk of the traffic and the least of the
+                  # interest. Dropping them first is what keeps the log
+                  # readable at `Metadata`.
+                  {
+                    level = "None";
+                    verbs = [
+                      "get"
+                      "list"
+                      "watch"
+                    ];
+                  }
+                  { level = audit.level; }
+                ];
+              }
+            );
+
+            auditArgs = [
+              "--audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"
+              "--audit-log-path=/var/log/kubernetes/audit.log"
+              "--audit-log-maxage=${toString audit.maxAgeDays}"
+            ];
+
+            withAudit =
+              c:
+              if !audit.enable then
+                c
+              else
+                c
+                // {
+                  extraApiServerArgs = c.extraApiServerArgs ++ auditArgs;
+                  extraVolumes = c.extraVolumes ++ [
+                    {
+                      hostPath = "${auditPolicy}";
+                      containerPath = "/etc/rancher/k3s/audit-policy.yaml";
+                    }
+                  ];
+                };
+
             labKnows = {
-              k3d = c: c // { network = lab.name; };
+              k3d = c: withAudit (c // { network = lab.name; });
 
               # talosctl makes the cluster's own network and will not join
               # one it did not make, and kube-proxy in nftables mode will not

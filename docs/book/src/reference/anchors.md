@@ -179,9 +179,9 @@ Anchor on these by name when a token isn't specific enough. `<n>` is a
 cluster name.
 
 ```
-docker-network-create   colima-network-route   cert-generate
-host-trust-install      dns-setup              registry-setup
-ensure-secrets          setup-services         warm-cache
+docker-network-create   cert-generate          dns-setup
+registry-setup          ensure-secrets          setup-services
+warm-cache
 create-cluster-<n>      apply-root-<n>         bootstrap-forgejo-<n>
 publish-manifests       publish-images-<n>     preflight-<n>-<hook>
 

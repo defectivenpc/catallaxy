@@ -216,11 +216,8 @@ async fn dispatch(sctx: &StepContext<'_>, step: &PlannedStep) -> Result<()> {
         StepParams::SetupServices(_) => steps::setup_services::run(sctx),
         StepParams::DockerNetworkCreate(p) => steps::docker_network_create::run(sctx, p),
         StepParams::CertGenerate(p) => steps::cert_generate::run(sctx, p),
-        StepParams::TrustBundle(_) => steps::trust_bundle::run(sctx),
-        StepParams::HostTrustInstall(_) => steps::host_trust_install::run(sctx),
         StepParams::DnsSetup(p) => steps::dns_setup::run(sctx, p),
         StepParams::DnsTeardown(p) => steps::dns_teardown::run(sctx, p),
-        StepParams::ColimaNetworkRoute(p) => steps::colima_network_route::run(sctx, p),
         StepParams::RegistrySetup(p) => steps::registry_setup::run(sctx, p),
         StepParams::WarmCache(_) => steps::warm_cache::run(sctx).await,
         StepParams::CreateCluster(p) => steps::create_cluster::run(sctx, p),
@@ -236,12 +233,10 @@ async fn dispatch(sctx: &StepContext<'_>, step: &PlannedStep) -> Result<()> {
         StepParams::BootstrapArgocdKubectlSsa(p) => {
             steps::bootstrap_argocd_kubectl_ssa::run(sctx, p)
         }
-        StepParams::BootstrapArgocdHelm(p) => steps::bootstrap_argocd_helm::run(sctx, p),
-        StepParams::VerifyArgocdReachable(p) => steps::verify_argocd_reachable::run(sctx, p),
         StepParams::RunScript(p) => steps::run_script::run(sctx, step, p),
         StepParams::InfraPlan(p) => steps::infra::plan(sctx, p),
         StepParams::InfraApply(p) => steps::infra::apply(sctx, p).await,
-        StepParams::InfraDestroy(p) => steps::infra::destroy(sctx, p),
+        StepParams::InfraDestroy(p) => steps::infra::destroy(sctx, p).await,
         StepParams::DestroyCluster(p) => steps::destroy_cluster::run(sctx, p),
         StepParams::ReconcileManagedResource(p) => steps::reconcile_managed_resource::run(sctx, p),
         StepParams::DeleteManagedResource(p) => steps::delete_managed_resource::run(sctx, p),
@@ -403,11 +398,7 @@ mod tests {
 
     #[test]
     fn read_only_kinds_still_run_under_dry_run() {
-        for tag in [
-            "wait-for-resources",
-            "wait-for-cluster-gone",
-            "verify-argocd-reachable",
-        ] {
+        for tag in ["wait-for-resources", "wait-for-cluster-gone"] {
             assert!(
                 kind(tag).dry_run_safe(),
                 "`{tag}` only observes, so a dry run may execute it"

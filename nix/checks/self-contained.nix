@@ -23,6 +23,12 @@ let
   # `unstable` defaults to false and is stated only where it is true, so the
   # table reads as a list of labs that work with the exceptions called out.
   expected = {
+    # The reconcile camp's loop: crossplane and a provider that reaches
+    # nothing, so the whole managed-resource lifecycle runs with no account.
+    "crossplane.nop" = {
+      eligible = true;
+      mentions = [ ];
+    };
     "minimal.local" = {
       eligible = true;
       mentions = [ ];

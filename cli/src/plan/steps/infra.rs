@@ -7,6 +7,9 @@ use crate::domain::plan::InfraParams;
 use crate::io::tofu;
 use crate::plan::StepContext;
 
+/// What `plan` writes and `apply` consumes, inside the stack's work dir.
+const PLAN_FILE: &str = "plan.tfplan";
+
 /// What the tool is called inside the lab package.
 ///
 /// The lab carries its own, built with exactly the providers its stacks pin,
@@ -74,6 +77,14 @@ impl Stack {
         self.run("init", &["-input=false"])
     }
 
+    /// Where `plan` leaves what `apply` consumes.
+    ///
+    /// Beside the state it was planned against, so a stale one is refused by
+    /// the tool rather than silently applied.
+    fn plan_file(&self) -> PathBuf {
+        self.work_dir.join(PLAN_FILE)
+    }
+
     fn run(&self, verb: &str, args: &[&str]) -> Result<()> {
         let status = tofu::run(&self.tool, &self.work_dir, verb, args)?;
         if !status.success() {
@@ -129,7 +140,10 @@ pub fn plan(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
         style(&stack.name).bold(),
     );
     stack.prepare()?;
-    stack.run("plan", &["-input=false", "-no-color"])
+    stack.run(
+        "plan",
+        &["-input=false", "-no-color", &format!("-out={PLAN_FILE}")],
+    )
 }
 
 pub async fn apply(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
@@ -153,7 +167,35 @@ pub async fn apply(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
         style(&stack.name).bold(),
     );
     stack.prepare()?;
-    stack.run("apply", &["-input=false", "-auto-approve", "-no-color"])?;
+
+    // Apply the artifact `plan` wrote, so what runs is what was shown. The
+    // tool refuses a plan made against different state, which is the whole
+    // guarantee — RFC 0003 §8.
+    let saved = stack.plan_file();
+    if crate::io::fs::metadata(&saved).is_ok_and(|m| m.is_file()) {
+        stack.run("apply", &["-input=false", "-no-color", PLAN_FILE])?;
+
+        // Spent. Leaving it would let a later apply reuse a plan for changes
+        // already made, and the tool would refuse it with a message about
+        // state rather than about this.
+        if let Err(e) = crate::io::fs::remove_file(&saved) {
+            eprintln!(
+                "{} could not remove the spent plan {}: {e}",
+                style("warning").yellow(),
+                saved.display(),
+            );
+        }
+    } else {
+        println!(
+            "      no saved plan for '{}'; applying from the current \
+             configuration.\n      \
+             `cata lab plan --infra` writes one, and applying it is what \
+             makes the change provably the one you read.",
+            stack.name,
+        );
+        stack.run("apply", &["-input=false", "-auto-approve", "-no-color"])?;
+    }
+
     let outputs = capture_outputs(&stack)?;
     publish(sctx, &stack, &outputs).await?;
     println!(
@@ -164,7 +206,7 @@ pub async fn apply(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
     Ok(())
 }
 
-pub fn destroy(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
+pub async fn destroy(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
     let stack = Stack::resolve(sctx, p)?;
 
     if !sctx.allow_infra {
@@ -183,7 +225,59 @@ pub fn destroy(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
         style(&stack.name).bold(),
     );
     stack.prepare()?;
-    stack.run("destroy", &["-input=false", "-auto-approve", "-no-color"])
+    stack.run("destroy", &["-input=false", "-auto-approve", "-no-color"])?;
+
+    // What the stack published outlived the thing that produced it until now
+    // (RFC 0003 §7). After the destroy, so a failed destroy leaves the value
+    // in place for the retry rather than stranding a subscriber.
+    unpublish(sctx, &stack).await;
+
+    // A spent plan describes a world that no longer exists.
+    let _ = crate::io::fs::remove_file(stack.plan_file());
+    Ok(())
+}
+
+/// Take back what this stack published.
+///
+/// Never fails the step. A key left behind is worth saying loudly and is not
+/// worth leaving a half-destroyed lab over — the infrastructure is already
+/// gone by the time this runs.
+async fn unpublish(sctx: &StepContext<'_>, stack: &Stack) {
+    for target in sctx
+        .lab
+        .infra_publications
+        .iter()
+        .filter(|p| p.stack == stack.name)
+    {
+        let Some(store) = sctx.lab.secrets.stores.get(&target.store) else {
+            continue;
+        };
+
+        let outcome = match crate::io::secret_sink::for_store(&target.store, store) {
+            Ok(sink) => sink.remove(&target.key).await.map(|r| (r, sink.describe())),
+            Err(e) => Err(e),
+        };
+
+        match outcome {
+            Ok((crate::io::secret_sink::Removal::Gone, where_)) => println!(
+                "{} un-published '{}' from {where_}",
+                style(">>>").green(),
+                target.key,
+            ),
+            Ok((crate::io::secret_sink::Removal::Unsupported, where_)) => println!(
+                "{} '{}' is still in {where_}: the store declares no \
+                 `remover.command`, so nothing here can take it back.",
+                style("warning").yellow(),
+                target.key,
+            ),
+            Err(e) => println!(
+                "{} '{}' could not be removed from store '{}': {e:#}",
+                style("warning").yellow(),
+                target.key,
+                target.store,
+            ),
+        }
+    }
 }
 
 /// Record what the apply produced, next to the state that produced it.

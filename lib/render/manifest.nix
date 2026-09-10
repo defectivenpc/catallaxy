@@ -117,6 +117,38 @@ let
           ${extraOptsStr} \
           > work/helm-output.yaml
 
+        # Lifecycle hooks are dropped below, because install order here comes
+        # from the wave graph and not from a weight the chart chose. A test
+        # hook is meant to be dropped; anything else is work that will not
+        # happen, so the floe has to say what does it instead.
+        yq ea '
+          select(tag == "!!map" and has("kind"))
+          | select((.metadata.annotations."helm.sh/hook" // "") != "")
+          | select((.metadata.annotations."helm.sh/hook" | test("test")) | not)
+          | .metadata.name
+        ' work/helm-output.yaml | sed '/^---$/d; /^[[:space:]]*$/d' | sort -u > work/dropped-hooks
+
+        cat > work/declared-hooks <<'DECLARED'
+        ${lib.concatStringsSep "\n" (lib.attrNames spec.replacedHooks)}
+        DECLARED
+        sed -i 's/^[[:space:]]*//' work/declared-hooks
+        sed -i '/^$/d' work/declared-hooks
+        sort -u -o work/declared-hooks work/declared-hooks
+
+        if undeclared=$(comm -23 work/dropped-hooks work/declared-hooks) \
+          && [ -n "$undeclared" ]; then
+          echo "chart '${spec.releaseName}' has lifecycle hooks nothing replaces:" >&2
+          echo "$undeclared" | sed 's/^/  /' >&2
+          echo "" >&2
+          echo "These are dropped: catallaxy derives install order from the wave" >&2
+          echo "graph, so a hook's weight has nowhere to go. Whatever they did" >&2
+          echo "has to be done by the floe instead." >&2
+          echo "" >&2
+          echo "Declare each on the chart once that is true:" >&2
+          echo "  kinds.mkHelmChart { replacedHooks.\"<name>\" = \"what does it instead\"; }" >&2
+          exit 1
+        fi
+
         yq -i '
           select(tag == "!!map" and has("kind"))
           | select((.metadata.annotations."helm.sh/hook" // "") == "")

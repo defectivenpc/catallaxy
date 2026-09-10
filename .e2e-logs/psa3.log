@@ -1,0 +1,401 @@
+
+=== lab up ===
+>>> Preflight passed
+catallaxy Deploying lab 'minimal.local' (6 steps)
+
+>>> Building lab manifests...
+>>> Lab package built
+
+>>> Step 1/6: Create docker network 'minimal.local'
+>>> Ensuring 'minimal.local' network exists (subnet: 172.20.0.0/16)...
+
+>>> Step 2/6: Start lab infrastructure services
+>>> Starting Zot OCI registry (image cache)...
+6d05188dcc0f7cd8852b537bdbe7227e52ef28f33fb3b9152adbd91418ff3568
+>>> Waiting for Zot OCI registry (image cache) to serve http://127.0.0.1:5050/v2/
+>>> Zot OCI registry (image cache) started
+
+>>> Step 3/6: Write registries.yaml + certs.d + lab-resolv.conf
+Warning: Lab CA missing at /home/whitehead/.local/share/catallaxy/labs/minimal.local/proxy/ca.crt; registry pulls will fail until cert-generate produces it.
+Warning: Could not resolve lab DNS container IP; cluster nodes will fall back to Docker DNS (lab hostnames won't resolve)
+
+>>> Step 4/6: Pre-warm the lab registry with every declared image
+catallaxy Warming 5 images via localhost:5050
+>>> quay.io/jetstack/cert-manager-webhook:v1.17.2... cached
+>>> quay.io/jetstack/cert-manager-controller:v1.17.2... cached
+>>> ghcr.io/stefanprodan/podinfo:6.7.1... cached
+>>> docker.io/traefik:v3.3.6... cached
+>>> quay.io/jetstack/cert-manager-cainjector:v1.17.2... cached
+
+>>> Cache: 5 ready, 0 skipped
+
+>>> Step 5/6: Create k3d cluster 'app'
+>>> Creating k3d cluster 'minimal-local-app'...
+[36mINFO[0m[0000] Prep: Network                                
+[36mINFO[0m[0000] Re-using existing network 'minimal.local' (38619b2986882559e301e29b4ef37ee95d830cbcc26fe28fcf75f661e678e7b5) 
+[36mINFO[0m[0000] Created image volume k3d-minimal-local-app-images 
+[36mINFO[0m[0000] Starting new tools node...                   
+[36mINFO[0m[0000] Starting node 'k3d-minimal-local-app-tools'  
+[36mINFO[0m[0001] Creating node 'k3d-minimal-local-app-server-0' 
+[36mINFO[0m[0001] Creating LoadBalancer 'k3d-minimal-local-app-serverlb' 
+[36mINFO[0m[0001] Using the k3d-tools node to gather environment information 
+[36mINFO[0m[0001] HostIP: using network gateway 172.20.0.1 address 
+[36mINFO[0m[0001] Starting cluster 'minimal-local-app'         
+[36mINFO[0m[0001] Starting servers...                          
+[36mINFO[0m[0001] Starting node 'k3d-minimal-local-app-server-0' 
+[36mINFO[0m[0003] All agents already running.                  
+[36mINFO[0m[0003] Starting helpers...                          
+[36mINFO[0m[0003] Starting node 'k3d-minimal-local-app-serverlb' 
+[36mINFO[0m[0009] Injecting records for hostAliases (incl. host.k3d.internal) and for 2 network members into CoreDNS configmap... 
+[36mINFO[0m[0011] Cluster 'minimal-local-app' created successfully! 
+[36mINFO[0m[0011] You can now use it like this:                
+export KUBECONFIG=$(k3d kubeconfig write minimal-local-app)
+kubectl cluster-info
+>>> Cluster ready (context: k3d-minimal-local-app)
+
+>>> Step 6/6: Deploy manifests to 'app'
+>>> Applying 6 wave(s) via kubectl SSA on 'k3d-minimal-local-app' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/backendlbpolicies.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/backendtlspolicies.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/gatewayclasses.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/gateways.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/grpcroutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/tcproutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/tlsroutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/udproutes.gateway.networking.k8s.io serverside-applied
+>>> Applied bundle 'gateway-api__crds'
+>>> Waiting for 10 CRD(s) from 'gateway-api__crds' to be Established
+  CRD backendlbpolicies.gateway.networking.k8s.io established
+  CRD backendtlspolicies.gateway.networking.k8s.io established
+  CRD gatewayclasses.gateway.networking.k8s.io established
+  CRD gateways.gateway.networking.k8s.io established
+  CRD grpcroutes.gateway.networking.k8s.io established
+  CRD httproutes.gateway.networking.k8s.io established
+  CRD referencegrants.gateway.networking.k8s.io established
+  CRD tcproutes.gateway.networking.k8s.io established
+  CRD tlsroutes.gateway.networking.k8s.io established
+  CRD udproutes.gateway.networking.k8s.io established
+namespace/cert-manager serverside-applied
+namespace/podinfo serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/cert-manager-cainjector serverside-applied
+serviceaccount/cert-manager serverside-applied
+serviceaccount/cert-manager-webhook serverside-applied
+customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/challenges.acme.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/clusterissuers.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/issuers.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/orders.acme.cert-manager.io serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-cainjector serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-issuers serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificates serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-orders serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-challenges serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-cluster-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-cainjector serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-issuers serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificates serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-orders serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-challenges serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection serverside-applied
+role.rbac.authorization.k8s.io/cert-manager:leaderelection serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-tokenrequest serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager:leaderelection serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-cert-manager-tokenrequest serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving serverside-applied
+service/cert-manager-cainjector serverside-applied
+service/cert-manager serverside-applied
+service/cert-manager-webhook serverside-applied
+deployment.apps/cert-manager-cainjector serverside-applied
+deployment.apps/cert-manager serverside-applied
+deployment.apps/cert-manager-webhook serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook serverside-applied
+>>> Applied bundle 'cert-manager__cert-manager'
+>>> Waiting for 6 CRD(s) from 'cert-manager__cert-manager' to be Established
+  CRD certificaterequests.cert-manager.io established
+  CRD certificates.cert-manager.io established
+  CRD challenges.acme.cert-manager.io established
+  CRD clusterissuers.cert-manager.io established
+  CRD issuers.cert-manager.io established
+  CRD orders.acme.cert-manager.io established
+>>> Waiting for 3 workload(s) in /nix/store/f3m3r6n508ggg62nv4wf66hasg2hy9vg-lab-minimal.local/manifests/app/01-wave/cert-manager__cert-manager (timeout: 600s)
+Waiting for deployment "cert-manager-cainjector" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-cainjector" successfully rolled out
+deployment "cert-manager" successfully rolled out
+Waiting for deployment "cert-manager-webhook" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-webhook" successfully rolled out
+>>> Waiting on readyProbe for 'cert-manager__cert-manager' → deployment/cert-manager-webhook condition=Available
+deployment.apps/cert-manager-webhook condition met
+deployment.apps/cert-manager-webhook condition met
+
+>>> Wave 003 (1 bundle)
+clusterissuer.cert-manager.io/lab-ca-bootstrap serverside-applied
+clusterissuer.cert-manager.io/lab-ca serverside-applied
+certificate.cert-manager.io/lab-ca serverside-applied
+>>> Applied bundle 'cert-manager__issuers'
+>>> Waiting on readyProbe for 'cert-manager__issuers' → clusterissuer/lab-ca condition=Ready
+clusterissuer.cert-manager.io/lab-ca condition met
+clusterissuer.cert-manager.io/lab-ca condition met
+
+>>> Wave 004 (1 bundle)
+serviceaccount/traefik serverside-applied
+clusterrole.rbac.authorization.k8s.io/traefik-kube-system serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/traefik-kube-system serverside-applied
+service/traefik serverside-applied
+deployment.apps/traefik serverside-applied
+ingressclass.networking.k8s.io/traefik serverside-applied
+gatewayclass.gateway.networking.k8s.io/traefik serverside-applied
+>>> Applied bundle 'gateway__controller'
+>>> Waiting for 1 workload(s) in /nix/store/f3m3r6n508ggg62nv4wf66hasg2hy9vg-lab-minimal.local/manifests/app/03-wave/gateway__controller (timeout: 600s)
+Waiting for deployment "traefik" rollout to finish: 0 of 1 updated replicas are available...
+deployment "traefik" successfully rolled out
+>>> Waiting on readyProbe for 'gateway__controller' → deployment/traefik condition=Available
+deployment.apps/traefik condition met
+deployment.apps/traefik condition met
+
+>>> Wave 005 (1 bundle)
+gateway.gateway.networking.k8s.io/default-gateway serverside-applied
+>>> Applied bundle 'gateway__gateway'
+>>> Waiting on readyProbe for 'gateway__gateway' → gateway/default-gateway jsonpath={.status.addresses[0].value}
+gateway.gateway.networking.k8s.io/default-gateway condition met
+gateway.gateway.networking.k8s.io/default-gateway condition met
+
+>>> Wave 006 (1 bundle)
+deployment.apps/podinfo serverside-applied
+httproute.gateway.networking.k8s.io/podinfo serverside-applied
+service/podinfo serverside-applied
+>>> Applied bundle 'podinfo__podinfo'
+>>> Waiting for 1 workload(s) in /nix/store/f3m3r6n508ggg62nv4wf66hasg2hy9vg-lab-minimal.local/manifests/app/05-wave/podinfo__podinfo (timeout: 600s)
+Waiting for deployment "podinfo" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "podinfo" rollout to finish: 1 of 2 updated replicas are available...
+deployment "podinfo" successfully rolled out
+>>> Waiting on readyProbe for 'podinfo__podinfo' → deployment/podinfo condition=Available
+deployment.apps/podinfo condition met
+deployment.apps/podinfo condition met
+
+>>> SSA wave apply complete on 'k3d-minimal-local-app'
+
+=== lab verify ===
+catallaxy Verifying lab 'minimal.local'
+  clusters: app
+
+  ✓ the lab answers on every surface it declares
+
+=== lab up again, which must change nothing ===
+>>> Preflight passed
+catallaxy Deploying lab 'minimal.local' (6 steps)
+
+>>> Building lab manifests...
+>>> Lab package built
+
+>>> Step 1/6: Create docker network 'minimal.local'
+>>> Ensuring 'minimal.local' network exists (subnet: 172.20.0.0/16)...
+
+>>> Step 2/6: Start lab infrastructure services
+>>> Zot OCI registry (image cache) already running
+
+>>> Step 3/6: Write registries.yaml + certs.d + lab-resolv.conf
+Warning: Lab CA missing at /home/whitehead/.local/share/catallaxy/labs/minimal.local/proxy/ca.crt; registry pulls will fail until cert-generate produces it.
+Warning: Could not resolve lab DNS container IP; cluster nodes will fall back to Docker DNS (lab hostnames won't resolve)
+
+>>> Step 4/6: Pre-warm the lab registry with every declared image
+catallaxy Warming 5 images via localhost:5050
+>>> quay.io/jetstack/cert-manager-cainjector:v1.17.2... cached
+>>> quay.io/jetstack/cert-manager-webhook:v1.17.2... cached
+>>> ghcr.io/stefanprodan/podinfo:6.7.1... cached
+>>> docker.io/traefik:v3.3.6... cached
+>>> quay.io/jetstack/cert-manager-controller:v1.17.2... cached
+
+>>> Cache: 5 ready, 0 skipped
+
+>>> Step 5/6: Create k3d cluster 'app'
+>>> Cluster 'app' is already running and matches the lab
+
+>>> Step 6/6: Deploy manifests to 'app'
+>>> Applying 6 wave(s) via kubectl SSA on 'k3d-minimal-local-app' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/backendlbpolicies.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/backendtlspolicies.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/gatewayclasses.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/gateways.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/grpcroutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/tcproutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/tlsroutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/udproutes.gateway.networking.k8s.io serverside-applied
+>>> Applied bundle 'gateway-api__crds'
+>>> Waiting for 10 CRD(s) from 'gateway-api__crds' to be Established
+  CRD backendlbpolicies.gateway.networking.k8s.io established
+  CRD backendtlspolicies.gateway.networking.k8s.io established
+  CRD gatewayclasses.gateway.networking.k8s.io established
+  CRD gateways.gateway.networking.k8s.io established
+  CRD grpcroutes.gateway.networking.k8s.io established
+  CRD httproutes.gateway.networking.k8s.io established
+  CRD referencegrants.gateway.networking.k8s.io established
+  CRD tcproutes.gateway.networking.k8s.io established
+  CRD tlsroutes.gateway.networking.k8s.io established
+  CRD udproutes.gateway.networking.k8s.io established
+namespace/cert-manager serverside-applied
+namespace/podinfo serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/cert-manager-cainjector serverside-applied
+serviceaccount/cert-manager serverside-applied
+serviceaccount/cert-manager-webhook serverside-applied
+customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/challenges.acme.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/clusterissuers.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/issuers.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/orders.acme.cert-manager.io serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-cainjector serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-issuers serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificates serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-orders serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-challenges serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-cluster-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-cainjector serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-issuers serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificates serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-orders serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-challenges serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection serverside-applied
+role.rbac.authorization.k8s.io/cert-manager:leaderelection serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-tokenrequest serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager:leaderelection serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-cert-manager-tokenrequest serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving serverside-applied
+service/cert-manager-cainjector serverside-applied
+service/cert-manager serverside-applied
+service/cert-manager-webhook serverside-applied
+deployment.apps/cert-manager-cainjector serverside-applied
+deployment.apps/cert-manager serverside-applied
+deployment.apps/cert-manager-webhook serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook serverside-applied
+>>> Applied bundle 'cert-manager__cert-manager'
+>>> Waiting for 6 CRD(s) from 'cert-manager__cert-manager' to be Established
+  CRD certificaterequests.cert-manager.io established
+  CRD certificates.cert-manager.io established
+  CRD challenges.acme.cert-manager.io established
+  CRD clusterissuers.cert-manager.io established
+  CRD issuers.cert-manager.io established
+  CRD orders.acme.cert-manager.io established
+>>> Waiting for 3 workload(s) in /nix/store/f3m3r6n508ggg62nv4wf66hasg2hy9vg-lab-minimal.local/manifests/app/01-wave/cert-manager__cert-manager (timeout: 600s)
+deployment "cert-manager-cainjector" successfully rolled out
+deployment "cert-manager" successfully rolled out
+deployment "cert-manager-webhook" successfully rolled out
+>>> Waiting on readyProbe for 'cert-manager__cert-manager' → deployment/cert-manager-webhook condition=Available
+deployment.apps/cert-manager-webhook condition met
+deployment.apps/cert-manager-webhook condition met
+
+>>> Wave 003 (1 bundle)
+clusterissuer.cert-manager.io/lab-ca-bootstrap serverside-applied
+clusterissuer.cert-manager.io/lab-ca serverside-applied
+certificate.cert-manager.io/lab-ca serverside-applied
+>>> Applied bundle 'cert-manager__issuers'
+>>> Waiting on readyProbe for 'cert-manager__issuers' → clusterissuer/lab-ca condition=Ready
+clusterissuer.cert-manager.io/lab-ca condition met
+clusterissuer.cert-manager.io/lab-ca condition met
+
+>>> Wave 004 (1 bundle)
+serviceaccount/traefik serverside-applied
+clusterrole.rbac.authorization.k8s.io/traefik-kube-system serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/traefik-kube-system serverside-applied
+service/traefik serverside-applied
+deployment.apps/traefik serverside-applied
+ingressclass.networking.k8s.io/traefik serverside-applied
+gatewayclass.gateway.networking.k8s.io/traefik serverside-applied
+>>> Applied bundle 'gateway__controller'
+>>> Waiting for 1 workload(s) in /nix/store/f3m3r6n508ggg62nv4wf66hasg2hy9vg-lab-minimal.local/manifests/app/03-wave/gateway__controller (timeout: 600s)
+deployment "traefik" successfully rolled out
+>>> Waiting on readyProbe for 'gateway__controller' → deployment/traefik condition=Available
+deployment.apps/traefik condition met
+deployment.apps/traefik condition met
+
+>>> Wave 005 (1 bundle)
+gateway.gateway.networking.k8s.io/default-gateway serverside-applied
+>>> Applied bundle 'gateway__gateway'
+>>> Waiting on readyProbe for 'gateway__gateway' → gateway/default-gateway jsonpath={.status.addresses[0].value}
+gateway.gateway.networking.k8s.io/default-gateway condition met
+gateway.gateway.networking.k8s.io/default-gateway condition met
+
+>>> Wave 006 (1 bundle)
+deployment.apps/podinfo serverside-applied
+httproute.gateway.networking.k8s.io/podinfo serverside-applied
+service/podinfo serverside-applied
+>>> Applied bundle 'podinfo__podinfo'
+>>> Waiting for 1 workload(s) in /nix/store/f3m3r6n508ggg62nv4wf66hasg2hy9vg-lab-minimal.local/manifests/app/05-wave/podinfo__podinfo (timeout: 600s)
+deployment "podinfo" successfully rolled out
+>>> Waiting on readyProbe for 'podinfo__podinfo' → deployment/podinfo condition=Available
+deployment.apps/podinfo condition met
+deployment.apps/podinfo condition met
+
+>>> SSA wave apply complete on 'k3d-minimal-local-app'
+
+=== lab destroy ===
+catallaxy Destroying lab 'minimal.local' (3 steps)
+
+>>> Realizing teardown hook binaries...
+>>> Lab package built
+
+>>> Step 1/3: Destroy k3d cluster 'app'
+>>> Destroying k3d cluster 'minimal-local-app'...
+[36mINFO[0m[0000] Deleting cluster 'minimal-local-app'         
+[36mINFO[0m[0000] Deleting 1 attached volumes...               
+[36mINFO[0m[0000] Removing cluster details from default kubeconfig... 
+[36mINFO[0m[0000] Removing standalone kubeconfig file (if there is one)... 
+[36mINFO[0m[0000] Successfully deleted cluster minimal-local-app! 
+>>> Cluster destroyed
+
+>>> Step 2/3: Remove lab infrastructure services
+>>> Removing Zot OCI registry (image cache)...
+catallaxy-minimal.local-registry
+catallaxy-minimal.local-registry
+>>> Zot OCI registry (image cache) removed
+
+>>> Step 3/3: Remove docker network 'minimal.local'
+>>> Removing Docker network 'minimal.local'...
+
+=== nothing of this lab survived the teardown ===
+
+minimal.local: up in 48s, verified, idempotent, destroyed clean

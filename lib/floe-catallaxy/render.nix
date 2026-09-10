@@ -14,6 +14,7 @@ let
       releaseName
       namespace
       values
+      replacedHooks
       ;
     extraOpts = [ ];
     kustomize = {
@@ -85,19 +86,26 @@ in
       cluster,
       owner ? name,
       waitTimeout ? "10m",
+      namespaceLabels ? { },
+      namespaceResources ? [ ],
     }:
     let
       namespacesBundle = {
         resources = { };
         helmCharts = { };
-        yamls = map (
-          ns:
-          builtins.toJSON {
-            apiVersion = "v1";
-            kind = "Namespace";
-            metadata.name = ns;
-          }
-        ) cluster.namespaces;
+        yamls =
+          map (
+            ns:
+            builtins.toJSON {
+              apiVersion = "v1";
+              kind = "Namespace";
+              metadata = {
+                name = ns;
+              }
+              // lib.optionalAttrs (namespaceLabels ? ${ns}) { labels = namespaceLabels.${ns}; };
+            }
+          ) cluster.namespaces
+          ++ map builtins.toJSON namespaceResources;
         awaitRollout = true;
       };
 

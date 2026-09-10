@@ -290,6 +290,7 @@ in
         stores = lib.mapAttrs (_: store: {
           inherit (store) backend direction;
           writerCommand = store.writer.command;
+          removerCommand = store.remover.command;
 
           # A `vault` store's server, mount and version filled in from
           # whatever provides VAULT_SERVER, for the fields the lab left unset.

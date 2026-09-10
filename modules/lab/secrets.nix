@@ -88,6 +88,26 @@ let
           '';
         };
 
+        remover.command = mkOption {
+          type = types.nullOr (types.listOf types.str);
+          default = null;
+          example = [
+            "vault-delete"
+            "--mount"
+            "lab"
+          ];
+          description = ''
+            How to remove a value from this store, for when the thing that
+            produced it is destroyed.
+
+            Same contract as `writer.command` minus the value: it receives
+            `CATA_SECRET_KEY` and must exit non-zero if the key is still
+            there. A store with no remover is not an error — destroying a
+            stack says what it could not take back rather than refusing to
+            finish.
+          '';
+        };
+
         vault = {
           server = mkOption {
             type = types.nullOr types.str;

@@ -124,6 +124,12 @@
         "cnpg": {
           "enable": true
         },
+        "crossplane": {
+          "enable": true
+        },
+        "crossplane-provider-nop": {
+          "enable": true
+        },
         "doks": {
           "enable": true
         },
@@ -167,6 +173,9 @@
           "enable": true
         },
         "netbird-operator": {
+          "enable": true
+        },
+        "nop-resource": {
           "enable": true
         },
         "openbao": {
@@ -244,6 +253,11 @@
           },
           {
             "hasReadyProbe": false,
+            "name": "crossplane/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
             "name": "external-secrets/crds",
             "resourceCount": 0
           },
@@ -277,6 +291,11 @@
           {
             "hasReadyProbe": true,
             "name": "cnpg/cnpg",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "crossplane/crossplane",
             "resourceCount": 0
           },
           {
@@ -348,6 +367,11 @@
           },
           {
             "hasReadyProbe": true,
+            "name": "crossplane-provider-nop/provider",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": true,
             "name": "external-dns/external-dns",
             "resourceCount": 0
           },
@@ -372,6 +396,11 @@
             "hasReadyProbe": true,
             "name": "gateway/controller",
             "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "nop-resource/nop",
+            "resourceCount": 1
           },
           {
             "hasReadyProbe": false,
@@ -561,6 +590,7 @@
       "argocd",
       "cert-manager",
       "cnpg-system",
+      "crossplane-system",
       "external-dns",
       "external-secrets",
       "forgejo",
@@ -622,6 +652,7 @@
       "authored": {
         "backend": "sops",
         "direction": "authored",
+        "removerCommand": null,
         "vault": {
           "path": "secret",
           "server": null,
@@ -632,6 +663,7 @@
       "knot": {
         "backend": "env",
         "direction": "authored",
+        "removerCommand": null,
         "vault": {
           "path": "secret",
           "server": null,
@@ -642,6 +674,7 @@
       "runtime": {
         "backend": "vault",
         "direction": "runtime",
+        "removerCommand": null,
         "vault": {
           "path": "secret",
           "server": "http://openbao.openbao.svc.cluster.local:8200",

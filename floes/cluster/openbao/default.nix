@@ -296,7 +296,7 @@ catallaxy.mkComponentFloe {
               digest = null;
             };
 
-            helmCharts.openbao = {
+            helmCharts.openbao = kinds.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "openbao";
               namespace = inputs.namespace;

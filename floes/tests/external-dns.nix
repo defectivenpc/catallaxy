@@ -97,21 +97,25 @@ lib.runTests {
 
   # ---- the step --------------------------------------------------------
 
+  # The floe names a moment, not an anchor: it has no name for the cluster it
+  # is on, and `modules/lab/planner/default.nix` — which does — turns this into
+  # `optional:provides:cluster/<name>/destroyed`.
   testItContributesATeardownStep = {
     expr = {
-      inherit (step) kind direction;
+      inherit (step) kind direction teardown;
       onFailure = step.policy.onFailure;
       before = step.before;
     };
     expected = {
       kind = "run-script";
       direction = "teardown";
+      teardown = "before-cluster-destroy";
 
       # A zone left dirty is bad; a lab that cannot be destroyed is worse.
       # Everything after this step is what frees the ports and the network.
       onFailure = "continue";
 
-      before = [ "optional:provides:cluster/${support.stubs.cluster.value.name}/destroyed" ];
+      before = [ ];
     };
   };
 

@@ -106,4 +106,11 @@ in
     discoverLabs
     discoverFixtures
     ;
+
+  # mkFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
+  #
+  # What a consumer calls on its own floe directory. The built-in set is
+  # built by the same function, so a floe outside this repo is handed the
+  # same arguments as one inside it.
+  mkFloes = applyFloes;
 }

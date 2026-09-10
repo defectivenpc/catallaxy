@@ -86,6 +86,16 @@ catallaxy.mkComponentFloe {
             };
 
             helmCharts.seaweedfs = kinds.mkHelmChart {
+              replacedHooks = {
+                secret-seaweedfs-db =
+                  "nothing needs it: the filer here uses leveldb, the chart reads "
+                  + "`WEED_MYSQL_*` with `optional: true`, and the hook's Secret carries "
+                  + "the chart's hardcoded `HardCodedPassword` \u2014 not installing it is better "
+                  + "than installing it";
+                seaweedfs-volume-resize-hook =
+                  "RBAC for a resize Job this lab does not enable; there are no volumes "
+                  + "to grow on a first install";
+              };
               inherit (inputs) chart namespace;
               releaseName = "seaweedfs";
               values = {

@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, HashMap};
 use serde::Deserialize;
 
 const CLUSTER_PREFIX: &str = "lab.clusters.<name>.";
-const FLOE_PREFIX: &str = "lab.clusters.<name>.floes.";
 const BUNDLES_PREFIX: &str = "lab.clusters.<name>.bundles.";
 const LAB_STEPS_PREFIX: &str = "lab.steps.";
 const BUNDLE_ENTRY_PREFIX: &str = "lab.clusters.<name>.bundles.<name>.";
@@ -53,15 +52,9 @@ pub enum Route {
     LabSteps,
     Cluster,
     ClusterBundles,
-    Floe(String),
 }
 
 pub fn route(name: &str) -> Option<Route> {
-    if let Some(rest) = name.strip_prefix(FLOE_PREFIX) {
-        return Some(Route::Floe(
-            rest.split('.').next().unwrap_or_default().to_string(),
-        ));
-    }
     if name.starts_with(BUNDLES_PREFIX) {
         return Some(Route::ClusterBundles);
     }
@@ -283,7 +276,6 @@ pub fn render_all(all: BTreeMap<String, OptionDoc>) -> Result<Rendered, RenderEr
     let mut lab_steps = BTreeMap::new();
     let mut cluster = BTreeMap::new();
     let mut bundles = BTreeMap::new();
-    let mut floes: BTreeMap<String, BTreeMap<String, OptionDoc>> = BTreeMap::new();
     let mut unrouted = Vec::new();
     let mut undescribed = Vec::new();
 
@@ -295,9 +287,6 @@ pub fn render_all(all: BTreeMap<String, OptionDoc>) -> Result<Rendered, RenderEr
             undescribed.push(name.clone());
         }
         match route(&name) {
-            Some(Route::Floe(floe)) => {
-                floes.entry(floe).or_default().insert(name, opt);
-            }
             Some(Route::ClusterBundles) => {
                 bundles.insert(name, opt);
             }
@@ -319,20 +308,8 @@ pub fn render_all(all: BTreeMap<String, OptionDoc>) -> Result<Rendered, RenderEr
         return Err(RenderError::Unrouted(unrouted));
     }
 
-    let option_count = lab.len()
-        + lab_steps.len()
-        + cluster.len()
-        + bundles.len()
-        + floes.values().map(|f| f.len()).sum::<usize>();
-    assemble_pages(
-        lab,
-        lab_steps,
-        cluster,
-        bundles,
-        floes,
-        option_count,
-        undescribed,
-    )
+    let option_count = lab.len() + lab_steps.len() + cluster.len() + bundles.len();
+    assemble_pages(lab, lab_steps, cluster, bundles, option_count, undescribed)
 }
 
 type OptionMap = BTreeMap<String, OptionDoc>;
@@ -342,11 +319,10 @@ fn assemble_pages(
     lab_steps: OptionMap,
     cluster: OptionMap,
     bundles: OptionMap,
-    floes: BTreeMap<String, OptionMap>,
     option_count: usize,
     mut undescribed: Vec<String>,
 ) -> Result<Rendered, RenderError> {
-    let mut pages = vec![
+    let pages = vec![
         Page {
             path: "options/lab.md".into(),
             body: render_page(
@@ -395,25 +371,6 @@ fn assemble_pages(
         },
     ];
 
-    for (floe, options) in &floes {
-        pages.push(Page {
-            path: format!("options/floes/{floe}.md"),
-            body: render_page(
-                &format!("`floes.{floe}` Options"),
-                &format!("All options are under `lab.clusters.<name>.floes.{floe}.`"),
-                options,
-                FLOE_PREFIX,
-            )
-            .map_err(RenderError::AnchorCollision)?,
-        });
-    }
-
-    let names: Vec<String> = floes.keys().cloned().collect();
-    pages.push(Page {
-        path: "options/floes/index.md".into(),
-        body: render_floe_index(&names),
-    });
-
     undescribed.sort();
 
     Ok(Rendered {
@@ -438,10 +395,13 @@ mod tests {
     }
 
     #[test]
-    fn routes_floe_options_to_their_own_page() {
+    fn a_floe_is_a_cluster_option_like_any_other() {
+        // Since RFC 0001 a floe's inputs are function arguments, not options,
+        // so nothing exists under `floes.<n>` to route. The instantiated floe
+        // itself is one cluster option, and belongs on the cluster page.
         assert_eq!(
-            route("lab.clusters.<name>.floes.kanidm.domain"),
-            Some(Route::Floe("kanidm".into()))
+            route("lab.clusters.<name>.floes.kanidm"),
+            Some(Route::Cluster)
         );
         assert_eq!(
             route("lab.clusters.<name>.kubernetes.version"),
@@ -499,14 +459,6 @@ mod tests {
             "the parent carries the pointer description and belongs with the cluster"
         );
         assert_eq!(route("lab.steps"), Some(Route::Lab));
-    }
-
-    #[test]
-    fn a_floe_still_wins_over_the_cluster_prefix() {
-        assert_eq!(
-            route("lab.clusters.<name>.floes.gateway.tls"),
-            Some(Route::Floe("gateway".into()))
-        );
     }
 
     #[test]
@@ -572,42 +524,18 @@ mod tests {
     }
 
     #[test]
-    fn every_floe_gets_a_page_and_an_index_entry() {
-        let mut all = BTreeMap::new();
-        all.insert(
-            "lab.clusters.<name>.floes.kanidm.domain".to_string(),
-            opt("d"),
-        );
-        all.insert(
-            "lab.clusters.<name>.floes.netbird.domain".to_string(),
-            opt("d"),
-        );
-        let rendered = render_all(all).expect("routes cleanly");
-        let paths: Vec<&str> = rendered.pages.iter().map(|p| p.path.as_str()).collect();
-        assert!(paths.contains(&"options/floes/kanidm.md"));
-        assert!(paths.contains(&"options/floes/netbird.md"));
-        let index = rendered
-            .pages
-            .iter()
-            .find(|p| p.path == "options/floes/index.md")
-            .unwrap();
-        assert!(index.body.contains("[`floes.kanidm`](./kanidm.md)"));
-        assert!(index.body.contains("[`floes.netbird`](./netbird.md)"));
-    }
-
-    #[test]
     fn option_names_are_shown_with_their_page_prefix_stripped() {
         let mut all = BTreeMap::new();
         all.insert(
-            "lab.clusters.<name>.floes.kanidm.domain".to_string(),
+            "lab.clusters.<name>.kubernetes.version".to_string(),
             opt("d"),
         );
         let rendered = render_all(all).expect("routes cleanly");
         let page = rendered
             .pages
             .iter()
-            .find(|p| p.path == "options/floes/kanidm.md")
+            .find(|p| p.path == "options/cluster.md")
             .unwrap();
-        assert!(page.body.contains("## `kanidm.domain`"));
+        assert!(page.body.contains("## `kubernetes.version`"));
     }
 }

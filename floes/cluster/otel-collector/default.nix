@@ -162,7 +162,7 @@ catallaxy.mkComponentFloe {
                 digest = null;
               };
 
-              helmCharts.gateway = {
+              helmCharts.gateway = kinds.mkHelmChart {
                 chart = inputs.chart;
                 releaseName = release;
                 namespace = inputs.namespace;
@@ -235,7 +235,7 @@ catallaxy.mkComponentFloe {
               # page of connection-refused in the agent's own logs.
               needs = [ "gateway" ];
 
-              helmCharts.agent = {
+              helmCharts.agent = kinds.mkHelmChart {
                 chart = inputs.chart;
                 releaseName = "${release}-agent";
                 namespace = inputs.namespace;

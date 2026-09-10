@@ -5,11 +5,8 @@ pub enum StepKind {
     SetupServices,
     DockerNetworkCreate,
     CertGenerate,
-    TrustBundle,
-    HostTrustInstall,
     DnsSetup,
     DnsTeardown,
-    ColimaNetworkRoute,
     RegistrySetup,
     WarmCache,
     CreateCluster,
@@ -23,8 +20,6 @@ pub enum StepKind {
     ApplyRootApplication,
     BootstrapForgejoRepos,
     BootstrapArgocdKubectlSsa,
-    BootstrapArgocdHelm,
-    VerifyArgocdReachable,
     RunScript,
     InfraPlan,
     InfraApply,
@@ -39,15 +34,12 @@ pub enum StepKind {
 }
 
 impl StepKind {
-    pub const ALL: [StepKind; 34] = [
+    pub const ALL: [StepKind; 29] = [
         StepKind::SetupServices,
         StepKind::DockerNetworkCreate,
         StepKind::CertGenerate,
-        StepKind::TrustBundle,
-        StepKind::HostTrustInstall,
         StepKind::DnsSetup,
         StepKind::DnsTeardown,
-        StepKind::ColimaNetworkRoute,
         StepKind::RegistrySetup,
         StepKind::WarmCache,
         StepKind::CreateCluster,
@@ -61,8 +53,6 @@ impl StepKind {
         StepKind::ApplyRootApplication,
         StepKind::BootstrapForgejoRepos,
         StepKind::BootstrapArgocdKubectlSsa,
-        StepKind::BootstrapArgocdHelm,
-        StepKind::VerifyArgocdReachable,
         StepKind::RunScript,
         StepKind::InfraPlan,
         StepKind::InfraApply,
@@ -85,11 +75,8 @@ impl StepKind {
             StepKind::SetupServices => "setup-services",
             StepKind::DockerNetworkCreate => "docker-network-create",
             StepKind::CertGenerate => "cert-generate",
-            StepKind::TrustBundle => "trust-bundle",
-            StepKind::HostTrustInstall => "host-trust-install",
             StepKind::DnsSetup => "dns-setup",
             StepKind::DnsTeardown => "dns-teardown",
-            StepKind::ColimaNetworkRoute => "colima-network-route",
             StepKind::RegistrySetup => "registry-setup",
             StepKind::WarmCache => "warm-cache",
             StepKind::CreateCluster => "create-cluster",
@@ -103,8 +90,6 @@ impl StepKind {
             StepKind::ApplyRootApplication => "apply-root-application",
             StepKind::BootstrapForgejoRepos => "bootstrap-forgejo-repos",
             StepKind::BootstrapArgocdKubectlSsa => "bootstrap-argocd-kubectl-ssa",
-            StepKind::BootstrapArgocdHelm => "bootstrap-argocd-helm",
-            StepKind::VerifyArgocdReachable => "verify-argocd-reachable",
             StepKind::RunScript => "run-script",
             StepKind::InfraPlan => "infra-plan",
             StepKind::InfraApply => "infra-apply",
@@ -131,11 +116,8 @@ impl StepKind {
             | StepKind::SetupServices
             | StepKind::DockerNetworkCreate
             | StepKind::CertGenerate
-            | StepKind::TrustBundle
-            | StepKind::HostTrustInstall
             | StepKind::DnsSetup
             | StepKind::DnsTeardown
-            | StepKind::ColimaNetworkRoute
             | StepKind::RegistrySetup
             | StepKind::WarmCache
             | StepKind::EnsureSecrets
@@ -147,8 +129,6 @@ impl StepKind {
             | StepKind::ApplyRootApplication
             | StepKind::BootstrapForgejoRepos
             | StepKind::BootstrapArgocdKubectlSsa
-            | StepKind::BootstrapArgocdHelm
-            | StepKind::VerifyArgocdReachable
             | StepKind::RunScript
             | StepKind::WaitForClusterGone
             | StepKind::ReconcileManagedResource
@@ -171,10 +151,7 @@ impl StepKind {
             StepKind::SetupServices
             | StepKind::DockerNetworkCreate
             | StepKind::CertGenerate
-            | StepKind::TrustBundle
-            | StepKind::HostTrustInstall
             | StepKind::DnsSetup
-            | StepKind::ColimaNetworkRoute
             | StepKind::RegistrySetup
             | StepKind::WarmCache
             | StepKind::CreateCluster
@@ -188,10 +165,8 @@ impl StepKind {
             | StepKind::ApplyRootApplication
             | StepKind::BootstrapForgejoRepos
             | StepKind::BootstrapArgocdKubectlSsa
-            | StepKind::BootstrapArgocdHelm
             | StepKind::InfraPlan
-            | StepKind::InfraApply
-            | StepKind::VerifyArgocdReachable => (true, false),
+            | StepKind::InfraApply => (true, false),
         };
         match direction {
             Direction::Deploy => deploy,
@@ -201,18 +176,13 @@ impl StepKind {
 
     pub fn dry_run_safe(self) -> bool {
         match self {
-            StepKind::WaitForResources
-            | StepKind::VerifyArgocdReachable
-            | StepKind::WaitForClusterGone => true,
+            StepKind::WaitForResources | StepKind::WaitForClusterGone => true,
             StepKind::InfraPlan
             | StepKind::SetupServices
             | StepKind::DockerNetworkCreate
             | StepKind::CertGenerate
-            | StepKind::TrustBundle
-            | StepKind::HostTrustInstall
             | StepKind::DnsSetup
             | StepKind::DnsTeardown
-            | StepKind::ColimaNetworkRoute
             | StepKind::RegistrySetup
             | StepKind::WarmCache
             | StepKind::CreateCluster
@@ -225,7 +195,6 @@ impl StepKind {
             | StepKind::ApplyRootApplication
             | StepKind::BootstrapForgejoRepos
             | StepKind::BootstrapArgocdKubectlSsa
-            | StepKind::BootstrapArgocdHelm
             | StepKind::RunScript
             | StepKind::InfraApply
             | StepKind::InfraDestroy

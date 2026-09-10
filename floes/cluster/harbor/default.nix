@@ -256,7 +256,7 @@ catallaxy.mkComponentFloe {
             ]
             ++ lib.optional (client != { }) "${ns}/${client.secret.name}";
 
-            helmCharts.harbor = {
+            helmCharts.harbor = kinds.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "harbor";
               namespace = ns;

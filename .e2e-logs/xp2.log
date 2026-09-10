@@ -1,0 +1,9 @@
+cata-e2e: 'crossplane.nop' already has containers on this machine.
+  This asserts that nothing survives its own teardown, so it has to
+  start from nothing. Other labs may be up; only this one is in the
+  way.
+
+catallaxy-crossplane.nop-registry d0f93ae8e869 2026-09-10 06:58:34 -0600 MDT
+
+  Remove them with:
+    cata lab cleanup crossplane.nop --yes

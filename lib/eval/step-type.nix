@@ -97,6 +97,18 @@ in
           description = "Tokens that are true once this step has run.";
         };
 
+        teardown = mkOption {
+          type = types.nullOr (types.enum [ "before-cluster-destroy" ]);
+          default = null;
+          description = ''
+            A moment in the teardown, for a step a floe contributes. The
+            planner turns it into the anchor, because it knows which cluster
+            the floe is on and the floe does not — that is the whole point.
+            A floe naming a plan token would be depending on lab internals
+            the signatures exist to keep it away from.
+          '';
+        };
+
         params = mkOption {
           type = types.attrs;
           default = { };

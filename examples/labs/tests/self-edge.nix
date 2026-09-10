@@ -63,6 +63,12 @@ in
   # The proxy is on, which is the point: a lab with no proxy would pass this
   # by having nothing to route rather than by routing the right subset.
   lab.proxy.enable = true;
+
+  # And the zone, so the same subset is pinned in DNS. A wildcard would answer
+  # for `edge`'s hostname too and send it to a proxy with no backend for it,
+  # so a lab that is not the edge for every cluster gets one record per host
+  # it really does front (RFC 0005 §6.4).
+  lab.dns.enable = true;
   lab.network.subnet = "172.40.0.0/16";
   lab.proxy.httpPort = 8090;
   lab.egress.port = 3137;

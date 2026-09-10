@@ -5,6 +5,7 @@
   pkgs,
   bookSrc ? ../docs/book,
   floeDocs ? ../docs/floes,
+  optionDocs ? ../docs/generated,
   changelog ? ../CHANGELOG.md,
 }:
 
@@ -49,6 +50,12 @@ pkgs.runCommand "catallaxy-book"
     cp "$indexPath" book/src/reference/floes/index.md
     cp ${changelog} book/src/changelog.md
 
+    # The option and CLI reference, and the nav that reaches them. The
+    # generated SUMMARY is the committed one with those entries spliced in,
+    # so it replaces the copy here before the Floes block goes in below.
+    cp -r --no-preserve=mode ${optionDocs}/options ${optionDocs}/cli book/src/reference/
+    cp --no-preserve=mode ${optionDocs}/SUMMARY.md book/src/SUMMARY.md
+
     awk -v block="$(cat "$navBlockPath")" '
       { print }
       /^- \[Floes\]/ { print block }
@@ -57,6 +64,11 @@ pkgs.runCommand "catallaxy-book"
 
     grep -q "reference/floes/" book/src/SUMMARY.md || {
       echo "the Floes nav block was not spliced — did the SUMMARY entry move?" >&2
+      exit 1
+    }
+
+    grep -q "reference/options/lab.md" book/src/SUMMARY.md || {
+      echo "the generated option nav is missing — is docs/generated stale?" >&2
       exit 1
     }
 

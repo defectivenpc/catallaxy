@@ -273,7 +273,14 @@
     }
   },
   "destroy": {},
-  "dnsInfo": null,
+  "dnsInfo": {
+    "host": "127.0.0.1",
+    "port": 5370,
+    "tsigKeyname": "externaldns-key",
+    "tsigSecret": "kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=",
+    "tsigSecretAlg": "hmac-sha256",
+    "zone": "self-edge.test"
+  },
   "infraPublications": [],
   "labName": "self-edge",
   "labNamespaces": {
@@ -305,10 +312,35 @@
     "stores": {}
   },
   "services": {
+    "dns": {
+      "command": [
+        "knotd"
+      ],
+      "container": "catallaxy-self-edge-dns",
+      "description": "Knot DNS server (self-edge.test)",
+      "image": "cznic/knot:latest",
+      "networks": [
+        "self-edge"
+      ],
+      "ports": [
+        "5370:53/tcp",
+        "5370:53/udp"
+      ],
+      "volumes": {
+        "/config/knot.conf": {
+          "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: self-edge.test.\n    storage: /storage\n    file: self-edge.test.zone\n    acl: update-acl\n"
+        },
+        "/storage/self-edge.test.zone": {
+          "content": "$ORIGIN self-edge.test.\n$TTL 300\n\n@   IN  SOA ns1.self-edge.test. admin.self-edge.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.self-edge.test.\nns1 IN  A   127.0.0.1\n\n; No wildcard: some cluster here is its own edge, and a wildcard would\n; answer for its hostnames too — sending them to a proxy that has no\n; backend for them (RFC 0005 §6.4). One record per hostname the lab\n; really is the edge for, and nothing for the rest.\npodinfo   IN  A   172.40.0.1\n"
+        }
+      }
+    },
     "egress": {
       "container": "catallaxy-self-edge-egress",
       "description": "Forward proxy inside the lab network (self-edge.test)",
-      "dnsContainers": [],
+      "dnsContainers": [
+        "catallaxy-self-edge-dns"
+      ],
       "image": "ghcr.io/querateam/docker-tinyproxy:latest",
       "networks": [
         "self-edge"

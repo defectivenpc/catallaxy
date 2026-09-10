@@ -137,6 +137,36 @@ in
     };
   };
 
+  # ---- managed resources -------------------------------------------------
+
+  MANAGED_RESOURCE_CONTROL_PLANE = floe.mkSig {
+    name = "MANAGED_RESOURCE_CONTROL_PLANE";
+    as = "controlPlane";
+    description = "A control plane that installs providers and reconciles the resources they define.";
+    fields = {
+      namespace = T.local T.k8sName;
+
+      # The kind a provider floe renders to install itself, so a provider
+      # names no product either. Rendering it is also what orders the provider
+      # after these CRDs: `elaborate.nix` derives a `kind:` edge from the
+      # bundle that declares them, so there is no token to publish.
+      providerKind = T.local T.str;
+    };
+  };
+
+  MANAGED_RESOURCE_PROVIDER = floe.mkSig {
+    name = "MANAGED_RESOURCE_PROVIDER";
+    as = "resourceProvider";
+    description = "A provider is healthy and the resource kinds it defines can be applied.";
+    fields = {
+      crdKinds = T.local (T.listOf T.str);
+
+      # What a consumer orders against: the provider's CRDs arrive when it
+      # installs, which is well after the CR that installed it was applied.
+      healthy = T.local T.str;
+    };
+  };
+
   REDIS_OPERATOR = floe.mkSig {
     name = "REDIS_OPERATOR";
     as = "redisOperator";

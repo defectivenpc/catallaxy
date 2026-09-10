@@ -235,7 +235,7 @@ catallaxy.mkComponentFloe {
             # lint` calling the Deployment's reference to them dangling.
             externalSecrets = lib.optional (client != { }) "${inputs.namespace}/${client.secret.name}";
 
-            helmCharts.grafana = {
+            helmCharts.grafana = kinds.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "grafana";
               namespace = inputs.namespace;

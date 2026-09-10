@@ -1,12 +1,10 @@
 # The CLI, the tools it shells out to, and the runners that test a whole lab.
-#
-# The option-docs generator is still parked; its splicer survives as
-# `cata-build docs render`.
 {
   lib,
   pkgs,
   craneLib,
   rustToolchain,
+  optionsJSON,
 }:
 
 let
@@ -64,6 +62,15 @@ let
   refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
   refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
   refresh-floe-docs = import ./refresh-floe-docs.nix { inherit lib pkgs; };
+  refresh-option-docs = import ./refresh-option-docs.nix { inherit lib pkgs; };
+  optionDocs = import ./option-docs.nix {
+    inherit
+      lib
+      pkgs
+      cata
+      optionsJSON
+      ;
+  };
   docs = import ./docs.nix { inherit lib pkgs; };
   refresh-plans = import ./refresh-plans.nix {
     inherit lib pkgs;
@@ -83,6 +90,8 @@ in
     refresh-digests
     refresh-cli-configs
     refresh-floe-docs
+    refresh-option-docs
+    optionDocs
     refresh-plans
     docs
     ;

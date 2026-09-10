@@ -236,8 +236,8 @@ in
       description = ''
         Why this lab is not expected to stand up, or null when it is.
 
-        The migration off the parked floe set moves faster than every lab can
-        be made to run, and a lab that renders but does not deploy is worth
+        Not every lab can be made to stand up as fast as it can be made to
+        render, and a lab that renders but does not deploy is worth
         having in the tree: it renders, it lints, its plan is snapshotted, and
         its digest is pinned, so the ninety-odd checks that do not need a
         cluster all apply to it. What it must not do is fail in CI as though

@@ -5,6 +5,13 @@ use anyhow::{Context, Result, bail};
 
 use crate::domain::secrets::{Backend, SecretStore};
 
+/// What became of a key a stack had published.
+pub enum Removal {
+    Gone,
+    /// The lab never said how to remove from this store.
+    Unsupported,
+}
+
 /// Somewhere the host can write a value it only learned at runtime.
 ///
 /// An interface rather than a fixed backend, because which store a lab writes
@@ -24,6 +31,22 @@ impl SecretSink {
         match self {
             Self::Vault(s) => s.write(key, value).await,
             Self::Command(s) => s.write(key, value),
+        }
+    }
+
+    /// Take back what `write` put there.
+    ///
+    /// `Unsupported` rather than an error: a store that declares no remover
+    /// is a lab that never said how, and refusing to finish a teardown over
+    /// it would leave the cluster standing to protect one key.
+    ///
+    /// # Errors
+    ///
+    /// If removal was attempted and failed.
+    pub async fn remove(&self, key: &str) -> Result<Removal> {
+        match self {
+            Self::Vault(s) => s.remove(key).await,
+            Self::Command(s) => s.remove(key),
         }
     }
 
@@ -54,6 +77,7 @@ pub fn for_store(name: &str, store: &SecretStore) -> Result<SecretSink> {
         return Ok(SecretSink::Command(CommandSink {
             store: name.to_string(),
             argv: argv.clone(),
+            remover: store.remover_command.clone(),
         }));
     }
 
@@ -104,6 +128,35 @@ pub struct VaultSink {
 }
 
 impl VaultSink {
+    /// KV v2 puts `metadata` in the path to remove every version; deleting
+    /// `data` there only marks the latest one, which reads back as absent
+    /// while the value is still recoverable.
+    async fn remove(&self, key: &str) -> Result<Removal> {
+        let path = if self.v2 {
+            format!("{}/v1/{}/metadata/{key}", self.server, self.mount)
+        } else {
+            format!("{}/v1/{}/{key}", self.server, self.mount)
+        };
+
+        let response = crate::io::http::client(reqwest::Client::builder())?
+            .delete(&path)
+            .header("X-Vault-Token", &self.token)
+            .send()
+            .await
+            .with_context(|| format!("removing '{key}' from {}", self.describe()))?;
+
+        // A key that is already gone is the state we wanted.
+        if response.status().is_success() || response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(Removal::Gone);
+        }
+
+        bail!(
+            "{} refused the removal of '{key}': HTTP {}.",
+            self.describe(),
+            response.status(),
+        )
+    }
+
     async fn write(&self, key: &str, value: &str) -> Result<()> {
         // KV v2 nests the payload under `data` and puts `data` in the path as
         // well. Writing a v2 mount as though it were v1 succeeds and stores
@@ -147,9 +200,33 @@ impl VaultSink {
 pub struct CommandSink {
     store: String,
     argv: Vec<String>,
+    remover: Option<Vec<String>>,
 }
 
 impl CommandSink {
+    fn remove(&self, key: &str) -> Result<Removal> {
+        let Some(argv) = self.remover.as_ref() else {
+            return Ok(Removal::Unsupported);
+        };
+
+        let status = Command::new(&argv[0])
+            .args(&argv[1..])
+            .env("CATA_SECRET_KEY", key)
+            .status()
+            .with_context(|| format!("running the remover for {}", self.describe()))?;
+
+        if !status.success() {
+            bail!(
+                "the remover for {} exited {} removing '{key}'.\n    \
+                 It ran as: {}",
+                self.describe(),
+                status.code().unwrap_or(-1),
+                argv.join(" "),
+            );
+        }
+        Ok(Removal::Gone)
+    }
+
     fn write(&self, key: &str, value: &str) -> Result<()> {
         // The value goes on stdin and the key in the environment. Neither is
         // an argument, so neither shows up in a process listing on a shared

@@ -172,6 +172,11 @@ in
           url = "https://public.ecr.aws";
         }
         {
+          # Crossplane's own image and the packages its providers ship as.
+          host = "xpkg.upbound.io";
+          url = "https://xpkg.upbound.io";
+        }
+        {
           host = "oci.external-secrets.io";
           url = "https://oci.external-secrets.io";
         }

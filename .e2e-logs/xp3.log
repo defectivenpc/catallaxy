@@ -1,0 +1,289 @@
+
+=== lab up ===
+>>> Preflight passed
+catallaxy Deploying lab 'crossplane.nop' (6 steps)
+
+>>> Building lab manifests...
+>>> Lab package built
+
+>>> Step 1/6: Create docker network 'crossplane.nop'
+>>> Ensuring 'crossplane.nop' network exists (subnet: 172.44.0.0/16)...
+
+>>> Step 2/6: Start lab infrastructure services
+>>> Starting Zot OCI registry (image cache)...
+1609ac542743faf6dfc093746facfea4bdbb40a3d0047267eb67877e46158e22
+>>> Waiting for Zot OCI registry (image cache) to serve http://127.0.0.1:5060/v2/
+>>> Zot OCI registry (image cache) started
+
+>>> Step 3/6: Write registries.yaml + certs.d + lab-resolv.conf
+Warning: Lab CA missing at /home/whitehead/.local/share/catallaxy/labs/crossplane.nop/proxy/ca.crt; registry pulls will fail until cert-generate produces it.
+Warning: Could not resolve lab DNS container IP; cluster nodes will fall back to Docker DNS (lab hostnames won't resolve)
+
+>>> Step 4/6: Pre-warm the lab registry with every declared image
+catallaxy Warming 1 images via localhost:5060
+>>> xpkg.upbound.io/crossplane/crossplane:v1.18.2... cached
+
+>>> Cache: 1 ready, 0 skipped
+
+>>> Step 5/6: Create k3d cluster 'control'
+>>> Creating k3d cluster 'crossplane-nop-control'...
+[36mINFO[0m[0000] Prep: Network                                
+[36mINFO[0m[0000] Re-using existing network 'crossplane.nop' (961045edf24e8c97d1be1914d90cfbb011e50e7ed4420216ec76e005184cbcf9) 
+[36mINFO[0m[0000] Created image volume k3d-crossplane-nop-control-images 
+[36mINFO[0m[0000] Starting new tools node...                   
+[36mINFO[0m[0000] Starting node 'k3d-crossplane-nop-control-tools' 
+[36mINFO[0m[0001] Creating node 'k3d-crossplane-nop-control-server-0' 
+[36mINFO[0m[0001] Creating LoadBalancer 'k3d-crossplane-nop-control-serverlb' 
+[36mINFO[0m[0001] Using the k3d-tools node to gather environment information 
+[36mINFO[0m[0001] HostIP: using network gateway 172.44.0.1 address 
+[36mINFO[0m[0001] Starting cluster 'crossplane-nop-control'    
+[36mINFO[0m[0001] Starting servers...                          
+[36mINFO[0m[0001] Starting node 'k3d-crossplane-nop-control-server-0' 
+[36mINFO[0m[0004] All agents already running.                  
+[36mINFO[0m[0004] Starting helpers...                          
+[36mINFO[0m[0004] Starting node 'k3d-crossplane-nop-control-serverlb' 
+[36mINFO[0m[0010] Injecting records for hostAliases (incl. host.k3d.internal) and for 2 network members into CoreDNS configmap... 
+[36mINFO[0m[0012] Cluster 'crossplane-nop-control' created successfully! 
+[36mINFO[0m[0012] You can now use it like this:                
+export KUBECONFIG=$(k3d kubeconfig write crossplane-nop-control)
+kubectl cluster-info
+>>> Cluster ready (context: k3d-crossplane-nop-control)
+
+>>> Step 6/6: Deploy manifests to 'control'
+>>> Applying 4 wave(s) via kubectl SSA on 'k3d-crossplane-nop-control' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/compositeresourcedefinitions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositionrevisions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/environmentconfigs.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/usages.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurationrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurations.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/controllerconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/deploymentruntimeconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functionrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/imageconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/locks.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providerrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providers.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/storeconfigs.secrets.crossplane.io serverside-applied
+>>> Applied bundle 'crossplane__crds'
+>>> Waiting for 16 CRD(s) from 'crossplane__crds' to be Established
+  CRD compositeresourcedefinitions.apiextensions.crossplane.io established
+  CRD compositionrevisions.apiextensions.crossplane.io established
+  CRD compositions.apiextensions.crossplane.io established
+  CRD configurationrevisions.pkg.crossplane.io established
+  CRD configurations.pkg.crossplane.io established
+  CRD controllerconfigs.pkg.crossplane.io established
+  CRD deploymentruntimeconfigs.pkg.crossplane.io established
+  CRD environmentconfigs.apiextensions.crossplane.io established
+  CRD functionrevisions.pkg.crossplane.io established
+  CRD functions.pkg.crossplane.io established
+  CRD imageconfigs.pkg.crossplane.io established
+  CRD locks.pkg.crossplane.io established
+  CRD providerrevisions.pkg.crossplane.io established
+  CRD providers.pkg.crossplane.io established
+  CRD storeconfigs.secrets.crossplane.io established
+  CRD usages.apiextensions.crossplane.io established
+namespace/crossplane-system serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/rbac-manager serverside-applied
+serviceaccount/crossplane serverside-applied
+secret/crossplane-root-ca serverside-applied
+secret/crossplane-tls-server serverside-applied
+secret/crossplane-tls-client serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:system:aggregate-to-crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:allowed-provider-permissions serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-browse serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-browse serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+service/crossplane-webhooks serverside-applied
+deployment.apps/crossplane serverside-applied
+deployment.apps/crossplane-rbac-manager serverside-applied
+>>> Applied bundle 'crossplane__crossplane'
+>>> Waiting for 2 workload(s) in /nix/store/hb3d1rycr7wky1p2qid8l26rkr2r0iqa-lab-crossplane.nop/manifests/control/01-wave/crossplane__crossplane (timeout: 600s)
+Waiting for deployment "crossplane" rollout to finish: 0 of 1 updated replicas are available...
+deployment "crossplane" successfully rolled out
+deployment "crossplane-rbac-manager" successfully rolled out
+>>> Waiting on readyProbe for 'crossplane__crossplane' → deployment/crossplane condition=Available
+deployment.apps/crossplane condition met
+deployment.apps/crossplane condition met
+
+>>> Wave 003 (1 bundle)
+provider.pkg.crossplane.io/provider-nop serverside-applied
+>>> Applied bundle 'provider__provider'
+>>> Waiting on readyProbe for 'provider__provider' → provider/provider-nop condition=Healthy
+provider.pkg.crossplane.io/provider-nop condition met
+provider.pkg.crossplane.io/provider-nop condition met
+
+>>> Wave 004 (1 bundle)
+nopresource.nop.crossplane.io/nop serverside-applied
+>>> Applied bundle 'workload__nop'
+>>> Waiting on readyProbe for 'workload__nop' → nopresource/nop condition=Ready
+nopresource.nop.crossplane.io/nop condition met
+nopresource.nop.crossplane.io/nop condition met
+
+>>> SSA wave apply complete on 'k3d-crossplane-nop-control'
+
+=== lab verify ===
+catallaxy Verifying lab 'crossplane.nop'
+  clusters: control
+
+  ✓ the lab answers on every surface it declares
+
+=== lab up again, which must change nothing ===
+>>> Preflight passed
+catallaxy Deploying lab 'crossplane.nop' (6 steps)
+
+>>> Building lab manifests...
+>>> Lab package built
+
+>>> Step 1/6: Create docker network 'crossplane.nop'
+>>> Ensuring 'crossplane.nop' network exists (subnet: 172.44.0.0/16)...
+
+>>> Step 2/6: Start lab infrastructure services
+>>> Zot OCI registry (image cache) already running
+
+>>> Step 3/6: Write registries.yaml + certs.d + lab-resolv.conf
+Warning: Lab CA missing at /home/whitehead/.local/share/catallaxy/labs/crossplane.nop/proxy/ca.crt; registry pulls will fail until cert-generate produces it.
+Warning: Could not resolve lab DNS container IP; cluster nodes will fall back to Docker DNS (lab hostnames won't resolve)
+
+>>> Step 4/6: Pre-warm the lab registry with every declared image
+catallaxy Warming 1 images via localhost:5060
+>>> xpkg.upbound.io/crossplane/crossplane:v1.18.2... cached
+
+>>> Cache: 1 ready, 0 skipped
+
+>>> Step 5/6: Create k3d cluster 'control'
+>>> Cluster 'control' is already running and matches the lab
+
+>>> Step 6/6: Deploy manifests to 'control'
+>>> Applying 4 wave(s) via kubectl SSA on 'k3d-crossplane-nop-control' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (2 bundles)
+customresourcedefinition.apiextensions.k8s.io/compositeresourcedefinitions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositionrevisions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/compositions.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/environmentconfigs.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/usages.apiextensions.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurationrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/configurations.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/controllerconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/deploymentruntimeconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functionrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/functions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/imageconfigs.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/locks.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providerrevisions.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/providers.pkg.crossplane.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/storeconfigs.secrets.crossplane.io serverside-applied
+>>> Applied bundle 'crossplane__crds'
+>>> Waiting for 16 CRD(s) from 'crossplane__crds' to be Established
+  CRD compositeresourcedefinitions.apiextensions.crossplane.io established
+  CRD compositionrevisions.apiextensions.crossplane.io established
+  CRD compositions.apiextensions.crossplane.io established
+  CRD configurationrevisions.pkg.crossplane.io established
+  CRD configurations.pkg.crossplane.io established
+  CRD controllerconfigs.pkg.crossplane.io established
+  CRD deploymentruntimeconfigs.pkg.crossplane.io established
+  CRD environmentconfigs.apiextensions.crossplane.io established
+  CRD functionrevisions.pkg.crossplane.io established
+  CRD functions.pkg.crossplane.io established
+  CRD imageconfigs.pkg.crossplane.io established
+  CRD locks.pkg.crossplane.io established
+  CRD providerrevisions.pkg.crossplane.io established
+  CRD providers.pkg.crossplane.io established
+  CRD storeconfigs.secrets.crossplane.io established
+  CRD usages.apiextensions.crossplane.io established
+namespace/crossplane-system serverside-applied
+>>> Applied bundle 'namespaces'
+
+>>> Wave 002 (1 bundle)
+serviceaccount/rbac-manager serverside-applied
+serviceaccount/crossplane serverside-applied
+secret/crossplane-root-ca serverside-applied
+secret/crossplane-tls-server serverside-applied
+secret/crossplane-tls-client serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:system:aggregate-to-crossplane serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:allowed-provider-permissions serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane-browse serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-admin serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/crossplane:aggregate-to-browse serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-rbac-manager serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/crossplane-admin serverside-applied
+service/crossplane-webhooks serverside-applied
+deployment.apps/crossplane serverside-applied
+deployment.apps/crossplane-rbac-manager serverside-applied
+>>> Applied bundle 'crossplane__crossplane'
+>>> Waiting for 2 workload(s) in /nix/store/hb3d1rycr7wky1p2qid8l26rkr2r0iqa-lab-crossplane.nop/manifests/control/01-wave/crossplane__crossplane (timeout: 600s)
+deployment "crossplane" successfully rolled out
+deployment "crossplane-rbac-manager" successfully rolled out
+>>> Waiting on readyProbe for 'crossplane__crossplane' → deployment/crossplane condition=Available
+deployment.apps/crossplane condition met
+deployment.apps/crossplane condition met
+
+>>> Wave 003 (1 bundle)
+provider.pkg.crossplane.io/provider-nop serverside-applied
+>>> Applied bundle 'provider__provider'
+>>> Waiting on readyProbe for 'provider__provider' → provider/provider-nop condition=Healthy
+provider.pkg.crossplane.io/provider-nop condition met
+provider.pkg.crossplane.io/provider-nop condition met
+
+>>> Wave 004 (1 bundle)
+nopresource.nop.crossplane.io/nop serverside-applied
+>>> Applied bundle 'workload__nop'
+>>> Waiting on readyProbe for 'workload__nop' → nopresource/nop condition=Ready
+nopresource.nop.crossplane.io/nop condition met
+nopresource.nop.crossplane.io/nop condition met
+
+>>> SSA wave apply complete on 'k3d-crossplane-nop-control'
+
+=== lab destroy ===
+catallaxy Destroying lab 'crossplane.nop' (3 steps)
+
+>>> Realizing teardown hook binaries...
+>>> Lab package built
+
+>>> Step 1/3: Destroy k3d cluster 'control'
+>>> Destroying k3d cluster 'crossplane-nop-control'...
+[36mINFO[0m[0000] Deleting cluster 'crossplane-nop-control'    
+[36mINFO[0m[0000] Deleting 1 attached volumes...               
+[36mINFO[0m[0000] Removing cluster details from default kubeconfig... 
+[36mINFO[0m[0000] Removing standalone kubeconfig file (if there is one)... 
+[36mINFO[0m[0000] Successfully deleted cluster crossplane-nop-control! 
+>>> Cluster destroyed
+
+>>> Step 2/3: Remove lab infrastructure services
+>>> Removing Zot OCI registry (image cache)...
+catallaxy-crossplane.nop-registry
+catallaxy-crossplane.nop-registry
+>>> Zot OCI registry (image cache) removed
+
+>>> Step 3/3: Remove docker network 'crossplane.nop'
+>>> Removing Docker network 'crossplane.nop'...
+
+=== nothing of this lab survived the teardown ===
+
+crossplane.nop: up in 45s, verified, idempotent, destroyed clean

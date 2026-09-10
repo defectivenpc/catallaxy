@@ -11,6 +11,8 @@
   labDefs,
   exampleLabs,
   mkLab,
+  mkFloes,
+  optionDocs,
   e2eLabs,
   cloudE2eLabs,
   cliConfigs,
@@ -33,6 +35,15 @@ in
 // import ./self-contained.nix { inherit lib pkgs e2eLabs; }
 // import ./cloud-e2e.nix { inherit lib pkgs cloudE2eLabs; }
 // import ./step-kinds.nix { inherit lib pkgs; }
+// import ./consumer-template.nix {
+  inherit
+    lib
+    pkgs
+    mkLab
+    mkFloes
+    ;
+}
+// import ./option-docs.nix { inherit lib pkgs optionDocs; }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
   inherit

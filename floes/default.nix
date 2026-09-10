@@ -8,6 +8,8 @@
     cert-manager = ./cluster/cert-manager;
     cilium = ./cluster/cilium;
     cnpg = ./cluster/cnpg;
+    crossplane = ./cluster/crossplane;
+    crossplane-provider-nop = ./cluster/crossplane-provider-nop;
     custom = ./cluster/custom;
     doks = ./cluster/doks;
     external-dns = ./cluster/external-dns;
@@ -23,6 +25,7 @@
     loki = ./cluster/loki;
     netbird = ./cluster/netbird;
     netbird-operator = ./cluster/netbird-operator;
+    nop-resource = ./cluster/nop-resource;
     openbao = ./cluster/openbao;
     openebs = ./cluster/openebs;
     otel-collector = ./cluster/otel-collector;

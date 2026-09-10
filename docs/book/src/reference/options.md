@@ -56,11 +56,31 @@ Regenerate with:
 nix run .#refresh-floe-docs
 ```
 
-## Not generated from `nixosOptionsDoc`
+## The generated pages
 
-An earlier design generated per-option pages for `lab.*` and `cluster.*`
-from `nixosOptionsDoc`, routed by option name. That generator is parked —
-the splicer survives as `cata-build docs render` and
-`cli/src/docs/options.rs`, and `pkgs/default.nix` records the gap. The table
-above is hand-written and is therefore the one page in this section that can
-drift; the floe pages cannot.
+The table above is a map. Every option, with its type, default and the file
+it is declared in, is generated from the module tree by `nixosOptionsDoc`
+and split by route:
+
+| Page                                | Holds                      |
+| ----------------------------------- | -------------------------- |
+| [`lab.*`](./options/lab.md)         | lab scope                  |
+| [`lab.steps.*`](./options/steps.md) | steps you declare yourself |
+| [`cluster.*`](./options/cluster.md) | one cluster                |
+| [`bundles.*`](./options/bundles.md) | one bundle                 |
+
+The source is the same tree `mkLab` evaluates, so the reference cannot
+describe an option a lab does not have. `option-docs` diffs the committed
+pages against the generator and `option-descriptions` fails on any option
+that carries none.
+
+Regenerate with:
+
+```bash
+nix run .#refresh-option-docs
+```
+
+Floes are not among these pages. A floe's inputs are function arguments
+rather than options, so there is nothing under `floes.<n>` to route; their
+interfaces come from `nix/floe-docs.nix`, which can also say what a floe
+emits.

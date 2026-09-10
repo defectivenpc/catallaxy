@@ -20,13 +20,8 @@ let
 
   # orphans :: { KindName -> Why }
   orphans = {
-    bootstrap-argocd-helm = "the Helm path to ArgoCD; the argocd floe emits `bootstrap-argocd-kubectl-ssa`";
-    colima-network-route = "a macOS-only route into the Colima VM; nothing declares it since the host services were rewritten";
-    host-trust-install = "installing the lab CA into the host trust store; its ops command went with the parked tree";
-    pivot = "moving a cloud cluster's control off the bootstrap cluster; the Crossplane half, never rebuilt";
+    pivot = "moving a cloud cluster's control off the bootstrap cluster; needs a provider that makes a real cluster, which `examples/labs/crossplane` does not";
     publish-images = "pushing a lab's images to its registry; `warm-cache` covers the read path only";
-    trust-bundle = "distributing the lab CA as a step; trust-manager does it in-cluster";
-    verify-argocd-reachable = "a bespoke readiness step; a bundle's `ready` probe covers it";
   };
 in
 {

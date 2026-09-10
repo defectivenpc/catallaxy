@@ -156,6 +156,14 @@ catallaxy.mkComponentFloe {
             crds = crdKinds;
 
             helmCharts.cert-manager = kinds.mkHelmChart {
+              replacedHooks = {
+                cert-manager-startupapicheck =
+                  "the webhook bundle waits on `readyDeployment cert-manager-webhook`, "
+                  + "and the issuer bundle on the ClusterIssuer reporting Ready \u2014 which "
+                  + "proves a CR was accepted *and* reconciled, not merely admitted";
+                "cert-manager-startupapicheck:create-cert" =
+                  "same probe; this is the second half of the same check";
+              };
               inherit (inputs) chart namespace;
               releaseName = "cert-manager";
               values.crds = {

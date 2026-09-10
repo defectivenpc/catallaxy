@@ -203,7 +203,10 @@ catallaxy.mkComponentFloe {
 
             externalSecrets = lib.optional (client != { }) "${ns}/${client.secret.name}";
 
-            helmCharts.argocd = {
+            helmCharts.argocd = kinds.mkHelmChart {
+              replacedHooks.argocd-redis-secret-init =
+                "the floe mints `argocd-redis` itself with `kinds.mkGeneratedSecret`, "
+                + "so the credential exists before anything reads it";
               inherit (inputs) chart;
               releaseName = "argocd";
               namespace = ns;

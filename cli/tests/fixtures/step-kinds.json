@@ -24,43 +24,6 @@
       }
     }
   },
-  "bootstrap-argocd-helm": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": false,
-    "idempotency": "idempotent",
-    "params": {
-      "chartRef": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "kubeContext": {
-        "required": false,
-        "sample": "conformance-sample"
-      },
-      "namespace": {
-        "required": false,
-        "sample": "conformance-sample"
-      },
-      "releaseName": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "target": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "valuesPath": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "waitTimeoutSeconds": {
-        "required": false,
-        "sample": 1
-      }
-    }
-  },
   "bootstrap-argocd-kubectl-ssa": {
     "directions": [
       "deploy"
@@ -127,23 +90,6 @@
     "idempotency": "idempotent",
     "params": {
       "zone": {
-        "required": true,
-        "sample": "conformance-sample"
-      }
-    }
-  },
-  "colima-network-route": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": false,
-    "idempotency": "idempotent",
-    "params": {
-      "profile": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "subnet": {
         "required": true,
         "sample": "conformance-sample"
       }
@@ -313,14 +259,6 @@
         "sample": []
       }
     }
-  },
-  "host-trust-install": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": false,
-    "idempotency": "idempotent",
-    "params": {}
   },
   "infra-apply": {
     "directions": [
@@ -559,35 +497,6 @@
         }
       },
       "kubeContext": {
-        "required": false,
-        "sample": "conformance-sample"
-      },
-      "target": {
-        "required": true,
-        "sample": "conformance-sample"
-      }
-    }
-  },
-  "trust-bundle": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": false,
-    "idempotency": "idempotent",
-    "params": {}
-  },
-  "verify-argocd-reachable": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": true,
-    "idempotency": "idempotent",
-    "params": {
-      "kubeContext": {
-        "required": false,
-        "sample": "conformance-sample"
-      },
-      "namespace": {
         "required": false,
         "sample": "conformance-sample"
       },

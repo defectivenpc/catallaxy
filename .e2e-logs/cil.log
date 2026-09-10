@@ -1,0 +1,226 @@
+>>> Preflight passed
+catallaxy Deploying lab 'minimal.cilium' (6 steps)
+
+>>> Building lab manifests...
+>>> Lab package built
+
+>>> Step 1/6: Create docker network 'minimal.cilium'
+>>> Ensuring 'minimal.cilium' network exists (subnet: 172.33.0.0/16)...
+
+>>> Step 2/6: Start lab infrastructure services
+>>> Starting Zot OCI registry (image cache)...
+233854ed766817a8b2ffbe7c5dd33ae399a12d3ca88e6bc14493fc8573cd1114
+>>> Waiting for Zot OCI registry (image cache) to serve http://127.0.0.1:5055/v2/
+>>> Zot OCI registry (image cache) started
+
+>>> Step 3/6: Write registries.yaml + certs.d + lab-resolv.conf
+Warning: Lab CA missing at /home/whitehead/.local/share/catallaxy/labs/minimal.cilium/proxy/ca.crt; registry pulls will fail until cert-generate produces it.
+Warning: Could not resolve lab DNS container IP; cluster nodes will fall back to Docker DNS (lab hostnames won't resolve)
+
+>>> Step 4/6: Pre-warm the lab registry with every declared image
+catallaxy Warming 8 images via localhost:5055
+>>> quay.io/jetstack/cert-manager-controller:v1.17.2... cached
+>>> ghcr.io/stefanprodan/podinfo:6.7.1... cached
+>>> quay.io/jetstack/cert-manager-webhook:v1.17.2... cached
+>>> quay.io/jetstack/cert-manager-cainjector:v1.17.2... cached
+>>> docker.io/traefik:v3.3.6... cached
+>>> quay.io/cilium/cilium-envoy:v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211@sha256:377c78c13d2731f3720f931721ee309159e782d882251709cb0fac3b42c03f4b... warmed
+>>> quay.io/cilium/operator-generic:v1.17.2@sha256:81f2d7198366e8dec2903a3a8361e4c68d47d19c68a0d42f0b7b6e3f0523f249... warmed
+>>> quay.io/cilium/cilium:v1.17.2@sha256:3c4c9932b5d8368619cb922a497ff2ebc8def5f41c18e410bcc84025fcd385b1... warmed
+
+>>> Cache: 8 ready, 0 skipped
+
+>>> Step 5/6: Create k3d cluster 'app'
+>>> Creating k3d cluster 'minimal-cilium-app'...
+[36mINFO[0m[0000] Prep: Network                                
+[36mINFO[0m[0000] Re-using existing network 'minimal.cilium' (6efcc621fc43777728b63e246bfd7903d207b35cc7eca3da02baf08e327e93eb) 
+[36mINFO[0m[0000] Created image volume k3d-minimal-cilium-app-images 
+[36mINFO[0m[0000] Starting new tools node...                   
+[36mINFO[0m[0000] Starting node 'k3d-minimal-cilium-app-tools' 
+[36mINFO[0m[0001] Creating node 'k3d-minimal-cilium-app-server-0' 
+[36mINFO[0m[0001] Creating LoadBalancer 'k3d-minimal-cilium-app-serverlb' 
+[36mINFO[0m[0001] Using the k3d-tools node to gather environment information 
+[36mINFO[0m[0001] HostIP: using network gateway 172.33.0.1 address 
+[36mINFO[0m[0001] Starting cluster 'minimal-cilium-app'        
+[36mINFO[0m[0001] Starting servers...                          
+[36mINFO[0m[0001] Starting node 'k3d-minimal-cilium-app-server-0' 
+[36mINFO[0m[0003] All agents already running.                  
+[36mINFO[0m[0003] Starting helpers...                          
+[36mINFO[0m[0003] Starting node 'k3d-minimal-cilium-app-serverlb' 
+[36mINFO[0m[0010] Injecting records for hostAliases (incl. host.k3d.internal) and for 2 network members into CoreDNS configmap... 
+[36mINFO[0m[0012] Cluster 'minimal-cilium-app' created successfully! 
+[36mINFO[0m[0012] You can now use it like this:                
+export KUBECONFIG=$(k3d kubeconfig write minimal-cilium-app)
+kubectl cluster-info
+>>> Cluster ready (context: k3d-minimal-cilium-app)
+
+>>> Step 6/6: Deploy manifests to 'app'
+>>> Applying 6 wave(s) via kubectl SSA on 'k3d-minimal-cilium-app' (field-manager=catallaxy-bootstrap)
+
+>>> Wave 001 (3 bundles)
+namespace/cilium-secrets serverside-applied
+serviceaccount/cilium serverside-applied
+serviceaccount/cilium-envoy serverside-applied
+serviceaccount/cilium-operator serverside-applied
+configmap/cilium-config serverside-applied
+configmap/cilium-envoy-config serverside-applied
+clusterrole.rbac.authorization.k8s.io/cilium serverside-applied
+clusterrole.rbac.authorization.k8s.io/cilium-operator serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cilium serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cilium-operator serverside-applied
+role.rbac.authorization.k8s.io/cilium-config-agent serverside-applied
+role.rbac.authorization.k8s.io/cilium-tlsinterception-secrets serverside-applied
+role.rbac.authorization.k8s.io/cilium-operator-tlsinterception-secrets serverside-applied
+rolebinding.rbac.authorization.k8s.io/cilium-config-agent serverside-applied
+rolebinding.rbac.authorization.k8s.io/cilium-tlsinterception-secrets serverside-applied
+rolebinding.rbac.authorization.k8s.io/cilium-operator-tlsinterception-secrets serverside-applied
+service/cilium-envoy serverside-applied
+daemonset.apps/cilium serverside-applied
+daemonset.apps/cilium-envoy serverside-applied
+deployment.apps/cilium-operator serverside-applied
+>>> Applied bundle 'cilium__cilium'
+customresourcedefinition.apiextensions.k8s.io/backendlbpolicies.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/backendtlspolicies.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/gatewayclasses.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/gateways.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/grpcroutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/tcproutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/tlsroutes.gateway.networking.k8s.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/udproutes.gateway.networking.k8s.io serverside-applied
+>>> Applied bundle 'gateway-api__crds'
+>>> Waiting for 10 CRD(s) from 'gateway-api__crds' to be Established
+  CRD backendlbpolicies.gateway.networking.k8s.io established
+  CRD backendtlspolicies.gateway.networking.k8s.io established
+  CRD gatewayclasses.gateway.networking.k8s.io established
+  CRD gateways.gateway.networking.k8s.io established
+  CRD grpcroutes.gateway.networking.k8s.io established
+  CRD httproutes.gateway.networking.k8s.io established
+  CRD referencegrants.gateway.networking.k8s.io established
+  CRD tcproutes.gateway.networking.k8s.io established
+  CRD tlsroutes.gateway.networking.k8s.io established
+  CRD udproutes.gateway.networking.k8s.io established
+namespace/cert-manager serverside-applied
+namespace/podinfo serverside-applied
+>>> Applied bundle 'namespaces'
+>>> Waiting for 3 workload(s) in /nix/store/6izass6xz09zxpc7pjjmjhxy4xzf84i6-lab-minimal.cilium/manifests/app/00-wave/cilium__cilium (timeout: 600s)
+Waiting for daemon set "cilium" rollout to finish: 0 of 1 updated pods are available...
+daemon set "cilium" successfully rolled out
+daemon set "cilium-envoy" successfully rolled out
+deployment "cilium-operator" successfully rolled out
+
+>>> Wave 002 (1 bundle)
+serviceaccount/cert-manager-cainjector serverside-applied
+serviceaccount/cert-manager serverside-applied
+serviceaccount/cert-manager-webhook serverside-applied
+customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/challenges.acme.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/clusterissuers.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/issuers.cert-manager.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/orders.acme.cert-manager.io serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-cainjector serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-issuers serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificates serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-orders serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-challenges serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-cluster-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-view serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-edit serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests serverside-applied
+clusterrole.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-cainjector serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-issuers serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificates serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-orders serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-challenges serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection serverside-applied
+role.rbac.authorization.k8s.io/cert-manager:leaderelection serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-tokenrequest serverside-applied
+role.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager:leaderelection serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-cert-manager-tokenrequest serverside-applied
+rolebinding.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving serverside-applied
+service/cert-manager-cainjector serverside-applied
+service/cert-manager serverside-applied
+service/cert-manager-webhook serverside-applied
+deployment.apps/cert-manager-cainjector serverside-applied
+deployment.apps/cert-manager serverside-applied
+deployment.apps/cert-manager-webhook serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook serverside-applied
+>>> Applied bundle 'cert-manager__cert-manager'
+>>> Waiting for 6 CRD(s) from 'cert-manager__cert-manager' to be Established
+  CRD certificaterequests.cert-manager.io established
+  CRD certificates.cert-manager.io established
+  CRD challenges.acme.cert-manager.io established
+  CRD clusterissuers.cert-manager.io established
+  CRD issuers.cert-manager.io established
+  CRD orders.acme.cert-manager.io established
+>>> Waiting for 3 workload(s) in /nix/store/6izass6xz09zxpc7pjjmjhxy4xzf84i6-lab-minimal.cilium/manifests/app/01-wave/cert-manager__cert-manager (timeout: 600s)
+Waiting for deployment "cert-manager-cainjector" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-cainjector" successfully rolled out
+Waiting for deployment "cert-manager" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager" successfully rolled out
+Waiting for deployment "cert-manager-webhook" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-webhook" successfully rolled out
+>>> Waiting on readyProbe for 'cert-manager__cert-manager' → deployment/cert-manager-webhook condition=Available
+deployment.apps/cert-manager-webhook condition met
+deployment.apps/cert-manager-webhook condition met
+
+>>> Wave 003 (1 bundle)
+clusterissuer.cert-manager.io/lab-ca-bootstrap serverside-applied
+clusterissuer.cert-manager.io/lab-ca serverside-applied
+certificate.cert-manager.io/lab-ca serverside-applied
+>>> Applied bundle 'cert-manager__issuers'
+>>> Waiting on readyProbe for 'cert-manager__issuers' → clusterissuer/lab-ca condition=Ready
+clusterissuer.cert-manager.io/lab-ca condition met
+clusterissuer.cert-manager.io/lab-ca condition met
+
+>>> Wave 004 (1 bundle)
+serviceaccount/traefik serverside-applied
+clusterrole.rbac.authorization.k8s.io/traefik-kube-system serverside-applied
+clusterrolebinding.rbac.authorization.k8s.io/traefik-kube-system serverside-applied
+service/traefik serverside-applied
+deployment.apps/traefik serverside-applied
+ingressclass.networking.k8s.io/traefik serverside-applied
+gatewayclass.gateway.networking.k8s.io/traefik serverside-applied
+>>> Applied bundle 'gateway__controller'
+>>> Waiting for 1 workload(s) in /nix/store/6izass6xz09zxpc7pjjmjhxy4xzf84i6-lab-minimal.cilium/manifests/app/03-wave/gateway__controller (timeout: 600s)
+Waiting for deployment "traefik" rollout to finish: 0 of 1 updated replicas are available...
+deployment "traefik" successfully rolled out
+>>> Waiting on readyProbe for 'gateway__controller' → deployment/traefik condition=Available
+deployment.apps/traefik condition met
+deployment.apps/traefik condition met
+
+>>> Wave 005 (1 bundle)
+gateway.gateway.networking.k8s.io/default-gateway serverside-applied
+>>> Applied bundle 'gateway__gateway'
+>>> Waiting on readyProbe for 'gateway__gateway' → gateway/default-gateway jsonpath={.status.addresses[0].value}
+gateway.gateway.networking.k8s.io/default-gateway condition met
+gateway.gateway.networking.k8s.io/default-gateway condition met
+
+>>> Wave 006 (1 bundle)
+deployment.apps/podinfo serverside-applied
+httproute.gateway.networking.k8s.io/podinfo serverside-applied
+service/podinfo serverside-applied
+>>> Applied bundle 'podinfo__podinfo'
+>>> Waiting for 1 workload(s) in /nix/store/6izass6xz09zxpc7pjjmjhxy4xzf84i6-lab-minimal.cilium/manifests/app/05-wave/podinfo__podinfo (timeout: 600s)
+Waiting for deployment "podinfo" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "podinfo" rollout to finish: 1 of 2 updated replicas are available...
+deployment "podinfo" successfully rolled out
+>>> Waiting on readyProbe for 'podinfo__podinfo' → deployment/podinfo condition=Available
+deployment.apps/podinfo condition met
+deployment.apps/podinfo condition met
+
+>>> SSA wave apply complete on 'k3d-minimal-cilium-app'

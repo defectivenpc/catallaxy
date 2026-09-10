@@ -41,6 +41,8 @@ pub struct SecretStore {
     #[serde(default)]
     pub writer_command: Option<Vec<String>>,
     #[serde(default)]
+    pub remover_command: Option<Vec<String>>,
+    #[serde(default)]
     pub vault: VaultStore,
 }
 

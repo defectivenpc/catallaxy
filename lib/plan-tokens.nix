@@ -10,7 +10,6 @@ let
     created = "cluster/${name}/created";
     deployed = "cluster/${name}/deployed";
     kubeconfigSynced = "cluster/${name}/kubeconfig-synced";
-    cleanup = "cluster/${name}/cleanup";
     cloudReleased = "cluster/${name}/cloud-released";
     managedResourceAdopted = "cluster/${name}/mr-adopted";
     managedResourceReconciled = "cluster/${name}/mr-reconciled";
@@ -45,7 +44,6 @@ in
     # The cluster is Argo's now; `cata` has stopped applying.
     cdHandedOver = "lab/cd-handed-over";
     reachable = "host/lab-reachable";
-    cleanup = "lab/cleanup";
     servicesRemoved = "lab/services-removed";
     networkRemoved = "lab/network-removed";
   };
