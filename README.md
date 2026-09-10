@@ -1,82 +1,122 @@
 # catallaxy
 
-Declarative Kubernetes platform built on the NixOS module system.
+**Declarative Kubernetes platform management.** A lab is a typed, ordered
+graph of modules: the clusters, the capabilities running on them, and the
+plan that builds all of it, expressed in the Nix module system and executed
+by a Rust CLI.
 
-Catallaxy takes its name from F.A. Hayek's term for the spontaneous order that
-emerges when independent actors follow their own rules. Applied to
-infrastructure: independent component declarations compose into coordinated
-multi-cluster environments through Nix's lazy evaluation. There is no imperative
-orchestration — just declarations that reference each other, and a build system
-that resolves them.
+The name is Hayek's, for the order that emerges when independent actors
+follow their own rules rather than a central plan. It is the same claim
+functional programmers make about **local reasoning**: if every part can be
+understood on its own, composing them is safe and the global structure need
+not be authored by hand.
 
-Define your clusters, components, and topology in Nix. Catallaxy evaluates the
-configuration, renders Kubernetes manifests (Helm charts, typed resources, raw
-YAML), and provides a CLI to provision and manage the result.
+So no part here knows the deployment plan. Each declares its own inputs, the
+manifests it emits, and the capabilities it needs, and the install order is
+_derived_ from those declarations rather than typed as a sequence of
+numbers.
+
+> **Built on RFC 0001.** The floe interface is
+> [RFC 0001](docs/rfcs/0001-floes.md) (`lib/floe-core/`), and the shipped
+> tree runs on it: nine example labs, 37 floes, host DNS, the registry, the
+> proxy and secrets. Two earlier implementations preceded this one; what
+> they cost is recorded in
+> [`docs/prior-implementations.md`](docs/prior-implementations.md).
 
 **[Documentation](https://onepunchtech.github.io/catallaxy)**
 
-## Why
+---
 
-Kubernetes platform engineering has an accidental complexity problem: YAML sprawl across environments, deployment ordering that lives in tribal knowledge, brittle bash glue that breaks silently, and a management plane that's always click-ops even when everything it manages gets GitOps.
+The unit is a **floe**: a typed interface with an implementation behind it.
+It declares the capabilities it needs by name, and the linker finds whatever
+provides them.
 
-Catallaxy treats your platform like a compilation problem. Declare components in typed Nix modules. Cross-cluster references resolve through lazy evaluation at build time. Phase ordering is a dependency graph, not a runbook. The same declarations compile to kapp, ArgoCD, or Fleet output without changing component code.
+```nix
+lab.clusters.core.floes = {
+  cluster      = floes.k3d-cluster  { name = "core"; instanceName = "homelab-core"; };
+  cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
+  gateway      = floes.gateway      { chart = "${cataCharts.traefik.chart}"; };
+  forgejo      = floes.forgejo      { chart = "${cataCharts.forgejo.chart}"; oidc = true; };
+};
+```
 
-If you've felt this pain and recognize that Nix's guarantees — purity, reproducibility, composability — are what infrastructure configuration needs, [read more](https://onepunchtech.github.io/catallaxy/why.html).
+What is **not** there is the argument. Nothing says `forgejo` comes after
+`gateway`, nothing passes the gateway's address into it, and nothing names
+an issuer. `forgejo` declares `requires.gateway = sigs.API_GATEWAY`; exactly
+one floe in that cluster provides it, checked at evaluation, and the
+ordering edge falls out. No string templating, no values file duplicated in
+two places, no sync-wave number chosen by looking at the neighbouring
+numbers.
 
 ## Quick start
 
 ```bash
-# Enter dev shell (provides kubectl, helm, kapp, k3d, etc.)
 nix develop
 
-# Stand up the example homelab (2 clusters: core + obs)
-cata --flake ./examples/labs#homelab lab up
+cata-dev --flake ./examples/labs#minimal.local lab plan     # read it first
+cata-dev --flake ./examples/labs#minimal.local lab up
+cata-dev --flake ./examples/labs#minimal.local lab topology --format table
+cata-dev --flake ./examples/labs#minimal.local lab verify
 
-# Configure local DNS and trust the lab CA
-cata --flake ./examples/labs#homelab lab dns --setup
-cata --flake ./examples/labs#homelab lab trust --setup
-
-# Access services by domain
-# https://argocd.homelab.test
-# https://grafana.homelab.test
-# https://kanidm.homelab.test
-
-# Tear down
-cata --flake ./examples/labs#homelab lab down
+cata-dev --flake ./examples/labs#minimal.local lab destroy
 ```
 
-## Features
+`nix develop` gives you `cata-dev`, which runs the CLI from source. For the
+released binary, `nix run .#cata`.
 
-- **Batteries included** — CNI, gateway, PKI, observability, databases,
-  identity, GitOps, and more
-- **Cross-cluster references** via Nix lazy evaluation — one cluster's Tempo
-  endpoint wired into another's OTEL collector
-- **Phase-based deployment ordering** — CRDs before operators before
-  infrastructure before apps
-- **Multiple output strategies** — kapp (direct apply), ArgoCD, Fleet
-- **Lab-aware ops tooling** — commands that understand your cluster topology
-- **Consumer flake support** — define your lab in your own flake, import
-  catallaxy as an input
+`minimal.local` is one k3d cluster with a gateway and one app (podinfo). It
+runs no host ingress and no host DNS, so it comes up on any machine but is
+not reachable from outside the cluster — `lab verify` checks it from within.
+`minimal.tls` adds the proxy and a CA it mints; `homelab.local` adds
+identity, observability and GitOps; `homelab.mesh` is reachable only from a
+WireGuard mesh.
 
-## Status
+Walkthrough:
+[Run the Example Lab](https://onepunchtech.github.io/catallaxy/start-here/first-lab.html).
 
-**v0.5** — The homelab example boots multi-cluster environments on k3d with
-full-stack services and domain-based access. Cloud provisioning and GitOps
-integration are next. See the [roadmap](https://onepunchtech.github.io/catallaxy/roadmap.html).
+## What it does
 
-## Build and development
+- **A plan you read before it runs.** `cata lab plan` prints the ordered
+  step list `cata lab up` will execute: provisioning, host DNS and TLS,
+  secret projections, cross-cluster copies.
+- **Install order that is derived.** A floe says which capabilities it
+  needs. Waves fall out. Nothing carries a number, and cross-floe ordering
+  is not expressible by hand.
+- **Failures that happen early.** Types, link errors naming both floes, lint
+  over rendered manifests, and snapshot tests over the plan — none of which
+  needs a cluster.
+- **37 floes.** CNI, gateway, PKI, identity, observability, databases,
+  registries, GitOps, backup, and yours built the same way, in your own
+  repository. Each has a generated interface page under
+  [`docs/floes/`](docs/floes/) that a check keeps honest.
+- **Cloud clusters.** `doks` provisions a DigitalOcean cluster through
+  OpenTofu ([RFC 0003](docs/rfcs/0003-resources.md)); `talos-cluster` and
+  `external-cluster` cover bare metal and one you already have. A cluster
+  elsewhere is its own edge, so the lab does not assume it can route to it.
+- **Secrets that stay out of the store.** A credential is minted in the
+  cluster that needs it, and moving one between clusters goes through a lab
+  secret store rather than through Nix.
+
+## Your own lab
+
+Your flake takes catallaxy as an input; you never fork it. `examples/labs/`
+is the worked reference, and CI builds every lab in it. See
+[Build Your Own Lab](https://onepunchtech.github.io/catallaxy/start-here/your-own-lab.html).
+
+## Development
 
 ```bash
-nix develop                       # dev shell with all tools
-cargo build                       # build CLI (in cli/)
-nix build .#cata                  # full wrapped CLI with runtime tools
-nix fmt                           # format Nix, Rust, YAML
-nix flake check                   # build + format + lint checks
+nix develop                       # cata-dev, and every runtime tool
+cargo build                       # the CLI
+nix flake check                   # everything: tests, lint, snapshots, docs
+nix fmt                           # nixfmt, rustfmt, yamlfmt
+nix build .#docs                  # the book
 ```
 
-## Contributing
+`nix flake check` needs the sandbox permitted to fetch; an in-sandbox run
+evaluates a stale tree and its green is not meaningful.
 
-[contributor guide](https://onepunchtech.github.io/catallaxy/contributing/guide.html).
+[Contributing](https://onepunchtech.github.io/catallaxy/contributing.html)
 
 ## License
 

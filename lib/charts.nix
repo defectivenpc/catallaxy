@@ -7,7 +7,6 @@
 let
   inherit (kubelib) downloadHelmChart;
 
-  # Extract CRDs from a helm chart's crds/ directory
   extractChartCrds =
     name: chart:
     pkgs.runCommand "${name}-crds.yaml" { } ''
@@ -21,8 +20,6 @@ let
       fi
     '';
 
-  # Fetch source from GitHub and concatenate CRDs from a directory.
-  # Optional crdGlob filters to specific file patterns (default: all *.yaml).
   extractGitHubCrds =
     name: def:
     let
@@ -45,7 +42,6 @@ let
       if [ ! -s "$out" ]; then touch $out; fi
     '';
 
-  # Extract only CRDs from a components.yaml manifest
   extractComponentsCrds =
     name: def:
     let
@@ -59,11 +55,32 @@ let
       if [ ! -s "$out" ]; then touch $out; fi
     '';
 
-  # Build a CRD derivation from a crdDef
+  extractTemplatedCrds =
+    name: chart:
+    pkgs.runCommand "${name}-crds.yaml"
+      {
+        nativeBuildInputs = [
+          pkgs.kubernetes-helm
+          pkgs.yq-go
+        ];
+      }
+      ''
+        export HELM_CACHE_HOME=$PWD/.helm HELM_CONFIG_HOME=$PWD/.helm HELM_DATA_HOME=$PWD/.helm
+        helm template ${name} ${chart} \
+          | yq 'select(.kind == "CustomResourceDefinition")' - > $out
+        if [ ! -s "$out" ]; then
+          echo "${name} declares its CRDs as templates but rendering produced none," >&2
+          echo "so either the chart moved them or the values now gate them off." >&2
+          exit 1
+        fi
+      '';
+
   buildCrds =
     name: chartDrv: crdDef:
     if crdDef == null then
       null
+    else if crdDef.type == "templated" then
+      extractTemplatedCrds name chartDrv
     else if crdDef.type == "url" then
       pkgs.fetchurl {
         inherit (crdDef) url hash;
@@ -78,8 +95,6 @@ let
     else
       throw "Unknown CRD type: ${crdDef.type}";
 
-  # Chart definitions — all managed with explicit versions
-  # Each entry has: repo, chart, version, chartHash, and optional crd
   chartDefs = {
     cilium = {
       repo = "https://helm.cilium.io";
@@ -101,6 +116,16 @@ let
       chart = "trust-manager";
       version = "0.22.1";
       chartHash = "sha256-No3nepftJ5d9+5eXkgDCR4iAKun46a3rbI+uz4FxGSw=";
+      crd = {
+        type = "templated";
+      };
+    };
+
+    reloader = {
+      repo = "https://stakater.github.io/stakater-charts";
+      chart = "reloader";
+      version = "2.2.14";
+      chartHash = "sha256-kZU0Qdf959SbMOJLCuUrjM1mtYbtv+gfttVi17ZCZo0=";
     };
 
     cert-manager = {
@@ -178,6 +203,13 @@ let
       crd = {
         type = "chart";
       };
+    };
+
+    openbao = {
+      repo = "https://openbao.github.io/openbao-helm";
+      chart = "openbao";
+      version = "0.16.1";
+      chartHash = "sha256-1O89lZcZXkIJduFA8hy64XVK8bOf6oK/5gR5Ik6dEQg=";
     };
 
     external-secrets = {
@@ -263,11 +295,14 @@ let
       chartHash = "sha256-E6CY8pKAhLhRuJL1ZtgUXSHlcLVyb0+Nhbe6kFvryD0=";
     };
 
-    netbird = {
-      repo = "https://charts.jaconi.io";
-      chart = "netbird";
-      version = "0.15.0";
-      chartHash = "sha256-pdlGztaE1G5W4CDlSRdy55/PBdFKjY3+GGGUUO6mpkU=";
+    netbird-operator = {
+      repo = "oci://ghcr.io/netbirdio/helm-charts";
+      chart = "netbird-operator";
+      version = "0.7.0";
+      chartHash = "sha256-60er+LAeq/cxNXQVwwae58hAaIpV5p+J4dI2zbSzoZQ=";
+      crd = {
+        type = "chart";
+      };
     };
 
     kanidm = {
@@ -291,11 +326,19 @@ let
       chartHash = "sha256-BGBIoJwU0wMAxD5vFb6WE6n/vhTyEvYwwgrmOMAQlrI=";
     };
 
+    harbor = {
+      repo = "https://helm.goharbor.io";
+      chart = "harbor";
+      version = "1.19.1";
+      chartHash = "sha256-EyzxTVfMZsLIC8KPBdT8AHtR8pVe3DkJ5I4btlTnsnE=";
+    };
+
     kaniop = {
       repo = "oci://ghcr.io/pando85/helm-charts";
       chart = "kaniop";
-      version = "0.6.1";
-      chartHash = "sha256-jZdmj7bxUEOg1fAsBuLlUhN1bmoymOKSfCk0G0Fz3MQ=";
+
+      version = "0.11.1";
+      chartHash = "sha256-7BCNK34d7GV9EVyjDx3lVXuD9L5RIdaE8vuItNkFz5Q=";
       crd = {
         type = "chart";
       };
@@ -316,7 +359,6 @@ let
       };
     };
 
-    # Uses local-path-provisioner chart, no separate chart
     openebs = {
       repo = "https://charts.containeroo.ch";
       chart = "local-path-provisioner";
@@ -325,7 +367,6 @@ let
     };
   };
 
-  # Build final chart entries: { chart, crds, version } per name
   charts = lib.mapAttrs (
     name: def:
     let
@@ -346,7 +387,8 @@ let
     }
   ) chartDefs;
 
-  # Crossplane provider CRDs — extracted from GitHub sources at build time
+  # For the Crossplane floe, which is not built. Kept: re-deriving the hashes
+  # later costs more than the pin does.
   crossplaneProviderCrdDefs = {
     provider-upjet-digitalocean = {
       type = "github";
@@ -363,7 +405,7 @@ let
       rev = "v0.2.5";
       hash = "sha256-UXaCmII2GuLjMeErqGG5yVoFYFPpSW0gdvb80P9cAHY=";
       crdPath = "package/crds";
-      # Only include CRD groups we use — the full set (425) has broken CEL rules
+
       crdGlob = [
         "dns.upjet-cloudflare.*.yaml"
         "tunnel.upjet-cloudflare.*.yaml"

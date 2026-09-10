@@ -1,3 +1,13 @@
+# What the CLI reads: one JSON document and one store path.
+#
+# `cata` resolves exactly two attribute paths — `labs."<lab>"` for
+# `lab.out.cliConfig` and `labPackages."<lab>"` for `lab.out.package` — and
+# nothing else. Every field below is required by a Rust struct in
+# `cli/src/domain/`; anything the parser defaults is omitted.
+#
+# The package is the second half of that contract and is easy to under-read:
+# `cata lab lint` and `cata images` do not fail gracefully when an entry is
+# absent, they abort. `metadata.json` and `images.txt` are load-bearing.
 {
   config,
   lib,
@@ -6,377 +16,438 @@
 }:
 
 let
-  inherit (lib)
-    mkOption
-    types
-    ;
+  inherit (lib) mkOption types;
 
-  renderers = import ../../lib/render { inherit lib pkgs; };
-  catallaxyLib = import ../../lib/eval/cluster.nix { inherit lib pkgs; };
+  clusters = config.lab.clusters;
 
+  imageUtil = import ../../lib/eval/images.nix { inherit lib; };
+  infraLib = import ../../lib/render/infra.nix { inherit lib; };
+  tofuProviders = import ../../lib/tofu-providers.nix { inherit lib pkgs; };
+
+  # Every stack in the lab, across every cluster. Names are already scoped by
+  # the cluster that produced them, so this merge is disjoint by construction
+  # — the same property the component monoid gets from `qualify`.
+  allStacks = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: c: c.stacks) clusters);
+
+  # The providers the lab's stacks actually name, so `init` verifies those and
+  # no others. A lab with no stacks builds no tool at all.
+  usedProviders = lib.unique (
+    lib.concatLists (
+      lib.mapAttrsToList (_: stack: lib.mapAttrsToList (_: r: r.provider) stack.resources) allStacks
+    )
+  );
+
+  infraTool = tofuProviders.toolFor usedProviders;
+  chainsaw = import ../../lib/render/chainsaw.nix { inherit lib pkgs; };
+  lintRender = import ../../lib/render/lint.nix { inherit lib pkgs; };
+  # The lab's own vault, if it has exactly one.
+  #
+  # Exactly one or none: two vaults is not something a single `vault`
+  # store can point at, and taking the first would be choosing on the
+  # lab's behalf. A lab with two says which it means, per store.
+  vaultServers = lib.concatLists (
+    lib.mapAttrsToList (
+      _: cluster:
+      lib.concatLists (
+        lib.mapAttrsToList (
+          unit: inst:
+          lib.mapAttrsToList (instName: _: cluster.link.provides.${unit}.${instName}) (
+            lib.filterAttrs (_: sig: sig.name == "VAULT_SERVER") inst.def.provides
+          )
+        ) cluster.floes
+      )
+    ) clusters
+  );
+
+  vaultServer = if lib.length vaultServers == 1 then lib.head vaultServers else null;
+
+  opsRender = import ../../lib/render/ops.nix { inherit lib pkgs; };
+
+  inherit (lintRender) sanitize;
+
+  # ---- the operator surface, lifted off the clusters ----------------------
+  #
+  # The elaborator already qualified every key by the floe that wrote it, so
+  # what is left is joining the clusters. Ops are the only channel that has to
+  # merge rather than stay keyed by cluster, because the invocation
+  # `<lab>-ops <category> <name>` has no room for a cluster.
+  #
+  # So the cluster goes in the name. Every command is `<cluster>-<name>`,
+  # unconditionally — the identity of an ops command is which cluster it acts
+  # on as much as which floe declared it, and two clusters running the same
+  # floe are two different commands against two different kubecontexts.
+  #
+  # Unconditionally, rather than only when two clusters collide: a name that
+  # changes when a second cluster is added is a name an operator's notes and
+  # scripts stop matching, and the lab that adds the cluster is not the one
+  # that finds out.
+
+  opsByCluster = lib.mapAttrs (
+    clusterName: c:
+    lib.mapAttrs (
+      _category: cmds: lib.mapAttrs' (n: v: lib.nameValuePair "${clusterName}-${n}" v) cmds
+    ) c.out.ops
+  ) clusters;
+
+  opsCategories = lib.zipAttrsWith (_category: perCluster: perCluster) (lib.attrValues opsByCluster);
+
+  # A backstop now rather than the main line of defence: qualifying by cluster
+  # makes the ordinary collision impossible, and what is left is a cluster
+  # named so that its prefix reproduces another's — `core` with a command
+  # `x-y` against a cluster `core-x` with `y`. Contrived, and silent if it
+  # happened, so it stays checked.
+  opsCollisions = lib.concatLists (
+    lib.mapAttrsToList (
+      category: perCluster:
+      let
+        counts = lib.zipAttrsWith (_: values: lib.length values) perCluster;
+      in
+      lib.mapAttrsToList (
+        name: n: "ops command '${category} ${name}' is declared by ${toString n} clusters"
+      ) (lib.filterAttrs (_: n: n > 1) counts)
+    ) opsCategories
+  );
+
+  ops = lib.mapAttrs (_category: perCluster: lib.foldl' lib.mergeAttrs { } perCluster) opsCategories;
+
+  opsTool = opsRender.mkOpsTool {
+    labName = config.lab.name;
+    inherit ops;
+  };
+
+  verifyTests = lib.mapAttrs (
+    name: c:
+    chainsaw.mkVerifyTest {
+      labName = config.lab.name;
+      clusterName = name;
+      checks = c.out.verify;
+    }
+  ) clusters;
+
+  lintChecks = lib.filterAttrs (_: v: v != null) (
+    lib.mapAttrs (
+      name: c:
+      lintRender.mkLintChecks {
+        clusterName = name;
+        checks = c.out.lint;
+      }
+    ) clusters
+  );
+
+  # ---- metadata.json ------------------------------------------------------
+  #
+  # `LabMetadata` in `cli/src/lint/mod.rs:16`. Every field it does not default
+  # is required; the ones with no source in this tree yet are emitted empty,
+  # which is what makes the rules that read them return nothing rather than
+  # fail. `prefix` and `networkPolicies` are the two of those.
+
+  metadata = {
+    name = config.lab.name;
+    prefix = "";
+    clusterNames = lib.attrNames clusters;
+    labNamespaces = lib.mapAttrs (_: c: c.out.namespaces) clusters;
+
+    images = {
+      requireDigest = false;
+      allowedRegistries = [ ];
+    };
+
+    assertions = config.lab.assertions;
+    warnings = config.lab.warnings;
+
+    inherit (config.lab.out) deploymentPlan;
+
+    clusters = lib.mapAttrs (_: c: {
+      # Keyed by the sanitized name, because the key is matched against a
+      # *file name* under `lint/<cluster>/` and a lifted channel key holds
+      # slashes. The two sanitize through one function for that reason.
+      lint.checks = lib.mapAttrs' (
+        key: check:
+        lib.nameValuePair (sanitize key) {
+          inherit (check)
+            description
+            severity
+            scope
+            format
+            ;
+        }
+      ) c.out.lint;
+
+      # Both feed `cli/src/lint/rules/references.rs`, whose dangling-Secret
+      # check needs to know what arrives from outside the manifest stream.
+      # They were hardcoded empty, so that rule had no escape hatch and the
+      # CLI's only knowledge of out-of-band Secrets was a hardcoded table of
+      # three producers in Rust.
+      inherit (c.spec) projections;
+      inherit (c.out) runtimeMaterialised;
+
+      inherit (c) assertions warnings;
+
+      networkPolicies = {
+        enabled = false;
+        floes = { };
+      };
+    }) clusters;
+  };
 in
 {
-  options = {
-    lab.out = {
-      cliConfig = mkOption {
-        type = types.attrs;
-        readOnly = true;
-        description = ''
-          JSON-serializable lab configuration for the CLI.
-          Contains the fields that `cata lab` commands need:
-          management, clusterNames, services, network, registryPort, dnsInfo.
-        '';
-      };
+  options.lab.out = {
+    cliConfig = mkOption {
+      type = types.attrs;
+      internal = true;
+      readOnly = true;
+      description = "`LabSpec` as `cli/src/domain/lab.rs` parses it.";
+    };
 
-      allClusters = mkOption {
-        type = types.attrsOf types.attrs;
-        readOnly = true;
-        description = ''
-          Computed attrset of all clusters in the lab.
-          Keys are cluster names, values are evaluated cluster configs.
-          Use this for cross-cluster references.
-        '';
-      };
-
-      clusterNames = mkOption {
-        type = types.listOf types.str;
-        readOnly = true;
-        description = "List of all cluster names in the lab";
-      };
-
-      labNamespaces = mkOption {
-        type = types.attrsOf (types.listOf types.str);
-        readOnly = true;
-        description = ''
-          Per-cluster list of lab-created namespaces (before prefix application).
-          Used by checks to verify prefix completeness.
-        '';
-      };
-
-      manifests = mkOption {
-        type = types.attrsOf types.package;
-        readOnly = true;
-        description = ''
-          Per-cluster rendered manifest packages.
-          Each package contains the strategy-specific directory layout
-          (kapp, argocd, or fleet) with human-readable YAML manifests.
-        '';
-      };
-
-      bootstrapManifests = mkOption {
-        type = types.attrsOf types.package;
-        readOnly = true;
-        description = ''
-          Per-cluster kapp-format manifests for direct-apply bootstrap.
-          When strategy is kapp, this equals manifests. Otherwise renders
-          with kapp for use by `lab up` (which always direct-applies).
-        '';
-      };
-
-      package = mkOption {
-        type = types.package;
-        readOnly = true;
-        description = ''
-          Single package containing all lab outputs.
-          Includes metadata.json (pretty-printed) and manifests/ directory
-          with symlinks to each cluster's rendered manifests.
-        '';
-      };
+    package = mkOption {
+      type = types.package;
+      internal = true;
+      readOnly = true;
+      description = "The rendered manifest trees, and everything else the CLI reads off disk.";
     };
   };
 
+  config.lab.assertions = map (message: {
+    assertion = false;
+    inherit message;
+  }) opsCollisions;
+
   config.lab.out = {
     cliConfig = {
-      clusterNames = config.lab.out.clusterNames;
-      services =
-        lib.optionalAttrs config.lab.dns.enable {
-          dns = config.lab.dns.out.service;
-        }
-        // lib.optionalAttrs config.lab.registry.enable {
-          registry = config.lab.registry.service;
-        }
-        // lib.optionalAttrs config.lab.proxy.enable {
-          proxy = config.lab.proxy.out.service;
-        }
-        // lib.optionalAttrs config.lab.bgpRouter.enable {
-          bgpRouter = config.lab.bgpRouter.out.service;
-        };
       labName = config.lab.name;
-      environment = config.lab.environment;
+
+      # Flattened per RFC 0003 §7, because the executor wants "for this
+      # stack, these outputs go to these places" and not a walk over
+      # resources. `InfraPublication` in `cli/src/domain/lab.rs`.
+      infraPublications = lib.concatLists (
+        lib.mapAttrsToList (
+          stackName: stack:
+          map (pub: {
+            stack = stackName;
+            outputName = infraLib.outputName pub.resource pub.output;
+            inherit (pub) store key;
+          }) stack.publications
+        ) allStacks
+      );
+
+      clusterNames = lib.attrNames clusters;
+      clusters = lib.mapAttrs (_: c: c.spec) clusters;
+
+      # Which namespaces belong to the lab, so pruning knows what it may
+      # delete and what was already on the cluster.
+      labNamespaces = lib.mapAttrs (_: c: c.out.namespaces) clusters;
+
+      # Non-empty per cluster or `kube_context()` bails rather than falling
+      # back to something plausible.
+      runtimeContexts = lib.mapAttrs (_: c: c.spec.kubeContext) clusters;
+
       network = {
         name = config.lab.name;
-        dockerSubnet = config.lab.network.dockerSubnet;
+        dockerSubnet = config.lab.network.subnet;
       };
+
+      # `kapp` picks the `manifests/<cluster>` subdir; `kubectl-ssa` routes
+      # the apply through the server-side applier that reads `.wave-meta`.
+      # Which of those a lab gets is `modules/lab/cd.nix`'s answer now, read
+      # off whatever provides DELIVERY_POLICY rather than fixed here.
+      inherit (config.lab.out) cd;
+
+      inherit (config.lab.out) deploymentPlan teardownPlan;
+
+      # `checks` stays empty: `DeclaredCheck` is parsed and never dispatched
+      # (`cli/src/verify/mod.rs`), so a floe's verify checks are lowered to
+      # Chainsaw under `verify/` instead, which is the path that runs them.
+      verify = {
+        checks = { };
+        endpoints = {
+          inherit (config.lab.verify.endpoints) enable acceptStatuses;
+        };
+      };
+
+      opsToolPath = if opsTool == null then null else "${opsTool}/bin/${config.lab.name}-ops";
+
+      inherit (config.lab.out) services;
+
+      dnsInfo = config.lab.dns.out.dnsInfo;
+
       registryPort = if config.lab.registry.enable then config.lab.registry.port else null;
-      dnsInfo = if config.lab.dns.enable then config.lab.dns.out.dnsInfo else null;
-      cd = {
-        strategy = config.lab.cd.strategy;
-        git = config.lab.cd.git;
-      };
-      opsToolPath =
-        if config.lab.ops.out.tool != null then
-          "${config.lab.ops.out.tool}/bin/${config.lab.name}-ops"
-        else
-          null;
 
-      # Per-cluster configs for CLI consumption (provisioner details, components, etc.)
-      clusters = lib.mapAttrs (
-        _: clusterCfg:
-        (catallaxyLib.clusterConfigToJSON clusterCfg)
-        // {
-          labName = config.lab.name;
-        }
-      ) config.lab.out.allClusters;
+      # What `plan_warm` filters an image against. Left empty, every image
+      # routes to `NoUpstream` and nothing is warmed.
+      registryUpstreams = lib.optionals config.lab.registry.enable (
+        map (u: u.host) config.lab.registry.upstreams
+      );
 
-      # Lab-level secrets for CLI consumption
+      # Registries the lab publishes to itself, which warming should skip
+      # rather than try to fetch. Nothing publishes images yet.
+      labOwnedRegistries = [ ];
+
+      # `SecretsSpec` in `cli/src/domain/secrets.rs`. Note `writerCommand` is
+      # flat there, not the nested `writer.command` this module declares.
       secrets = {
-        stores = lib.mapAttrs (name: store: {
-          inherit (store) backend;
+        inherit (config.lab.secrets) envFile;
+
+        stores = lib.mapAttrs (_: store: {
+          inherit (store) backend direction;
+          writerCommand = store.writer.command;
+
+          # A `vault` store's server, mount and version filled in from
+          # whatever provides VAULT_SERVER, for the fields the lab left unset.
+          #
+          # Done here rather than as option defaults on the store itself,
+          # which is where it belongs and where it cannot go: deriving them
+          # needs to know *which* stores are `backend = "vault"`, and reading
+          # `lab.secrets.stores` to write `lab.secrets.stores` is infinite
+          # recursion. This reads the option and writes somewhere else.
+          #
+          # The lab still wins. openbao knows its own address and a lab that
+          # names one is pointing at a vault outside itself, which is a
+          # different and equally real thing.
+          vault =
+            if store.backend != "vault" || vaultServer == null then
+              store.vault
+            else
+              {
+                server = if store.vault.server != null then store.vault.server else vaultServer.address;
+                path = if store.vault.path != "secret" then store.vault.path else vaultServer.kvPath;
+                version = if store.vault.version != "v2" then store.vault.version else vaultServer.kvVersion;
+              };
         }) config.lab.secrets.stores;
 
-        managed = lib.mapAttrs (name: sec: {
-          inherit (sec) store;
-          keys = lib.mapAttrs (kname: key: {
-            inherit (key) generator length;
-          }) sec.keys;
+        managed = lib.mapAttrs (_: sec: {
+          inherit (sec) store kind;
+          keys = lib.mapAttrs (_: k: { inherit (k) generator length; }) sec.keys;
         }) config.lab.secrets.managed;
+
+        hostProjections = config.lab.secrets.out.hostProjections;
       };
 
-      # Deployment plan for the CLI executor
-      deploymentPlan = config.lab.out.deploymentPlan;
-      teardownPlan = config.lab.out.teardownPlan;
+      # Present because the parser requires the key, empty because rescue
+      # hints are not rebuilt yet.
+      destroy = { };
     };
-
-    allClusters = config.lab.clusters;
-
-    clusterNames = lib.attrNames config.lab.out.allClusters;
-
-    labNamespaces = lib.mapAttrs (
-      name: clusterCfg:
-      lib.unique (
-        lib.concatMap (
-          phaseName:
-          let
-            phase = clusterCfg.phases.${phaseName};
-            bundleValues = lib.attrValues phase.bundles;
-          in
-          lib.concatMap (b: b.createNamespaces) bundleValues
-        ) (lib.attrNames clusterCfg.phases)
-      )
-    ) config.lab.out.allClusters;
-
-    manifests =
-      let
-        strategy = config.lab.cd.strategy;
-        renderer = renderers.${strategy};
-        cdConfig = config.lab.cd.${strategy};
-        prefix = config.lab.prefix;
-      in
-      lib.mapAttrs (
-        name: clusterCfg:
-        renderer {
-          clusterName = name;
-          inherit prefix;
-          labNamespaces = config.lab.out.labNamespaces.${name};
-          phases = clusterCfg.cluster.out.phases;
-          phaseOrder = clusterCfg.cluster.out.phaseOrder;
-          deployConfig = cdConfig // {
-            targetPath = config.lab.cd.clusterPaths.${name} or "manifests/${name}";
-          };
-        }
-      ) config.lab.out.allClusters;
-
-    bootstrapManifests =
-      let
-        strategy = config.lab.cd.strategy;
-        prefix = config.lab.prefix;
-      in
-      if strategy == "kapp" then
-        config.lab.out.manifests
-      else
-        lib.mapAttrs (
-          name: clusterCfg:
-          renderers.kapp {
-            clusterName = name;
-            inherit prefix;
-            labNamespaces = config.lab.out.labNamespaces.${name};
-            phases = clusterCfg.cluster.out.phases;
-            phaseOrder = clusterCfg.cluster.out.phaseOrder;
-            deployConfig = config.lab.cd.kapp;
-          }
-        ) config.lab.out.allClusters;
 
     package =
       let
-        metadata = {
-          name = config.lab.name;
-          prefix = config.lab.prefix;
-          clusterNames = config.lab.out.clusterNames;
-          cd = {
-            strategy = config.lab.cd.strategy;
-            config = config.lab.cd.${config.lab.cd.strategy};
-          };
-          labNamespaces = config.lab.out.labNamespaces;
-          # Lab-level secrets metadata (stores + managed) so CLI can resolve
-          # store → SOPS file path without nix eval at runtime.
-          # Custom lint checks
-          lint.checks = lib.mapAttrs (name: check: {
-            inherit (check) description severity;
-          }) config.lab.lint.checks;
+        manifestLinks = lib.mapAttrsToList (
+          name: c: "ln -s ${c.manifests} $out/manifests/${name}"
+        ) clusters;
 
-          # Image policy for lint checks
-          images = {
-            inherit (config.lab.images) requireDigest allowedRegistries;
-            pins = lib.mapAttrs (_: pin: {
-              inherit (pin)
-                image
-                tag
-                digest
-                ref
-                ;
-            }) config.lab.images.pins;
-          };
+        # `cp -rL` rather than a symlink: `cata lab verify` walks this looking
+        # for `<cluster>/chainsaw-test.yaml`, and a cluster whose floes
+        # declared nothing renders a directory with no file in it.
+        verifyCopies = lib.mapAttrsToList (
+          name: pkg: "cp -rL ${pkg}/${name} $out/verify/${name}"
+        ) verifyTests;
 
-          secrets = {
-            stores = lib.mapAttrs (_: store: {
-              inherit (store) backend;
-            }) config.lab.secrets.stores;
-            managed = lib.mapAttrs (_: sec: {
-              inherit (sec) store;
-              keys = lib.mapAttrs (_: key: {
-                inherit (key) generator length;
-              }) sec.keys;
-            }) config.lab.secrets.managed;
-          };
+        lintCopies = lib.mapAttrsToList (name: pkg: "cp -rL ${pkg}/${name} $out/lint/${name}") lintChecks;
 
-          clusters = lib.mapAttrs (
-            name: clusterCfg:
-            let
-              topology = clusterCfg.cluster.out.topology // {
-                components = lib.filterAttrs (_: c: c.enabled) clusterCfg.cluster.out.topology.components;
-              };
-              sbom = clusterCfg.cluster.out.sbom // {
-                components = lib.filterAttrs (_: c: c.enabled) clusterCfg.cluster.out.sbom.components;
-              };
-            in
-            {
-              inherit topology sbom;
-              # Per-cluster projection metadata — drives CLI secret injection
-              projections = lib.mapAttrs (_: proj: {
-                inherit (proj) source namespace phase;
-                keys = lib.mapAttrs (_: key: {
-                  inherit (key) from transform;
-                  jsonKey = key.jsonKey or null;
-                }) proj.keys;
-              }) clusterCfg.secrets.projections;
-            }
-          ) config.lab.out.allClusters;
-        };
-        metadataJson = builtins.toJSON metadata;
-        manifestLinks = lib.concatStringsSep "\n" (
+        # Scraped from what rendered, not from what floes declared: a chart
+        # carries image defaults nobody wrote down, and those are exactly the
+        # ones a pull-through cache has to be told about.
+        scrapes = lib.mapAttrsToList (name: c: ''
+          for f in $(find -L ${c.manifests} -name '*.yaml' -type f); do
+            yq -N '${imageUtil.scrapeExpr}' "$f" 2>/dev/null >> images-raw.txt || true
+          done
+        '') clusters;
+
+        # Auto-deploy manifests, copied into the package.
+        #
+        # `provisionerConfig.k3d.autoDeployManifests[].path` is a store path
+        # that reaches the CLI as a plain string in `metadata.json`. Nothing in
+        # this derivation's inputs referenced it — the rendered manifests do
+        # not, and `builtins.toJSON` through `passAsFile` drops string context
+        # — so Nix never realised it and k3d found no file to mount. Copying it
+        # here makes the package depend on it by construction.
+        #
+        # `autodeploy/<cluster>/<name>.yaml` is the layout
+        # `cli/src/provision/mod.rs` already looks in before falling back to
+        # the declared path, so nothing on the CLI side changes.
+        #
+        # Guarded on the variant rather than indexing `.k3d` outright: the
+        # provisioner config is a tagged union now, so a cluster made any
+        # other way carries no k3d key and reading one would be an eval error
+        # in the lab package rather than the empty list it means.
+        # `infra/<stack>/main.tf.json`, exactly where
+        # `cli/src/plan/steps/infra.rs` looks. Rendered as data and written
+        # with `jq`, the way `metadata.json` is: the file is a value, so it
+        # is diffable as a fixture without building anything.
+        infraRenders = lib.mapAttrsToList (stackName: stack: ''
+          mkdir -p $out/infra/${stackName}
+          jq . ${
+            pkgs.writeText "${stackName}.tf.json" (
+              builtins.toJSON (
+                infraLib.renderStack {
+                  name = stackName;
+                  inherit stack;
+                  stacks = allStacks;
+                  providers = tofuProviders.constraints;
+                  # Where the CLI puts a stack's state, restated once so a
+                  # remote-state read resolves to the same place the producer
+                  # writes. `host::state::infra_work_dir` is the other half.
+                  stateDir = "$HOME/.local/share/catallaxy/infra/${config.lab.name}";
+                }
+              )
+            )
+          } > $out/infra/${stackName}/main.tf.json
+        '') allStacks;
+
+        autoDeployCopies = lib.concatLists (
           lib.mapAttrsToList (
-            name: pkg: "ln -s ${pkg}/${name} $out/manifests/${name}"
-          ) config.lab.out.manifests
+            clusterName: c:
+            map (m: ''
+              mkdir -p $out/autodeploy/${clusterName}
+              cp ${m.path} $out/autodeploy/${clusterName}/${m.name}.yaml
+            '') (c.spec.provisionerConfig.k3d.autoDeployManifests or [ ])
+          ) clusters
         );
-        # Collect all teardown hook packages so they get built with the lab package
-        teardownHookLinks = lib.concatStringsSep "\n" (
-          lib.concatLists (
-            lib.mapAttrsToList (
-              clusterName: clusterCfg:
-              map (step: "ln -s ${step.package}/bin/${step.name} $out/hooks/${clusterName}-${step.name}") (
-                clusterCfg.lifecycle.teardown or [ ]
-              )
-            ) config.lab.out.allClusters
-          )
-        );
-        hasTeardownHooks = teardownHookLinks != "";
-
-        # Auto-deploy manifests (k3d boot-time CNI etc.) — baked into package
-        autoDeployLinks = lib.concatStringsSep "\n" (
-          lib.concatLists (
-            lib.mapAttrsToList (
-              clusterName: clusterCfg:
-              let
-                manifests = clusterCfg.provisioner.k3d.autoDeployManifests or [ ];
-              in
-              lib.optionals (manifests != [ ]) (
-                [ "mkdir -p $out/autodeploy/${clusterName}" ]
-                ++ map (m: "ln -s ${m.content} $out/autodeploy/${clusterName}/${m.name}.yaml") manifests
-              )
-            ) config.lab.out.allClusters
-          )
-        );
-
-        # Custom lint check scripts
-        lintCheckScripts = lib.mapAttrs (
-          name: check:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [
-              pkgs.yq-go
-              pkgs.jq
-              pkgs.coreutils
-            ];
-            text = check.command;
-          }
-        ) config.lab.lint.checks;
-        lintCheckLinks = lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (name: script: "ln -s ${script}/bin/${name} $out/lint/${name}") lintCheckScripts
-        );
-        hasLintChecks = config.lab.lint.checks != { };
-
-        strategy = config.lab.cd.strategy;
-        bootstrapLinks =
-          if strategy == "kapp" then
-            "ln -s $out/manifests $out/bootstrap"
-          else
-            lib.concatStringsSep "\n" (
-              lib.mapAttrsToList (
-                name: pkg: "ln -s ${pkg}/${name} $out/bootstrap/${name}"
-              ) config.lab.out.bootstrapManifests
-            );
       in
       pkgs.runCommand "lab-${config.lab.name}"
         {
           nativeBuildInputs = [
-            pkgs.jq
             pkgs.yq-go
+            pkgs.jq
           ];
+          metadataText = builtins.toJSON metadata;
           passAsFile = [ "metadataText" ];
-          metadataText = metadataJson;
         }
         ''
-          mkdir -p $out/manifests $out/bin
-          ${lib.optionalString (strategy != "kapp") "mkdir -p $out/bootstrap"}
-          ${lib.optionalString hasTeardownHooks "mkdir -p $out/hooks"}
-          ${lib.optionalString hasLintChecks "mkdir -p $out/lint"}
-          jq . "$metadataTextPath" > $out/metadata.json
-          ${manifestLinks}
-          ${bootstrapLinks}
-          ${teardownHookLinks}
-          ${lintCheckLinks}
-          ${autoDeployLinks}
+          mkdir -p $out/manifests $out/verify
+          ${lib.concatStringsSep "\n" manifestLinks}
 
-          # Extract all container images from rendered manifests into images.txt.
-          # Targets container specs in Deployments, StatefulSets, DaemonSets, Jobs, CronJobs.
-          touch $out/images-raw.txt
-          ${lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (name: pkg: ''
-              for f in $(find ${pkg}/${name} -name '*.yaml' -type f); do
-                yq -N 'select(.kind == "Deployment" or .kind == "StatefulSet" or .kind == "DaemonSet" or .kind == "Job" or .kind == "CronJob" or .kind == "Pod") | .spec.template.spec.containers[].image' "$f" 2>/dev/null >> $out/images-raw.txt || true
-                yq -N 'select(.kind == "Deployment" or .kind == "StatefulSet" or .kind == "DaemonSet" or .kind == "Job" or .kind == "CronJob" or .kind == "Pod") | .spec.template.spec.initContainers[].image' "$f" 2>/dev/null >> $out/images-raw.txt || true
-                yq -N 'select(.kind == "CronJob") | .spec.jobTemplate.spec.template.spec.containers[].image' "$f" 2>/dev/null >> $out/images-raw.txt || true
-              done
-            '') config.lab.out.manifests
-          )}
-          sort -u $out/images-raw.txt | grep -v '^$' | grep -v '^null$' > $out/images.txt || touch $out/images.txt
-          rm -f $out/images-raw.txt
-          ${
-            if config.lab.ops.out.tool != null then
-              "ln -s ${config.lab.ops.out.tool}/bin/${config.lab.name}-ops $out/bin/${config.lab.name}-ops"
-            else
-              ""
-          }
+          # Under the kapp strategy the CLI reads `manifests/`, but a lab that
+          # later sets a different strategy reads `bootstrap/`. One symlink
+          # costs nothing and makes that switch a config change rather than a
+          # renderer change.
+          ln -s $out/manifests $out/bootstrap
+
+          jq . "$metadataTextPath" > $out/metadata.json
+
+          ${lib.concatStringsSep "\n" autoDeployCopies}
+
+          ${lib.optionalString (allStacks != { }) ''
+            mkdir -p $out/infra/bin
+            ln -s ${infraTool}/bin/tofu $out/infra/bin/tofu
+          ''}
+          ${lib.concatStringsSep "\n" infraRenders}
+
+          ${lib.optionalString (config.lab.out.rootApplication != { }) ''
+            mkdir -p $out/cd
+            cp ${pkgs.writeText "root-application.yaml" (builtins.toJSON config.lab.out.rootApplication)} $out/cd/root-application.yaml
+          ''}
+
+          ${lib.concatStringsSep "\n" verifyCopies}
+          ${lib.optionalString (lintChecks != { }) "mkdir -p $out/lint"}
+          ${lib.concatStringsSep "\n" lintCopies}
+
+          touch images-raw.txt
+          ${lib.concatStringsSep "\n" scrapes}
+          sort -u images-raw.txt | grep -v '^$' > $out/images.txt || touch $out/images.txt
+
+          ${lib.optionalString (opsTool != null) ''
+            mkdir -p $out/bin
+            ln -s ${opsTool}/bin/${config.lab.name}-ops $out/bin/${config.lab.name}-ops
+          ''}
         '';
   };
 }

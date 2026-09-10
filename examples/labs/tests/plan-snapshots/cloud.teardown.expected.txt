@@ -1,0 +1,5 @@
+[001] destroy-cluster name=destroy-cluster-home cluster=home params.name=home params.provisioner=k3d params.skipIfMissing=true
+[002] destroy-cluster name=destroy-cluster-workload cluster=workload params.name=workload params.provisioner=external params.skipIfMissing=true
+[003] infra-destroy name=infra-destroy-home-doks-before-clusters params.stack=home-doks-before-clusters
+[004] remove-services name=remove-services
+[005] remove-network name=remove-network

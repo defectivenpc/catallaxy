@@ -1,18 +1,15 @@
-{ lib, ... }:
-
+# A lab: clusters built from composed floes, lowered to what `cata` reads.
+{ ... }:
 {
   imports = [
     ./types.nix
-    ./dns.nix
-    ./network.nix
-    ./registry.nix
-    ./proxy.nix
-    ./ops.nix
     ./secrets.nix
-    ./images.nix
-    ./lint.nix
-    ./planner.nix
-    ./bgp-router.nix
+    ./host
+    ./e2e.nix
+    ./e2e-cloud.nix
+    ./cd.nix
+    ./planner
+    ./plan.nix
     ./out.nix
   ];
 }

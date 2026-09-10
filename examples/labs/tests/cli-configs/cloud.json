@@ -1,0 +1,356 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {},
+    "strategy": "kapp"
+  },
+  "clusterNames": [
+    "home",
+    "workload"
+  ],
+  "clusters": {
+    "home": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-cloud-home-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "doks": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [
+        "home-doks-before-clusters"
+      ],
+      "kubeContext": "k3d-cloud-home",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "cloud",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 1
+          }
+        ]
+      ],
+      "name": "home",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {},
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [],
+          "clusterName": "cloud-home",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "cloud",
+          "noFlannel": false,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    },
+    "workload": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": null,
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "self"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "podinfo/podinfo",
+          "host": "podinfo.cloud.test",
+          "namespace": "podinfo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "podinfo": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "cata-cloud-workload",
+      "kubernetes": {
+        "controlPlanes": 0,
+        "distribution": "kubernetes",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "cloud",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "podinfo/podinfo",
+            "resourceCount": 3
+          }
+        ]
+      ],
+      "name": "workload",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.245.0.0/16"
+      },
+      "projections": {},
+      "provider": "external",
+      "provisioner": "external",
+      "provisionerConfig": {
+        "external": {
+          "madeBy": "opentofu, from the 'doks' floe on 'home'"
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": null,
+  "infraPublications": [
+    {
+      "key": "clusters/workload/kubeconfig",
+      "outputName": "cluster_kube_config",
+      "stack": "home-doks-before-clusters",
+      "store": "cloud"
+    }
+  ],
+  "labName": "cloud",
+  "labNamespaces": {
+    "home": [
+      "cert-manager"
+    ],
+    "workload": [
+      "cert-manager",
+      "podinfo"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.43.0.0/16",
+    "name": "cloud"
+  },
+  "opsToolPath": "/nix/store/HASH-cloud-ops/bin/cloud-ops",
+  "registryPort": null,
+  "registryUpstreams": [],
+  "runtimeContexts": {
+    "home": "k3d-cloud-home",
+    "workload": "cata-cloud-workload"
+  },
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {},
+    "stores": {
+      "cloud": {
+        "backend": "env",
+        "direction": "authored",
+        "vault": {
+          "path": "secret",
+          "server": null,
+          "version": "v2"
+        },
+        "writerCommand": null
+      }
+    }
+  },
+  "services": {
+    "egress": {
+      "container": "catallaxy-cloud-egress",
+      "description": "Forward proxy inside the lab network (cloud.test)",
+      "dnsContainers": [],
+      "image": "ghcr.io/querateam/docker-tinyproxy:latest",
+      "networks": [
+        "cloud"
+      ],
+      "ports": [
+        "127.0.0.1:3138:8888"
+      ],
+      "volumes": {
+        "/etc/tinyproxy/tinyproxy.conf": {
+          "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
+        }
+      }
+    },
+    "proxy": {
+      "container": "catallaxy-cloud-ingress",
+      "description": "HAProxy lab ingress (cloud.test)",
+      "extraMounts": [
+        {
+          "container": "/etc/haproxy/certs/lab.pem",
+          "host": "{{STATE_DIR}}/proxy/lab.pem"
+        }
+      ],
+      "image": "haproxy:3.1-alpine",
+      "networks": [
+        "cloud"
+      ],
+      "ports": [
+        "127.0.0.1:8092:80",
+        "172.43.0.1:80:80",
+        "127.0.0.1:8451:443",
+        "172.43.0.1:443:443"
+      ],
+      "readyProbe": {
+        "host": "127.0.0.1",
+        "kind": "tcp",
+        "port": 8092,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/usr/local/etc/haproxy/haproxy.cfg": {
+          "content": "global\n    log stdout format raw local0 info\n\n# `init-addr none` with a resolver, rather than resolving at startup:\n# the proxy comes up before the cluster it points at exists, and\n# HAProxy refuses to start on a server name it cannot resolve.\nresolvers docker\n    nameserver dns1 127.0.0.11:53\n    resolve_retries 30\n    timeout resolve 1s\n    timeout retry 1s\n    hold valid 10s\n\ndefaults\n    timeout connect 5s\n    timeout client 1h\n    timeout server 1h\n    timeout tunnel 1h\n    log global\n\nfrontend ft_https\n    bind *:443 ssl crt /etc/haproxy/certs/lab.pem\n    mode http\n\n\n\nfrontend ft_http\n    bind *:80\n    mode http\n\n    # Redirect to the bare host, not `redirect scheme https`,\n    # which keeps whatever port the client used and would send it\n    # to HTTPS on the HTTP port. Dropping the port lands on 443,\n    # which is what the zone's wildcard reaches.\n    http-request redirect location https://%[req.hdr(host),field(1,:)]%[path] code 301\n\n\n\n"
+        }
+      }
+    }
+  },
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": true
+    }
+  }
+}

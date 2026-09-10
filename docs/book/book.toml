@@ -5,14 +5,14 @@ authors = ["Catallaxy Contributors"]
 language = "en"
 src = "src"
 
-[preprocessor.mermaid]
-command = "mdbook-mermaid"
+# A SUMMARY entry with no file is an error, not a blank page.
+[build]
+create-missing = false
 
 [output.html]
 default-theme = "navy"
 git-repository-url = "https://github.com/onepunchtech/catallaxy"
 edit-url-template = "https://github.com/onepunchtech/catallaxy/edit/master/docs/book/{path}"
-additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
 [output.html.search]
 enable = true

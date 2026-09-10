@@ -1,0 +1,5 @@
+[001] cert-generate name=cert-generate params.zone=minimal.test
+[002] docker-network-create name=docker-network-create params.gateway=172.37.0.1 params.name=minimal.talos params.subnet=172.37.0.0/16
+[003] create-cluster name=create-cluster-app cluster=app params.name=app params.provisioner=talos
+[004] deploy-manifests name=deploy-manifests-app cluster=app params.kubeContext=admin@minimal-talos-app params.target=app
+[005] setup-services name=setup-services

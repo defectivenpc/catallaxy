@@ -1,0 +1,662 @@
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result, bail};
+use console::style;
+
+use crate::config::Context as CataContext;
+pub use crate::domain::cluster::{ProjectionConfig, ProjectionKeyConfig};
+
+use crate::domain::secrets::{self, SecretsSpec};
+use crate::domain::{ClusterSpec, LabSpec};
+use crate::io;
+use crate::io::nix;
+
+pub use crate::domain::secrets::SecretsCache;
+
+pub struct ApplyRequest<'a> {
+    pub cluster: Option<&'a str>,
+    pub bundle: Option<&'a str>,
+    pub dry_run: bool,
+    pub force: bool,
+    pub manifests_dir: Option<&'a str>,
+    pub secrets_cache: Option<SecretsCache>,
+    pub lab: Option<&'a LabSpec>,
+    pub kube_context_override: Option<&'a str>,
+}
+
+impl<'a> ApplyRequest<'a> {
+    pub fn for_cluster(cluster: &'a str) -> Self {
+        ApplyRequest {
+            cluster: Some(cluster),
+            bundle: None,
+            dry_run: false,
+            force: false,
+            manifests_dir: None,
+            secrets_cache: None,
+            lab: None,
+            kube_context_override: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct BundleDir {
+    key: String,
+    dir: PathBuf,
+    wave: usize,
+}
+
+/// Whether the caller narrates the manifest build. `apply` has always printed
+/// as it goes and `diff` has always been silent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Narration {
+    Announce,
+    Quiet,
+}
+
+/// The cluster and the lab it belongs to. Resolving these is separate from
+/// building the manifests because `diff` refuses an unreachable cluster in
+/// between, and a refusal should not cost a nix build.
+fn resolve_lab<'a>(
+    ctx: &CataContext,
+    args: &ApplyRequest<'a>,
+) -> Result<std::borrow::Cow<'a, LabSpec>> {
+    Ok(match args.lab {
+        Some(lab) => std::borrow::Cow::Borrowed(lab),
+        None => {
+            let lab_name = ctx.resolve_lab_name(None)?;
+            std::borrow::Cow::Owned(nix::get_lab_spec(ctx, &lab_name)?)
+        }
+    })
+}
+
+fn kube_context_for<'a>(args: &ApplyRequest<'a>, spec: &'a ClusterSpec) -> &'a str {
+    args.kube_context_override
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&spec.kube_context)
+}
+
+fn cluster_manifests(
+    ctx: &CataContext,
+    args: &ApplyRequest<'_>,
+    cluster: &str,
+    narrate: Narration,
+) -> Result<PathBuf> {
+    let announce = narrate == Narration::Announce;
+
+    let manifests_path = match args.manifests_dir {
+        Some(dir) => {
+            if announce {
+                println!("{} Using pre-built manifests: {dir}", style(">>>").green());
+            }
+            dir.to_string()
+        }
+        None => {
+            if announce {
+                println!("{} Building manifests...", style(">>>").cyan());
+            }
+            let lab_name = ctx.resolve_lab_name(None)?;
+            let lab_pkg = nix::build_lab_package(ctx, &lab_name)?;
+            let path = format!("{lab_pkg}/manifests");
+            if announce {
+                println!("{} Manifests built: {path}", style(">>>").green());
+            }
+            path
+        }
+    };
+
+    let cluster_subdir = Path::new(&manifests_path).join(cluster);
+    Ok(if cluster_subdir.is_dir() {
+        cluster_subdir
+    } else {
+        PathBuf::from(&manifests_path)
+    })
+}
+
+pub fn apply(ctx: &CataContext, args: ApplyRequest<'_>) -> Result<()> {
+    let cluster = ctx.resolve_cluster_name(args.cluster)?;
+
+    println!(
+        "{} Applying to cluster '{cluster}'",
+        style("catallaxy").cyan().bold(),
+    );
+    println!();
+
+    let lab = resolve_lab(ctx, &args)?;
+    let spec = lab.cluster(&cluster)?;
+
+    let strategy = spec.deploy.strategy;
+    if strategy.is_gitops() && !args.force {
+        return Err(deployed_through_git(strategy));
+    }
+
+    let kube_context = kube_context_for(&args, spec);
+    let manifests = cluster_manifests(ctx, &args, &cluster, Narration::Announce)?;
+
+    apply_kapp(
+        ctx,
+        kube_context,
+        &manifests.display().to_string(),
+        &args,
+        &lab,
+        spec,
+    )
+}
+
+pub fn diff(ctx: &CataContext, args: ApplyRequest<'_>) -> Result<bool> {
+    let cluster = ctx.resolve_cluster_name(args.cluster)?;
+    let lab = resolve_lab(ctx, &args)?;
+    let spec = lab.cluster(&cluster)?;
+
+    let strategy = spec.deploy.strategy;
+    if strategy.is_gitops() && !args.force {
+        return Err(deployed_through_git(strategy));
+    }
+
+    let kube_context = kube_context_for(&args, spec);
+
+    if !io::kubectl::api_reachable(kube_context) {
+        bail!(
+            "cannot reach cluster '{cluster}' (context: {kube_context}), so there is \
+             nothing to compare against. `cata lab plan` shows what would run without \
+             a cluster."
+        );
+    }
+
+    let cluster_manifests = cluster_manifests(ctx, &args, &cluster, Narration::Quiet)?;
+
+    let mut bundles = discover_bundles(&cluster_manifests)?;
+    if let Some(key) = args.bundle {
+        bundles.retain(|b| b.key == key);
+        if bundles.is_empty() {
+            bail!("{}", unknown_bundle(key, &cluster_manifests));
+        }
+    }
+
+    println!(
+        "{} Diffing cluster '{}' against {} bundle(s)",
+        style("catallaxy").cyan().bold(),
+        style(&cluster).green(),
+        bundles.len(),
+    );
+
+    let mut changed = Vec::new();
+    for bundle in &bundles {
+        println!(
+            "\n{} Bundle: {} (wave {:03})",
+            style(">>>").cyan(),
+            style(&bundle.key).bold(),
+            bundle.wave,
+        );
+        if io::kapp::diff(
+            kube_context,
+            &kapp_app_name(&bundle.key),
+            &bundle.dir.display().to_string(),
+        )? {
+            changed.push(bundle.key.clone());
+        }
+    }
+
+    println!();
+    if changed.is_empty() {
+        println!(
+            "{} '{cluster}' already matches what the lab declares",
+            style(">>>").green(),
+        );
+    } else {
+        println!(
+            "{} {} of {} bundle(s) would change: {}",
+            style(">>>").yellow(),
+            changed.len(),
+            bundles.len(),
+            changed.join(", "),
+        );
+    }
+
+    Ok(!changed.is_empty())
+}
+
+fn unknown_bundle(key: &str, cluster_manifests: &Path) -> String {
+    let known: Vec<String> = discover_bundles(cluster_manifests)
+        .map(|bundles| bundles.into_iter().map(|b| b.key).collect())
+        .unwrap_or_default();
+
+    format!(
+        "bundle '{key}' is not in the rendered manifests. Available: {}",
+        if known.is_empty() {
+            "(none)".to_string()
+        } else {
+            known.join(", ")
+        },
+    )
+}
+
+fn kapp_app_name(bundle_key: &str) -> String {
+    bundle_key
+        .chars()
+        .map(|c| {
+            let c = c.to_ascii_lowercase();
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect()
+}
+
+fn discover_bundles(cluster_manifests: &Path) -> Result<Vec<BundleDir>> {
+    let wave_meta_path = cluster_manifests.join(".wave-meta");
+    let raw = crate::io::fs::read_to_string(&wave_meta_path).with_context(|| {
+        format!(
+            "reading {}: the manifest tree was rendered by an older \
+             catallaxy. Re-render the lab.",
+            wave_meta_path.display()
+        )
+    })?;
+    let meta: crate::io::ssa::WaveMeta = serde_json::from_str(&raw)
+        .with_context(|| format!("parsing {}", wave_meta_path.display()))?;
+
+    let mut bundles = Vec::new();
+    for wave in &meta.waves {
+        for b in &wave.bundles {
+            if !b.has_content {
+                continue;
+            }
+            bundles.push(BundleDir {
+                key: b.key.clone(),
+                dir: cluster_manifests.join(&b.dir),
+                wave: wave.index,
+            });
+        }
+    }
+    Ok(bundles)
+}
+
+fn wait_timeout_in(content: &str) -> Option<&str> {
+    content
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("waitTimeout:"))
+        .map(str::trim)
+}
+
+fn read_deploy_timeout(cluster_manifests: &Path) -> Result<String> {
+    let config_file = cluster_manifests.join(".deploy-config");
+    let content = crate::io::fs::read_to_string(&config_file).with_context(|| {
+        format!(
+            "reading {}. The lab declares `waitTimeout` there; substituting a \
+             default would deploy with a timeout the lab never asked for",
+            config_file.display()
+        )
+    })?;
+
+    let timeout = wait_timeout_in(&content).ok_or_else(|| {
+        anyhow::anyhow!(
+            "{} has no `waitTimeout:` line. Re-render the lab",
+            config_file.display()
+        )
+    })?;
+
+    crate::io::kubectl::parse_timeout(timeout).ok_or_else(|| {
+        anyhow::anyhow!(
+            "`waitTimeout: {timeout}` in {} is not a duration (expected e.g. 30s, \
+             10m, 1h). kapp would have been handed it verbatim",
+            config_file.display()
+        )
+    })?;
+
+    Ok(timeout.to_string())
+}
+
+fn apply_kapp(
+    ctx: &CataContext,
+    kube_context: &str,
+    manifests_path: &str,
+    args: &ApplyRequest<'_>,
+    lab: &LabSpec,
+    spec: &ClusterSpec,
+) -> Result<()> {
+    if !io::kubectl::api_reachable(kube_context) {
+        bail!("Cannot reach cluster (context: {kube_context}). Is it running?");
+    }
+
+    let cluster_manifests = Path::new(manifests_path);
+    let timeout = read_deploy_timeout(cluster_manifests)?;
+    let mut bundles = discover_bundles(cluster_manifests)?;
+
+    if let Some(key) = args.bundle {
+        bundles.retain(|b| b.key == key);
+        if bundles.is_empty() {
+            bail!("{}", unknown_bundle(key, cluster_manifests));
+        }
+    }
+
+    let projections = &spec.projections;
+    if !projections.is_empty() {
+        println!(
+            "{} Found {} projection(s){}",
+            style(">>>").cyan(),
+            projections.len(),
+            if args.secrets_cache.is_some() {
+                " (cached)"
+            } else {
+                ""
+            },
+        );
+    }
+    if args.dry_run {
+        println!("{} Dry run: would deploy:", style("Note:").yellow());
+        for b in &bundles {
+            println!("  wave {:03}  {}", b.wave, b.key);
+        }
+        for name in projections.keys() {
+            println!("  projection {name}");
+        }
+        return Ok(());
+    }
+
+    if !projections.is_empty() {
+        let ordered: Vec<(String, ProjectionConfig)> = projections
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        inject_projections(
+            ctx,
+            kube_context,
+            &ProjectionSource {
+                lab_name: &lab.lab_name,
+                secrets: &lab.secrets,
+                pre_cache: args.secrets_cache.as_deref(),
+            },
+            &ordered,
+            &timeout,
+        )?;
+    }
+
+    cleanup_bootstrap_resources(kube_context, spec);
+
+    for bundle in &bundles {
+        println!(
+            "\n{} Bundle: {} (wave {:03})",
+            style(">>>").cyan(),
+            style(&bundle.key).bold(),
+            bundle.wave,
+        );
+
+        let crd_wait_file = bundle.dir.join(".crd-wait");
+        if crd_wait_file.exists()
+            && let Ok(content) = crate::io::fs::read_to_string(&crd_wait_file)
+        {
+            for crd in content.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+                println!("{} Waiting for CRD: {crd}...", style(">>>").cyan());
+                io::kubectl::wait_crd_established(kube_context, crd, &timeout)?;
+            }
+        }
+
+        if let Ok(stuck) = io::kubectl::get_stuck_deployments(kube_context) {
+            for (ns, name) in &stuck {
+                println!(
+                    "{} Restarting stuck deployment {}/{}",
+                    style(">>>").yellow(),
+                    ns,
+                    name
+                );
+                let _ = io::kubectl::rollout_restart(kube_context, "deployment", ns, name);
+            }
+        }
+
+        io::kapp::deploy(
+            kube_context,
+            &kapp_app_name(&bundle.key),
+            &bundle.dir.display().to_string(),
+            &timeout,
+        )?;
+    }
+
+    println!();
+    println!("{} All bundles deployed", style(">>>").green());
+
+    Ok(())
+}
+
+fn inject_projections(
+    ctx: &CataContext,
+    kube_context: &str,
+    source: &ProjectionSource<'_>,
+    projections: &[(String, ProjectionConfig)],
+    timeout: &str,
+) -> Result<()> {
+    inject_projections_with(ctx, source, projections, |secret_dir, secret_name| {
+        io::kapp::deploy(
+            kube_context,
+            &format!("secrets-{secret_name}"),
+            &secret_dir.display().to_string(),
+            timeout,
+        )
+    })
+}
+
+pub struct ProjectionSource<'a> {
+    pub lab_name: &'a str,
+    pub secrets: &'a SecretsSpec,
+    pub pre_cache: Option<&'a secrets::SecretsByStore>,
+}
+
+pub fn inject_projections_with<F>(
+    ctx: &CataContext,
+    source: &ProjectionSource<'_>,
+    projections: &[(String, ProjectionConfig)],
+    mut apply_fn: F,
+) -> Result<()>
+where
+    F: FnMut(&std::path::Path, &str) -> Result<()>,
+{
+    let ProjectionSource {
+        lab_name,
+        secrets: spec,
+        pre_cache,
+    } = source;
+    let secrets_tmp = crate::io::fs::secure_tempdir()?;
+
+    let mut store_cache: HashMap<String, HashMap<String, HashMap<String, String>>> = HashMap::new();
+
+    for (proj_name, proj) in projections {
+        let store_name = spec.store_of(&proj.source).unwrap_or(&proj.source);
+
+        let store_data = if let Some(cached) = pre_cache.and_then(|c| c.get(store_name)) {
+            cached.clone()
+        } else if let Some(cached) = store_cache.get(store_name) {
+            cached.clone()
+        } else {
+            let data = io::secrets::load_store(ctx, lab_name, store_name, spec)?;
+            let problems = secrets::validate_store(spec, store_name, &data);
+            if !problems.is_empty() {
+                bail!(secrets::describe_store_problems(
+                    spec, lab_name, store_name, &problems
+                ));
+            }
+            store_cache.insert(store_name.to_string(), data.clone());
+            data
+        };
+
+        println!(
+            "{} Injecting projection: {} (namespace: {}, from: {})...",
+            style(">>>").cyan(),
+            style(proj_name).bold(),
+            proj.namespace,
+            proj.source,
+        );
+
+        let source_keys = store_data.get(&proj.source).ok_or_else(|| {
+            anyhow::anyhow!(
+                "projection '{proj_name}' references managed secret '{}', which store '{store_name}' does not carry. {}",
+                proj.source,
+                secrets::describe_store_source(spec, lab_name, store_name),
+            )
+        })?;
+        let mut k8s_data: HashMap<String, String> = HashMap::new();
+
+        for (key_name, key_def) in &proj.keys {
+            let source_value = source_keys.get(&key_def.from).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "projection '{proj_name}' wants key '{}' of managed secret '{}': {}",
+                    key_def.from,
+                    proj.source,
+                    secrets::describe_missing_value(
+                        spec,
+                        lab_name,
+                        store_name,
+                        &proj.source,
+                        &key_def.from
+                    ),
+                )
+            })?;
+            let source_value = source_value.as_str();
+
+            let value = match key_def.transform.as_deref().unwrap_or("none") {
+                "base64" => {
+                    use base64::Engine;
+                    base64::engine::general_purpose::STANDARD.encode(source_value)
+                }
+                "json-wrap" => {
+                    let json_key = key_def.json_key.as_deref().unwrap_or(key_name);
+                    serde_json::json!({ json_key: source_value }).to_string()
+                }
+                _ => source_value.to_string(),
+            };
+
+            k8s_data.insert(key_name.clone(), value);
+        }
+
+        let secret_manifest = serde_json::json!({
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {
+                "name": proj_name,
+                "namespace": proj.namespace,
+                "labels": { "app.kubernetes.io/managed-by": "catallaxy" }
+            },
+            "type": "Opaque",
+            "stringData": k8s_data,
+        });
+
+        let yaml = serde_yaml::to_string(&secret_manifest)?;
+        let secret_dir = secrets_tmp.path().join(format!("secrets-{proj_name}"));
+        crate::io::fs::create_dir_all(&secret_dir)?;
+        crate::io::fs::write(secret_dir.join("secret.yaml"), &yaml)?;
+
+        apply_fn(&secret_dir, proj_name)?;
+    }
+
+    Ok(())
+}
+
+fn cleanup_bootstrap_resources(kube_context: &str, spec: &ClusterSpec) {
+    if spec.provisioner_config.auto_deploy_manifests().is_empty() {
+        return;
+    }
+
+    for kind in &["deployments", "daemonsets"] {
+        let output = crate::io::kubectl::output(
+            kube_context,
+            &[
+                "get",
+                kind,
+                "-n",
+                "kube-system",
+                "-o",
+                "jsonpath={range .items[*]}{.metadata.name},{.metadata.labels.kapp\\.k14s\\.io/app}{'\\n'}{end}",
+            ],
+        );
+
+        let output = match output {
+            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).to_string(),
+            _ => continue,
+        };
+
+        let unmanaged: Vec<&str> = output
+            .lines()
+            .filter(|line| {
+                let parts: Vec<&str> = line.split(',').collect();
+                !parts.is_empty()
+                    && !parts[0].is_empty()
+                    && (parts.len() < 2 || parts[1].is_empty())
+            })
+            .filter_map(|line| line.split(',').next())
+            .filter(|name| name.starts_with("cilium"))
+            .collect();
+
+        if unmanaged.is_empty() {
+            continue;
+        }
+
+        let kind_singular = if *kind == "deployments" {
+            "deployment"
+        } else {
+            "daemonset"
+        };
+
+        println!(
+            "{} Cleaning up bootstrap-deployed {}s (kapp will recreate): {}",
+            console::style(">>>").cyan(),
+            kind_singular,
+            unmanaged.join(", ")
+        );
+
+        for name in &unmanaged {
+            let _ = crate::io::kubectl::quiet_status(
+                kube_context,
+                &[
+                    "delete",
+                    kind_singular,
+                    name,
+                    "-n",
+                    "kube-system",
+                    "--ignore-not-found",
+                ],
+            );
+        }
+    }
+}
+
+fn deployed_through_git(strategy: crate::domain::DeployStrategy) -> anyhow::Error {
+    let strategy = strategy.tag();
+    anyhow::anyhow!(
+        "This lab uses '{strategy}' strategy. Manifests must be deployed via Git.\n\
+         Use 'cata lab publish' to push manifests to the Git repository.\n\
+         To apply directly anyway, use --force."
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_declared_timeout_is_read_from_the_config() {
+        let content = "strategy: kapp\nwaitTimeout: 45m\n";
+        assert_eq!(wait_timeout_in(content), Some("45m"));
+    }
+
+    #[test]
+    fn a_config_without_the_key_yields_nothing_rather_than_a_default() {
+        assert_eq!(wait_timeout_in("strategy: kapp\n"), None);
+        assert_eq!(wait_timeout_in("waitTimeoutSeconds: 600\n"), None);
+    }
+
+    #[test]
+    fn surrounding_whitespace_is_not_part_of_the_duration() {
+        assert_eq!(wait_timeout_in("   waitTimeout:   45m   \n"), Some("45m"));
+    }
+
+    #[test]
+    fn a_duration_kapp_cannot_read_is_not_silently_ten_minutes() {
+        for bad in ["soon", "45minutes", "", "-5m"] {
+            assert!(
+                crate::io::kubectl::parse_timeout(bad).is_none(),
+                "'{bad}' parsed as a duration"
+            );
+        }
+    }
+}

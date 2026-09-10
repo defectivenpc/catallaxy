@@ -1,0 +1,284 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {},
+    "strategy": "kapp"
+  },
+  "clusterNames": [
+    "mgmt",
+    "workload"
+  ],
+  "clusters": {
+    "mgmt": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-provisions-mgmt-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "k3d-provisions-mgmt",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "provisions",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 1
+          }
+        ]
+      ],
+      "name": "mgmt",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {},
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [],
+          "clusterName": "provisions-mgmt",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "provisions",
+          "noFlannel": false,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    },
+    "workload": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": null,
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "self"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "podinfo/podinfo",
+          "host": "podinfo.provisions.test",
+          "namespace": "podinfo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "podinfo": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "cata-provisions-workload",
+      "kubernetes": {
+        "controlPlanes": 0,
+        "distribution": "kubernetes",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "provisions",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "podinfo/podinfo",
+            "resourceCount": 3
+          }
+        ]
+      ],
+      "name": "workload",
+      "network": {
+        "podSubnet": "10.246.0.0/16",
+        "serviceSubnet": "10.113.0.0/16"
+      },
+      "projections": {},
+      "provider": "external",
+      "provisioner": "external",
+      "provisionerConfig": {
+        "external": {
+          "madeBy": "crossplane on 'mgmt'"
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": null,
+  "infraPublications": [],
+  "labName": "provisions",
+  "labNamespaces": {
+    "mgmt": [
+      "cert-manager"
+    ],
+    "workload": [
+      "cert-manager",
+      "podinfo"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.42.0.0/16",
+    "name": "provisions"
+  },
+  "opsToolPath": "/nix/store/HASH-provisions-ops/bin/provisions-ops",
+  "registryPort": null,
+  "registryUpstreams": [],
+  "runtimeContexts": {
+    "mgmt": "k3d-provisions-mgmt",
+    "workload": "cata-provisions-workload"
+  },
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {},
+    "stores": {}
+  },
+  "services": {},
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": true
+    }
+  }
+}

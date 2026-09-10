@@ -1,0 +1,7 @@
+[001] destroy-cluster name=destroy-cluster-workload cluster=workload params.name=workload params.provisioner=external params.skipIfMissing=true
+[002] release-cluster-cloud-resources name=release-cluster-cloud-resources-workload cluster=workload params.kubeContext=cata-provisions-workload params.target=workload
+[003] reconcile-managed-resource name=reconcile-managed-resource-workload cluster=mgmt params.kubeContext=k3d-provisions-mgmt params.resourceKind=clusters.kubernetes.digitalocean.crossplane.io params.resourceName=workload params.target=workload
+[004] delete-managed-resource name=delete-managed-resource-workload cluster=mgmt params.kubeContext=k3d-provisions-mgmt params.resourceKind=clusters.kubernetes.digitalocean.crossplane.io params.resourceName=workload params.target=workload
+[005] wait-for-cluster-gone name=wait-for-cluster-gone-workload cluster=mgmt params.kubeContext=k3d-provisions-mgmt params.resourceKind=clusters.kubernetes.digitalocean.crossplane.io params.resourceName=workload params.target=workload params.waitTimeoutSeconds=1800
+[006] destroy-cluster name=destroy-cluster-mgmt cluster=mgmt params.name=mgmt params.provisioner=k3d params.skipIfMissing=true
+[007] remove-network name=remove-network

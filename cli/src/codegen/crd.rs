@@ -1,42 +1,31 @@
-//! CRD parsing
-//!
-//! This module handles parsing Kubernetes CustomResourceDefinitions (CRDs)
-//! from YAML and converting them to NixType representations.
-
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use super::types::{GeneratorOptions, K8sResourceType, NixOption, NixType, Submodule};
+use super::types::{GeneratorOptions, K8sResourceType};
 
-/// Parse CRDs from YAML content
 pub fn parse_crds_from_yaml(
     yaml: &str,
     options: &GeneratorOptions,
 ) -> Result<Vec<K8sResourceType>> {
     let mut resources = Vec::new();
 
-    // Parse all YAML documents in the file
     for doc in yaml_rust2::YamlLoader::load_from_str(yaml).context("Failed to parse YAML")? {
-        // Convert to serde_json::Value for easier processing
         let value = yaml_to_json(&doc)?;
 
-        // Check if this is a CRD
         let kind = value.get("kind").and_then(|v| v.as_str());
 
         if kind == Some("CustomResourceDefinition") {
             if let Some(crd) = parse_single_crd(&value, options)? {
                 resources.push(crd);
             }
-        } else if kind == Some("List") {
-            // Handle List of CRDs
-            if let Some(items) = value.get("items").and_then(|v| v.as_array()) {
-                for item in items {
-                    if item.get("kind").and_then(|v| v.as_str()) == Some("CustomResourceDefinition")
-                    {
-                        if let Some(crd) = parse_single_crd(item, options)? {
-                            resources.push(crd);
-                        }
-                    }
+        } else if kind == Some("List")
+            && let Some(items) = value.get("items").and_then(|v| v.as_array())
+        {
+            for item in items {
+                if item.get("kind").and_then(|v| v.as_str()) == Some("CustomResourceDefinition")
+                    && let Some(crd) = parse_single_crd(item, options)?
+                {
+                    resources.push(crd);
                 }
             }
         }
@@ -45,7 +34,6 @@ pub fn parse_crds_from_yaml(
     Ok(resources)
 }
 
-/// Parse a single CRD definition
 fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8sResourceType>> {
     let spec = crd.get("spec").context("CRD missing spec")?;
 
@@ -59,15 +47,12 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
         .and_then(|v| v.as_str())
         .context("CRD missing kind")?;
 
-    // Check for excluded groups
     if options.exclude_groups.iter().any(|g| group.contains(g)) {
         return Ok(None);
     }
 
-    // Get the latest version
     let versions = spec.get("versions").and_then(|v| v.as_array());
     let version_info = if let Some(versions) = versions {
-        // Find the served version (preferring storage version)
         versions
             .iter()
             .find(|v| v.get("storage").and_then(|s| s.as_bool()).unwrap_or(false))
@@ -89,7 +74,6 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
     let mut resource =
         K8sResourceType::new(group.to_string(), version.to_string(), kind.to_string());
 
-    // Parse the schema if available
     let schema = version_info
         .and_then(|v| v.get("schema"))
         .and_then(|s| s.get("openAPIV3Schema"))
@@ -100,10 +84,10 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
 
     if let Some(schema) = schema {
         if let Some(spec_schema) = schema.get("properties").and_then(|p| p.get("spec")) {
-            resource.spec = Some(convert_crd_schema(spec_schema, options));
+            resource.spec =
+                Some(super::convert::Converter::standalone(options).convert(spec_schema));
         }
 
-        // Get description
         if options.include_descriptions {
             resource.description = schema
                 .get("description")
@@ -112,7 +96,6 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
         }
     }
 
-    // Check if namespaced
     resource.namespaced = spec
         .get("scope")
         .and_then(|v| v.as_str())
@@ -122,122 +105,6 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
     Ok(Some(resource))
 }
 
-/// Convert a CRD schema to NixType
-fn convert_crd_schema(schema: &Value, options: &GeneratorOptions) -> NixType {
-    let type_str = schema.get("type").and_then(|v| v.as_str());
-
-    match type_str {
-        Some("string") => convert_crd_string_schema(schema),
-        Some("integer") => NixType::Int,
-        Some("number") => NixType::Float,
-        Some("boolean") => NixType::Bool,
-        Some("array") => {
-            let items = schema.get("items");
-            let inner = match items {
-                Some(items_schema) => convert_crd_schema(items_schema, options),
-                None => NixType::Anything,
-            };
-            NixType::ListOf(Box::new(inner))
-        }
-        Some("object") => convert_crd_object_schema(schema, options),
-        _ => {
-            // No type or unknown type
-            if schema.get("properties").is_some() {
-                convert_crd_object_schema(schema, options)
-            } else {
-                NixType::Anything
-            }
-        }
-    }
-}
-
-fn convert_crd_string_schema(schema: &Value) -> NixType {
-    // Check for enum
-    if let Some(enum_values) = schema.get("enum").and_then(|v| v.as_array()) {
-        let values: Vec<String> = enum_values
-            .iter()
-            .filter_map(|v| v.as_str().map(String::from))
-            .collect();
-        if !values.is_empty() {
-            return NixType::Enum(values);
-        }
-    }
-
-    // Check for format
-    if let Some(format) = schema.get("format").and_then(|v| v.as_str()) {
-        if format == "int-or-string" {
-            return NixType::Either(Box::new(NixType::Int), Box::new(NixType::Str));
-        }
-    }
-
-    NixType::Str
-}
-
-fn convert_crd_object_schema(schema: &Value, options: &GeneratorOptions) -> NixType {
-    // Check for additionalProperties (map type)
-    if let Some(additional) = schema.get("additionalProperties") {
-        if additional.is_boolean() {
-            if additional.as_bool() == Some(true) {
-                return NixType::Attrs;
-            }
-        } else {
-            let value_type = convert_crd_schema(additional, options);
-            return NixType::AttrsOf(Box::new(value_type));
-        }
-    }
-
-    // Check for x-kubernetes-preserve-unknown-fields
-    let preserve_unknown = schema
-        .get("x-kubernetes-preserve-unknown-fields")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    // Check for properties
-    if let Some(properties) = schema.get("properties").and_then(|v| v.as_object()) {
-        let required: Vec<&str> = schema
-            .get("required")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
-            .unwrap_or_default();
-
-        let mut submodule = Submodule::new();
-
-        for (name, prop_schema) in properties {
-            let prop_type = convert_crd_schema(prop_schema, options);
-            let is_required = required.contains(&name.as_str());
-
-            let mut option = NixOption::new(if is_required {
-                prop_type
-            } else {
-                prop_type.nullable()
-            });
-
-            if !is_required {
-                option.default = Some("null".to_string());
-            }
-
-            if options.include_descriptions {
-                if let Some(desc) = prop_schema.get("description").and_then(|v| v.as_str()) {
-                    option.description = Some(desc.to_string());
-                }
-            }
-
-            submodule.options.insert(name.clone(), option);
-        }
-
-        // Add freeformType if enabled or if preserve-unknown-fields is set
-        if options.freeform_type || preserve_unknown {
-            submodule.freeform_type = Some(Box::new(NixType::Attrs));
-        }
-
-        return NixType::Submodule(submodule);
-    }
-
-    // No properties, just a generic object
-    NixType::Attrs
-}
-
-/// Convert yaml_rust2 Yaml to serde_json Value
 fn yaml_to_json(yaml: &yaml_rust2::Yaml) -> Result<Value> {
     match yaml {
         yaml_rust2::Yaml::Null => Ok(Value::Null),
@@ -260,7 +127,7 @@ fn yaml_to_json(yaml: &yaml_rust2::Yaml) -> Result<Value> {
                 let key = match k {
                     yaml_rust2::Yaml::String(s) => s.clone(),
                     yaml_rust2::Yaml::Integer(i) => i.to_string(),
-                    other => format!("{:?}", other),
+                    other => format!("{other:?}"),
                 };
                 map.insert(key, yaml_to_json(v)?);
             }

@@ -1,7 +1,3 @@
-# pkgs/cli.nix
-#
-# Build the cata CLI binary using crane.
-
 {
   lib,
   pkgs,
@@ -12,8 +8,27 @@
 let
   cliSrc = lib.cleanSourceWith {
     src = ../cli;
-    filter = path: type: (craneLib.filterCargoSources path type) || (type == "directory");
+    filter =
+      path: type:
+      (craneLib.filterCargoSources path type)
+      || (type == "directory")
+      || (
+        lib.any (ext: lib.hasSuffix ext path) [
+          ".json"
+          ".crt"
+          ".key"
+        ]
+        && lib.hasInfix "/tests/fixtures/" path
+      )
+      || (lib.hasSuffix ".nix" path && lib.hasInfix "/src/commands/templates/" path)
+      # The I/O boundary test's baseline. Without it the test panics rather
+      # than passing, which is the right way round, but it has to be here.
+      || (lib.hasSuffix ".txt" path && lib.hasInfix "/tests/" path);
   };
+
+  # For `cli/tests/book.rs`. On `buildPackage` only, so `buildDepsOnly`'s
+  # artifacts survive a docs edit.
+  bookSrc = ../docs/book/src;
 
   commonArgs = {
     src = cliSrc;
@@ -33,5 +48,15 @@ craneLib.buildPackage (
   commonArgs
   // {
     inherit cargoArtifacts;
+
+    CATALLAXY_BOOK_SRC = bookSrc;
+
+    passthru.clippy = craneLib.cargoClippy (
+      commonArgs
+      // {
+        inherit cargoArtifacts;
+        cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+      }
+    );
   }
 )

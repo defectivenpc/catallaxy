@@ -1,0 +1,110 @@
+use anyhow::{Context, Result, bail};
+use console::style;
+
+use crate::domain::StepFailure;
+use crate::domain::plan::PlannedStep;
+use crate::domain::plan::RunScriptParams;
+use crate::domain::plan::ScriptEnv;
+use crate::domain::secrets::describe_missing_value;
+use crate::plan::StepContext;
+
+pub fn run(sctx: &StepContext<'_>, step: &PlannedStep, p: &RunScriptParams) -> Result<()> {
+    let RunScriptParams {
+        bin,
+        env,
+        kube_context,
+    } = p;
+    let kube_context = kube_context.as_deref();
+
+    let hook_name = step.name.as_str();
+    let continue_on_failure = step.continues_on_failure();
+    if bin.is_empty() {
+        bail!("run-script step '{hook_name}' has no `bin` field");
+    }
+    println!("{} hook '{}'", style(">>>").cyan(), style(hook_name).bold(),);
+
+    if !std::path::Path::new(bin).exists() {
+        let msg = format!(
+            "hook binary not in the nix store:\n    {bin}\n    \
+             The lab package build failed or was skipped, so the hook was \
+             never realized. Run `nix build .#labPackages.\"{}\"` and retry.",
+            sctx.lab_name,
+        );
+        if continue_on_failure {
+            println!("{} {hook_name} skipped: {msg}", style("ERROR").red());
+            sctx.failures.borrow_mut().push(StepFailure::new(
+                "run-script",
+                format!("hook '{hook_name}' binary not realized ({bin})"),
+            ));
+            return Ok(());
+        }
+        bail!("Lifecycle hook '{hook_name}' cannot run: {msg}");
+    }
+
+    let resolved = resolve_env(sctx, hook_name, env)?;
+
+    let status = crate::io::hook::run(bin, &resolved, kube_context)
+        .with_context(|| format!("executing lifecycle hook '{hook_name}' ({bin})"))?;
+    if !status.success() {
+        let code = status.code().unwrap_or(-1);
+        if continue_on_failure {
+            println!(
+                "{} hook '{hook_name}' failed (exit {code}), continuing",
+                style("ERROR").red(),
+            );
+            sctx.failures.borrow_mut().push(StepFailure::new(
+                "run-script",
+                format!("hook '{hook_name}' exited {code}"),
+            ));
+            return Ok(());
+        }
+        bail!(
+            "Lifecycle hook '{hook_name}' failed. \
+             Bin: {bin}. Fix the hook or its precondition and re-run \
+             `cata lab up`."
+        );
+    }
+    println!("{} hook '{}' ok", style(">>>").green(), hook_name);
+    Ok(())
+}
+
+fn resolve_env(
+    sctx: &StepContext<'_>,
+    hook_name: &str,
+    env: &[ScriptEnv],
+) -> Result<Vec<(String, String)>> {
+    if env.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let Some(cache) = sctx.secrets_cache.as_ref() else {
+        bail!(
+            "Lifecycle hook '{hook_name}' declares {} secret-sourced \
+             environment variable(s), but no secret store was loaded for this \
+             lab. Declare the store under `lab.secrets.stores` so the executor \
+             loads it before the plan runs.",
+            env.len(),
+        );
+    };
+
+    let spec = &sctx.lab.secrets;
+
+    env.iter()
+        .map(|e| {
+            let store = spec.store_of(&e.secret).unwrap_or(&e.secret);
+
+            let value = cache
+                .get(store)
+                .and_then(|secrets| secrets.get(&e.secret))
+                .and_then(|keys| keys.get(&e.key))
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Lifecycle hook '{hook_name}' needs ${}: {}",
+                        e.name,
+                        describe_missing_value(spec, sctx.lab_name, store, &e.secret, &e.key),
+                    )
+                })?;
+            Ok((e.name.clone(), value.clone()))
+        })
+        .collect()
+}

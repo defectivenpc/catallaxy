@@ -1,7 +1,8 @@
 [package]
 name = "cata"
-version = "0.6.0"
+version = "0.8.0"
 edition = "2024"
+default-run = "cata"
 description = "CLI for catallaxy - declarative Kubernetes platform management"
 authors = ["Catallaxy Contributors"]
 license = "MIT"
@@ -9,59 +10,74 @@ repository = "https://github.com/onepunchtech/catallaxy"
 homepage = "https://onepunchtech.github.io/catallaxy"
 
 [dependencies]
-# CLI framework
 clap = { version = "4.5", features = ["derive", "env"] }
 
-# Async runtime
 tokio = { version = "1.40", features = ["full"] }
 
-# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 
-# Error handling
 anyhow = "1.0"
 
-# Process execution
 which = "6.0"
 
-# Home directory
 dirs = "5.0"
 
-# Terminal output
 console = "0.15"
 
-# Secret generation
 rand = "0.8"
 base64 = "0.22"
 uuid = { version = "1", features = ["v4"] }
 
-# Temporary files
 tempfile = "3.10"
 
-# Directory traversal
 walkdir = "2"
 
-# Date/time
 chrono = "0.4"
 
-# Pretty printing for Nix code generation
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
 pretty = "0.12"
 
-# YAML parsing for CRDs
 yaml-rust2 = "0.10"
 
-# PKI / Certificate generation
 rcgen = { version = "0.13", features = ["pem", "x509-parser"] }
 x509-parser = "0.16"
+sha1 = "0.10"
 pem = "3.0"
 time = "0.3"
 
 [dev-dependencies]
 assert_cmd = "2.0"
 predicates = "3.0"
+proc-macro2 = { version = "1.0.107", features = ["span-locations"] }
+syn = { version = "3.0.4", features = ["full", "visit", "extra-traits"] }
+
+[lib]
+name = "cata"
+path = "src/lib.rs"
 
 [[bin]]
 name = "cata"
-path = "src/main.rs"
+path = "src/bin/cata.rs"
+
+[[bin]]
+name = "cata-build"
+path = "src/bin/cata-build.rs"
+
+# Lints beyond clippy's default, chosen because each one found something.
+# `#[allow]` is forbidden anywhere in cli/ by `cli-no-lint-suppressions`, so a
+# lint listed here has to be worth fixing everywhere, every time.
+#
+# Deliberately absent: `use_self` and `must_use_candidate`, which between them
+# flag 550 sites, found no defect, and would rewrite most of the crate's `git
+# blame`. `format_push_string` too: its suggested rewrite swallows a Result to
+# save an allocation that is not on any hot path.
+[lints.clippy]
+# Async that never awaits colours every caller. 45 of these existed, and the
+# step dispatcher already handled sync and async arms side by side, so the
+# uniformity they looked like was not one.
+unused_async = "deny"
+uninlined_format_args = "deny"
+redundant_closure = "deny"

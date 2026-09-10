@@ -1,0 +1,90 @@
+# The Gateway API CRDs, as their own unit.
+#
+# These were once owned by the cluster rather than a floe: a
+# mechanism that exists because gateway and cilium both install these, and a
+# bundle declared by two floes is a conflicting definition. Here it is an
+# ordinary floe providing GATEWAY_API, and the linker's exactly-one rule is
+# what makes a second provider an error instead of a silent merge.
+{
+  lib,
+  catallaxy,
+  sigs,
+  kinds,
+  ...
+}:
+
+catallaxy.mkComponentFloe {
+  name = "gateway-api-crds";
+  summary = "The Gateway API CRDs, so Gateway and route kinds have types.";
+
+  inputs = {
+    manifest = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Store path of the upstream CRD bundle. Required — the caller pins the
+        URL and hash in `lib/k8s-specs.nix`.
+      '';
+    };
+
+    version = lib.mkOption {
+      type = lib.types.str;
+      description = "Gateway API release the manifest came from. Required.";
+    };
+  };
+
+  provides.gatewayApi = sigs.GATEWAY_API;
+
+  modules = [
+    (
+      { config, lib, ... }:
+      let
+        inputs = config.floe.inputs;
+
+        # Attaching to a parent is what a route is for, so a route kind is
+        # only half-answered by the CRD existing; the gateway that admits one
+        # answers the rest. These say the type exists.
+        infraKinds = [
+          "kind:gateway.networking.k8s.io/GatewayClass"
+          "kind:gateway.networking.k8s.io/Gateway"
+          "kind:gateway.networking.k8s.io/ReferenceGrant"
+        ];
+
+        routeKinds = [
+          "kind:gateway.networking.k8s.io/HTTPRoute"
+          "kind:gateway.networking.k8s.io/GRPCRoute"
+          "kind:gateway.networking.k8s.io/TCPRoute"
+          "kind:gateway.networking.k8s.io/TLSRoute"
+          "kind:gateway.networking.k8s.io/UDPRoute"
+          "kind:gateway.networking.k8s.io/BackendTLSPolicy"
+          "kind:gateway.networking.k8s.io/BackendLBPolicy"
+        ];
+      in
+      {
+        config.floe.provides.gatewayApi = {
+          inherit (inputs) version;
+          crdKinds = infraKinds ++ routeKinds;
+        };
+
+        config.floe.out.component = kinds.mkComponent {
+          # It installs CRDs and nothing that runs, so the exhaustive image set
+          # is the empty one and it needs no traffic at all. Saying so is not
+          # the same as saying nothing: an undeclared floe reads as one nobody
+          # has looked at.
+          imagesComplete = true;
+
+          backs.gatewayApi = [ "crds" ];
+
+          bundles.crds = kinds.mkBundle {
+            yamls = [ inputs.manifest ];
+
+            # `crdProviders` in manifest-autoedges reads CRDs out of
+            # `resources`; these arrive as an upstream YAML file, which eval
+            # cannot see inside, so the bundle says which kinds it installs.
+            # Every consumer's `kind:` requirement resolves against this.
+            crds = map (lib.removePrefix "kind:") (infraKinds ++ routeKinds);
+          };
+        };
+      }
+    )
+  ];
+}

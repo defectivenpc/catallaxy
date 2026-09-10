@@ -1,0 +1,6 @@
+# `linguist-generated` collapses a file in a diff. Only for what nobody
+# reviews — the snapshots, digests, cli-configs and floe interface documents
+# are committed to be read in a diff.
+lib/kubernetes/generated/** linguist-generated=true
+flake.lock linguist-generated=true
+cli/Cargo.lock linguist-generated=true

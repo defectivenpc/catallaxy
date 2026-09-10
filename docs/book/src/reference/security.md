@@ -1,119 +1,48 @@
-# Security
+# Cluster Security
 
-Catallaxy provides three cluster-level security features that derive policies from existing component configuration. Enable with simple toggles — the system generates the right policies.
+> **The `cluster.security.*` options this page described are not built.** It
+> documented three opt-in controls — Pod Security Admission labelling,
+> default-deny NetworkPolicies, and API server audit logging — under
+> `cluster.security.podSecurity`, `.networkPolicies` and `.auditLogging`.
+> None of those option paths exists, and neither does `mkNetworkPolicy`.
+> They are named here because "the option is missing" is more useful to a
+> reader than a page that quietly omits the subject.
 
-## Pod Security Standards
+There is no NetworkPolicy renderer anywhere in the tree. A `network` channel
+on a component carried a `declared` flag that 31 of 31 floes set to `true`
+and that nothing ever read; it was deleted rather than defaulted, because a
+claim nobody acts on is worse than no claim.
 
-Kubernetes [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) labels control what pods can do in each namespace.
+## What does exist
 
-```nix
-cluster.security.podSecurity = {
-  enable = true;
-  default = "restricted";  # "restricted" | "baseline" | "privileged"
-};
-```
+| Concern                            | Where                                                       |
+| ---------------------------------- | ----------------------------------------------------------- |
+| Client certificates, incl. YubiKey | `cata pki`, [CLI](./cli.md)                                 |
+| Encrypted secrets at rest          | `lab.secrets.stores.*`, `cata secrets`                      |
+| Moving a secret between clusters   | publish/subscribe through a lab store — never a copy in Nix |
+| Secrets a manifest must not carry  | a check refuses secret material in rendered output          |
+| TLS and CA trust                   | the `cert-manager` and `trust-manager` floes                |
+| Single sign-on                     | the `kanidm` floe and `OIDC_PROVIDER`                       |
+| What is reachable from outside     | the `gateway` floe, and `lab.clusters.<c>.edge`             |
+| Image provenance and mirroring     | [Images and Registries](./images.md)                        |
 
-When enabled, all lab-managed namespaces get PSA labels:
+Two of those are worth stating as guarantees rather than as options, because
+they hold without anyone turning them on:
 
-```yaml
-metadata:
-  labels:
-    pod-security.kubernetes.io/enforce: restricted
-    pod-security.kubernetes.io/warn: restricted
-```
+**A generated secret is generated in the cluster.** A floe that needs a
+credential declares it and a generator mints it there; the value does not
+pass through Nix, so it cannot reach the store or a rendered manifest. An
+eval-time check asks, of every Secret referenced, which floe creates it —
+and refuses one that nothing does.
 
-### Per-Namespace Overrides
+**A route may not leave its zone.** `kinds.mkRoute` refuses an out-of-zone
+hostname at construction, so a workload cannot claim a name the lab does not
+serve.
 
-Components that need elevated privileges (Cilium, kaniop, etc.) can override per namespace:
+## If you want the missing controls
 
-```nix
-cluster.security.podSecurity.namespaceOverrides = {
-  kube-system = "privileged";
-  kanidm = "baseline";
-};
-```
-
-### PSA Levels
-
-| Level | Description |
-|-------|-------------|
-| `restricted` | No host networking, no root, no privilege escalation. Most secure. |
-| `baseline` | Prevents known privilege escalations. Allows most workloads. |
-| `privileged` | Unrestricted. For system components (CNI, node agents). |
-
-## Network Policies
-
-Default-deny network policies restrict pod-to-pod traffic. When enabled, each lab namespace gets a policy that blocks all traffic except:
-
-- **DNS** (UDP/TCP 53) — pods can resolve names
-- **Same-namespace** — pods in the same namespace can talk to each other
-
-```nix
-cluster.security.networkPolicies.enable = true;
-```
-
-### Cross-Namespace Access
-
-Components that need cross-namespace traffic add their own allow rules in their phase bundles. Use the `mkNetworkPolicy` helper:
-
-```nix
-{ config, lib, ... }:
-let
-  catallaxyLib = config._module.args.catallaxyLib or {};
-in
-lib.mkIf config.cluster.security.networkPolicies.enable {
-  phases.apps.bundles.my-app.resources.my-app-netpol =
-    catallaxyLib.mkNetworkPolicy {
-      name = "allow-gateway-ingress";
-      namespace = "my-app";
-      podSelector.matchLabels."app" = "my-app";
-      policyTypes = ["Ingress"];
-      ingress = [{
-        from = [{ namespaceSelector.matchLabels."kubernetes.io/metadata.name" = "kube-system"; }];
-        ports = [{ port = 8080; }];
-      }];
-    };
-}
-```
-
-### Built-in Components
-
-Built-in components will progressively add their own network policies when this feature is enabled. The default-deny baseline ensures nothing is open by accident.
-
-## Audit Logging
-
-Kubernetes API server audit logging records who did what.
-
-```nix
-cluster.security.auditLogging.enable = true;
-```
-
-### Provisioner Behavior
-
-| Provisioner | Behavior |
-|-------------|----------|
-| **k3d** | Adds `--audit-policy-file` and `--audit-log-path` API server args. Audit policy mounted from host. |
-| **DOKS** | Managed by DigitalOcean. This option is a no-op. |
-| **Talos** | Machine config for audit policy (future). |
-
-### k3d Audit Policy
-
-When enabled on k3d, an audit policy file is mounted at `/etc/kubernetes/audit/policy.yaml`. The default policy logs:
-- All authentication events
-- All resource creation/deletion
-- Metadata for read operations
-
-Audit logs are written to `/var/log/kubernetes/audit.log` inside the k3d node container.
-
-## Enabling All Security Features
-
-```nix
-# In your cluster config:
-cluster.security = {
-  podSecurity.enable = true;
-  networkPolicies.enable = true;
-  auditLogging.enable = true;
-};
-```
-
-This gives you defense-in-depth: pod restrictions, network segmentation, and an audit trail — all derived from your existing lab configuration.
+Pod Security Admission is namespace labels, so a floe can emit them today
+with no framework support at all. Default-deny NetworkPolicies would need a
+renderer that does not exist and a CNI that enforces them — Cilium does,
+k3d's default Flannel does not, which is why a policy applied on a local lab
+would be inert and would teach the wrong lesson about whether it worked.

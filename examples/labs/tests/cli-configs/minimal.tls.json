@@ -1,0 +1,312 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {},
+    "strategy": "kapp"
+  },
+  "clusterNames": [
+    "app"
+  ],
+  "clusters": {
+    "app": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-minimal-tls-app-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "podinfo/podinfo",
+          "host": "podinfo.minimal.test",
+          "namespace": "podinfo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "cert-manager": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "lab-dns": {
+          "enable": true
+        },
+        "podinfo": {
+          "enable": true
+        },
+        "trust-manager": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [],
+      "kubeContext": "k3d-minimal-tls-app",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "minimal.tls",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "lab-dns/coredns",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 1
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/trust-manager",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 2
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/bundles",
+            "resourceCount": 2
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "podinfo/podinfo",
+            "resourceCount": 3
+          }
+        ]
+      ],
+      "name": "app",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {},
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [],
+          "clusterName": "minimal-tls-app",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "minimal.tls",
+          "noFlannel": false,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": {
+    "host": "127.0.0.1",
+    "port": 5356,
+    "tsigKeyname": "externaldns-key",
+    "tsigSecret": "kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=",
+    "tsigSecretAlg": "hmac-sha256",
+    "zone": "minimal.test"
+  },
+  "infraPublications": [],
+  "labName": "minimal.tls",
+  "labNamespaces": {
+    "app": [
+      "cert-manager",
+      "podinfo"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.25.0.0/16",
+    "name": "minimal.tls"
+  },
+  "opsToolPath": "/nix/store/HASH-minimal.tls-ops/bin/minimal.tls-ops",
+  "registryPort": 5051,
+  "registryUpstreams": [
+    "codeberg.org",
+    "registry.k8s.io",
+    "ghcr.io",
+    "quay.io",
+    "docker.io",
+    "public.ecr.aws",
+    "oci.external-secrets.io"
+  ],
+  "runtimeContexts": {
+    "app": "k3d-minimal-tls-app"
+  },
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {},
+    "stores": {}
+  },
+  "services": {
+    "dns": {
+      "command": [
+        "knotd"
+      ],
+      "container": "catallaxy-minimal.tls-dns",
+      "description": "Knot DNS server (minimal.test)",
+      "image": "cznic/knot:latest",
+      "networks": [
+        "minimal.tls"
+      ],
+      "ports": [
+        "5356:53/tcp",
+        "5356:53/udp"
+      ],
+      "volumes": {
+        "/config/knot.conf": {
+          "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: minimal.test.\n    storage: /storage\n    file: minimal.test.zone\n    acl: update-acl\n"
+        },
+        "/storage/minimal.test.zone": {
+          "content": "$ORIGIN minimal.test.\n$TTL 300\n\n@   IN  SOA ns1.minimal.test. admin.minimal.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.minimal.test.\nns1 IN  A   127.0.0.1\n\n; Every host-facing endpoint arrives through the ingress, which routes\n; by Host header, so one wildcard answers for all of them. The target is\n; the docker bridge gateway because the same zone is served to the host\n; and to pods, and that address reaches the ingress's published port\n; from both.\n;\n; A more specific record always wins, so a DNS controller keeps control\n; of anything it publishes. Without this a lab that runs no such\n; controller resolves nothing at all.\n*   IN  A   172.25.0.1\n"
+        }
+      }
+    },
+    "egress": {
+      "container": "catallaxy-minimal.tls-egress",
+      "description": "Forward proxy inside the lab network (minimal.test)",
+      "dnsContainers": [
+        "catallaxy-minimal.tls-dns"
+      ],
+      "image": "ghcr.io/querateam/docker-tinyproxy:latest",
+      "networks": [
+        "minimal.tls"
+      ],
+      "ports": [
+        "127.0.0.1:3129:8888"
+      ],
+      "volumes": {
+        "/etc/tinyproxy/tinyproxy.conf": {
+          "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
+        }
+      }
+    },
+    "proxy": {
+      "container": "catallaxy-minimal.tls-ingress",
+      "description": "HAProxy lab ingress (minimal.test)",
+      "extraMounts": [
+        {
+          "container": "/etc/haproxy/certs/lab.pem",
+          "host": "{{STATE_DIR}}/proxy/lab.pem"
+        }
+      ],
+      "image": "haproxy:3.1-alpine",
+      "networks": [
+        "minimal.tls"
+      ],
+      "ports": [
+        "127.0.0.1:8080:80",
+        "172.25.0.1:80:80",
+        "127.0.0.1:8443:443",
+        "172.25.0.1:443:443"
+      ],
+      "readyProbe": {
+        "host": "127.0.0.1",
+        "kind": "tcp",
+        "port": 8080,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/usr/local/etc/haproxy/haproxy.cfg": {
+          "content": "global\n    log stdout format raw local0 info\n\n# `init-addr none` with a resolver, rather than resolving at startup:\n# the proxy comes up before the cluster it points at exists, and\n# HAProxy refuses to start on a server name it cannot resolve.\nresolvers docker\n    nameserver dns1 127.0.0.11:53\n    resolve_retries 30\n    timeout resolve 1s\n    timeout retry 1s\n    hold valid 10s\n\ndefaults\n    timeout connect 5s\n    timeout client 1h\n    timeout server 1h\n    timeout tunnel 1h\n    log global\n\nfrontend ft_https\n    bind *:443 ssl crt /etc/haproxy/certs/lab.pem\n    mode http\n\n    use_backend bk_http_app if { req.hdr(host),field(1,:) -i podinfo.minimal.test }\n\nfrontend ft_http\n    bind *:80\n    mode http\n\n    # Redirect to the bare host, not `redirect scheme https`,\n    # which keeps whatever port the client used and would send it\n    # to HTTPS on the HTTP port. Dropping the port lands on 443,\n    # which is what the zone's wildcard reaches.\n    http-request redirect location https://%[req.hdr(host),field(1,:)]%[path] code 301\n\n\nbackend bk_http_app\n    mode http\n    server srv1 k3d-minimal-tls-app-server-0:443 ssl verify none init-addr none resolvers docker resolve-prefer ipv4\n"
+        }
+      }
+    },
+    "registry": {
+      "container": "catallaxy-minimal.tls-registry",
+      "description": "Zot OCI registry (image cache)",
+      "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "ports": [
+        "5051:5000"
+      ],
+      "readyProbe": {
+        "expectedStatus": 200,
+        "host": "127.0.0.1",
+        "kind": "http",
+        "path": "/v2/",
+        "port": 5051,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/etc/zot/config.json": {
+          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
+        },
+        "/var/lib/zot": {
+          "persist": "data"
+        }
+      }
+    }
+  },
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": true
+    }
+  }
+}

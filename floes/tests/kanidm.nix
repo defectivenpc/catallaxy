@@ -1,0 +1,121 @@
+# kanidm, alone.
+{ lib, pkgs }:
+
+let
+  support = import ./support.nix { inherit lib pkgs; };
+  evalWith =
+    inputs:
+    support.evalFloe {
+      name = "kanidm";
+      inputs = {
+        domain = "idm.stub.test";
+      }
+      // inputs;
+    };
+  r = evalWith { };
+  cr = r.bundles.server.resources.kanidm;
+in
+lib.runTests {
+
+  # No fan-in and no client list. Six consumers used to index an
+  # `oauth2Clients` attrset by an id each had invented; kaniop registers the
+  # CRD, so a client is an ordinary resource its own consumer renders.
+  testItPublishesNoClients = {
+    expr = r.provides.oidc ? clients || r.provides.oidc ? oauth2Clients;
+    expected = false;
+  };
+
+  # What a consumer needs to *build* a client, rather than to look one up.
+  testTheProvideSaysHowToRegisterAClient = {
+    expr = {
+      inherit (r.provides.oidc) clientCrd ref;
+    };
+    expected = {
+      clientCrd = "kaniop.rs/KanidmOAuth2Client";
+      ref = {
+        name = "kanidm";
+        namespace = "kanidm";
+      };
+    };
+  };
+
+  # An empty selector is "every namespace". Absent, kaniop looks only in its
+  # own: a consumer's client elsewhere is admitted, stored, and never
+  # reconciled, and the consumer waits for a Secret that is not coming.
+  testClientsMayLiveInTheirConsumersNamespace = {
+    expr = cr.spec ? oauth2ClientNamespaceSelector;
+    expected = true;
+  };
+
+  testThatIsSaidOnTheSignatureToo = {
+    expr = r.provides.oidc.clientsAnyNamespace;
+    expected = true;
+  };
+
+  testTurningItOffDropsTheSelector = {
+    expr =
+      (evalWith { clientsAnyNamespace = false; }).bundles.server.resources.kanidm.spec
+      ? oauth2ClientNamespaceSelector;
+    expected = false;
+  };
+
+  # The domain goes into WebAuthn's relying-party id and every token's issuer
+  # claim, so it must match the hostname clients actually reach.
+  testTheIssuerIsTheDomainOverTls = {
+    expr = r.provides.oidc.issuer;
+    expected = "https://idm.stub.test";
+  };
+
+  # Kanidm has no plaintext mode — WebAuthn needs a secure context — so it
+  # mints a certificate rather than assuming one.
+  testItMintsItsOwnCertificate = {
+    expr = r.bundles.server.resources.kanidm-cert.spec.dnsNames;
+    expected = [ "idm.stub.test" ];
+  };
+
+  testItDeclaresTheCertificateSecret = {
+    expr = r.bundles.server.secrets;
+    expected = [ "kanidm/kanidm-tls" ];
+  };
+
+  # The operator sets this once the server answers. Waiting on the StatefulSet
+  # would report ready while kanidm was still replaying its database.
+  testReadinessIsTheOperatorsVerdict = {
+    expr = r.bundles.server.ready.resource;
+    expected = "kanidm/kanidm";
+  };
+
+  # The field the CRD actually has. `spec.version` is not one of them, and a
+  # `Kanidm` carrying it is refused whole by the API server — which is a floe
+  # that installs nothing, discovered only by applying it. `homelab.local` was
+  # the first lab to run kanidm and it failed here on its first attempt.
+  testTheServerImageIsPinnedOnTheFieldTheCrdDeclares = {
+    expr = {
+      inherit (r.bundles.server.resources.kanidm.spec) image;
+      version = r.bundles.server.resources.kanidm.spec.version or "absent";
+    };
+    expected = {
+      image = "docker.io/kanidm/server:1.6.4";
+      version = "absent";
+    };
+  };
+
+  # And because this floe picks the image rather than the operator picking it
+  # from a version string, it can say so. A `Kanidm` is a CR and not a
+  # workload, so nothing scraping manifests for `image:` would find it.
+  testItNamesTheImageItRuns = {
+    expr = {
+      inherit (r.component) imagesComplete;
+      images = r.cluster.images;
+    };
+    expected = {
+      imagesComplete = true;
+      images."kanidm/server/server" = {
+        registry = "docker.io";
+        repository = "kanidm/server";
+        tag = "1.6.4";
+        digest = null;
+      };
+    };
+  };
+}

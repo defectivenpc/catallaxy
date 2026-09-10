@@ -1,5 +1,12 @@
 {
-  description = "catallaxy — declarative Kubernetes platform management";
+  description = "catallaxy: declarative Kubernetes platform management";
+
+  # The platform is built on the floe interface of RFC 0001 (`lib/floe-core`).
+  # Two earlier implementations preceded it; what they cost is recorded in
+  # `docs/prior-implementations.md`, and the code is in git.
+  #
+  # `labs` and `labPackages` are the two attribute paths `cata` resolves. The
+  # CLI is untouched and its contract is unchanged.
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -31,43 +38,21 @@
     }:
     let
       lib = nixpkgs.lib;
-      pureLib = import ./lib/pure.nix { inherit lib; };
     in
-    {
-      version = "0.6.0";
-
-      nixosModules.default =
-        { ... }:
-        {
-          imports = [ ./modules ];
-        };
-
-      lib = pureLib;
-
-      templates.consumer = {
-        path = ./templates/consumer;
-        description = "A catallaxy consumer flake with a custom component";
-      };
-    }
-    // flake-utils.lib.eachDefaultSystem (
+    flake-utils.lib.eachDefaultSystem (
       system:
       let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs { inherit system overlays; };
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ (import rust-overlay) ];
+        };
 
         rustToolchain = pkgs.rust-bin.stable.latest.default;
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
-        treefmtEval = treefmt-nix.lib.evalModule pkgs {
-          projectRootFile = "flake.nix";
-          programs.nixfmt.enable = true;
-          programs.rustfmt = {
-            enable = true;
-            package = rustToolchain;
-            edition = "2024";
-          };
-          programs.yamlfmt.enable = true;
-        };
+        treefmtEval = treefmt-nix.lib.evalModule pkgs (
+          import ./nix/treefmt.nix { inherit lib rustToolchain; }
+        );
 
         kubelib = nix-kube-generators.lib { inherit pkgs; };
         cataCharts = import ./lib/charts.nix { inherit lib pkgs kubelib; };
@@ -75,122 +60,192 @@
 
         packages' = import ./pkgs {
           inherit
-            self
             lib
             pkgs
             craneLib
             rustToolchain
-            cataCharts
-            k8sSpecs
             ;
         };
 
-        labs = import ./lib/labs.nix {
+        labs = import ./lib/lab.nix {
           inherit
             lib
             pkgs
-            pureLib
             cataCharts
             k8sSpecs
             ;
-          modulesPath = ./modules;
           examplesPath = ./examples/labs;
         };
 
-        exampleLabDefs = labs.discoverExampleLabs;
+        # Fixture labs render and snapshot but never run, so they are in
+        # `labPackages` and not in `labs`.
+        exampleLabs = labs.discoverLabs;
+        fixtureLabs = labs.discoverFixtures;
+        labDefs = exampleLabs // fixtureLabs;
 
+        # One binding, two readers: the flake output the e2e runner evaluates,
+        # and the check that pins what it says. Computing it twice would let
+        # them disagree about the very thing one exists to check.
+        e2eLabs = lib.mapAttrs (_: l: l.config.lab.out.selfContained) exampleLabs;
+
+        # The billable matrix, over every lab including fixtures: a cloud lab
+        # is a fixture until someone has an account, and `nix run .#e2e-cloud`
+        # is how it stops being one.
+        cloudE2eLabs = lib.mapAttrs (_: l: l.config.lab.out.cloudE2e) labDefs;
+
+        # Same reason, for the document the CLI parses: the check diffs
+        # against this and `refresh-cli-configs` copies out of it, so the
+        # fixture and the check cannot be produced by two pipelines that
+        # disagree.
+        cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
+
+        # And for the floes themselves. One derivation holding every floe's
+        # interface, which the check diffs against and `refresh-floe-docs`
+        # copies out of — so the fixture and the check cannot be produced by
+        # two pipelines that disagree.
+        floeInterfaces = import ./nix/floe-docs.nix {
+          inherit lib pkgs labDefs;
+          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs; };
+          # Flattened, the way `lib/lab.nix` flattens it: the three groups are
+          # how the set is organised on disk, not a namespace anything spells.
+          floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+        };
       in
       {
-        # ── Lab evaluation ─────────────────────────────────────────────────
-        mkLab = labs.mkLab;
-        labs = lib.mapAttrs (_: lab: lab.config.lab.out.cliConfig) exampleLabDefs;
-        labPackages = lib.mapAttrs (_: lab: lab.config.lab.out.package) exampleLabDefs;
-        charts = cataCharts;
-        inherit (labs) k8sTypegenConfig;
+        legacyPackages = {
+          charts = cataCharts;
 
-        # ── Packages ───────────────────────────────────────────────────────
+          # The two the CLI resolves, and the only two.
+          labs = lib.mapAttrs (_: l: l.config.lab.out.cliConfig) exampleLabs;
+          labPackages = lib.mapAttrs (_: l: l.config.lab.out.package) labDefs;
+
+          # The intermediate the lab is lowered from, for reading by hand.
+          clusters = lib.mapAttrs (_: l: lib.mapAttrs (_: c: c.out) l.config.lab.clusters) labDefs;
+
+          # What the e2e runner builds its matrix from. Example labs only:
+          # a fixture exists to be rendered and checked, never stood up.
+          inherit e2eLabs cloudE2eLabs;
+
+          # What `refresh-digests` iterates and what the digest checks cover —
+          # everything that renders, fixtures included.
+          digestLabs = lib.attrNames labDefs;
+
+          # One derivation holding `<lab>.json` for every lab, which both
+          # `cliConfig-<lab>` and `refresh-cli-configs` read. Fixtures
+          # included, for the same reason the digests include them: a fixture
+          # exists to be rendered and checked, and a cluster descriptor is
+          # exactly the thing a fixture is cheapest to pin.
+          labCliConfigs = cliConfigs;
+
+          # Every floe's interface, one file each.
+          inherit floeInterfaces;
+
+          # Both plans per lab, for `cata lab plan --from-file`. A fixture is
+          # not in `labs`, so the CLI cannot resolve one by name — and the
+          # snapshot check compares fixtures too, so there has to be a way to
+          # produce the same text for them.
+          labPlans = lib.mapAttrs (_: l: {
+            inherit (l.config.lab.out) deploymentPlan teardownPlan;
+          }) labDefs;
+        };
+
         packages = {
           default = packages'.cataWrapped;
           cata = packages'.cataWrapped;
           cata-unwrapped = packages'.cata;
-          option-docs = packages'.optionDocs;
-          docs = packages'.docs;
+
+          inherit (packages')
+            e2e
+            e2e-all
+            e2e-cloud
+            cloud-reap
+            refresh-digests
+            refresh-cli-configs
+            refresh-floe-docs
+            refresh-plans
+            docs
+            ;
         };
 
-        # ── Apps ───────────────────────────────────────────────────────────
-        apps = {
-          default = {
-            type = "app";
-            program = "${packages'.cataWrapped}/bin/cata";
-          };
-          cata = {
-            type = "app";
-            program = "${packages'.cataWrapped}/bin/cata";
-          };
-          generate-k8s-types =
-            let
-              configFile = pkgs.writeText "k8s-typegen-config.json" (builtins.toJSON labs.k8sTypegenConfig);
-            in
-            {
-              type = "app";
-              program = toString (
-                pkgs.writeShellScript "generate-k8s-types" ''
-                  set -euo pipefail
-                  exec ${packages'.cataWrapped}/bin/cata generate ${configFile}
-                ''
-              );
-            };
-        }
-        // lib.concatMapAttrs (
-          name: lab:
-          let
-            opsTool = lab.config.lab.ops.out.tool;
-          in
-          lib.optionalAttrs (opsTool != null) {
-            "${name}-ops" = {
-              type = "app";
-              program = "${opsTool}/bin/${name}-ops";
-            };
-          }
-        ) exampleLabDefs;
-
-        # ── Development ────────────────────────────────────────────────────
-        devShells.default = pkgs.mkShell {
-          packages = packages'.tools ++ [
-            packages'.cataWrapped
-            rustToolchain
-            pkgs.cargo-watch
-            pkgs.rust-analyzer
-            pkgs.mdbook
-            pkgs.mdbook-mermaid
-            (pkgs.writeShellScriptBin "cata-dev" ''
-              exec cargo run --manifest-path "''${CATALLAXY_ROOT:-$(git rev-parse --show-toplevel)}/cli/Cargo.toml" -- "$@"
-            '')
-          ];
-          shellHook = ''
-            echo "catallaxy dev shell"
-            echo "  cata-dev             # run CLI from source (cargo build + run)"
-            echo "  cargo build          # build CLI"
-            echo "  cargo watch -x run   # watch and rebuild"
-          '';
+        apps.default = {
+          type = "app";
+          program = "${packages'.cataWrapped}/bin/cata";
         };
 
-        # ── Formatting & checks ────────────────────────────────────────────
+        # `nix run .#e2e` with no argument prints the eligible set and why the
+        # rest are not, which is the intended way to find out.
+        apps.e2e = {
+          type = "app";
+          program = "${packages'.e2e}/bin/cata-e2e";
+        };
+
+        apps.e2e-all = {
+          type = "app";
+          program = "${packages'.e2e-all}/bin/cata-e2e-all";
+        };
+
+        # Spends money. Never in `nix flake check`, never on a PR.
+        apps.e2e-cloud = {
+          type = "app";
+          program = "${packages'.e2e-cloud}/bin/cata-e2e-cloud";
+        };
+
+        apps.cloud-reap = {
+          type = "app";
+          program = "${packages'.cloud-reap}/bin/cata-cloud-reap";
+        };
+
+        apps.refresh-digests = {
+          type = "app";
+          program = "${packages'.refresh-digests}/bin/refresh-digests";
+        };
+
+        apps.refresh-cli-configs = {
+          type = "app";
+          program = "${packages'.refresh-cli-configs}/bin/refresh-cli-configs";
+        };
+
+        apps.refresh-floe-docs = {
+          type = "app";
+          program = "${packages'.refresh-floe-docs}/bin/refresh-floe-docs";
+        };
+
+        apps.refresh-plans = {
+          type = "app";
+          program = "${packages'.refresh-plans}/bin/refresh-plans";
+        };
+
+        devShells.default = import ./nix/devshell.nix {
+          inherit pkgs rustToolchain;
+          packages = packages';
+        };
+
         formatter = treefmtEval.config.build.wrapper;
 
-        checks = {
-          cli = packages'.cataWrapped;
-          formatting = treefmtEval.config.build.check self;
-        }
-        // lib.mapAttrs' (
-          name: lab:
-          lib.nameValuePair "${name}-lint" (
-            pkgs.runCommand "${name}-lint" { nativeBuildInputs = [ packages'.cataWrapped ]; } ''
-              cata lab lint --path ${lab.config.lab.out.package}
-              touch $out
-            ''
-          )
-        ) exampleLabDefs;
+        checks = import ./nix/checks {
+          inherit
+            self
+            lib
+            pkgs
+            treefmtEval
+            ;
+          packages = packages';
+          inherit labDefs;
+
+          # `labDefs` includes fixtures; `counts` wants the runnable set.
+          inherit exampleLabs;
+
+          # A check that a *wrong* lab is refused has to build one, and only
+          # `mkLab` can: the refusal is an assertion inside the module tree,
+          # so there is nothing to inspect without evaluating it.
+          inherit (labs) mkLab;
+          inherit
+            e2eLabs
+            cloudE2eLabs
+            cliConfigs
+            floeInterfaces
+            ;
+        };
       }
     );
 }

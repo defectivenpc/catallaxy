@@ -1,0 +1,193 @@
+# Link-time policies: functions over the link result returning violations.
+# Core owns coherence — exactly one provider, sealed provides. A policy owns
+# domain legality, which core has no vocabulary for.
+{ lib }:
+
+let
+  clustersIn = result: result.out."catallaxy.cluster" or { };
+  componentsIn = result: result.out."catallaxy.component" or { };
+in
+{
+  oneCluster =
+    result:
+    let
+      names = lib.attrNames (clustersIn result);
+    in
+    if names == [ ] then
+      [ "no unit provides a cluster: nothing here has anywhere to install to" ]
+    else
+      lib.optional (lib.length names > 1) (
+        "this link is cluster-scope but ${toString (lib.length names)} units "
+        + "provide a cluster: ${lib.concatStringsSep ", " names}. "
+        + "Assembling several is a lab, which is not built yet."
+      );
+
+  promisedHostsAreRouted =
+    result:
+    let
+      gateways = lib.filter (g: g != null) (
+        lib.concatLists (
+          lib.mapAttrsToList (
+            _unit: provs: lib.mapAttrsToList (_n: v: if v ? baseDomain && v ? parentRef then v else null) provs
+          ) result.provides
+        )
+      );
+    in
+    lib.optionals (gateways != [ ]) (
+      let
+        zone = (lib.head gateways).baseDomain;
+
+        # Every `https://host...` and `http://host...` any unit promised.
+        hostsIn =
+          v:
+          if builtins.isString v then
+            let
+              m = builtins.match "https?://([^/:]+).*" v;
+            in
+            lib.optional (m != null) (lib.head m)
+          else if builtins.isAttrs v then
+            lib.concatMap hostsIn (lib.attrValues v)
+          else if builtins.isList v then
+            lib.concatMap hostsIn v
+          else
+            [ ];
+
+        promised = lib.concatLists (
+          lib.mapAttrsToList (
+            unit: provs:
+            map (h: {
+              inherit unit;
+              host = h;
+            }) (lib.concatMap hostsIn (lib.attrValues provs))
+          ) result.provides
+        );
+
+        inZone = lib.filter (p: lib.hasSuffix ".${zone}" p.host) promised;
+
+        routed = lib.concatLists (
+          lib.mapAttrsToList (
+            _unit: component:
+            lib.concatLists (
+              lib.mapAttrsToList (
+                _b: bundle:
+                lib.concatMap (r: lib.optionals ((r.kind or "") == "HTTPRoute") (r.spec.hostnames or [ ])) (
+                  lib.attrValues bundle.resources
+                )
+                # Plus what an operator routes on the bundle's behalf, which
+                # nothing in `resources` names.
+                ++ bundle.routedHosts
+              ) component.bundles
+            )
+          ) (componentsIn result)
+        );
+      in
+      map (
+        p:
+        "unit '${p.unit}' promises '${p.host}', which is inside the gateway's zone "
+        + "'${zone}', and nothing in this cluster routes it. Whatever reads that "
+        + "promise reaches the lab's ingress and is answered 503 — by a component "
+        + "that is running and healthy, which is why nothing reports it."
+      ) (lib.filter (p: !(lib.elem p.host routed)) (lib.unique inZone))
+    );
+
+  kanidmPrincipalsAreUnique =
+    result:
+    let
+      principalKinds = [
+        "KanidmOAuth2Client"
+        "KanidmServiceAccount"
+        "KanidmPersonAccount"
+        "KanidmGroup"
+      ];
+
+      # The entry's name is `metadata.name` for every one of these kinds:
+      # kaniop derives the principal from the resource's own name.
+      claims = lib.concatLists (
+        lib.mapAttrsToList (
+          unit: component:
+          lib.concatLists (
+            lib.mapAttrsToList (
+              bundleName: bundle:
+              lib.concatMap (
+                r:
+                lib.optional (lib.elem (r.kind or "") principalKinds) {
+                  inherit unit;
+                  kind = r.kind;
+                  name = r.metadata.name;
+                }
+              ) (lib.attrValues bundle.resources)
+            ) component.bundles
+          )
+        ) (componentsIn result)
+      );
+    in
+    lib.concatMap (
+      name:
+      let
+        holders = lib.filter (c: c.name == name) claims;
+      in
+      lib.optional (lib.length holders > 1) (
+        "kanidm principal '${name}' is claimed by "
+        + lib.concatMapStringsSep " and " (h: "${h.unit}'s ${h.kind}") holders
+        + ". kanidm has one name namespace across clients, service accounts, "
+        + "people and groups; the second to reconcile gets a 500 and an empty "
+        + "status, and whatever waits on it waits forever."
+      )
+    ) (lib.unique (map (c: c.name) claims));
+
+  componentsTargetTheCluster =
+    result:
+    let
+      clusters = lib.attrNames (clustersIn result);
+      reaches =
+        from: to: lib.any (e: e.from == from && e.to == to && e.kind == "eval") result.graph.edges;
+      installs = lib.filterAttrs (_: c: c.bundles != { }) (componentsIn result);
+    in
+    lib.concatMap (
+      unit:
+      lib.optional (!(lib.elem unit clusters) && !(lib.any (c: reaches unit c) clusters))
+        "unit '${unit}' renders bundles but requires no cluster. Add `requires.cluster = sigs.KUBERNETES_CLUSTER`."
+    ) (lib.attrNames installs);
+
+  needsNameSiblings =
+    result:
+    lib.concatLists (
+      lib.mapAttrsToList (
+        unit: component:
+        let
+          siblings = lib.attrNames component.bundles;
+        in
+        lib.concatLists (
+          lib.mapAttrsToList (
+            bundleName: bundle:
+            map (
+              n:
+              "bundle '${unit}.${bundleName}' needs '${n}', which is not a bundle of '${unit}'. "
+              + "`needs` is intra-floe; it has: ${lib.concatStringsSep ", " siblings}."
+            ) (lib.filter (n: !(lib.elem n siblings)) bundle.needs)
+          ) component.bundles
+        )
+      ) (componentsIn result)
+    );
+
+  # `backs` says which of a floe's own bundles stand behind a provide, so it
+  # can only name its own.
+  backsNameOwnBundles =
+    result:
+    lib.concatLists (
+      lib.mapAttrsToList (
+        unit: component:
+        let
+          siblings = lib.attrNames component.bundles;
+        in
+        lib.concatLists (
+          lib.mapAttrsToList (
+            instance: named:
+            map (n: "'${unit}' backs provide '${instance}' with '${n}', which is not one of its bundles.") (
+              lib.filter (n: !(lib.elem n siblings)) named
+            )
+          ) component.backs
+        )
+      ) (componentsIn result)
+    );
+}

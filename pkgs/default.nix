@@ -1,19 +1,15 @@
-# pkgs/default.nix
+# The CLI, the tools it shells out to, and the runners that test a whole lab.
 #
-# All package derivations for catallaxy.
-
+# The option-docs generator is still parked; its splicer survives as
+# `cata-build docs render`.
 {
-  self,
   lib,
   pkgs,
   craneLib,
   rustToolchain,
-  cataCharts ? null,
-  k8sSpecs ? null,
 }:
 
 let
-  # Runtime tools available to the CLI and scripts
   tools =
     with pkgs;
     [
@@ -21,6 +17,7 @@ let
       k3d
       kubectl
       kapp
+      kyverno-chainsaw
       kubernetes-helm
       jq
       yq-go
@@ -29,15 +26,16 @@ let
       openssl
       sops
       age
+      crane
+      gzip
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
-      pkgs.nssTools # certutil for browser CA trust
+      pkgs.nssTools
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       pkgs.colima
     ];
 
-  # Build the CLI binary
   cata = import ./cli.nix {
     inherit
       lib
@@ -47,20 +45,6 @@ let
       ;
   };
 
-  # Generic runner for operational scripts
-  mkScript =
-    name: text:
-    pkgs.writeShellApplication {
-      inherit name;
-      runtimeInputs = tools;
-      text = ''
-        set -euo pipefail
-        export CATALLAXY_ROOT="${self}"
-        ${text}
-      '';
-    };
-
-  # Wrap cata with runtime tools in PATH
   cataWrapped = pkgs.writeShellApplication {
     name = "cata";
     runtimeInputs = tools ++ [
@@ -68,54 +52,23 @@ let
       pkgs.nix
     ];
     text = ''
+      export CATALLAXY_SYSTEM_CA_BUNDLE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
       exec ${cata}/bin/cata "$@"
     '';
   };
 
-  # Option docs — auto-generated from Nix module system
-  optionDocs =
-    if cataCharts != null && k8sSpecs != null then
-      let
-        raw = import ../lib/docs/options.nix {
-          inherit
-            lib
-            pkgs
-            cataCharts
-            k8sSpecs
-            ;
-          sourceRoot = toString self;
-        };
-      in
-      pkgs.runCommand "catallaxy-option-docs" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 ${../lib/docs/render.py} \
-          ${raw.json}/share/doc/nixos/options.json \
-          $out
-      ''
-    else
-      null;
-
-  # Documentation site
-  docs =
-    if optionDocs != null then
-      pkgs.runCommand "catallaxy-docs"
-        {
-          nativeBuildInputs = [
-            pkgs.mdbook
-            pkgs.mdbook-mermaid
-          ];
-        }
-        ''
-          cp -r ${../docs/book} src
-          chmod -R u+w src
-          mkdir -p src/src/reference/options/components
-          cp ${optionDocs}/lab.md src/src/reference/options/
-          cp ${optionDocs}/cluster.md src/src/reference/options/
-          cp ${optionDocs}/components/*.md src/src/reference/options/components/
-          mdbook-mermaid install src
-          mdbook build src -d $out
-        ''
-    else
-      null;
+  e2e = import ./e2e.nix { inherit lib pkgs cataWrapped; };
+  e2e-all = import ./e2e-all.nix { inherit lib pkgs e2e; };
+  cloud-reap = import ./cloud-reap.nix { inherit lib pkgs; };
+  e2e-cloud = import ./e2e-cloud.nix { inherit lib pkgs cataWrapped; };
+  refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
+  refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
+  refresh-floe-docs = import ./refresh-floe-docs.nix { inherit lib pkgs; };
+  docs = import ./docs.nix { inherit lib pkgs; };
+  refresh-plans = import ./refresh-plans.nix {
+    inherit lib pkgs;
+    cata = cataWrapped;
+  };
 
 in
 {
@@ -123,8 +76,14 @@ in
     tools
     cata
     cataWrapped
-    mkScript
-    optionDocs
+    e2e
+    e2e-all
+    e2e-cloud
+    cloud-reap
+    refresh-digests
+    refresh-cli-configs
+    refresh-floe-docs
+    refresh-plans
     docs
     ;
 }

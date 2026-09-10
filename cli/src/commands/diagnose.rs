@@ -1,0 +1,503 @@
+use anyhow::{Result, bail};
+use clap::Args;
+use console::style;
+
+use crate::config::Context as CataContext;
+use crate::domain::{ClusterSpec, FloeSpec, KappStatus};
+use crate::io;
+
+#[derive(Args)]
+pub struct DiagnoseArgs {
+    #[arg(help = "Cluster to inspect. Defaults to the flake fragment")]
+    cluster: Option<String>,
+
+    #[arg(long, help = "Inspect every cluster in the lab")]
+    all: bool,
+
+    #[arg(
+        long,
+        default_value = "20",
+        value_name = "N",
+        help = "Log lines to show per unhealthy pod"
+    )]
+    tail: u32,
+
+    #[arg(
+        long,
+        default_value = "30",
+        value_name = "MINUTES",
+        help = "How far back to look for warning events"
+    )]
+    since: u32,
+}
+
+pub fn run(ctx: &CataContext, args: DiagnoseArgs) -> Result<()> {
+    if args.all {
+        return diagnose_all(ctx, &args);
+    }
+
+    let lab_name = ctx.resolve_lab_name(None)?;
+    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+
+    let cluster_name = match &args.cluster {
+        Some(name) => name.clone(),
+        None => match lab.cluster_names.as_slice() {
+            [only] => only.clone(),
+            names => bail!(
+                "Multiple clusters in lab. Specify one: {} (or use --all)",
+                names.join(", ")
+            ),
+        },
+    };
+
+    let spec = lab.cluster(&cluster_name)?;
+    let context = lab.kube_context(&cluster_name)?;
+
+    diagnose_cluster(ctx, &cluster_name, context, spec, &args)
+}
+
+fn diagnose_all(ctx: &CataContext, args: &DiagnoseArgs) -> Result<()> {
+    let lab_name = ctx.resolve_lab_name(None)?;
+    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+
+    for cluster_name in &lab.cluster_names {
+        let spec = lab.cluster(cluster_name)?;
+        let context = lab.kube_context(cluster_name)?;
+        diagnose_cluster(ctx, cluster_name, context, spec, args)?;
+        println!();
+    }
+
+    Ok(())
+}
+
+fn diagnose_cluster(
+    _ctx: &CataContext,
+    cluster_name: &str,
+    kube_context: &str,
+    cluster: &ClusterSpec,
+    args: &DiagnoseArgs,
+) -> Result<()> {
+    println!(
+        "{} Diagnosing cluster '{}'",
+        style("catallaxy").cyan().bold(),
+        style(cluster_name).green()
+    );
+    println!();
+
+    if !io::kubectl::api_reachable(kube_context) {
+        println!(
+            "  {} API server unreachable (context: {})",
+            style("UNREACHABLE").red().bold(),
+            kube_context
+        );
+        println!("  Cannot diagnose an unreachable cluster.");
+        return Ok(());
+    }
+    println!("  {} API server reachable", style("OK").green().bold());
+
+    print_node_status(kube_context)?;
+
+    print_kapp_status(kube_context)?;
+
+    print_floe_health(kube_context, cluster);
+
+    print_unhealthy_pods(kube_context, args.tail)?;
+
+    print_stuck_deployments(kube_context)?;
+
+    print_warning_events(kube_context, args.since)?;
+
+    Ok(())
+}
+
+fn print_node_status(context: &str) -> Result<()> {
+    let nodes = io::kubectl::get_node_status(context)?;
+    if nodes.is_empty() {
+        println!("  {} No nodes found", style("WARN").yellow().bold());
+        return Ok(());
+    }
+
+    println!();
+    println!("  {}", style("Nodes:").bold());
+    for node in &nodes {
+        let name = node["metadata"]["name"].as_str().unwrap_or("?");
+        let conditions = node["status"]["conditions"].as_array();
+        let ready = conditions
+            .map(|conds| {
+                conds.iter().any(|c| {
+                    c["type"].as_str() == Some("Ready") && c["status"].as_str() == Some("True")
+                })
+            })
+            .unwrap_or(false);
+
+        let status = if ready {
+            style("Ready").green()
+        } else {
+            style("NotReady").red()
+        };
+
+        let version = node["status"]["nodeInfo"]["kubeletVersion"]
+            .as_str()
+            .unwrap_or("?");
+
+        println!("    {} [{}] {}", style(name).cyan(), status, version);
+    }
+
+    Ok(())
+}
+
+fn print_kapp_status(context: &str) -> Result<()> {
+    let apps = io::kubectl::get_kapp_app_statuses(context)?;
+    if apps.is_empty() {
+        return Ok(());
+    }
+
+    println!();
+    println!("  {}", style("Kapp Apps:").bold());
+    for (name, status, age) in &apps {
+        let display_name = name.strip_prefix("cata-").unwrap_or(name);
+        let status_styled = match KappStatus::classify(status) {
+            KappStatus::Succeeded => style(status).green(),
+            KappStatus::Failed => style(status).red(),
+            KappStatus::Pending => style(status).yellow(),
+        };
+
+        if age.is_empty() {
+            println!("    {} [{}]", style(display_name).cyan(), status_styled);
+        } else {
+            println!(
+                "    {} [{}] ({})",
+                style(display_name).cyan(),
+                status_styled,
+                style(age).dim()
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn print_floe_health(context: &str, cluster: &ClusterSpec) {
+    let enabled: Vec<(&String, &FloeSpec)> = cluster.enabled_floes().collect();
+
+    if enabled.is_empty() {
+        return;
+    }
+
+    println!();
+    println!("  {}", style("Floes:").bold());
+
+    for (name, floe) in &enabled {
+        let namespace = floe.namespace.as_deref().unwrap_or(name);
+        let version = floe.version.as_deref().unwrap_or("?");
+
+        let ns_health = check_namespace_health(context, namespace);
+        let (status, detail) = match ns_health {
+            NamespaceHealth::AllReady(total) => (style("healthy").green(), format!("{total} pods")),
+            NamespaceHealth::SomeNotReady(ready, total) => (
+                style("degraded").yellow(),
+                format!("{ready}/{total} pods ready"),
+            ),
+            NamespaceHealth::NoPods => (style("no pods").dim(), String::new()),
+            NamespaceHealth::Error => (style("error").red(), String::new()),
+        };
+
+        if detail.is_empty() {
+            println!(
+                "    {} {} [{}]",
+                style(name).cyan(),
+                style(format!("v{version}")).dim(),
+                status,
+            );
+        } else {
+            println!(
+                "    {} {} [{}] ({})",
+                style(name).cyan(),
+                style(format!("v{version}")).dim(),
+                status,
+                detail,
+            );
+        }
+    }
+}
+
+enum NamespaceHealth {
+    AllReady(usize),
+    SomeNotReady(usize, usize),
+    NoPods,
+    Error,
+}
+
+fn check_namespace_health(context: &str, namespace: &str) -> NamespaceHealth {
+    let Some(items) = crate::io::kubectl::pods_in_namespace(context, namespace, None) else {
+        return NamespaceHealth::Error;
+    };
+    if items.is_empty() {
+        return NamespaceHealth::NoPods;
+    }
+    let items = &items;
+
+    let total = items.len();
+    let ready = items
+        .iter()
+        .filter(|pod| {
+            let phase = pod["status"]["phase"].as_str().unwrap_or("");
+            match phase {
+                "Succeeded" | "Completed" => true,
+                "Running" => pod["status"]["containerStatuses"]
+                    .as_array()
+                    .map(|statuses| {
+                        statuses
+                            .iter()
+                            .all(|cs| cs["ready"].as_bool() == Some(true))
+                    })
+                    .unwrap_or(false),
+                _ => false,
+            }
+        })
+        .count();
+
+    if ready == total {
+        NamespaceHealth::AllReady(total)
+    } else {
+        NamespaceHealth::SomeNotReady(ready, total)
+    }
+}
+
+fn print_unhealthy_pods(context: &str, tail_lines: u32) -> Result<()> {
+    let unhealthy = io::kubectl::get_unhealthy_pods(context)?;
+    if unhealthy.is_empty() {
+        return Ok(());
+    }
+
+    println!();
+    println!(
+        "  {} ({} pod{})",
+        style("Unhealthy Pods:").bold().red(),
+        unhealthy.len(),
+        if unhealthy.len() == 1 { "" } else { "s" }
+    );
+
+    for pod in &unhealthy {
+        let ns = pod["metadata"]["namespace"].as_str().unwrap_or("?");
+        let name = pod["metadata"]["name"].as_str().unwrap_or("?");
+        let phase = pod["status"]["phase"].as_str().unwrap_or("Unknown");
+        let reason = pod["status"]["reason"].as_str().unwrap_or("");
+
+        let status_detail = if reason.is_empty() {
+            phase.to_string()
+        } else {
+            format!("{phase}/{reason}")
+        };
+
+        println!(
+            "    {} {}/{} [{}]",
+            style("-").red(),
+            style(ns).dim(),
+            style(name).cyan(),
+            style(&status_detail).red()
+        );
+
+        if let Some(statuses) = pod["status"]["containerStatuses"].as_array() {
+            for cs in statuses {
+                let container_name = cs["name"].as_str().unwrap_or("?");
+                if let Some(waiting) = cs["state"]["waiting"].as_object() {
+                    let msg = waiting
+                        .get("message")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| waiting.get("reason").and_then(|v| v.as_str()))
+                        .unwrap_or("waiting");
+                    println!(
+                        "      {} {}: {}",
+                        style("waiting").yellow(),
+                        container_name,
+                        msg
+                    );
+                } else if let Some(terminated) = cs["state"]["terminated"].as_object() {
+                    let exit_code = terminated
+                        .get("exitCode")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(-1);
+                    let reason = terminated
+                        .get("reason")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("terminated");
+                    println!(
+                        "      {} {}: {} (exit {})",
+                        style("terminated").red(),
+                        container_name,
+                        reason,
+                        exit_code
+                    );
+                }
+            }
+        }
+
+        if tail_lines > 0 {
+            let logs = io::kubectl::get_pod_logs(context, ns, name, tail_lines).unwrap_or_default();
+            if !logs.trim().is_empty() {
+                let lines: Vec<&str> = logs.lines().collect();
+                let show_lines = if lines.len() > tail_lines as usize {
+                    &lines[lines.len() - tail_lines as usize..]
+                } else {
+                    &lines
+                };
+                println!("      {}:", style("logs").dim());
+                for line in show_lines {
+                    println!("        {}", style(line).dim());
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_stuck_deployments(context: &str) -> Result<()> {
+    let stuck = io::kubectl::get_stuck_deployments(context)?;
+    if stuck.is_empty() {
+        return Ok(());
+    }
+
+    println!();
+    println!(
+        "  {} ({} deployment{})",
+        style("Stuck Deployments:").bold().yellow(),
+        stuck.len(),
+        if stuck.len() == 1 { "" } else { "s" }
+    );
+
+    for (ns, name) in &stuck {
+        println!(
+            "    {} {}/{}",
+            style("-").yellow(),
+            style(ns).dim(),
+            style(name).cyan()
+        );
+    }
+    println!(
+        "    {} use 'kubectl rollout restart deployment/<name> -n <ns>' to retry",
+        style("hint:").dim()
+    );
+
+    Ok(())
+}
+
+fn print_warning_events(context: &str, since_minutes: u32) -> Result<()> {
+    let events = io::kubectl::get_warning_events(context, since_minutes)?;
+    if events.is_empty() {
+        return Ok(());
+    }
+
+    let mut event_counts: std::collections::BTreeMap<String, (u32, String, String)> =
+        std::collections::BTreeMap::new();
+
+    for event in &events {
+        let ns = event["metadata"]["namespace"].as_str().unwrap_or("?");
+        let message = event["message"].as_str().unwrap_or("?");
+        let involved = event["involvedObject"]["name"].as_str().unwrap_or("?");
+        let key = format!("{ns}/{involved}: {message}");
+        let entry = event_counts
+            .entry(key.clone())
+            .or_insert((0, ns.to_string(), String::new()));
+        entry.0 += 1;
+        entry.2 = message.to_string();
+    }
+
+    let events_to_show: Vec<_> = event_counts.iter().take(15).collect();
+
+    println!();
+    println!(
+        "  {} (last {} min, {} unique)",
+        style("Warning Events:").bold().yellow(),
+        since_minutes,
+        event_counts.len()
+    );
+
+    for (key, (count, _ns, _msg)) in &events_to_show {
+        let count_str = if *count > 1 {
+            format!(" (x{count})")
+        } else {
+            String::new()
+        };
+        let display = truncate_chars(key, 117);
+        println!(
+            "    {} {}{}",
+            style("-").yellow(),
+            display,
+            style(&count_str).dim()
+        );
+    }
+
+    if event_counts.len() > 15 {
+        println!(
+            "    {} ...and {} more",
+            style("-").dim(),
+            event_counts.len() - 15
+        );
+    }
+
+    Ok(())
+}
+
+/// Shorten for display, counting characters rather than bytes.
+///
+/// A Kubernetes Event message is arbitrary UTF-8 from a kubelet, an admission
+/// webhook or a container runtime, so slicing it by byte index panics as soon
+/// as the cut lands inside a codepoint.
+fn truncate_chars(s: &str, keep: usize) -> String {
+    if s.chars().count() <= keep + 3 {
+        return s.to_string();
+    }
+    let mut out: String = s.chars().take(keep).collect();
+    out.push_str("...");
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_short_message_is_left_alone() {
+        assert_eq!(
+            truncate_chars("kubelet: pulled image", 117),
+            "kubelet: pulled image"
+        );
+    }
+
+    #[test]
+    fn a_long_message_is_cut_and_marked() {
+        let long = "a".repeat(200);
+        let got = truncate_chars(&long, 117);
+        assert_eq!(got.chars().count(), 120);
+        assert!(got.ends_with("..."));
+    }
+
+    #[test]
+    fn a_multibyte_character_on_the_cut_does_not_panic() {
+        for pad in 110..125 {
+            let s = format!("{}\u{2014}{}", "a".repeat(pad), "b".repeat(200));
+            let got = truncate_chars(&s, 117);
+            assert!(got.chars().count() <= 120, "pad {pad} produced {got}");
+        }
+    }
+
+    #[test]
+    fn a_message_of_only_multibyte_characters_survives() {
+        let s = "\u{1f600}".repeat(200);
+        let got = truncate_chars(&s, 117);
+        assert_eq!(got.chars().count(), 120);
+    }
+
+    #[test]
+    fn the_byte_slice_this_replaced_would_have_split_a_codepoint() {
+        let s = format!("{}\u{2014}{}", "a".repeat(115), "b".repeat(200));
+        assert!(s.len() > 120);
+        assert!(
+            !s.is_char_boundary(117),
+            "this fixture no longer reproduces the panic it guards against"
+        );
+        truncate_chars(&s, 117);
+    }
+}

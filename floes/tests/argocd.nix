@@ -1,0 +1,98 @@
+# argocd, alone.
+{ lib, pkgs }:
+
+let
+  support = import ./support.nix { inherit lib pkgs; };
+  r = support.evalFloe {
+    name = "argocd";
+    inputs.chart = "/dev/null";
+  };
+  values = r.bundles.argocd.helmCharts.argocd.values;
+  repo = r.bundles.argocd.resources.argocd-repo;
+in
+lib.runTests {
+
+  # The whole reason GIT_REPOSITORY carries two URLs. Argo clones from inside
+  # the cluster, so the repository Secret gets the Service address — the
+  # routed name is a longer path to the same server and needs the lab's CA.
+  # The *repository*, over the in-cluster address. Both halves matter and
+  # each was wrong once: pointing at `externalUrl` sent Argo through the
+  # gateway, and pointing at the server rather than the repository got a 503
+  # from an ingress with nothing at its root.
+  testItClonesTheRepositoryOverTheInternalUrl = {
+    expr = repo.stringData.url;
+    expected = "http://forgejo-http.forgejo.svc.cluster.local:3000/stub-admin/lab.git";
+  };
+
+  # A Secret with this label is how Argo finds a repository; there is no CRD
+  # for one, so a wrong label is a repository Argo never sees.
+  testTheRepositoryIsFoundByLabel = {
+    expr = repo.metadata.labels."argocd.argoproj.io/secret-type";
+    expected = "repository";
+  };
+
+  # Nothing here creates the git credentials — the git server does.
+  testItNeedsTheGitCredentials = {
+    expr = r.bundles.argocd.needsSecrets;
+    expected = [ "forgejo/forgejo-admin" ];
+  };
+
+  # `argocd-redis` is minted here, not left to the chart. The chart creates
+  # it from a `post-install` hook, and a hook is not a rendered manifest —
+  # this renders with `helm template`, so the Job never exists and the Secret
+  # never appears.
+  #
+  # It was first declared as `externalSecrets`, which satisfied the lint and
+  # nothing else: four workloads sat in CreateContainerConfigError for the
+  # full ten minutes on `gitops.local`'s first real run. That is the failure
+  # a lab which only renders cannot report.
+  testTheRedisPasswordIsMintedNotAwaited = {
+    expr = lib.elem "argocd/argocd-redis" r.bundles.argocd.secrets;
+    expected = true;
+  };
+
+  # The Redis pod reads the same key to set `--requirepass` as its four
+  # clients read to authenticate, so one minted value serves both halves.
+  testItIsTheKeyBothHalvesRead = {
+    expr = r.bundles.argocd.resources.argocd-redis-generator.spec.length;
+    expected = 32;
+  };
+
+  # Handing the cluster over is the point: `cata` stops applying and Argo
+  # starts. `bootstrapTool` stays, because something has to apply Argo itself
+  # and it cannot be Argo.
+  testItTakesOverDelivery = {
+    expr = r.provides.delivery;
+    expected = {
+      strategy = "argocd";
+      bootstrapTool = "kubectl-ssa";
+    };
+  };
+
+  # The chart's defaults are an HA topology with a Redis cluster — three more
+  # workloads than a lab reconciling one repository needs.
+  testItRunsOneOfEach = {
+    expr = {
+      ha = values.redis-ha.enabled;
+      ctrl = values.controller.replicas;
+      appsets = values.applicationSet.enabled;
+    };
+    expected = {
+      ha = false;
+      ctrl = 1;
+      appsets = false;
+    };
+  };
+
+  # Argo's own OIDC is `dex`, a second identity provider inside a cluster that
+  # already has one. It talks to the issuer directly instead.
+  testItRunsNoSecondIdentityProvider = {
+    expr = values.dex.enabled;
+    expected = false;
+  };
+
+  testClaimsItsImages = {
+    expr = r.component.imagesComplete;
+    expected = true;
+  };
+}

@@ -1,0 +1,7 @@
+[001] cert-generate name=cert-generate params.zone=self-edge.test
+[002] docker-network-create name=docker-network-create params.gateway=172.40.0.1 params.name=self-edge params.subnet=172.40.0.0/16
+[003] create-cluster name=create-cluster-core cluster=core params.name=core params.provisioner=k3d
+[004] create-cluster name=create-cluster-edge cluster=edge params.name=edge params.provisioner=k3d
+[005] deploy-manifests name=deploy-manifests-core cluster=core params.kubeContext=k3d-self-edge-core params.target=core
+[006] deploy-manifests name=deploy-manifests-edge cluster=edge params.kubeContext=k3d-self-edge-edge params.target=edge
+[007] setup-services name=setup-services

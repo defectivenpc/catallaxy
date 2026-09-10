@@ -1,0 +1,662 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {
+      "branch": "main",
+      "credentialFromKubeSecret": {
+        "context": "k3d-every-floe-core",
+        "key": "password",
+        "name": "forgejo-admin",
+        "namespace": "forgejo",
+        "username": "forgejo-admin"
+      },
+      "path": "manifests",
+      "provider": "forgejo",
+      "repo": "https://git.every-floe.test/forgejo-admin/lab.git"
+    },
+    "strategy": "argocd"
+  },
+  "clusterNames": [
+    "core"
+  ],
+  "clusters": {
+    "core": {
+      "deploy": {
+        "strategy": "kapp"
+      },
+      "edge": {
+        "backend": "k3d-every-floe-core-server-0",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "mode": "proxy"
+      },
+      "exposedHosts": [
+        {
+          "bundle": "argocd/argocd",
+          "host": "argocd.every-floe.test",
+          "namespace": "argocd",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "forgejo/forgejo",
+          "host": "git.every-floe.test",
+          "namespace": "forgejo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "grafana/grafana",
+          "host": "grafana.every-floe.test",
+          "namespace": "monitoring",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "harbor/harbor",
+          "host": "harbor.every-floe.test",
+          "namespace": "harbor",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "hello/hello",
+          "host": "hello.every-floe.test",
+          "namespace": "hello",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "netbird/server",
+          "host": "netbird.every-floe.test",
+          "namespace": "netbird",
+          "paths": [
+            "/api",
+            "/management.ManagementService/",
+            "/signalexchange.SignalExchange/",
+            "/relay",
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "podinfo/podinfo",
+          "host": "podinfo.every-floe.test",
+          "namespace": "podinfo",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        },
+        {
+          "bundle": "kanidm/server",
+          "host": "idm.every-floe.test",
+          "namespace": "default",
+          "paths": [
+            "/"
+          ],
+          "tier": "public"
+        }
+      ],
+      "floes": {
+        "argocd": {
+          "enable": true
+        },
+        "cert-manager": {
+          "enable": true
+        },
+        "cilium": {
+          "enable": true
+        },
+        "cluster": {
+          "enable": true
+        },
+        "cnpg": {
+          "enable": true
+        },
+        "doks": {
+          "enable": true
+        },
+        "external-dns": {
+          "enable": true
+        },
+        "external-secrets": {
+          "enable": true
+        },
+        "forgejo": {
+          "enable": true
+        },
+        "gateway": {
+          "enable": true
+        },
+        "gateway-api": {
+          "enable": true
+        },
+        "grafana": {
+          "enable": true
+        },
+        "harbor": {
+          "enable": true
+        },
+        "hello": {
+          "enable": true
+        },
+        "kanidm": {
+          "enable": true
+        },
+        "kaniop": {
+          "enable": true
+        },
+        "lab-dns": {
+          "enable": true
+        },
+        "loki": {
+          "enable": true
+        },
+        "netbird": {
+          "enable": true
+        },
+        "netbird-operator": {
+          "enable": true
+        },
+        "openbao": {
+          "enable": true
+        },
+        "openebs": {
+          "enable": true
+        },
+        "otel-collector": {
+          "enable": true
+        },
+        "podinfo": {
+          "enable": true
+        },
+        "prometheus": {
+          "enable": true
+        },
+        "provisioned": {
+          "enable": true
+        },
+        "redis-operator": {
+          "enable": true
+        },
+        "reloader": {
+          "enable": true
+        },
+        "seaweedfs": {
+          "enable": true
+        },
+        "secret-store": {
+          "enable": true
+        },
+        "tempo": {
+          "enable": true
+        },
+        "trust-manager": {
+          "enable": true
+        },
+        "velero": {
+          "enable": true
+        },
+        "zot": {
+          "enable": true
+        }
+      },
+      "host": {
+        "colima": {
+          "cpu": 4,
+          "disk": 60,
+          "enable": false,
+          "memory": 8,
+          "profile": "catallaxy"
+        },
+        "waitTimeout": "10m"
+      },
+      "infraStacks": [
+        "core-doks-before-clusters",
+        "core-provisioned-before-clusters"
+      ],
+      "kubeContext": "k3d-every-floe-core",
+      "kubernetes": {
+        "controlPlanes": 1,
+        "distribution": "k3s",
+        "version": "1.31",
+        "workers": 0
+      },
+      "labName": "every-floe",
+      "lifecycle": {},
+      "manifestWaves": [
+        [
+          {
+            "hasReadyProbe": false,
+            "name": "cilium/cilium",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "external-secrets/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "gateway-api/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "kaniop/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "lab-dns/coredns",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "namespaces",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/cert-manager",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "cnpg/cnpg",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "external-secrets/external-secrets",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "kaniop/kaniop",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "loki/loki",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "openbao/server",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "openebs/openebs",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "projection/externaldns-tsig",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "projection/vault-token",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "redis-operator/redis-operator",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "reloader/reloader",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "seaweedfs/seaweedfs",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "tempo/tempo",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "zot/zot",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "cert-manager/issuers",
+            "resourceCount": 3
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "external-dns/external-dns",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "openbao/init",
+            "resourceCount": 7
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "secret-store/store",
+            "resourceCount": 1
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "velero/crds",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/controller",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "prometheus/crds",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/trust-manager",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "velero/velero",
+            "resourceCount": 2
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "gateway/gateway",
+            "resourceCount": 2
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "prometheus/prometheus",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "trust-manager/bundles",
+            "resourceCount": 2
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "kanidm/server",
+            "resourceCount": 3
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "otel-collector/gateway",
+            "resourceCount": 0
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "podinfo/podinfo",
+            "resourceCount": 3
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "forgejo/forgejo",
+            "resourceCount": 4
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "grafana/grafana",
+            "resourceCount": 4
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "harbor/harbor",
+            "resourceCount": 17
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "hello/hello",
+            "resourceCount": 4
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/credentials",
+            "resourceCount": 5
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/dashboard",
+            "resourceCount": 3
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "otel-collector/agent",
+            "resourceCount": 0
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "argocd/argocd",
+            "resourceCount": 7
+          },
+          {
+            "hasReadyProbe": false,
+            "name": "forgejo/bootstrap",
+            "resourceCount": 2
+          },
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/server",
+            "resourceCount": 12
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "netbird/automation",
+            "resourceCount": 7
+          }
+        ],
+        [
+          {
+            "hasReadyProbe": true,
+            "name": "netbird-operator/operator",
+            "resourceCount": 0
+          }
+        ]
+      ],
+      "name": "core",
+      "network": {
+        "podSubnet": "10.244.0.0/16",
+        "serviceSubnet": "10.96.0.0/12"
+      },
+      "projections": {
+        "externaldns-tsig": {
+          "keys": {
+            "tsig-secret": {
+              "from": "tsig-secret",
+              "jsonKey": null,
+              "transform": "none"
+            }
+          },
+          "namespace": "external-dns",
+          "source": "externaldns-tsig"
+        },
+        "vault-token": {
+          "keys": {
+            "token": {
+              "from": "token",
+              "jsonKey": null,
+              "transform": "none"
+            }
+          },
+          "namespace": "external-secrets",
+          "source": "vault-credential"
+        }
+      },
+      "provider": "docker",
+      "provisioner": "k3d",
+      "provisionerConfig": {
+        "k3d": {
+          "autoDeployManifests": [
+            {
+              "name": "cilium",
+              "path": "/nix/store/HASH-cilium-bootstrap.yaml"
+            }
+          ],
+          "clusterName": "every-floe-core",
+          "extraApiServerArgs": [],
+          "extraVolumes": [],
+          "image": "rancher/k3s:v1.31.4-k3s1",
+          "network": "every-floe",
+          "noFlannel": true,
+          "noLocalStorage": false,
+          "noServiceLB": false,
+          "noTraefik": true,
+          "ports": []
+        }
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": null,
+  "infraPublications": [
+    {
+      "key": "provisioned/identity",
+      "outputName": "identity_result",
+      "stack": "core-provisioned-before-clusters",
+      "store": "runtime"
+    }
+  ],
+  "labName": "every-floe",
+  "labNamespaces": {
+    "core": [
+      "argocd",
+      "cert-manager",
+      "cnpg-system",
+      "external-dns",
+      "external-secrets",
+      "forgejo",
+      "monitoring",
+      "harbor",
+      "hello",
+      "kanidm",
+      "loki",
+      "netbird",
+      "openbao",
+      "openebs",
+      "observability",
+      "podinfo",
+      "redis-operator",
+      "reloader",
+      "seaweedfs",
+      "tempo",
+      "velero",
+      "zot"
+    ]
+  },
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.30.0.0/16",
+    "name": "every-floe"
+  },
+  "opsToolPath": "/nix/store/HASH-every-floe-ops/bin/every-floe-ops",
+  "registryPort": null,
+  "registryUpstreams": [],
+  "runtimeContexts": {
+    "core": "k3d-every-floe-core"
+  },
+  "secrets": {
+    "envFile": "examples/labs/tests/every-floe.env",
+    "hostProjections": [],
+    "managed": {
+      "externaldns-tsig": {
+        "keys": {
+          "tsig-secret": {
+            "generator": null,
+            "length": null
+          }
+        },
+        "kind": "value",
+        "store": "knot"
+      },
+      "vault-credential": {
+        "keys": {
+          "token": {
+            "generator": "hex",
+            "length": 32
+          }
+        },
+        "kind": "value",
+        "store": "authored"
+      }
+    },
+    "stores": {
+      "authored": {
+        "backend": "sops",
+        "direction": "authored",
+        "vault": {
+          "path": "secret",
+          "server": null,
+          "version": "v2"
+        },
+        "writerCommand": null
+      },
+      "knot": {
+        "backend": "env",
+        "direction": "authored",
+        "vault": {
+          "path": "secret",
+          "server": null,
+          "version": "v2"
+        },
+        "writerCommand": null
+      },
+      "runtime": {
+        "backend": "vault",
+        "direction": "runtime",
+        "vault": {
+          "path": "secret",
+          "server": "http://openbao.openbao.svc.cluster.local:8200",
+          "version": "v2"
+        },
+        "writerCommand": null
+      }
+    }
+  },
+  "services": {},
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": true
+    }
+  }
+}
