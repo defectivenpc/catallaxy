@@ -17,6 +17,12 @@ distribution
 > | Hole renaming (§3.2, §6)  | Never built. Resolution is by signature name alone.                                                                                                                                                                                                              |
 > | `T.template` (§3.1, §7)   | Never built.                                                                                                                                                                                                                                                     |
 >
+> **Where the words come from.** This RFC does not say so, and it is the
+> single most explanatory fact about the design: the model is Haskell's
+> Backpack — signatures, holes, mixin linking, instantiation — applied to
+> NixOS modules, with sealing from ML. The mapping, and why the rules follow
+> from it, is in the book's [The Model](../book/src/understanding/model.md).
+>
 > Other drift a reader should know about:
 >
 > - **`requiresMany` is gone**, replaced by `requiresOptional`

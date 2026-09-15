@@ -4,6 +4,10 @@ One line each, in roughly the order you meet them. The last column names
 where the term is actually explained, which is the only place that
 explanation is maintained.
 
+Most of these words are borrowed from Haskell's Backpack and from ML
+modules; [The Model](../understanding/model.md#where-the-words-come-from)
+has the mapping and says why the rules follow from it.
+
 ## The nouns
 
 | Term              | Means                                                                                                                                              | Explained in                               |

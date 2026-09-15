@@ -104,6 +104,38 @@ A bundle orders itself against its **siblings in the same floe**, with
 design: ordering between floes comes from the link graph, where it is
 checked, rather than from a string that happens to match.
 
+## Where the words come from
+
+The vocabulary is borrowed, not invented, and knowing the source explains
+most of it at once. Catallaxy's floe system is Haskell's
+[Backpack](https://plv.mpi-sws.org/backpack/) — a mixin module system —
+applied to NixOS modules rather than to Haskell modules.
+
+| Here                        | There                                                                   |
+| --------------------------- | ----------------------------------------------------------------------- |
+| **Signature**               | a Backpack signature (`.hsig`): an interface with no implementation     |
+| **Hole**                    | a hole: an unfilled signature a unit requires                           |
+| **Link**                    | mixin linking: matching requirements to implementations by name         |
+| **`requires` / `provides`** | a unit's requirements and provisions                                    |
+| **Instantiation**           | instantiating a unit by filling its holes                               |
+| **Sealing**                 | ML's opaque sealing (`:>`): a structure seen only through its signature |
+
+That correspondence is why the rules are what they are. A hole must be
+filled by exactly one provider because mixin linking resolves by name, not
+by search. A provided value is sealed because a signature is the _whole_
+interface — if a consumer could read past it, the signature would not be
+one. And a floe is the unit, which is why `lab.clusters.<c>.floes.<name>` is
+an instantiation and not a definition.
+
+Two places the analogy stops. Backpack links a whole program at once;
+catallaxy links per cluster, with the lab as a second, wider scope that a
+cluster falls back to. And Backpack has no notion of a value being unusable
+elsewhere, which is what `T.local` marks: a Secret reference means nothing
+in another cluster, so it does not cross.
+
+The one word that was doing its job backwards was `unit` — see the
+glossary's table of retired terms.
+
 ## Next
 
 - [How It Works](./how-it-works.md): how a declaration becomes a cluster.
