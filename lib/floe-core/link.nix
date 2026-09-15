@@ -17,7 +17,7 @@
       scope ? { },
     }:
     let
-      unitNames = lib.attrNames units;
+      instNames = lib.attrNames units;
       scopeNames = lib.attrNames scope;
 
       isFromScope = p: p ? scope;
@@ -42,13 +42,13 @@
             provs = (getInstance u).def.provides;
           in
           lib.concatMap (
-            instName:
-            lib.optional (provs.${instName}.name == sigName) {
-              unit = u;
-              instance = instName;
+            provideName:
+            lib.optional (provs.${provideName}.name == sigName) {
+              instName = u;
+              inherit provideName;
             }
           ) (lib.attrNames provs)
-        ) unitNames;
+        ) instNames;
 
       scopeProvidersOf =
         sigName: lib.concatMap (n: lib.optional (scope.${n}.sig.name == sigName) { scope = n; }) scopeNames;
@@ -69,7 +69,7 @@
               lib.optionalString (scope.${p.scope} ? origin) ": ${scope.${p.scope}.origin}"
             })"
           else
-            "'${p.unit}' (as ${p.instance})"
+            "'${p.instName}' (as ${p.provideName})"
         ) ps;
 
       selfResolutions = lib.concatMap (
@@ -82,13 +82,13 @@
               lib.mapAttrsToList (
                 hole: sig:
                 map (
-                  p: "unit '${u}' ${label} '${sig.name}' as hole '${hole}' and also provides it (as ${p.instance})"
-                ) (lib.filter (p: !(isFromScope p) && p.unit == u) (localProvidersOf sig.name))
+                  p: "floe '${u}' ${label} '${sig.name}' as hole '${hole}' and also provides it (as ${p.provideName})"
+                ) (lib.filter (p: !(isFromScope p) && p.instName == u) (localProvidersOf sig.name))
               ) decl
             );
         in
         holesOf "requires" inst.def.requires ++ holesOf "optionally requires" inst.def.requiresOptional
-      ) unitNames;
+      ) instNames;
 
       wiringOne = lib.mapAttrs (
         u: inst:
@@ -101,7 +101,7 @@
             throw (
               "floe link error: no provider for signature '${sig.name}' "
               + "(required by unit '${u}' as hole '${hole}'). "
-              + "Units in this link: ${lib.concatStringsSep ", " unitNames}"
+              + "Units in this link: ${lib.concatStringsSep ", " instNames}"
             )
           else if lib.length ps > 1 then
             throw (
@@ -112,7 +112,7 @@
           else
             lib.head ps
         ) inst.def.requires
-      ) (lib.genAttrs unitNames getInstance);
+      ) (lib.genAttrs instNames getInstance);
 
       wiringOptional = lib.mapAttrs (
         u: inst:
@@ -130,7 +130,7 @@
           else
             (if ps == [ ] then null else lib.head ps)
         ) inst.def.requiresOptional
-      ) (lib.genAttrs unitNames getInstance);
+      ) (lib.genAttrs instNames getInstance);
 
       localOnly = lib.filterAttrs (_hole: p: p != null && !(isFromScope p));
       fromScopeOnly = lib.filterAttrs (_hole: p: p != null && isFromScope p);
@@ -175,13 +175,17 @@
 
       fixed = lib.fix (
         self:
-        lib.genAttrs unitNames (
+        lib.genAttrs instNames (
           u:
           let
             inst = getInstance u;
 
             valueOf =
-              p: if isFromScope p then sealedScope.${p.scope} else self.${p.unit}.sealedProvides.${p.instance};
+              p:
+              if isFromScope p then
+                sealedScope.${p.scope}
+              else
+                self.${p.instName}.sealedProvides.${p.provideName};
 
             resolved =
               lib.mapAttrs (_hole: valueOf) wiringOne.${u}
@@ -190,20 +194,20 @@
           rec {
             evaluated = floeLib.evalFloe {
               instance = inst;
-              unitName = u;
+              instName = u;
               resolvedRequires = resolved;
             };
             sealedProvides = lib.mapAttrs (
-              instName: sig:
+              provideName: sig:
               let
                 v =
-                  evaluated.config.floe.provides.${instName} or (throw (
-                    "floe '${u}': declares provide '${instName}' (signature "
+                  evaluated.config.floe.provides.${provideName} or (throw (
+                    "floe '${u}': declares provide '${provideName}' (signature "
                     + "'${sig.name}') but its body never defines "
-                    + "config.floe.provides.${instName}"
+                    + "config.floe.provides.${provideName}"
                   ));
               in
-              sealSig [ u "provides" instName ] sig v
+              sealSig [ u "provides" provideName ] sig v
             ) inst.def.provides;
             outs = lib.mapAttrs (
               kName: kind:
@@ -230,7 +234,7 @@
         u:
         lib.mapAttrsToList (hole: p: {
           from = u;
-          to = p.unit;
+          to = p.instName;
           via = hole;
           kind = "eval";
         }) (localOnly wiringOne.${u})
@@ -239,13 +243,13 @@
             hole: p:
             lib.optional (p != null) {
               from = u;
-              to = p.unit;
+              to = p.instName;
               via = hole;
               kind = "eval";
             }
           ) (localOnly wiringOptional.${u})
         )
-      ) unitNames;
+      ) instNames;
 
       deployEdges = lib.unique (
         lib.concatMap (
@@ -259,7 +263,7 @@
               kind = "deploy";
             }
           ) (scanTokens fixed.${u}.outs)
-        ) unitNames
+        ) instNames
       );
 
       deployDepsOf = u: lib.unique (map (e: e.to) (lib.filter (e: e.from == u) deployEdges));
@@ -279,7 +283,7 @@
       allKindNames = lib.unique (
         lib.concatMap (
           u: map (k: (getInstance u).def.out.${k}.name) (lib.attrNames (getInstance u).def.out)
-        ) unitNames
+        ) instNames
       );
 
       outByKind = lib.genAttrs allKindNames (
@@ -293,29 +297,29 @@
             acc
           else
             acc // { ${u} = fixed.${u}.outs.${lib.head (lib.attrNames matching)}; }
-        ) { } unitNames
+        ) { } instNames
       );
 
       # ---- Result and policies ---------------------------------------------
 
       result = {
-        provides = lib.genAttrs unitNames (u: fixed.${u}.sealedProvides);
+        provides = lib.genAttrs instNames (u: fixed.${u}.sealedProvides);
         out = outByKind;
 
-        inputs = lib.genAttrs unitNames (u: interfaces.renderInputs (getInstance u).def.inputs);
+        inputs = lib.genAttrs instNames (u: interfaces.renderInputs (getInstance u).def.inputs);
 
         graph = {
-          nodes = unitNames;
+          nodes = instNames;
           edges = evalEdges ++ deployEdges;
         };
-        phases = lib.genAttrs unitNames (phaseOf [ ]);
+        phases = lib.genAttrs instNames (phaseOf [ ]);
 
         wiring = {
           one = lib.mapAttrs (_u: localOnly) wiringOne;
           optional = lib.mapAttrs (_u: localOnly) wiringOptional;
 
           scope = lib.mapAttrs (u: _: (fromScopeOnly wiringOne.${u}) // (fromScopeOnly wiringOptional.${u})) (
-            lib.genAttrs unitNames getInstance
+            lib.genAttrs instNames getInstance
           );
         };
       };

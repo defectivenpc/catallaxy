@@ -86,7 +86,7 @@ an instance, and the linker resolves between instances.
 ---
 ### `provides` {#provides}
 
-Provisions this cluster exposes to the lab, as `<unit>/<provide>`.
+Provisions this cluster exposes to the lab, as `<instName>/<provide>`.
 
 A link is per-cluster, so `requires.mesh = MESH_NETWORK` finds only
 what is in the same cluster — right for almost everything, and wrong

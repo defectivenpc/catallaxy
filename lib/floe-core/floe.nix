@@ -5,9 +5,9 @@
 rec {
   # Deferred-value token constructor, exposed to bodies as `floe.mkDeferred`
   # via specialArgs (bound to the unit's link name).
-  mkDeferredFor = unitName: path: {
+  mkDeferredFor = instName: path: {
     __deferred = true;
-    source = unitName;
+    source = instName;
     inherit path;
     phase = "post-apply";
   };
@@ -113,7 +113,7 @@ rec {
   evalFloe =
     {
       instance,
-      unitName,
+      instName,
       resolvedRequires,
     }:
     let
@@ -123,7 +123,7 @@ rec {
         options.floe = {
           name = lib.mkOption {
             type = t.str;
-            default = unitName;
+            default = instName;
           };
           inputs = lib.mkOption {
             type = t.raw;
@@ -149,7 +149,7 @@ rec {
     in
     lib.evalModules {
       specialArgs.floe = {
-        mkDeferred = mkDeferredFor unitName;
+        mkDeferred = mkDeferredFor instName;
       };
       modules = def.modules ++ [ base ];
     };

@@ -9,7 +9,7 @@ in
   # mkVerifyTest :: { labName; clusterName; checks } -> package
   #
   # `checks` is `cluster.out.verify`: the lifted channel, keyed
-  # `<unit>/<bundle>/<check>`, whose values are the floe's `verifyCheckSchema`
+  # `<instName>/<bundle>/<check>`, whose values are the floe's `verifyCheckSchema`
   # records.
   mkVerifyTest =
     {

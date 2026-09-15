@@ -85,7 +85,9 @@ in
         lib.sort (a: b: a < b) (
           lib.unique (
             lib.concatLists (
-              lib.mapAttrsToList (_hole: p: backs."${p.unit}/${p.instance}" or (bundlesOfUnit p.unit)) holes
+              lib.mapAttrsToList (
+                _hole: p: backs."${p.instName}/${p.provideName}" or (bundlesOfUnit p.instName)
+              ) holes
             )
           )
         );

@@ -9,7 +9,7 @@ in
 
   # mkLintChecks :: { clusterName; checks } -> package or null
   #
-  # `checks` is `cluster.out.lint`, keyed `<unit>/<bundle>/<name>`.
+  # `checks` is `cluster.out.lint`, keyed `<instName>/<bundle>/<name>`.
   mkLintChecks =
     { clusterName, checks }:
     let

@@ -62,7 +62,7 @@ let
     provideOf = unit: instName: labLink.provides.${unit}.${instName};
   };
 
-  # A cluster exposes named provisions, `<unit>/<provide>`, so a floe holding one
+  # A cluster exposes named provisions, `<instName>/<provide>`, so a floe holding one
   # that travels and one that cannot is not all-or-nothing.
   offerEntry =
     clusterName: cluster: spec:
@@ -72,7 +72,7 @@ let
         reason:
         throw (
           "cluster '${clusterName}' exposes '${spec}' to the lab, ${reason}.\n"
-          + "An entry names one provision as '<unit>/<provide>'."
+          + "An entry names one provision as '<instName>/<provide>'."
         );
       unit = lib.elemAt parts 0;
       instName = lib.elemAt parts 1;
