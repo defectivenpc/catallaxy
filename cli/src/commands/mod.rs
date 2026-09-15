@@ -40,7 +40,6 @@ mod help_text {
             super::pki::PkiCommands::augment_subcommands(Command::new("pki")),
             super::images::ImagesCommands::augment_subcommands(Command::new("images")),
             super::docs::DocsCommands::augment_subcommands(Command::new("docs")),
-            super::kubeconfig::KubeconfigCommands::augment_subcommands(Command::new("kubeconfig")),
             super::apply::ApplyArgs::augment_args(Command::new("apply")),
             super::diagnose::DiagnoseArgs::augment_args(Command::new("diagnose")),
             super::generate::GenerateArgs::augment_args(Command::new("generate")),

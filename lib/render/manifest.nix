@@ -8,8 +8,6 @@ let
     filterAttrs
     ;
 
-  writeYamlFile = name: content: pkgs.writeText "${name}.yaml" (builtins.toJSON content);
-
   writeValuesFile = name: values: pkgs.writeText "${name}-values.yaml" (builtins.toJSON values);
 
   resourceToYaml =
@@ -350,45 +348,7 @@ let
       echo "${bundleKey}" > $out/.bundle-key
     '';
 
-  renderNamespaces =
-    namespaces:
-    let
-      nsResources = lib.genAttrs namespaces (ns: {
-        apiVersion = "v1";
-        kind = "Namespace";
-        metadata.name = ns;
-      });
-    in
-    renderResources "namespaces" nsResources;
-
 in
 {
-  inherit
-    renderHelmChart
-    renderResources
-    renderYamls
-    renderBundle
-    renderNamespaces
-    resourceToYaml
-    writeValuesFile
-    writeYamlFile
-    ;
-
-  applyCommonLabels =
-    labels: resource:
-    resource
-    // {
-      metadata = (resource.metadata or { }) // {
-        labels = (resource.metadata.labels or { }) // labels;
-      };
-    };
-
-  applyCommonAnnotations =
-    annotations: resource:
-    resource
-    // {
-      metadata = (resource.metadata or { }) // {
-        annotations = (resource.metadata.annotations or { }) // annotations;
-      };
-    };
+  inherit renderResources renderBundle;
 }

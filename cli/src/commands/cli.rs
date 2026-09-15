@@ -57,11 +57,8 @@ pub enum Commands {
         command: secrets::SecretsCommands,
     },
 
-    #[command(about = "Inspect kubeconfig contexts for lab clusters")]
-    Kubeconfig {
-        #[command(subcommand)]
-        command: kubeconfig::KubeconfigCommands,
-    },
+    #[command(about = "Show the kubeconfig contexts for the lab's clusters")]
+    Kubeconfig,
 
     #[command(about = "Inspect and mirror the container images a lab references")]
     Images {
@@ -78,7 +75,7 @@ pub async fn dispatch(ctx: &CataContext, command: Commands) -> anyhow::Result<()
         Commands::Diagnose(args) => diagnose::run(ctx, args),
         Commands::Pki { command } => pki::run(ctx, command),
         Commands::Secrets { command } => secrets::run(ctx, command),
-        Commands::Kubeconfig { command } => kubeconfig::run(ctx, command),
+        Commands::Kubeconfig => kubeconfig::run(ctx),
         Commands::Images { command } => images::run(ctx, command).await,
     }
 }

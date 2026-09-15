@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use console::style;
@@ -80,8 +80,9 @@ pub fn merge_kubeconfig(kubeconfig_path: &Path, context_name: &str) -> Result<()
 /// If `HOME` is unset, or the cluster's own kubeconfig file exists and cannot
 /// be removed. Entries absent from the default kubeconfig are not an error.
 pub fn cleanup_kubeconfig(cluster_name: &str) -> Result<()> {
-    let kubeconfig_path = dirs::home_dir()
-        .context("Could not find home directory")?
+    let kubeconfig_path = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .context("HOME is unset")?
         .join(".kube")
         .join(format!("{cluster_name}.kubeconfig"));
 

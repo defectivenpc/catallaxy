@@ -10,8 +10,4 @@
 
   # wants :: Token -> Anchor — order against it if it exists.
   wants = token: "optional:provides:${token}";
-
-  wantsAll = tokens: map (token: "optional:provides:${token}") tokens;
-
-  wantsKind = kind: "optional:kind:${kind}";
 }

@@ -163,7 +163,6 @@ pub fn run_lint(package_path: &Path, skip: &[String]) -> Result<bool> {
     println!();
 
     let registry = rules::cluster_rules();
-    let lab_registry = rules::lab_rules();
     let mut all_diagnostics: Vec<Diagnostic> = Vec::new();
 
     if !skip.iter().any(|s| s == "assertions") {
@@ -252,10 +251,8 @@ pub fn run_lint(package_path: &Path, skip: &[String]) -> Result<bool> {
         resources_by_cluster: &resources_by_cluster,
         deployment_plan: &metadata.deployment_plan,
     };
-    for rule in &lab_registry {
-        if !skip.iter().any(|s| s == rule.name()) {
-            all_diagnostics.extend(rule.check(&lab_ctx));
-        }
+    if !skip.iter().any(|s| s == rules::plan::NAME) {
+        all_diagnostics.extend(rules::plan::check(&lab_ctx));
     }
 
     println!();

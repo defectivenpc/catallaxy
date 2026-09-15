@@ -49,9 +49,26 @@ pub fn generate_value(generator: &str, length: Option<u64>) -> Result<String> {
                 .map(char::from)
                 .collect())
         }
-        "uuid" => Ok(uuid::Uuid::new_v4().to_string()),
+        "uuid" => Ok(uuid_v4()),
         _ => bail!("Unknown generator: {generator}"),
     }
+}
+
+/// A v4 UUID: 16 random bytes with the version and variant bits pinned, in
+/// the canonical 8-4-4-4-12 grouping.
+fn uuid_v4() -> String {
+    let mut b: [u8; 16] = rand::random();
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    let h = hex::encode(&b);
+    format!(
+        "{}-{}-{}-{}-{}",
+        &h[0..8],
+        &h[8..12],
+        &h[12..16],
+        &h[16..20],
+        &h[20..32]
+    )
 }
 
 mod hex {
@@ -97,6 +114,36 @@ mod tests {
     #[test]
     fn uuid_needs_no_length() {
         assert_eq!(generate_value("uuid", None).unwrap().len(), 36);
+    }
+
+    /// The bits a v4 UUID pins, checked over enough draws that a stuck
+    /// nibble shows. Hand-rolled since the `uuid` crate went, and the two
+    /// pinned nibbles are exactly what hand-rolling gets wrong.
+    #[test]
+    fn uuid_is_shaped_like_a_v4() {
+        for _ in 0..256 {
+            let u = generate_value("uuid", None).unwrap();
+            let parts: Vec<&str> = u.split('-').collect();
+            assert_eq!(
+                parts.iter().map(|p| p.len()).collect::<Vec<_>>(),
+                vec![8, 4, 4, 4, 12],
+                "{u}"
+            );
+            assert!(u.chars().all(|c| c == '-' || c.is_ascii_hexdigit()), "{u}");
+            assert_eq!(parts[2].chars().next().unwrap(), '4', "version nibble: {u}");
+            assert!(
+                matches!(parts[3].chars().next().unwrap(), '8' | '9' | 'a' | 'b'),
+                "variant nibble: {u}"
+            );
+        }
+    }
+
+    #[test]
+    fn two_uuids_differ() {
+        assert_ne!(
+            generate_value("uuid", None).unwrap(),
+            generate_value("uuid", None).unwrap()
+        );
     }
 
     #[test]

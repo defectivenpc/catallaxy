@@ -4,27 +4,22 @@ use std::path::PathBuf;
 use crate::domain::diagnostic::{Diagnostic, Severity};
 use crate::domain::plan::{PlannedStep, StepParams};
 
-use super::{LabCheckContext, LabCheckRule};
+use super::LabCheckContext;
 
-pub struct Plan;
+pub const NAME: &str = "plan";
 
-impl LabCheckRule for Plan {
-    fn name(&self) -> &'static str {
-        "plan"
-    }
-    fn check(&self, ctx: &LabCheckContext<'_>) -> Vec<Diagnostic> {
-        let known: HashSet<&str> = ctx
-            .metadata
-            .cluster_names
-            .iter()
-            .map(String::as_str)
-            .collect();
+pub fn check(ctx: &LabCheckContext<'_>) -> Vec<Diagnostic> {
+    let known: HashSet<&str> = ctx
+        .metadata
+        .cluster_names
+        .iter()
+        .map(String::as_str)
+        .collect();
 
-        let mut diags = Vec::new();
-        diags.extend(check_cluster_refs(ctx.deployment_plan, &known));
-        diags.extend(check_duplicate_create(ctx.deployment_plan));
-        diags
-    }
+    let mut diags = Vec::new();
+    diags.extend(check_cluster_refs(ctx.deployment_plan, &known));
+    diags.extend(check_duplicate_create(ctx.deployment_plan));
+    diags
 }
 
 fn check_cluster_refs(plan: &[PlannedStep], known: &HashSet<&str>) -> Vec<Diagnostic> {
@@ -108,7 +103,7 @@ mod tests {
             resources_by_cluster: &by_cluster,
             deployment_plan: &meta.deployment_plan,
         };
-        Plan.check(&ctx)
+        check(&ctx)
     }
 
     use crate::lint::rules::test_util::planned_step;

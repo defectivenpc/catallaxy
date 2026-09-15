@@ -1,4 +1,6 @@
 use std::process::{Command, Stdio};
+use time::format_description::well_known::Rfc3339;
+use time::{Duration, OffsetDateTime};
 
 use anyhow::{Context, Result, bail};
 
@@ -168,13 +170,13 @@ pub fn get_warning_events(context: &str, since_minutes: u32) -> Result<Vec<serde
     let json: serde_json::Value = serde_json::from_slice(&output.stdout)
         .context("parsing `kubectl get events -A --field-selector type=Warning -o json`")?;
 
-    let cutoff = chrono::Utc::now() - chrono::Duration::minutes(since_minutes as i64);
+    let cutoff = OffsetDateTime::now_utc() - Duration::minutes(since_minutes as i64);
     let mut events = Vec::new();
     if let Some(items) = json["items"].as_array() {
         for event in items {
             let include = event["lastTimestamp"]
                 .as_str()
-                .and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok())
+                .and_then(|ts| OffsetDateTime::parse(ts, &Rfc3339).ok())
                 .map(|t| t >= cutoff)
                 .unwrap_or(true);
             if include {

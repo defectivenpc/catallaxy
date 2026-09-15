@@ -22,19 +22,16 @@ anyhow = "1.0"
 
 which = "6.0"
 
-dirs = "5.0"
 
 console = "0.15"
 
 rand = "0.8"
 base64 = "0.22"
-uuid = { version = "1", features = ["v4"] }
 
 tempfile = "3.10"
 
 walkdir = "2"
 
-chrono = "0.4"
 
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 
@@ -46,7 +43,7 @@ rcgen = { version = "0.13", features = ["pem", "x509-parser"] }
 x509-parser = "0.16"
 sha1 = "0.10"
 pem = "3.0"
-time = "0.3"
+time = { version = "0.3", features = ["parsing"] }
 
 [dev-dependencies]
 assert_cmd = "2.0"

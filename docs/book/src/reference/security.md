@@ -64,8 +64,9 @@ deny nothing — which teaches that it worked. `disableFlannel = true` plus
 the `cilium` floe is the combination that enforces, and `minimal.cilium`
 exists to be it.
 
-`kinds.mkNetworkPolicy` renders one; `kinds.mkDefaultDeny` renders the deny
-above.
+`kinds.mkDefaultDeny` renders the deny above. There is no general
+`mkNetworkPolicy` helper: a floe writing its own allow rules writes the
+resource, and a helper wrapping four fields would have had one caller.
 
 ## What else exists
 

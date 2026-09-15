@@ -1,23 +1,10 @@
 use anyhow::Result;
-use clap::Subcommand;
 use console::style;
 
 use crate::config::Context as CataContext;
 use crate::io;
 
-#[derive(Subcommand)]
-pub enum KubeconfigCommands {
-    #[command(about = "Show the kubeconfig contexts for the lab's clusters")]
-    Show,
-}
-
-pub fn run(ctx: &CataContext, command: KubeconfigCommands) -> Result<()> {
-    match command {
-        KubeconfigCommands::Show => show(ctx),
-    }
-}
-
-fn show(ctx: &CataContext) -> Result<()> {
+pub fn run(ctx: &CataContext) -> Result<()> {
     let name = ctx
         .flake_ref
         .fragment

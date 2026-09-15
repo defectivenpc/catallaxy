@@ -60,15 +60,6 @@ pub struct LabCheckContext<'a> {
     pub deployment_plan: &'a [PlannedStep],
 }
 
-pub trait LabCheckRule {
-    fn name(&self) -> &'static str;
-    fn check(&self, ctx: &LabCheckContext<'_>) -> Vec<Diagnostic>;
-}
-
-pub fn lab_rules() -> Vec<Box<dyn LabCheckRule>> {
-    vec![Box::new(plan::Plan)]
-}
-
 #[cfg(test)]
 pub(crate) mod test_util {
     use std::path::{Path, PathBuf};

@@ -53,7 +53,7 @@ cata apply       [CLUSTER]
 cata diagnose    [CLUSTER]
 cata pki         init | issue | provision | list | kubeconfig
 cata secrets     edit | encrypt | decrypt | rotate | generate | list
-cata kubeconfig  show
+cata kubeconfig
 cata images      list | mirror | prefetch
 ```
 
@@ -204,7 +204,7 @@ All take `--name <LAB>`, or the flake fragment. See
 | ------------------------- | ----------------------------------------------------------------------------------- |
 | `cata apply [CLUSTER]`    | apply manifests to one cluster (`--bundle`, `--dry-run`, `--sequential`, `--force`) |
 | `cata diagnose [CLUSTER]` | pods, events, deployments (`--all`, `--tail <N>`, `--since <MIN>`)                  |
-| `cata kubeconfig show`    | kubeconfig contexts for lab clusters                                                |
+| `cata kubeconfig`         | kubeconfig contexts for lab clusters                                                |
 
 ## `cata-build`
 

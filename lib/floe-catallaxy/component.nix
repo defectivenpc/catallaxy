@@ -194,57 +194,42 @@ rec {
 
   # ---- constructors a floe ships for its consumers ------------------------
 
-  # mkNetworkPolicy :: { name; namespace; ... } -> NetworkPolicy
-  #
-  # `podSelector = {}` selects every pod in the namespace, which is what
-  # makes a policy with no rules a deny. A NetworkPolicy is additive: once
-  # any policy selects a pod, only what some policy allows gets through.
-  mkNetworkPolicy =
-    {
-      name,
-      namespace,
-      podSelector ? { },
-      ingress ? [ ],
-      egress ? [ ],
-      policyTypes ? [
-        "Ingress"
-        "Egress"
-      ],
-    }:
+  # Deny everything not otherwise allowed, except DNS. `podSelector = {}`
+  # selects every pod in the namespace, and a NetworkPolicy is additive, so a
+  # policy with no allow rules is a deny. A namespace whose pods cannot
+  # resolve turns every failure into a name error, which is why DNS is the
+  # one exception and why it is stated here rather than configured.
+  mkDefaultDeny =
+    { namespace }:
     {
       apiVersion = "networking.k8s.io/v1";
       kind = "NetworkPolicy";
-      metadata = { inherit name namespace; };
+      metadata = {
+        name = "default-deny";
+        inherit namespace;
+      };
       spec = {
-        inherit podSelector policyTypes;
-      }
-      // lib.optionalAttrs (ingress != [ ]) { inherit ingress; }
-      // lib.optionalAttrs (egress != [ ]) { inherit egress; };
-    };
-
-  # Deny everything not otherwise allowed, except DNS. A namespace whose
-  # pods cannot resolve is one where every failure looks like a name error,
-  # and the exception is small enough to state once here.
-  mkDefaultDeny =
-    { namespace }:
-    mkNetworkPolicy {
-      name = "default-deny";
-      inherit namespace;
-      egress = [
-        {
-          to = [ { namespaceSelector.matchLabels."kubernetes.io/metadata.name" = "kube-system"; } ];
-          ports = [
-            {
-              protocol = "UDP";
-              port = 53;
-            }
-            {
-              protocol = "TCP";
-              port = 53;
-            }
-          ];
-        }
-      ];
+        podSelector = { };
+        policyTypes = [
+          "Ingress"
+          "Egress"
+        ];
+        egress = [
+          {
+            to = [ { namespaceSelector.matchLabels."kubernetes.io/metadata.name" = "kube-system"; } ];
+            ports = [
+              {
+                protocol = "UDP";
+                port = 53;
+              }
+              {
+                protocol = "TCP";
+                port = 53;
+              }
+            ];
+          }
+        ];
+      };
     };
 
   mkRoute =

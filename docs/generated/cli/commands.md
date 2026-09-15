@@ -47,7 +47,7 @@ Every command and flag, generated from the parser. The judgement, the flake frag
 | [`cata secrets generate`](#secrets-generate) | Mint values for generator-backed keys |
 | [`cata secrets init-intermediate`](#secrets-init-intermediate) | Mint an intermediate CA signed by the lab's root CA |
 | [`cata secrets list`](#secrets-list) | List managed secrets and their status |
-| [`cata kubeconfig show`](#kubeconfig-show) | Show the kubeconfig contexts for the lab's clusters |
+| [`cata kubeconfig`](#kubeconfig) | Show the kubeconfig contexts for the lab's clusters |
 | [`cata images list`](#images-list) | List every image the lab references |
 | [`cata images actual`](#images-actual) | List every image the lab's clusters are actually running |
 | [`cata images mirror`](#images-mirror) | Copy the lab's images into a registry |
@@ -647,14 +647,14 @@ cata secrets list [LAB]
 
 ## `cata kubeconfig`
 
-Inspect kubeconfig contexts for lab clusters
+Show the kubeconfig contexts for the lab's clusters
 
-### `cata kubeconfig show` {#kubeconfig-show}
+### `cata kubeconfig` {#kubeconfig}
 
 Show the kubeconfig contexts for the lab's clusters
 
 ```
-cata kubeconfig show
+cata kubeconfig
 ```
 
 ## `cata images`
