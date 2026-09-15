@@ -79,8 +79,6 @@
     # once the cluster is up. The floe defaults both halves from one pin, so the
     # two cannot disagree about what is running.
     cluster = floes.k3d-cluster {
-      name = "core";
-      instanceName = "every-floe-core";
 
       disableFlannel = true;
       autoDeployManifests = [
@@ -118,8 +116,7 @@
     # Beside the control plane, so it resolves both `MESH_NETWORK` and
     # `MESH_ADMIN` locally and the lab says nothing about either. In
     # `homelab.mesh` the same floe runs in a second cluster with neither.
-    netbird-operator = floes.netbird-operator {
-    };
+    netbird-operator = floes.netbird-operator { };
 
     # The first consumer of GIT_REPOSITORY, and the reason it carries two
     # URLs: argo clones from inside the cluster, over forgejo's Service.
@@ -222,8 +219,7 @@
     crossplane-provider-nop = floes.crossplane-provider-nop { };
     nop-resource = floes.nop-resource { };
 
-    crossplane = floes.crossplane {
-    };
+    crossplane = floes.crossplane { };
     kaniop = floes.kaniop { };
     redis-operator = floes.redis-operator { };
     reloader = floes.reloader { };
@@ -232,8 +228,7 @@
     # exists to make checkable rather than coincidental.
     openbao = floes.openbao { };
 
-    external-secrets = floes.external-secrets {
-    };
+    external-secrets = floes.external-secrets { };
 
     secret-store = floes.secret-store {
       labStore = "runtime";
@@ -241,8 +236,7 @@
     };
 
     # ---- storage and telemetry ------------------------------------------
-    prometheus = floes.prometheus {
-    };
+    prometheus = floes.prometheus { };
     openebs = floes.openebs { };
     seaweedfs = floes.seaweedfs { };
     zot = floes.zot { };

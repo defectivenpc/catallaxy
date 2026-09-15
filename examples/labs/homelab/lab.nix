@@ -50,8 +50,6 @@
 let
   zone = config.lab.dns.zone;
 
-  instanceOf = clusterName: "${lib.replaceStrings [ "." ] [ "-" ] config.lab.name}-${clusterName}";
-
   # What both clusters need before anything in them can be reached: the CRDs
   # the gateway is written against, a root to sign from, a resolver a pod can
   # use, and the gateway itself.
@@ -62,8 +60,6 @@ let
   # composes them. `examples/labs/tests/secret-sharing.nix` does the same.
   platform = clusterName: {
     cluster = floes.k3d-cluster {
-      name = clusterName;
-      instanceName = instanceOf clusterName;
 
       # Two clusters on one docker network, so their pod and service ranges
       # have to be told apart. An address plan is a decision written down
@@ -91,8 +87,7 @@ let
     # that dials an in-lab HTTPS endpoint — netbird fetching the issuer's
     # signing keys is the first — fails x509 verification without it, and the
     # error names a certificate rather than the thing that is missing.
-    trust-manager = floes.trust-manager {
-    };
+    trust-manager = floes.trust-manager { };
 
     # So a pod resolves `*.${zone}` too. Its resolver is the cluster's
     # CoreDNS, which has never heard of the lab.
@@ -104,8 +99,7 @@ let
 
     # Both clusters mint credentials rather than letting a chart write them
     # into the rendered manifests, so both need a generator.
-    external-secrets = floes.external-secrets {
-    };
+    external-secrets = floes.external-secrets { };
   };
 in
 {
@@ -161,8 +155,7 @@ in
   lab.clusters.obs.floes = platform "obs" // {
     # All three backends, so all three of the collector's optional holes
     # resolve and Grafana gets three datasources.
-    prometheus = floes.prometheus {
-    };
+    prometheus = floes.prometheus { };
     loki = floes.loki { };
     tempo = floes.tempo { };
 

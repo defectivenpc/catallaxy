@@ -12,9 +12,6 @@
 }:
 
 let
-  # Two labs may each hold a cluster called `app` on one docker host, so the
-  # container name carries the lab. `.` is not legal in a k3d cluster name.
-  instanceOf = clusterName: "${lib.replaceStrings [ "." ] [ "-" ] config.lab.name}-${clusterName}";
 in
 {
   lab.name = lib.mkDefault "minimal";
@@ -32,10 +29,7 @@ in
   lab.verify.endpoints.enable = lib.mkDefault false;
 
   lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster {
-      name = "app";
-      instanceName = instanceOf "app";
-    };
+    cluster = floes.k3d-cluster { };
 
     gateway-api = floes.gateway-api-crds { };
 
@@ -45,8 +39,7 @@ in
     # TLS, so nothing signs anything here; `minimal.tls` flips one input.
     cert-manager = floes.cert-manager { };
 
-    gateway = floes.gateway {
-    };
+    gateway = floes.gateway { };
 
     podinfo = floes.podinfo { };
   };

@@ -50,8 +50,6 @@
 
   lab.clusters.app.floes.cluster = lib.mkForce (
     floes.talos-cluster {
-      name = "app";
-      instanceName = "minimal-talos-app";
 
       # Must not overlap the lab's own network above, and no check covers it:
       # this network is talosctl's, not one the lab creates, so

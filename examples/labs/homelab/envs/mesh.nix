@@ -143,8 +143,7 @@ in
       # `MESH_ADMIN` and the operator resolves it. Naming the Secret here would
       # be a second place for it to be wrong, and the floe refuses both answers
       # at once rather than picking one.
-      netbird-operator = floes.netbird-operator {
-      };
+      netbird-operator = floes.netbird-operator { };
     };
 
     # One promise, not the unit. `netbird` also provides `MESH_ADMIN`, which is

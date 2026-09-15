@@ -33,8 +33,6 @@ let
   # shared backend, and the token that store authenticates with.
   sharedFloes = clusterName: {
     cluster = floes.k3d-cluster {
-      name = clusterName;
-      instanceName = "secret-sharing-${clusterName}";
 
       # Distinct ranges, because the two clusters share a docker network. Both
       # took the defaults until `lab-cluster-ranges` was written and said so —
@@ -45,8 +43,7 @@ let
       serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
     };
 
-    external-secrets = floes.external-secrets {
-    };
+    external-secrets = floes.external-secrets { };
 
     store = floes.secret-store {
       labStore = "runtime";

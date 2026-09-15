@@ -56,10 +56,7 @@ in
   lab.secrets.stores.cloud.backend = "env";
 
   lab.clusters.home.floes = members // {
-    cluster = floes.k3d-cluster {
-      name = "home";
-      instanceName = "cloud-home";
-    };
+    cluster = floes.k3d-cluster { };
 
     # Resources, not bundles. Declared here because a resource has to be *somewhere*,
     # and the operator's own cluster is where a lab keeps the thing that

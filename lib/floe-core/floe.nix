@@ -98,9 +98,16 @@ rec {
 
           # instantiate :: attrset -> instance
           # inputsChecked carries the validated, defaults-filled inputs.
+          #
+          # `supplied` is kept verbatim beside it because a floe is
+          # instantiated before it is placed, so it cannot know the cluster it
+          # lands in. Whoever places it re-instantiates with defaults for what
+          # only placement knows, and `supplied` is what says which inputs the
+          # author chose and must therefore win. `inputsChecked` is lazy, so
+          # the discarded instance is never forced.
           instantiate = supplied: {
             __floeInstance = true;
-            inherit def;
+            inherit def supplied;
             inputsChecked = checkInputs supplied;
           };
         }

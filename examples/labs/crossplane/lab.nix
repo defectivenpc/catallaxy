@@ -23,7 +23,6 @@
 }:
 
 let
-  instanceOf = clusterName: "${lib.replaceStrings [ "." ] [ "-" ] config.lab.name}-${clusterName}";
 in
 {
   lab.name = lib.mkDefault "crossplane";
@@ -36,13 +35,9 @@ in
   lab.verify.endpoints.enable = lib.mkDefault false;
 
   lab.clusters.control.floes = {
-    cluster = floes.k3d-cluster {
-      name = "control";
-      instanceName = instanceOf "control";
-    };
+    cluster = floes.k3d-cluster { };
 
-    crossplane = floes.crossplane {
-    };
+    crossplane = floes.crossplane { };
 
     # Nothing here names crossplane. The provider requires a control plane and
     # the resource requires a provider, and the linker matches both — swapping

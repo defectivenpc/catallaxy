@@ -54,11 +54,43 @@ let
 in
 types.submodule (
   { name, config, ... }:
+  let
+    # What only placement knows. A floe is instantiated before it is placed,
+    # so the provisioner cannot read the cluster it is the provisioner *of* —
+    # the attribute key it sits under is the cluster's name, and the lab's
+    # name is what tells two `app` clusters on one docker host apart. Both
+    # were written by hand in every lab, with an `instanceOf` helper copied
+    # between them.
+    #
+    # Only for the floe providing KUBERNETES_CLUSTER: other floes have a
+    # `name` of their own that means something else.
+    providesCluster =
+      inst: lib.any (s: s.name == "KUBERNETES_CLUSTER") (lib.attrValues (inst.def.provides or { }));
+
+    placementDefaults = {
+      inherit name;
+      # `.` is not legal in a k3d cluster name.
+      instanceName = "${lib.replaceStrings [ "." ] [ "-" ] lab.name}-${name}";
+    };
+
+    withPlacement =
+      inst:
+      if !(inst.__floeInstance or false) || !(providesCluster inst) then
+        inst
+      else
+        # Filtered to inputs the floe declares — `external-cluster` has a
+        # `name` and no `instanceName` — and `supplied` last, so writing one
+        # by hand still overrides.
+        inst.def.instantiate (
+          (lib.filterAttrs (k: _: inst.def.inputs ? ${k}) placementDefaults) // inst.supplied
+        );
+  in
   {
     options = {
       floes = mkOption {
         type = types.attrsOf types.raw;
         default = { };
+        apply = lib.mapAttrs (_: withPlacement);
         description = ''
           Instantiated floes, keyed by the name they link under. One of them
           must provide `KUBERNETES_CLUSTER`; the rest are what installs into

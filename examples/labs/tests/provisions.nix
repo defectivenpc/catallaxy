@@ -33,10 +33,7 @@
   lab.dns.hostPort = 5372;
 
   lab.clusters.mgmt.floes = {
-    cluster = floes.k3d-cluster {
-      name = "mgmt";
-      instanceName = "provisions-mgmt";
-    };
+    cluster = floes.k3d-cluster { };
 
     gateway-api = floes.gateway-api-crds { };
     cert-manager = floes.cert-manager { };

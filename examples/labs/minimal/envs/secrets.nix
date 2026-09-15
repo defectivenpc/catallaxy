@@ -65,8 +65,6 @@
 
     floes.cluster = lib.mkForce (
       floes.k3d-cluster {
-        name = "app";
-        instanceName = "minimal-secrets-app";
       }
     );
   };

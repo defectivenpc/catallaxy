@@ -17,7 +17,6 @@
 }:
 
 let
-  instanceOf = clusterName: "${lib.replaceStrings [ "." ] [ "-" ] config.lab.name}-${clusterName}";
 in
 {
   lab.name = lib.mkDefault "gitops.local";
@@ -41,10 +40,7 @@ in
   lab.verify.endpoints.enable = true;
 
   lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster {
-      name = "app";
-      instanceName = instanceOf "app";
-    };
+    cluster = floes.k3d-cluster { };
 
     # ---- the platform underneath ----------------------------------------
 
@@ -54,8 +50,7 @@ in
       rootFromLab = true;
     };
 
-    trust-manager = floes.trust-manager {
-    };
+    trust-manager = floes.trust-manager { };
 
     lab-dns = floes.lab-dns { };
 
@@ -65,8 +60,7 @@ in
 
     # forgejo and argocd both mint credentials rather than letting their
     # charts write them into the rendered manifests, so both need a generator.
-    external-secrets = floes.external-secrets {
-    };
+    external-secrets = floes.external-secrets { };
 
     # No openebs. k3s ships a `local-path` StorageClass and openebs installs
     # one under the same name with a different provisioner — which is an

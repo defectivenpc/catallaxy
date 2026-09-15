@@ -50,8 +50,7 @@
     # trust-manager puts that CA in a ConfigMap in every namespace, so a
     # workload can verify a certificate the lab signed. It reads the Secret
     # through X509_ISSUANCE — the edge that used to point the other way.
-    trust-manager = floes.trust-manager {
-    };
+    trust-manager = floes.trust-manager { };
 
     gateway = lib.mkForce (
       floes.gateway {

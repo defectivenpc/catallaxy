@@ -29,8 +29,6 @@
 let
   common = clusterName: {
     cluster = floes.k3d-cluster {
-      name = clusterName;
-      instanceName = "self-edge-${clusterName}";
       podSubnet = if clusterName == "core" then "10.244.0.0/16" else "10.245.0.0/16";
       serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
     };
@@ -39,8 +37,7 @@ let
 
     cert-manager = floes.cert-manager { };
 
-    gateway = floes.gateway {
-    };
+    gateway = floes.gateway { };
 
     # The same app, at the same hostname, in both clusters. A route's name
     # comes from the lab's one zone, so this is not a choice — but it is also
