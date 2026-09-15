@@ -125,7 +125,7 @@ let
     ++ section "Requires, optionally" (
       table [ "hole" "signature" "what it is" ] (holeRows def.requiresOptional)
     )
-    ++ section "Provides" (table [ "promise" "signature" "what it is" ] (holeRows def.provides))
+    ++ section "Provides" (table [ "provision" "signature" "what it is" ] (holeRows def.provides))
     ++ section "Emits" (
       table [ "alias" "kind" "what it carries" ] (
         lib.mapAttrsToList (alias: k: [
@@ -166,7 +166,7 @@ let
 
         provided = cluster.link.provides.${unit} or { };
 
-        # Which fields of a promise travel and which mean something only here.
+        # Which fields of a provision travel and which mean something only here.
         # `T.local` is per field, so a signature is usually a mix and "this
         # one crosses" is not a property of the promise as a whole.
         localFields = sig: lib.attrNames (lib.filterAttrs (_: t: catallaxy.floe.T.isLocal t) sig.fields);

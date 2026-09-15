@@ -566,26 +566,26 @@ types.submodule (
         default = [ ];
         example = [ "netbird/mesh" ];
         description = ''
-          Promises this cluster offers to the lab, as `<unit>/<provide>`.
+          Provisions this cluster exposes to the lab, as `<unit>/<provide>`.
 
           A link is per-cluster, so `requires.mesh = MESH_NETWORK` finds only
           what is in the same cluster — right for almost everything, and wrong
-          for the few things a lab has one of. Naming a promise here puts it
+          for the few things a lab has one of. Naming a provision here puts it
           in the lab's scope, where every *other* cluster resolves it if
           nothing of its own answers first.
 
-          Nearer wins, so offering something lab-wide cannot break a cluster
+          Nearer wins, so exposing something lab-wide cannot break a cluster
           that already has its own: a cluster with a gateway keeps it, and one
           without picks up the lab's.
 
-          Per promise rather than per unit, because one floe holds both kinds.
+          Per provision rather than per instantiation, because one floe holds both kinds.
           `netbird` provides `MESH_NETWORK`, which is the whole point of a
           mesh, and `MESH_ADMIN`, which is a reference to a Secret in this
-          cluster and can never mean anything anywhere else — offering the
-          unit would offer both, and `link` is right to refuse the second.
+          cluster and can never mean anything anywhere else — exposing the
+          instantiation would expose both, and `link` is right to refuse the second.
 
           Opt-in rather than automatic, for the same reason: a cluster's floes
-          promise plenty that is meaningless elsewhere. What is *readable*
+          provide plenty that is meaningless elsewhere. What is *readable*
           across the boundary is then decided per field by `T.local`; see
           `lib/floe-core/link.nix`.
         '';
@@ -673,7 +673,7 @@ types.submodule (
 
         # The SECRET_STORE provides in this cluster, read off the instantiated
         # floes. The signature name is on the definition, so this asks what a
-        # floe promised rather than guessing from what it rendered.
+        # floe provides rather than guessing from what it rendered.
         storesHere = lib.concatLists (
           lib.mapAttrsToList (
             unit: inst:

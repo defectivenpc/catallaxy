@@ -1,10 +1,13 @@
-# The reconcile camp, running.
+# Provisioning with bundles, running.
 #
-# Catallaxy provisions through two camps. The state-based one plans against
-# recorded state and applies once; the reconcile one hands a controller a
-# declaration and waits. `examples/labs/tests/cloud.nix` covers the first with
-# providers that reach no network, and this covers the second the same way:
-# `provider-nop` reconciles a resource to Ready and creates nothing.
+# Infrastructure can be brought into existence either way. A resource plans
+# against recorded state and applies once; a bundle hands a controller a
+# declaration and waits. `examples/labs/tests/cloud.nix` covers the resource
+# route with providers that reach no network, and this covers the bundle
+# route the same way: `provider-nop` reconciles to Ready and creates nothing.
+#
+# Crossplane is a bundle (RFC 0003 §2: it is a controller, it reconciles),
+# which is what makes this lab the interesting half of that claim.
 #
 # What it proves is the lifecycle — Crossplane installing, a provider becoming
 # healthy, its CRDs registering, a managed resource reaching Ready, and all of

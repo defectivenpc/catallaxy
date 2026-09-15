@@ -73,7 +73,7 @@ lib.runTests {
   # Free text, carried for the operator reading a plan, and never dispatched
   # on — dispatching would make it a provisioner enum again.
   #
-  # `kubeconfigFrom` is null here: this fixture is the reconcile-camp case,
+  # `kubeconfigFrom` is null here: this fixture is the bundle case,
   # where the kubeconfig is in a connection Secret and the lab reaches it
   # through the management cluster's `provisions`. The lab strips this field
   # before the descriptor becomes a `ClusterSpec` — it derives a step from it

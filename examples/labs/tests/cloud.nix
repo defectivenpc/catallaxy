@@ -66,7 +66,7 @@ in
       instanceName = "cloud-home";
     };
 
-    # The other camp. Declared here because a resource has to be *somewhere*,
+    # Resources, not bundles. Declared here because a resource has to be *somewhere*,
     # and the operator's own cluster is where a lab keeps the thing that
     # brings the cloud one into existence.
     doks = floes.doks {

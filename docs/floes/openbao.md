@@ -24,7 +24,7 @@ OpenBao, a Vault-compatible server, with its KV mount initialised.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | vault | VAULT_SERVER | A Vault-compatible server: where it answers, its KV mount, and whether it unseals itself. |
 

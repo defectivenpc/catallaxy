@@ -25,7 +25,7 @@ let
 
   # Every provide of a signature, across every cluster, as
   # `{ cluster; unit; value; }`. The same shape `modules/lab/cluster.nix` uses
-  # to find SECRET_STOREs: ask what a floe *promised*, off its definition,
+  # to find SECRET_STOREs: ask what a floe *provides*, off its definition,
   # rather than guessing from what it rendered.
   providesOf =
     sigName:

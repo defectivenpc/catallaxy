@@ -24,14 +24,22 @@ declare. Depends on RFC 0001, sibling to RFC 0002 and RFC 0004.
 > - **§12.8 is met**, as of the change that made `infra-plan`
 >   `dryRunSafe = false` and gated it on `--infra`. A plan is read-only but
 >   not inert: it authenticates and calls the provider's API.
-> - **§8 is not met.** `tofu plan` writes no `-out` and `tofu apply`
->   consumes no plan file, so what is applied is not provably what the plan
->   showed.
-> - **§7's "destroying a stack un-publishes" is not met.** What a
->   publication wrote into a secret store outlives the stack.
+> - **§8 is met**, as of 0.9.0. `infra-plan` writes `-out=plan.tfplan` and
+>   `infra-apply` consumes and removes it, so what is applied is provably
+>   what the plan showed.
+> - **§7's "destroying a stack un-publishes" is met**, as of 0.9.0.
+>   `infra-destroy` calls `unpublish` for each of the stack's publications.
 > - **§6's backward-phase refusal is not built**; a cycle between stacks is
 >   caught, but by the plan graph, naming steps rather than the resource and
 >   output.
+>
+> **The vocabulary moved.** This RFC and RFC 0002 call the two delivery
+> categories "camps". The tree does not: it says **bundles** and
+> **resources**, and where the model itself matters they are _reconciled_
+> (the cluster is the record of truth) and _state-tracked_ (a state file
+> is). "Camp" named a grouping whose members already had names, and
+> `nix/checks/floe-headers.nix` now refuses it outside the RFCs. The text
+> below is left as written, because an RFC records what was decided.
 
 RFC 0002 covers the reconcile camp — manifests handed to Kubernetes, which
 converges. This covers the state-based camp: plan against recorded state,

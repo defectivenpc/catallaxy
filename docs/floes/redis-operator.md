@@ -19,7 +19,7 @@ OT-Container-Kit's Redis operator.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | redisOperator | REDIS_OPERATOR | The Redis operator's CRDs are registered, so Redis CRs have a type. |
 

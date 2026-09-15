@@ -95,7 +95,7 @@ let
 
   componentLib = import ./component.nix { inherit lib floe; };
 
-  # RFC 0003's category, registered here beside the reconcile camp's. Both
+  # RFC 0003's category, registered here beside the bundle one. Both
   # are kinds a floe emits; nothing in core knows either.
   resourceLib = import ./resources.nix { inherit lib floe; };
 in

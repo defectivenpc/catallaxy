@@ -20,7 +20,7 @@ The nop Crossplane provider, whose managed resources reconcile without touching 
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | resourceProvider | MANAGED_RESOURCE_PROVIDER | A provider is healthy and the resource kinds it defines can be applied. |
 

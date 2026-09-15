@@ -1,6 +1,6 @@
 # A floe whose delivery is `resources` rather than bundles — RFC 0003.
 #
-# The two camps are not two kinds of floe. This one takes inputs, requires the
+# Resources and bundles are not two kinds of floe. This one takes inputs, requires the
 # cluster, and emits an output kind, exactly as every bundle floe does; what
 # differs is which kind. That is the claim RFC 0003 §0 makes about registering
 # a category, and this is the smallest thing that tests it.
@@ -19,7 +19,7 @@
 
 floe.mkFloe {
   name = "provisioned";
-  summary = "A fixture floe in the resources camp: mints a value and writes a local file.";
+  summary = "A fixture resource floe: mints a value and writes a local file.";
 
   inputs = {
     stateDir = lib.mkOption {
@@ -54,7 +54,7 @@ floe.mkFloe {
         Where the generated credential is published, or null to generate it
         and let it stay in state.
 
-        This is the join between the two camps (RFC 0003 §7) and the easiest
+        This is the join between resources and bundles (RFC 0003 §7) and the easiest
         thing in the design to get wrong: a publication writes into a store
         the lab already declares, and a cluster reads it back with the
         `secrets.subscribe` it already has. There is no second addressing
@@ -87,7 +87,7 @@ floe.mkFloe {
       in
       {
         config.floe.out.resources = {
-          # Runs before any cluster exists — the case the reconcile camp
+          # Runs before any cluster exists — the case a bundle
           # cannot cover at all, because before a cluster there is no
           # reconciler, no CRD, and nowhere to put a credential.
           identity = {

@@ -122,8 +122,8 @@ on every k3d container, so two labs on one host do not collide.
 
 Floes linked at lab scope, whose provides every cluster can resolve.
 
-The other direction from `lab.clusters.<c>.provides`: that offers a
-cluster's promise upward, this declares one the lab makes itself. A
+The other direction from `lab.clusters.<c>.provides`: that exposes a
+cluster's provision upward, this declares one the lab makes itself. A
 floe here installs nothing — there is no cluster for it to render
 into — and exists to answer a signature, which is how a fact the lab
 holds reaches the floes that need it without being threaded through

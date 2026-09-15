@@ -1,6 +1,6 @@
 # provider-nop: managed resources that reconcile without a cloud.
 #
-# What `local` and `random` are to the OpenTofu camp. A `NopResource` reaches
+# What `local` and `random` are to OpenTofu. A `NopResource` reaches
 # Ready on a timer and touches nothing, so the whole reconcile path — the
 # provider installing, its CRDs registering, a resource going Ready, adopt and
 # delete on teardown — runs in the e2e matrix with no account behind it.

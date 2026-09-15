@@ -19,7 +19,7 @@ The Gateway API CRDs, so Gateway and route kinds have types.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | gatewayApi | GATEWAY_API | The Gateway API CRDs are registered, so Gateway and route kinds have types. |
 

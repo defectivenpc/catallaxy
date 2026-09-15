@@ -23,7 +23,7 @@ let
   # ---- the lab's scope ----------------------------------------------------
   #
   # Two sources, one pool: floes the lab links itself, and whatever each
-  # cluster offered upward. Every cluster resolves against it when nothing of
+  # cluster exposed upward. Every cluster resolves against it when nothing of
   # its own answers first.
 
   # Linked with no scope of its own, so what the lab provides cannot depend on
@@ -52,9 +52,9 @@ let
       ) instances
     );
 
-  # The lab offers everything its own floes promise. A floe here exists only
+  # The lab exposes everything its own floes provide. A floe here exists only
   # to answer a signature — it renders nothing and has no cluster to be local
-  # to — so there is no second kind of promise for it to hold back.
+  # to — so there is no second kind of provision for it to hold back.
   labOwn = entriesOf {
     prefix = "lab";
     origin = "the lab";
@@ -62,7 +62,7 @@ let
     provideOf = unit: instName: labLink.provides.${unit}.${instName};
   };
 
-  # A cluster offers named promises, `<unit>/<provide>`, so a floe holding one
+  # A cluster exposes named provisions, `<unit>/<provide>`, so a floe holding one
   # that travels and one that cannot is not all-or-nothing.
   offerEntry =
     clusterName: cluster: spec:
@@ -71,8 +71,8 @@ let
       bad =
         reason:
         throw (
-          "cluster '${clusterName}' offers '${spec}' to the lab, ${reason}.\n"
-          + "An offer names one promise as '<unit>/<provide>'."
+          "cluster '${clusterName}' exposes '${spec}' to the lab, ${reason}.\n"
+          + "An entry names one provision as '<unit>/<provide>'."
         );
       unit = lib.elemAt parts 0;
       instName = lib.elemAt parts 1;
@@ -83,13 +83,13 @@ let
       bad "which is not one of those"
     else if catallaxy.floe.isUncrossable sig then
       # `link` refuses this too, when a cluster is handed such an entry. Here
-      # is earlier and better placed: it names the offer rather than whichever
+      # is earlier and better placed: it names the entry rather than whichever
       # sibling first resolved against it, it says so to whoever wrote the
       # line, and it fires in a lab that has one cluster — where there is no
       # sibling to be handed anything.
       bad (
         "and every field of '${sig.name}' is link-local. These are the "
-        + "promises that something is running *in a particular place* — a "
+        + "provisions saying something runs *in a particular place* — a "
         + "controller, a webhook, a Secret — and no other cluster is that place"
       )
     else
@@ -103,8 +103,8 @@ let
     clusterName: cluster: lib.listToAttrs (map (offerEntry clusterName cluster) cluster.provides)
   ) config.lab.clusters;
 
-  # Its own offers are excluded, and that is what breaks the evaluation cycle
-  # rather than a resolution rule: a cluster that both offers and consumes
+  # Its own provisions are excluded, and that is what breaks the evaluation cycle
+  # rather than a resolution rule: a cluster that both exposes and consumes
   # would otherwise depend on its own link result. Nearer-wins means a local
   # unit answers first regardless.
   scopeFor =
@@ -134,7 +134,7 @@ let
         holders = lib.unique (map (c: c.clusterName) (lib.filter (c: c.sig == sigName) claims));
       in
       lib.optional (lib.length holders > 1) (
-        "clusters ${lib.concatStringsSep " and " holders} both offer '${sigName}' to the lab. "
+        "clusters ${lib.concatStringsSep " and " holders} both expose '${sigName}' to the lab. "
         + "A scope holds one of each, so whichever a third cluster resolved would be arbitrary."
       )
     ) (lib.unique (map (c: c.sig) claims));
@@ -204,8 +204,8 @@ in
       description = ''
         Floes linked at lab scope, whose provides every cluster can resolve.
 
-        The other direction from `lab.clusters.<c>.provides`: that offers a
-        cluster's promise upward, this declares one the lab makes itself. A
+        The other direction from `lab.clusters.<c>.provides`: that exposes a
+        cluster's provision upward, this declares one the lab makes itself. A
         floe here installs nothing — there is no cluster for it to render
         into — and exists to answer a signature, which is how a fact the lab
         holds reaches the floes that need it without being threaded through

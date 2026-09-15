@@ -25,7 +25,7 @@ A ClusterSecretStore pointing at a backend the lab holds.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | secretStore | SECRET_STORE | A named store an ExternalSecret reads from, and whether it may be written to. |
 

@@ -1,9 +1,9 @@
 # A managed resource that reconciles to Ready and creates nothing.
 #
-# The reconcile camp's `podinfo`: the smallest thing that proves the path
+# A bundle's `podinfo`: the smallest thing that proves the path
 # works. It exists so a lab can run the whole Crossplane lifecycle — provider
 # healthy, CR applied, condition reached, deleted on teardown — without an
-# account, the way `provisioned` does for the state-based camp.
+# account, the way `provisioned` does for resources.
 {
   catallaxy,
   lib,

@@ -30,7 +30,7 @@ Harbor, an OCI registry with its own database and cache.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | registry | OCI_REGISTRY | A container registry, addressed for a human and for a node pulling an image. |
 

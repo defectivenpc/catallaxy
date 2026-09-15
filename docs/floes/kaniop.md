@@ -19,7 +19,7 @@ The kaniop operator, which reconciles Kanidm and its clients.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | identityOperator | IDENTITY_OPERATOR | The identity operator's CRDs are established, so its CRs can be applied. |
 

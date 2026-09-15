@@ -28,7 +28,7 @@ Kanidm as the lab's OIDC provider, reconciled by kaniop.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | oidc | OIDC_PROVIDER | An OIDC issuer, its endpoints, and the CR a consumer registers a client with. |
 

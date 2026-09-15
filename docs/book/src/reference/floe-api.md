@@ -64,7 +64,7 @@ mkSig { name, as, description, fields }
 | Argument      | Meaning                                                          |
 | ------------- | ---------------------------------------------------------------- |
 | `name`        | the identity resolution keys on. Two sigs sharing a name collide |
-| `as`          | the canonical local name a hole or promise binds it under        |
+| `as`          | the canonical local name a hole or provision binds it under      |
 | `description` | one line                                                         |
 | `fields`      | attrset of `T.*` types                                           |
 

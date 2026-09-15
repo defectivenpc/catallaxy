@@ -1,7 +1,7 @@
 # doks, alone.
 #
 # The first floe that names a real provider. What is worth pinning is that it
-# is an ordinary member of the resources camp — same `mkFloe`, same
+# is an ordinary resource floe — same `mkFloe`, same
 # `requires.cluster`, same output kinds as the fixture `provisioned` floe —
 # and that the two things a cloud cluster could have got wrong, it does not:
 # it pins a version rather than a prefix, and it declares the outputs it will
@@ -35,7 +35,7 @@ let
 in
 lib.runTests {
 
-  # Before any cluster exists — the case RFC 0003 §2 says the reconcile camp
+  # Before any cluster exists — the case RFC 0003 §2 says a bundle
   # cannot cover at all, because there is no reconciler yet to reconcile it.
   testAClusterIsMadeBeforeAnyClusterExists = {
     expr = resource.phase;

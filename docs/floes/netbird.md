@@ -28,7 +28,7 @@ A NetBird control plane: management, signal, dashboard and its identity setup.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | mesh | MESH_NETWORK | A mesh control plane, addressed from inside the cluster running it and from outside. |
 | meshAdmin | MESH_ADMIN | The credential that administers the mesh, as a Secret only its own cluster can read. |

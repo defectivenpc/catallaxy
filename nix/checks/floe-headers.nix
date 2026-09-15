@@ -16,6 +16,7 @@ let
     "cluster.prerequisites" = "replaced by exactly-one-provider resolution";
     "ROUTE_REQUEST" = "the routing inversion removed it; see sigs.nix API_GATEWAY";
     ".exports" = "floes provide signatures; there is no exports channel";
+    "camp" = "say bundles and resources; reconciled and state-tracked are the adjectives";
   };
 
   # namesTheOld :: { Path -> Why }, pages whose subject is the renaming.

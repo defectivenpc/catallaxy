@@ -11,7 +11,7 @@ A DigitalOcean Kubernetes cluster, declared as a resource for a state-based tool
 | name | string | *(required)* | Cluster name at the provider. Also the resource's own name. |
 | nodeCount | positive integer, meaning >0 | `2` | Nodes in the default pool. |
 | nodeSize | string | `"s-2vcpu-2gb"` | Droplet size slug for the default node pool. |
-| publishKubeconfigTo | null or (submodule) | `null` | Where the cluster's kubeconfig is published once it exists.  This is the join between the two camps (RFC 0003 §7): the apply produces a kubeconfig, the publication writes it into a store the lab already declares, and nothing invents a second addressing scheme to get it back out.  |
+| publishKubeconfigTo | null or (submodule) | `null` | Where the cluster's kubeconfig is published once it exists.  This is the join between resources and bundles (RFC 0003 §7): the apply produces a kubeconfig, the publication writes it into a store the lab already declares, and nothing invents a second addressing scheme to get it back out.  |
 | region | string | `"nyc3"` | DigitalOcean region slug. |
 | tags | list of string | `[]` | Tags applied to the cluster.  The lab adds its own before these reach the provider — see `modules/lab/cluster.nix`. Tagging is what makes a leak findable: a cluster nobody can list by lab is a cluster nobody notices is still running.  |
 | version | string | *(required)* | DOKS version slug, which is not a Kubernetes version.  Required and pinned: the provider accepts a prefix like `1.31.` and resolves it to whatever is current, so a lab that wrote one would get a different cluster on different days and call it reproducible.  |

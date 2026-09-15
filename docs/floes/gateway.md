@@ -27,7 +27,7 @@ Traefik as the Gateway API implementation, and the cluster's one Gateway.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | gateway | API_GATEWAY | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 

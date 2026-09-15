@@ -28,7 +28,7 @@ Prometheus and its CRDs, as the cluster's metrics store.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | metrics | METRICS_INGEST | Where metrics are written and queried, and the monitoring CRDs a consumer may use. |
 

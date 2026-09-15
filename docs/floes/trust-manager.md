@@ -22,7 +22,7 @@ trust-manager, distributing the lab's CA into every namespace that needs it.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | trust | TRUST_BUNDLE | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |
 

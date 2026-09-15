@@ -156,7 +156,7 @@
       version = "1.31.1-do.4";
     };
 
-    # The other delivery camp. Publishes into the runtime store, so this
+    # Resources rather than bundles. Publishes into the runtime store, so this
     # fixture covers the join between the two (RFC 0003 §7) and not only the
     # resources on their own.
     provisioned = floes.provisioned {

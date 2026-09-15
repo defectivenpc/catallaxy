@@ -20,7 +20,7 @@ The Crossplane control plane, which installs providers and reconciles managed re
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | controlPlane | MANAGED_RESOURCE_CONTROL_PLANE | A control plane that installs providers and reconciles the resources they define. |
 

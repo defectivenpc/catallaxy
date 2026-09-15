@@ -28,7 +28,7 @@ The NetBird operator, which joins this cluster to a mesh another one runs.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | meshOperator | MESH_OPERATOR | The mesh operator's CRDs are registered, and the router its resources attach to. |
 

@@ -30,9 +30,9 @@ let
 in
 lib.runTests {
 
-  # Before any cluster exists is the case the reconcile camp cannot cover at
+  # Before any cluster exists is the case a bundle cannot cover at
   # all: no reconciler, no CRD, and nowhere to put a credential. That is the
-  # whole reason RFC 0003 §1 says the second camp cannot be dissolved into
+  # whole reason RFC 0003 §1 says resources cannot be dissolved into
   # the first.
   testItProvisionsBeforeAnyClusterExists = {
     expr = lib.mapAttrs (_: r: r.phase) (resources plain);
@@ -86,7 +86,7 @@ lib.runTests {
     };
   };
 
-  # The join between the two camps. Off by default, because a resource whose
+  # The join between resources and bundles. Off by default, because a resource whose
   # value stays in state is a complete arrangement — publishing is what a lab
   # asks for when a cluster has to read the value back.
   testNothingIsPublishedUntilTheLabAsks = {

@@ -20,7 +20,7 @@ External Secrets, which mints secret values in the cluster.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | generation | SECRET_GENERATION | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
 

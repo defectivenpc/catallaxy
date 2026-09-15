@@ -80,7 +80,7 @@ to use, the replica count, the domain. Those are inputs.
 
 ### Values from the lab, and from another cluster
 
-A floe that needs the lab's DNS zone requires `DNS_ZONE`; the lab offers it
+A floe that needs the lab's DNS zone requires `DNS_ZONE`; the lab exposes it
 as a **scope**, and every cluster resolves against the union of its own
 floes and the lab's offers, nearer-first. A cluster running its own zone
 provider shadows the lab's, and neither the floe nor your lab file says

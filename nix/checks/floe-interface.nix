@@ -8,7 +8,7 @@
 #
 # It also covers what nothing else does. `manifest-digest` walks rendered YAML,
 # so it cannot see an ops command's name, a bundle's ready-probe kind, whether a
-# promise's field travels or is link-local, or that a floe adds a plan step.
+# provision's field travels or is link-local, or that a floe adds a plan step.
 # All of those reach an operator or another floe, and all of them were
 # previously checked by nobody.
 #
@@ -33,7 +33,7 @@ lib.foldl' lib.mergeAttrs { } (
             echo "The interface of '${name}' changed." >&2
             echo "" >&2
             echo "This is the floe as anything outside it sees it: what a deployer" >&2
-            echo "may set, what it asks the cluster for, what it promises and which" >&2
+            echo "may set, what it asks the cluster for, what it provides and which" >&2
             echo "of those fields travel, what installs and in what order, and what" >&2
             echo "an operator can type. A change here is a change to somebody else's" >&2
             echo "contract, whether or not any manifest moved." >&2

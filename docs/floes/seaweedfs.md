@@ -20,7 +20,7 @@ SeaweedFS, an S3-compatible object store.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | objectStore | OBJECT_STORE | An S3-compatible endpoint and the credentials, if any, needed to reach it. |
 

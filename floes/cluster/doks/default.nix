@@ -1,6 +1,6 @@
 # A DigitalOcean Kubernetes cluster, declared as a resource — RFC 0003.
 #
-# This is the case the reconcile camp cannot cover at all (RFC 0003 §2, case
+# This is the case a bundle cannot cover at all (RFC 0003 §2, case
 # 1): before a cluster exists there is no reconciler, no CRD, and nowhere to
 # put a credential. Something has to make the first one, and this is it.
 #
@@ -93,7 +93,7 @@ floe.mkFloe {
       description = ''
         Where the cluster's kubeconfig is published once it exists.
 
-        This is the join between the two camps (RFC 0003 §7): the apply
+        This is the join between resources and bundles (RFC 0003 §7): the apply
         produces a kubeconfig, the publication writes it into a store the lab
         already declares, and nothing invents a second addressing scheme to
         get it back out.
@@ -103,7 +103,7 @@ floe.mkFloe {
 
   # It installs into a cluster like any other member — the management cluster,
   # or whichever one the lab puts it in. `componentsTargetTheCluster` would
-  # refuse it otherwise, and it is not exempt for being a different camp.
+  # refuse it otherwise, and it is not exempt for being a resource.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
 
   out.resources = kinds.resources;

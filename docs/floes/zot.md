@@ -22,7 +22,7 @@ Zot, a small OCI registry used as the lab's pull-through cache.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | registry | OCI_REGISTRY | A container registry, addressed for a human and for a node pulling an image. |
 

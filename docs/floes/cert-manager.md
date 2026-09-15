@@ -22,7 +22,7 @@ cert-manager, and an issuer for the lab's own certificates.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | issuance | X509_ISSUANCE | Something that signs certificates, and whether a browser will trust what it signs. |
 | webhook | X509_WEBHOOK | The certificate controller's admission webhook is serving, so its CRs are accepted. |

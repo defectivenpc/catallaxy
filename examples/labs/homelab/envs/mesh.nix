@@ -12,7 +12,7 @@
 # it to the other and neither should: an operator in `core` does not reconcile
 # a CR applied in `obs`.
 #
-# **Lab.** `core` offers one promise, `netbird/mesh`. `obs` runs no control
+# **Lab.** `core` exposes one provision, `netbird/mesh`. `obs` runs no control
 # plane, so its operator's `MESH_NETWORK` hole finds nothing local and resolves
 # from the lab scope — where `managementUrl` reads and `managementInternalUrl`
 # is a throw naming the field.

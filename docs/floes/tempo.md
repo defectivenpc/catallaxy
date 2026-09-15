@@ -19,7 +19,7 @@ Tempo, the trace store.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | traces | TRACE_INGEST | Where traces are sent and queried. |
 

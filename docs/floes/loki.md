@@ -19,7 +19,7 @@ Loki, the log store.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | logs | LOG_INGEST | Where logs are pushed and queried. |
 

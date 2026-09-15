@@ -80,7 +80,7 @@ let
     }) (lib.zipAttrsWith (_: v: lib.length v) (map (e: { ${e.provisioned} = 1; }) edges));
 
   # A cluster the lab installs into has to become reachable somehow. Two ways,
-  # one per camp, and a cluster that names neither fails at its first kubectl
+  # one each for bundles and resources, and a cluster that names neither fails at its first kubectl
   # call with a context that does not exist — after the plan has already
   # created things.
   externalClusters = lib.filterAttrs (_: c: c.spec.provisioner == "external") clusters;

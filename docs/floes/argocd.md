@@ -30,7 +30,7 @@ Argo CD, which takes ownership of applying the cluster's manifests.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | delivery | DELIVERY_POLICY | How manifests reach the cluster, and what bootstraps whatever applies them. |
 

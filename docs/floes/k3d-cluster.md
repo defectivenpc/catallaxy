@@ -19,7 +19,7 @@ A k3d cluster on the operator's docker host.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | cluster | KUBERNETES_CLUSTER | The cluster a member installs into: its name, version, context and address ranges. |
 

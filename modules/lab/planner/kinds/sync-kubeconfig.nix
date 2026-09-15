@@ -40,7 +40,7 @@
         Read the kubeconfig from a lab secret store instead of from a
         Crossplane connection Secret on `target`.
 
-        The two camps produce a kubeconfig in different places and there is
+        Bundles and resources produce a kubeconfig in different places and there is
         one step for both, because what the step *does* — write it locally
         under the context the lab decided — is the same either way. A
         state-based apply publishes its output into a store (RFC 0003 §7);

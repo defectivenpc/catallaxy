@@ -14,7 +14,7 @@ The lab's DNS zone, offered downward so every cluster resolves against one.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | zone | DNS_ZONE | The lab's DNS zone and the server authoritative for it. The only fully portable signature. |
 

@@ -31,7 +31,7 @@ Forgejo, a git server, with an admin account and repositories bootstrapped.
 
 ## Provides
 
-| promise | signature | what it is |
+| provision | signature | what it is |
 | --- | --- | --- |
 | git | GIT_REPOSITORY | A git remote, addressed differently from inside and outside the cluster. |
 
