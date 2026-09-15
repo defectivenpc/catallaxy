@@ -10,7 +10,7 @@ cccdefe14f6651b2de0ec7f64f1dcb2e219ba57fd9fc319693be10136e72572d  bootstrap/app/
 e61a56ef47c986b2053559d8e3dfb2e91e9996dbeb4a0485b782ebad95e99489  bootstrap/app/00-wave/gateway-api__crds/.crd-wait
 fa499b472ba0244fab7fed11144cdbb22dc1787879a968f84a169315e10b8490  bootstrap/app/00-wave/gateway-api__crds/0-gateway.networking.k8s.io.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  bootstrap/app/00-wave/lab-dns__coredns/.bundle-key
-14177a0036835862b9d76814376b439ceeaf5c42215af4f93b735126ded98090  bootstrap/app/00-wave/lab-dns__coredns/resources.yaml
+0d8f6dfbb3502bd73fe6ce1a7a4d868b994ed1bd8748b73121d479b61221f55c  bootstrap/app/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  bootstrap/app/00-wave/namespaces/.bundle-key
 9551b5d6ef24ed40368e850c95e91fd8a4183edce64304786b6025f113e947a5  bootstrap/app/00-wave/namespaces/0-inline.yaml
 1aa5b0970312ccbea84867f476c74ccb93db3fa8a21c77cf22bf65b2193080fe  bootstrap/app/00-wave/namespaces/1-inline.yaml
@@ -59,7 +59,7 @@ cccdefe14f6651b2de0ec7f64f1dcb2e219ba57fd9fc319693be10136e72572d  manifests/app/
 e61a56ef47c986b2053559d8e3dfb2e91e9996dbeb4a0485b782ebad95e99489  manifests/app/00-wave/gateway-api__crds/.crd-wait
 fa499b472ba0244fab7fed11144cdbb22dc1787879a968f84a169315e10b8490  manifests/app/00-wave/gateway-api__crds/0-gateway.networking.k8s.io.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  manifests/app/00-wave/lab-dns__coredns/.bundle-key
-14177a0036835862b9d76814376b439ceeaf5c42215af4f93b735126ded98090  manifests/app/00-wave/lab-dns__coredns/resources.yaml
+0d8f6dfbb3502bd73fe6ce1a7a4d868b994ed1bd8748b73121d479b61221f55c  manifests/app/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  manifests/app/00-wave/namespaces/.bundle-key
 9551b5d6ef24ed40368e850c95e91fd8a4183edce64304786b6025f113e947a5  manifests/app/00-wave/namespaces/0-inline.yaml
 1aa5b0970312ccbea84867f476c74ccb93db3fa8a21c77cf22bf65b2193080fe  manifests/app/00-wave/namespaces/1-inline.yaml
@@ -93,5 +93,5 @@ f79173278d003891aae1233ebd2f0b5f48c047950618d9b2bc465f74f0015c3c  manifests/app/
 86c856e3d2f902d85b2b58e405de007a06f4ad2db6fce31a4ab28d8eb2c07f44  manifests/app/06-wave/argocd__argocd/resources.yaml
 492f44e9ba70220eb56187e4d61ddf4706dc8969b8099826ea52de0718b05849  manifests/app/06-wave/forgejo__bootstrap/.bundle-key
 7d8f0c8fb942a3fd2b0f5ef6badd55991e8d73d59a4237351b9f947190c6dad8  manifests/app/06-wave/forgejo__bootstrap/resources.yaml
-d119ed83c7409f758b19a03e2671658a57b5fba0a3aa09d01dc267178e0cf524  metadata.json
+1b9cdae3e61cb9d27f31f00264ee67a0c0f6f7d2a35b63cf3cbf99426f3db449  metadata.json
 4f1c4f69ab4fede827893e0d81e1731f6efd55c9c604d3704277be1a302008e3  verify/app/chainsaw-test.yaml

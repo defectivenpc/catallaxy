@@ -10,6 +10,7 @@
 { config, lib, ... }:
 
 let
+  allocation = (import ../../../lib/allocation.nix { inherit lib; }).allocationFor config.lab.name;
   inherit (lib)
     mkOption
     mkEnableOption
@@ -174,13 +175,13 @@ in
 
     httpPort = mkOption {
       type = types.port;
-      default = 80;
+      default = allocation.proxyHttp;
       description = "Loopback port the HTTP listener is published on.";
     };
 
     httpsPort = mkOption {
       type = types.port;
-      default = 443;
+      default = allocation.proxyHttps;
       description = "Loopback port the HTTPS listener is published on.";
     };
 

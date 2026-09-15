@@ -614,7 +614,7 @@
   },
   "labOwnedRegistries": [],
   "network": {
-    "dockerSubnet": "172.30.0.0/16",
+    "dockerSubnet": "172.29.160.0/20",
     "name": "every-floe"
   },
   "opsToolPath": "/nix/store/HASH-every-floe-ops/bin/every-floe-ops",

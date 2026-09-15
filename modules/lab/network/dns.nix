@@ -17,6 +17,7 @@
 }:
 
 let
+  allocation = (import ../../../lib/allocation.nix { inherit lib; }).allocationFor config.lab.name;
   inherit (lib)
     mkOption
     mkEnableOption
@@ -164,7 +165,7 @@ in
 
     hostPort = mkOption {
       type = types.port;
-      default = 5354;
+      default = allocation.dns;
       description = ''
         Host-mapped port for the DNS server.
 

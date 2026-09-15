@@ -28,9 +28,6 @@
 {
   lab.name = "provisions";
   lab.dns.zone = "provisions.test";
-  lab.network.subnet = "172.42.0.0/16";
-  lab.egress.port = 3139;
-  lab.dns.hostPort = 5372;
 
   lab.clusters.mgmt.floes = {
     cluster = floes.k3d-cluster { };

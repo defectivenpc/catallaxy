@@ -22,7 +22,6 @@
 {
   lab.name = "every-floe";
   lab.dns.zone = "every-floe.test";
-  lab.network.subnet = "172.30.0.0/16";
 
   # The store floe authenticates with a token it does not create. Authored in
   # sops and projected in, which is the shape the floe's docstring describes

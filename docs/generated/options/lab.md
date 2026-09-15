@@ -16,7 +16,7 @@ Lab-scope options: identity, CD strategy, DNS, networking, secrets, images, lint
 | [`dns.configureHost`](#dns-configurehost) | `boolean` | `false` |
 | [`dns.containerName`](#dns-containername) | `string` | `"catallaxy-${config.lab.name}-dns"` |
 | [`dns.enable`](#dns-enable) | `boolean` | `false` |
-| [`dns.hostPort`](#dns-hostport) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `5354` |
+| [`dns.hostPort`](#dns-hostport) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `5352` |
 | [`dns.image`](#dns-image) | `string` | `"cznic/knot:latest"` |
 | [`dns.out.dnsInfo`](#dns-out-dnsinfo) | `null or (attribute set)` | `null` |
 | [`dns.out.service`](#dns-out-service) | `attribute set` | `{ }` |
@@ -30,9 +30,9 @@ Lab-scope options: identity, CD strategy, DNS, networking, secrets, images, lint
 | [`egress.enable`](#egress-enable) | `boolean` | `config.lab.proxy.enable` |
 | [`egress.image`](#egress-image) | `string` |  |
 | [`egress.out.service`](#egress-out-service) | `attribute set` | `{ }` |
-| [`egress.port`](#egress-port) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `3128` |
+| [`egress.port`](#egress-port) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `3052` |
 | [`network.gateway`](#network-gateway) | `string` | `the address after the subnet's own` |
-| [`network.subnet`](#network-subnet) | `string` | `"172.20.0.0/16"` |
+| [`network.subnet`](#network-subnet) | `string` | `"172.19.64.0/20"` |
 | [`out.cloudE2e.eligible`](#out-cloude2e-eligible) | `boolean` |  |
 | [`out.cloudE2e.providers`](#out-cloude2e-providers) | `list of string` | `[ ]` |
 | [`out.cloudE2e.reasons`](#out-cloude2e-reasons) | `list of string` | `[ ]` |
@@ -44,8 +44,8 @@ Lab-scope options: identity, CD strategy, DNS, networking, secrets, images, lint
 | [`out.selfContained.unstable`](#out-selfcontained-unstable) | `null or string` | `null` |
 | [`proxy.containerName`](#proxy-containername) | `string` | `"catallaxy-${config.lab.name}-ingress"` |
 | [`proxy.enable`](#proxy-enable) | `boolean` | `false` |
-| [`proxy.httpPort`](#proxy-httpport) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `80` |
-| [`proxy.httpsPort`](#proxy-httpsport) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `443` |
+| [`proxy.httpPort`](#proxy-httpport) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `8052` |
+| [`proxy.httpsPort`](#proxy-httpsport) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `8452` |
 | [`proxy.idleTimeout`](#proxy-idletimeout) | `string` | `"1h"` |
 | [`proxy.image`](#proxy-image) | `string` | `"haproxy:3.1-alpine"` |
 | [`proxy.out.hosts`](#proxy-out-hosts) | `list of string` | `[ ]` |
@@ -54,7 +54,7 @@ Lab-scope options: identity, CD strategy, DNS, networking, secrets, images, lint
 | [`registry.containerName`](#registry-containername) | `string` | `"catallaxy-${config.lab.name}-registry"` |
 | [`registry.enable`](#registry-enable) | `boolean` | `false` |
 | [`registry.image`](#registry-image) | `string` |  |
-| [`registry.port`](#registry-port) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `5050` |
+| [`registry.port`](#registry-port) | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` | `5052` |
 | [`registry.service`](#registry-service) | `attribute set` | `{ }` |
 | [`registry.upstreams`](#registry-upstreams) | `list of (submodule)` |  |
 | [`registry.upstreams.*.host`](#registry-upstreams-host) | `string` |  |
@@ -283,7 +283,7 @@ table of registered names and is not.
 
 **Type:** `16 bit unsigned integer; between 0 and 65535 (both inclusive)`
 
-**Default:** `5354`
+**Default:** `5352`
 
 **Declared in:** modules/lab/network/dns.nix
 
@@ -453,7 +453,7 @@ Loopback port the forward proxy is published on.
 
 **Type:** `16 bit unsigned integer; between 0 and 65535 (both inclusive)`
 
-**Default:** `3128`
+**Default:** `3052`
 
 **Declared in:** modules/lab/host/egress.nix
 
@@ -479,7 +479,7 @@ overlaps one already on the host.
 
 **Type:** `string`
 
-**Default:** `"172.20.0.0/16"`
+**Default:** `"172.19.64.0/20"`
 
 **Declared in:** modules/lab/types.nix
 
@@ -622,7 +622,7 @@ Loopback port the HTTP listener is published on.
 
 **Type:** `16 bit unsigned integer; between 0 and 65535 (both inclusive)`
 
-**Default:** `80`
+**Default:** `8052`
 
 **Declared in:** modules/lab/host/proxy.nix
 
@@ -633,7 +633,7 @@ Loopback port the HTTPS listener is published on.
 
 **Type:** `16 bit unsigned integer; between 0 and 65535 (both inclusive)`
 
-**Default:** `443`
+**Default:** `8452`
 
 **Declared in:** modules/lab/host/proxy.nix
 
@@ -746,7 +746,7 @@ Host port the registry listens on.
 
 **Type:** `16 bit unsigned integer; between 0 and 65535 (both inclusive)`
 
-**Default:** `5050`
+**Default:** `5052`
 
 **Declared in:** modules/lab/host/registry.nix
 

@@ -24,8 +24,6 @@
   lab.name = "minimal.secrets";
 
   # Its own subnet and ports, so it can be up beside the other two.
-  lab.network.subnet = "172.26.0.0/16";
-  lab.registry.port = 5052;
 
   lab.secrets.stores.app.backend = "env";
 

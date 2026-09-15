@@ -161,11 +161,11 @@
   },
   "labOwnedRegistries": [],
   "network": {
-    "dockerSubnet": "172.20.0.0/16",
+    "dockerSubnet": "172.16.32.0/20",
     "name": "minimal.local"
   },
   "opsToolPath": "/nix/store/HASH-minimal.local-ops/bin/minimal.local-ops",
-  "registryPort": 5050,
+  "registryPort": 5002,
   "registryUpstreams": [
     "codeberg.org",
     "registry.k8s.io",
@@ -191,14 +191,14 @@
       "description": "Zot OCI registry (image cache)",
       "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
       "ports": [
-        "5050:5000"
+        "5002:5000"
       ],
       "readyProbe": {
         "expectedStatus": 200,
         "host": "127.0.0.1",
         "kind": "http",
         "path": "/v2/",
-        "port": 5050,
+        "port": 5002,
         "timeout": "60s"
       },
       "volumes": {

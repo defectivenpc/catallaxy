@@ -34,12 +34,6 @@
   # Its own ports and network, so it runs beside the k3d labs rather than
   # instead of them. Note this is the *lab's* network; Talos makes a second
   # one of its own that talosctl controls and the lab's checks do not see.
-  lab.network.subnet = "172.37.0.0/16";
-  lab.proxy.httpPort = 8087;
-  lab.proxy.httpsPort = 8450;
-  lab.dns.hostPort = 5363;
-  lab.registry.port = 5059;
-  lab.egress.port = 3136;
 
   # The registry mounts `registries.yaml` and a CA into every node, and the
   # provisioner is what does the mounting. Talos takes machine config rather

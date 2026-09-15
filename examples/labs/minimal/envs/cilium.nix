@@ -16,13 +16,6 @@
 {
   lab.name = "minimal.cilium";
 
-  lab.network.subnet = "172.33.0.0/16";
-  lab.proxy.httpPort = 8083;
-  lab.proxy.httpsPort = 8446;
-  lab.dns.hostPort = 5359;
-  lab.registry.port = 5055;
-  lab.egress.port = 3132;
-
   lab.clusters.app.floes = {
     # Both halves. `disableFlannel` alone leaves nodes that never become
     # Ready; the manifest alone leaves a cluster carrying two CNIs, each

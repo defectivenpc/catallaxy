@@ -257,7 +257,7 @@
   },
   "labOwnedRegistries": [],
   "network": {
-    "dockerSubnet": "172.42.0.0/16",
+    "dockerSubnet": "172.22.224.0/20",
     "name": "provisions"
   },
   "opsToolPath": "/nix/store/HASH-provisions-ops/bin/provisions-ops",

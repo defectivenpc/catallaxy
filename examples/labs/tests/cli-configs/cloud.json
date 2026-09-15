@@ -269,7 +269,7 @@
   },
   "labOwnedRegistries": [],
   "network": {
-    "dockerSubnet": "172.43.0.0/16",
+    "dockerSubnet": "172.17.0.0/20",
     "name": "cloud"
   },
   "opsToolPath": "/nix/store/HASH-cloud-ops/bin/cloud-ops",
@@ -307,7 +307,7 @@
         "cloud"
       ],
       "ports": [
-        "127.0.0.1:3138:8888"
+        "127.0.0.1:3016:8888"
       ],
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
@@ -329,15 +329,15 @@
         "cloud"
       ],
       "ports": [
-        "127.0.0.1:8092:80",
-        "172.43.0.1:80:80",
-        "127.0.0.1:8451:443",
-        "172.43.0.1:443:443"
+        "127.0.0.1:8016:80",
+        "172.17.0.1:80:80",
+        "127.0.0.1:8416:443",
+        "172.17.0.1:443:443"
       ],
       "readyProbe": {
         "host": "127.0.0.1",
         "kind": "tcp",
-        "port": 8092,
+        "port": 8016,
         "timeout": "60s"
       },
       "volumes": {

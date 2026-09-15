@@ -35,12 +35,6 @@
 
   # Its own everything, so it renders and runs beside `homelab.local` rather
   # than replacing it.
-  lab.network.subnet = "172.35.0.0/16";
-  lab.proxy.httpPort = 8085;
-  lab.proxy.httpsPort = 8448;
-  lab.dns.hostPort = 5361;
-  lab.registry.port = 5057;
-  lab.egress.port = 3134;
 
   lab.clusters.core.floes.external-dns = floes.external-dns {
     inherit (config.lab.dns) tsigKeyname tsigSecretAlg;

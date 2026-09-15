@@ -1,5 +1,5 @@
 [001] cert-generate name=cert-generate params.zone=cloud.test
-[002] docker-network-create name=docker-network-create params.gateway=172.43.0.1 params.name=cloud params.subnet=172.43.0.0/16
+[002] docker-network-create name=docker-network-create params.gateway=172.17.0.1 params.name=cloud params.subnet=172.17.0.0/20
 [003] infra-plan name=infra-plan-home-doks-before-clusters params.stack=home-doks-before-clusters
 [004] infra-apply name=infra-apply-home-doks-before-clusters params.stack=home-doks-before-clusters
 [005] create-cluster name=create-cluster-home cluster=home params.name=home params.provisioner=k3d

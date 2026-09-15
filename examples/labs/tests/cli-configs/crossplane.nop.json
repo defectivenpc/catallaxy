@@ -124,11 +124,11 @@
   },
   "labOwnedRegistries": [],
   "network": {
-    "dockerSubnet": "172.44.0.0/16",
+    "dockerSubnet": "172.26.0.0/20",
     "name": "crossplane.nop"
   },
   "opsToolPath": null,
-  "registryPort": 5060,
+  "registryPort": 5160,
   "registryUpstreams": [
     "codeberg.org",
     "registry.k8s.io",
@@ -154,14 +154,14 @@
       "description": "Zot OCI registry (image cache)",
       "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
       "ports": [
-        "5060:5000"
+        "5160:5000"
       ],
       "readyProbe": {
         "expectedStatus": 200,
         "host": "127.0.0.1",
         "kind": "http",
         "path": "/v2/",
-        "port": 5060,
+        "port": 5160,
         "timeout": "60s"
       },
       "volumes": {

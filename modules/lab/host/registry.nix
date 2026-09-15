@@ -12,6 +12,7 @@
 { config, lib, ... }:
 
 let
+  allocation = (import ../../../lib/allocation.nix { inherit lib; }).allocationFor config.lab.name;
   inherit (lib)
     mkOption
     mkEnableOption
@@ -108,7 +109,7 @@ in
 
     port = mkOption {
       type = types.port;
-      default = 5050;
+      default = allocation.registry;
       description = "Host port the registry listens on.";
     };
 

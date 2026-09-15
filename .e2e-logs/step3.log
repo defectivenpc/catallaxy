@@ -1,0 +1,25 @@
+this derivation will be built:
+  /nix/store/xhjf54dmkmhfzlhv219qzsqj8lhq0ndf-cata-e2e-all.drv
+building '/nix/store/xhjf54dmkmhfzlhv219qzsqj8lhq0ndf-cata-e2e-all.drv'...
+running 9 labs, 2 at a time
+
+  PASS crossplane.nop
+crossplane.nop: up in 44s, verified, idempotent, destroyed clean
+  PASS gitops.local
+gitops.local: up in 117s, verified, idempotent, destroyed clean
+  PASS homelab.dns
+homelab.dns: up in 385s, verified, idempotent, destroyed clean
+  PASS homelab.local
+homelab.local: up in 318s, verified, idempotent, destroyed clean
+  PASS minimal.local
+minimal.local: up in 49s, verified, idempotent, destroyed clean
+  PASS minimal.cilium
+minimal.cilium: up in 81s, verified, idempotent, destroyed clean
+  PASS minimal.secrets
+minimal.secrets: up in 42s, verified, idempotent, destroyed clean
+  PASS minimal.tls
+minimal.tls: up in 40s, verified, idempotent, destroyed clean
+  PASS minimal.talos
+minimal.talos: up in 186s, verified, idempotent, destroyed clean
+
+all 9 labs passed

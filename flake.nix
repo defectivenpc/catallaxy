@@ -74,6 +74,8 @@
           };
         };
 
+        allocations = import ./nix/allocations.nix { inherit lib pkgs labDefs; };
+
         labs = import ./lib/lab.nix {
           inherit
             lib
@@ -131,6 +133,9 @@
           # What `refresh-option-docs` copies out of and `option-docs` diffs.
           inherit (packages') optionDocs;
 
+          # The address plan, written down. RFC 0005 §5.
+          inherit allocations;
+
           # The two a consumer flake calls. `mkLab` is here rather than in
           # `packages` because a lab is not a derivation.
           inherit (labs) mkLab mkFloes;
@@ -183,6 +188,7 @@
             refresh-cli-configs
             refresh-floe-docs
             refresh-option-docs
+            refresh-allocations
             refresh-plans
             docs
             ;
@@ -236,6 +242,11 @@
           program = "${packages'.refresh-option-docs}/bin/refresh-option-docs";
         };
 
+        apps.refresh-allocations = {
+          type = "app";
+          program = "${packages'.refresh-allocations}/bin/refresh-allocations";
+        };
+
         apps.refresh-plans = {
           type = "app";
           program = "${packages'.refresh-plans}/bin/refresh-plans";
@@ -268,6 +279,7 @@
           # so there is nothing to inspect without evaluating it.
           inherit (labs) mkLab mkFloes;
           inherit (packages') optionDocs;
+          inherit allocations;
           inherit
             e2eLabs
             cloudE2eLabs

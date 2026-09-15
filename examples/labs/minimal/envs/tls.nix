@@ -15,7 +15,6 @@
 
   # Its own subnet and its own k3d cluster name, so it can be up beside
   # `minimal.local` rather than fighting it for the network.
-  lab.network.subnet = "172.25.0.0/16";
 
   # The host half: a resolver that answers for the zone, and an ingress that
   # terminates TLS with the CA `cert-generate` mints.
@@ -27,12 +26,7 @@
   lab.verify.endpoints.enable = true;
 
   # `minimal.local` already claims 80/443 on loopback when both labs are up.
-  lab.proxy.httpPort = 8080;
-  lab.proxy.httpsPort = 8443;
   # 5356, not 5355: that one is LLMNR, which systemd-resolved holds.
-  lab.dns.hostPort = 5356;
-  lab.registry.port = 5051;
-  lab.egress.port = 3129;
 
   lab.clusters.app.floes = {
     # So a pod resolves `*.minimal.test` too, not just the host.

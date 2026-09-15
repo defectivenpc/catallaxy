@@ -13,7 +13,7 @@ a8b8fb7bfd3c7e2fe5d34ef009aa5d40222bc316cd026b615aef3557dc82b6f1  bootstrap/core
 85a7dffdf25f5a04b0f4cb9e916528e5cdc64dfbf73d5652a7bc17a0e6ba85bc  bootstrap/core/00-wave/kaniop__crds/.crd-wait
 20e7a4dbfeabd484171475ed82e0c82414388d4760c09f48f289e9e49e864c13  bootstrap/core/00-wave/kaniop__crds/0-kaniop.rs.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  bootstrap/core/00-wave/lab-dns__coredns/.bundle-key
-a73c0c6621c52fc688d51567f47ae88ca4293d40aab7ff0e4ae44b58f16e7e52  bootstrap/core/00-wave/lab-dns__coredns/resources.yaml
+79cd3e9ed5420cbb9fc74dfe82259f2f870786ea7e1749e9122779d4bced8d1a  bootstrap/core/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  bootstrap/core/00-wave/namespaces/.bundle-key
 6e9262818c3964ada74fd51e9f01dadde2d6ceaabdb7a663781b0faf5ec6dbdd  bootstrap/core/00-wave/namespaces/0-inline.yaml
 d8b685f66f4d96227a588cba901c01862670f50faf69b1664a252174c36a87fc  bootstrap/core/00-wave/namespaces/1-inline.yaml
@@ -73,7 +73,7 @@ a849f807998a3d020459afd48c6b5f63172cb1a99fca22c555eaaa26fc02277b  bootstrap/obs/
 e61a56ef47c986b2053559d8e3dfb2e91e9996dbeb4a0485b782ebad95e99489  bootstrap/obs/00-wave/gateway-api__crds/.crd-wait
 c12625a871769f00fa738b2c8695a656d99e6761745d5019fd4bf0f7fafcc39b  bootstrap/obs/00-wave/gateway-api__crds/0-gateway.networking.k8s.io.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  bootstrap/obs/00-wave/lab-dns__coredns/.bundle-key
-a73c0c6621c52fc688d51567f47ae88ca4293d40aab7ff0e4ae44b58f16e7e52  bootstrap/obs/00-wave/lab-dns__coredns/resources.yaml
+79cd3e9ed5420cbb9fc74dfe82259f2f870786ea7e1749e9122779d4bced8d1a  bootstrap/obs/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  bootstrap/obs/00-wave/namespaces/.bundle-key
 6e9262818c3964ada74fd51e9f01dadde2d6ceaabdb7a663781b0faf5ec6dbdd  bootstrap/obs/00-wave/namespaces/0-inline.yaml
 d8b685f66f4d96227a588cba901c01862670f50faf69b1664a252174c36a87fc  bootstrap/obs/00-wave/namespaces/1-inline.yaml
@@ -132,7 +132,7 @@ a8b8fb7bfd3c7e2fe5d34ef009aa5d40222bc316cd026b615aef3557dc82b6f1  manifests/core
 85a7dffdf25f5a04b0f4cb9e916528e5cdc64dfbf73d5652a7bc17a0e6ba85bc  manifests/core/00-wave/kaniop__crds/.crd-wait
 20e7a4dbfeabd484171475ed82e0c82414388d4760c09f48f289e9e49e864c13  manifests/core/00-wave/kaniop__crds/0-kaniop.rs.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  manifests/core/00-wave/lab-dns__coredns/.bundle-key
-a73c0c6621c52fc688d51567f47ae88ca4293d40aab7ff0e4ae44b58f16e7e52  manifests/core/00-wave/lab-dns__coredns/resources.yaml
+79cd3e9ed5420cbb9fc74dfe82259f2f870786ea7e1749e9122779d4bced8d1a  manifests/core/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  manifests/core/00-wave/namespaces/.bundle-key
 6e9262818c3964ada74fd51e9f01dadde2d6ceaabdb7a663781b0faf5ec6dbdd  manifests/core/00-wave/namespaces/0-inline.yaml
 d8b685f66f4d96227a588cba901c01862670f50faf69b1664a252174c36a87fc  manifests/core/00-wave/namespaces/1-inline.yaml
@@ -192,7 +192,7 @@ a849f807998a3d020459afd48c6b5f63172cb1a99fca22c555eaaa26fc02277b  manifests/obs/
 e61a56ef47c986b2053559d8e3dfb2e91e9996dbeb4a0485b782ebad95e99489  manifests/obs/00-wave/gateway-api__crds/.crd-wait
 c12625a871769f00fa738b2c8695a656d99e6761745d5019fd4bf0f7fafcc39b  manifests/obs/00-wave/gateway-api__crds/0-gateway.networking.k8s.io.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  manifests/obs/00-wave/lab-dns__coredns/.bundle-key
-a73c0c6621c52fc688d51567f47ae88ca4293d40aab7ff0e4ae44b58f16e7e52  manifests/obs/00-wave/lab-dns__coredns/resources.yaml
+79cd3e9ed5420cbb9fc74dfe82259f2f870786ea7e1749e9122779d4bced8d1a  manifests/obs/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  manifests/obs/00-wave/namespaces/.bundle-key
 6e9262818c3964ada74fd51e9f01dadde2d6ceaabdb7a663781b0faf5ec6dbdd  manifests/obs/00-wave/namespaces/0-inline.yaml
 d8b685f66f4d96227a588cba901c01862670f50faf69b1664a252174c36a87fc  manifests/obs/00-wave/namespaces/1-inline.yaml
@@ -232,6 +232,6 @@ cb6f258baa5a4b99dd0a2aa7a59d895b19d6fba0f17da9e3e13811dff83dffc1  manifests/obs/
 1b37310fa0c329caf4df760ed2030af3d0a896fc8325e4529e2c8dfdd6259746  manifests/obs/05-wave/otel-collector__gateway/gateway.yaml
 8b9a3dacffd7e6fd63ad090b2ac76fce51205013ec223823742783fd8801c1fb  manifests/obs/06-wave/otel-collector__agent/.bundle-key
 5658a853c99a3d4ed13e2f9f2d3d3979f7190f6510c6f0d5b53adf0b25ad9772  manifests/obs/06-wave/otel-collector__agent/agent.yaml
-863a65473f6f6137c5dddcaf16f83417827707d909ab507ba54ce08cf8ee8c50  metadata.json
+c0de926b3b618eeafeab30e74f6394ec2ebb84361fb200d013444badeb0b5bad  metadata.json
 b1254722c6839d1795f5efea89742ec153be0530a49a5ae794f50f4297da0c67  verify/core/chainsaw-test.yaml
 10c8192f8a7d56c55e1b45262a7b50de54b78b73917fd3250b561beb2efd1a95  verify/obs/chainsaw-test.yaml

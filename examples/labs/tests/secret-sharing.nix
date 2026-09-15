@@ -64,7 +64,6 @@ in
 {
   lab.name = "secret-sharing";
   lab.dns.zone = "secret-sharing.test";
-  lab.network.subnet = "172.31.0.0/16";
 
   lab.secrets.stores = {
     # Authored: you write the value, and it is projected into every cluster

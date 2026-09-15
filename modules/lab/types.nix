@@ -18,6 +18,7 @@
 }:
 
 let
+  allocation = (import ../../lib/allocation.nix { inherit lib; }).allocationFor config.lab.name;
   inherit (lib) mkOption types;
 
   # ---- the lab's scope ----------------------------------------------------
@@ -180,7 +181,7 @@ in
 
     network.subnet = mkOption {
       type = types.str;
-      default = "172.20.0.0/16";
+      default = allocation.subnet;
       description = ''
         Docker network the lab's containers share, in CIDR form. `cata lab up`
         parses this before it runs anything, to refuse a lab whose subnet

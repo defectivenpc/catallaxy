@@ -63,6 +63,7 @@ let
   refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
   refresh-floe-docs = import ./refresh-floe-docs.nix { inherit lib pkgs; };
   refresh-option-docs = import ./refresh-option-docs.nix { inherit lib pkgs; };
+  refresh-allocations = import ./refresh-allocations.nix { inherit lib pkgs; };
   optionDocs = import ./option-docs.nix {
     inherit
       lib
@@ -91,6 +92,7 @@ in
     refresh-cli-configs
     refresh-floe-docs
     refresh-option-docs
+    refresh-allocations
     optionDocs
     refresh-plans
     docs

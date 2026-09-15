@@ -15,6 +15,7 @@
   mkLab,
   mkFloes,
   optionDocs,
+  allocations,
   e2eLabs,
   cloudE2eLabs,
   cliConfigs,
@@ -46,6 +47,7 @@ in
     ;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
+// import ./allocations.nix { inherit lib pkgs allocations; }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
   inherit

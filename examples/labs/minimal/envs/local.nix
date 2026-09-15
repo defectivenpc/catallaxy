@@ -5,7 +5,6 @@
 { ... }:
 {
   lab.name = "minimal.local";
-  lab.network.subnet = "172.20.0.0/16";
 
   # The lab that proves PSA labelling works, because it is the fastest one
   # that runs. `enforce` is what the API server refuses below; `warn` is

@@ -472,7 +472,7 @@
   "destroy": {},
   "dnsInfo": {
     "host": "127.0.0.1",
-    "port": 5360,
+    "port": 5486,
     "tsigKeyname": "externaldns-key",
     "tsigSecret": "kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=",
     "tsigSecretAlg": "hmac-sha256",
@@ -502,11 +502,11 @@
   },
   "labOwnedRegistries": [],
   "network": {
-    "dockerSubnet": "172.34.0.0/16",
+    "dockerSubnet": "172.27.160.0/20",
     "name": "homelab.local"
   },
   "opsToolPath": "/nix/store/HASH-homelab.local-ops/bin/homelab.local-ops",
-  "registryPort": 5056,
+  "registryPort": 5186,
   "registryUpstreams": [
     "codeberg.org",
     "registry.k8s.io",
@@ -539,15 +539,15 @@
         "homelab.local"
       ],
       "ports": [
-        "5360:53/tcp",
-        "5360:53/udp"
+        "5486:53/tcp",
+        "5486:53/udp"
       ],
       "volumes": {
         "/config/knot.conf": {
           "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: homelab.test.\n    storage: /storage\n    file: homelab.test.zone\n    acl: update-acl\n"
         },
         "/storage/homelab.test.zone": {
-          "content": "$ORIGIN homelab.test.\n$TTL 300\n\n@   IN  SOA ns1.homelab.test. admin.homelab.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.homelab.test.\nns1 IN  A   127.0.0.1\n\n; Every host-facing endpoint arrives through the ingress, which routes\n; by Host header, so one wildcard answers for all of them. The target is\n; the docker bridge gateway because the same zone is served to the host\n; and to pods, and that address reaches the ingress's published port\n; from both.\n;\n; A more specific record always wins, so a DNS controller keeps control\n; of anything it publishes. Without this a lab that runs no such\n; controller resolves nothing at all.\n*   IN  A   172.34.0.1\n"
+          "content": "$ORIGIN homelab.test.\n$TTL 300\n\n@   IN  SOA ns1.homelab.test. admin.homelab.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.homelab.test.\nns1 IN  A   127.0.0.1\n\n; Every host-facing endpoint arrives through the ingress, which routes\n; by Host header, so one wildcard answers for all of them. The target is\n; the docker bridge gateway because the same zone is served to the host\n; and to pods, and that address reaches the ingress's published port\n; from both.\n;\n; A more specific record always wins, so a DNS controller keeps control\n; of anything it publishes. Without this a lab that runs no such\n; controller resolves nothing at all.\n*   IN  A   172.27.160.1\n"
         }
       }
     },
@@ -562,7 +562,7 @@
         "homelab.local"
       ],
       "ports": [
-        "127.0.0.1:3133:8888"
+        "127.0.0.1:3186:8888"
       ],
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
@@ -584,15 +584,15 @@
         "homelab.local"
       ],
       "ports": [
-        "127.0.0.1:8084:80",
-        "172.34.0.1:80:80",
-        "127.0.0.1:8447:443",
-        "172.34.0.1:443:443"
+        "127.0.0.1:8186:80",
+        "172.27.160.1:80:80",
+        "127.0.0.1:8586:443",
+        "172.27.160.1:443:443"
       ],
       "readyProbe": {
         "host": "127.0.0.1",
         "kind": "tcp",
-        "port": 8084,
+        "port": 8186,
         "timeout": "60s"
       },
       "volumes": {
@@ -606,14 +606,14 @@
       "description": "Zot OCI registry (image cache)",
       "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
       "ports": [
-        "5056:5000"
+        "5186:5000"
       ],
       "readyProbe": {
         "expectedStatus": 200,
         "host": "127.0.0.1",
         "kind": "http",
         "path": "/v2/",
-        "port": 5056,
+        "port": 5186,
         "timeout": "60s"
       },
       "volumes": {

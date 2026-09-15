@@ -39,16 +39,11 @@ in
 {
   lab.name = "cloud";
   lab.dns.zone = "cloud.test";
-  lab.network.subnet = "172.43.0.0/16";
-  lab.egress.port = 3138;
-  lab.dns.hostPort = 5373;
 
   # On, and it fronts `home` only. A lab that turned it off would pass the
   # edge checks by having nothing to route rather than by routing the right
   # subset.
   lab.proxy.enable = true;
-  lab.proxy.httpPort = 8092;
-  lab.proxy.httpsPort = 8451;
 
   # Where the cluster's kubeconfig lands when the apply produces it. `env`
   # rather than sops so the fixture needs no key to evaluate; a real lab would

@@ -24,12 +24,6 @@ in
 
   # Its own subnet and ports, so it stands up beside the minimal labs rather
   # than fighting them for the network.
-  lab.network.subnet = "172.32.0.0/16";
-  lab.proxy.httpPort = 8082;
-  lab.proxy.httpsPort = 8445;
-  lab.dns.hostPort = 5358;
-  lab.registry.port = 5054;
-  lab.egress.port = 3131;
 
   lab.registry.enable = lib.mkDefault true;
 

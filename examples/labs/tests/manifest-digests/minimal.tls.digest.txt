@@ -6,7 +6,7 @@ b9ec18872605861c47a4394351c33a0a65b660efa636fbd7db19486a9ec8a7fc  bootstrap/app/
 e61a56ef47c986b2053559d8e3dfb2e91e9996dbeb4a0485b782ebad95e99489  bootstrap/app/00-wave/gateway-api__crds/.crd-wait
 4697b05980a1bc8f519fcc57e919e39deb5feae02a7119fc7418a0450955628f  bootstrap/app/00-wave/gateway-api__crds/0-gateway.networking.k8s.io.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  bootstrap/app/00-wave/lab-dns__coredns/.bundle-key
-3daaca6432482e97e3a5b4e8d1897e0a590f768178895d2b458ae136ab422eef  bootstrap/app/00-wave/lab-dns__coredns/resources.yaml
+a6ce23bbfc62933087428141c7701d2d050da7c27ef654e68c327915d36ee790  bootstrap/app/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  bootstrap/app/00-wave/namespaces/.bundle-key
 204ff34fc645da72e8dbbe7f8dec386c6945416020581c1dfb62f1000dcbf9a4  bootstrap/app/00-wave/namespaces/0-inline.yaml
 b6ec6a1fa4b71c63c461ffdab8d95b1ab94a4e05a23e20d72f194ed157345221  bootstrap/app/00-wave/namespaces/1-inline.yaml
@@ -36,7 +36,7 @@ b9ec18872605861c47a4394351c33a0a65b660efa636fbd7db19486a9ec8a7fc  manifests/app/
 e61a56ef47c986b2053559d8e3dfb2e91e9996dbeb4a0485b782ebad95e99489  manifests/app/00-wave/gateway-api__crds/.crd-wait
 4697b05980a1bc8f519fcc57e919e39deb5feae02a7119fc7418a0450955628f  manifests/app/00-wave/gateway-api__crds/0-gateway.networking.k8s.io.yaml
 d60ce0fc94f2dc0072acb3947dd0cfcfcc6f36caaec0f2dfb37a7cf07692d53c  manifests/app/00-wave/lab-dns__coredns/.bundle-key
-3daaca6432482e97e3a5b4e8d1897e0a590f768178895d2b458ae136ab422eef  manifests/app/00-wave/lab-dns__coredns/resources.yaml
+a6ce23bbfc62933087428141c7701d2d050da7c27ef654e68c327915d36ee790  manifests/app/00-wave/lab-dns__coredns/resources.yaml
 a73ef0381b8451258580dfb585ced51c62a82b5e93b79107799ada9044be81d5  manifests/app/00-wave/namespaces/.bundle-key
 204ff34fc645da72e8dbbe7f8dec386c6945416020581c1dfb62f1000dcbf9a4  manifests/app/00-wave/namespaces/0-inline.yaml
 b6ec6a1fa4b71c63c461ffdab8d95b1ab94a4e05a23e20d72f194ed157345221  manifests/app/00-wave/namespaces/1-inline.yaml
@@ -56,5 +56,5 @@ e8ec597a8a7b0a19c8dc1e77330338518fe2b32b11f044d50f1c648c495237ce  manifests/app/
 aecc47aad3672ca8ff59cb2154340fde0f387ba76c6e9964b763b8d41f36c30e  manifests/app/04-wave/trust-manager__bundles/resources.yaml
 47873fd11951fb3d0148d6363eec19f1c0ed6fb0a4dcdd28de3672eb804a851e  manifests/app/05-wave/podinfo__podinfo/.bundle-key
 a654f6f98971c736d6fc8152142905d2421717267b48d95751ca65eab2545be0  manifests/app/05-wave/podinfo__podinfo/resources.yaml
-84973d504ba4684f952100d2729abf9382aa97ce22aac4f89443fd6d23e20bd1  metadata.json
+8402abd36e8f79b1712ec48f6b5db3a4435ad8ab268aba6ce97dad8b6b861f49  metadata.json
 a96559195efc1bb0a918991874c9a8620e0f500086872f1df31882ec636d9c1e  verify/app/chainsaw-test.yaml

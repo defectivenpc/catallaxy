@@ -8,6 +8,7 @@
 { config, lib, ... }:
 
 let
+  allocation = (import ../../../lib/allocation.nix { inherit lib; }).allocationFor config.lab.name;
   inherit (lib)
     mkOption
     mkEnableOption
@@ -40,7 +41,7 @@ in
 
     port = mkOption {
       type = types.port;
-      default = 3128;
+      default = allocation.egress;
       description = "Loopback port the forward proxy is published on.";
     };
 

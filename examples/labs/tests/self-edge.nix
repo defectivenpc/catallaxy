@@ -60,10 +60,6 @@ in
   # so a lab that is not the edge for every cluster gets one record per host
   # it really does front (RFC 0005 §6.4).
   lab.dns.enable = true;
-  lab.network.subnet = "172.40.0.0/16";
-  lab.proxy.httpPort = 8090;
-  lab.egress.port = 3137;
-  lab.dns.hostPort = 5370;
 
   lab.clusters.core.floes = common "core";
 

@@ -109,12 +109,6 @@ in
   '';
 
   # Its own everything, so it renders and runs beside the other two.
-  lab.network.subnet = "172.36.0.0/16";
-  lab.proxy.httpPort = 8086;
-  lab.proxy.httpsPort = 8449;
-  lab.dns.hostPort = 5362;
-  lab.registry.port = 5058;
-  lab.egress.port = 3135;
 
   # Two stores, because a value one cluster mints has to be writable. The
   # authored one holds the runtime one's credential and nothing else.
