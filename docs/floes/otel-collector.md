@@ -9,7 +9,7 @@ An OpenTelemetry collector, exporting to whichever backends the cluster has.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | agent | boolean | `true` | Also run a DaemonSet that tails container logs on every node and forwards them to the gateway.  Separate from the gateway because it is the expensive half: it runs once per node, mounts the host's log directory, and a cluster that already ships logs another way wants the gateway without it.  |
-| chart | string | *(required)* | Store path of the opentelemetry-collector Helm chart. Required. |
+| chart | string | `cataCharts.otel-collector.chart` | Store path of the opentelemetry-collector Helm chart. Required. |
 | namespace | string | `"observability"` | Namespace the collector runs in. |
 | otlpGrpcPort | 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `4317` | Port the gateway accepts OTLP/gRPC on. |
 | otlpHttpPort | 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `4318` | Port the gateway accepts OTLP/HTTP on. |

@@ -2,6 +2,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -14,6 +15,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.redis-operator.chart}";
+      defaultText = lib.literalExpression "cataCharts.redis-operator.chart";
       description = "Store path of the redis-operator Helm chart. Required.";
     };
 

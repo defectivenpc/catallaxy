@@ -18,8 +18,6 @@
 # symptom short of an ExternalSecret waiting forever.
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   config,
   ...
@@ -48,8 +46,6 @@ let
     };
 
     external-secrets = floes.external-secrets {
-      chart = "${cataCharts.external-secrets.chart}";
-      crds = "${cataCharts.external-secrets.crds}";
     };
 
     store = floes.secret-store {
@@ -98,7 +94,7 @@ in
     floes = sharedFloes "core" // {
       # It mints its own root, so the CA Secret genuinely exists here — which
       # is what makes this a real thing to share rather than a fixture.
-      cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
+      cert-manager = floes.cert-manager { };
     };
 
     secrets.project = tokenProjection;

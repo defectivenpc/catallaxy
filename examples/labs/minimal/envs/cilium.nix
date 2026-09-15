@@ -10,7 +10,6 @@
 # to `minimal.local` is admitted, stored, and enforced by nothing.
 {
   lib,
-  cataCharts,
   floes,
   ...
 }:
@@ -37,7 +36,7 @@
         autoDeployManifests = [
           {
             name = "cilium";
-            path = "${floes.cilium.mkBootstrapManifest { chart = "${cataCharts.cilium.chart}"; }}";
+            path = "${floes.cilium.mkBootstrapManifest { }}";
           }
         ];
       }
@@ -45,6 +44,6 @@
 
     # The same chart again, as a release that takes ownership once the cluster
     # is up, so upgrades and drift work like any other floe's.
-    cilium = floes.cilium { chart = "${cataCharts.cilium.chart}"; };
+    cilium = floes.cilium { };
   };
 }

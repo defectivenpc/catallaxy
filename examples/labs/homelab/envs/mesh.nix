@@ -43,7 +43,6 @@
 # a signature would put secret material in a rendered manifest, which is the
 # one thing no floe may do.
 {
-  cataCharts,
   floes,
   config,
   ...
@@ -136,7 +135,7 @@ in
   lab.clusters.core = {
     floes = storeClient // {
       # The store, and the one cluster that runs it.
-      openbao = floes.openbao { chart = "${cataCharts.openbao.chart}"; };
+      openbao = floes.openbao { };
 
       netbird = floes.netbird { };
 
@@ -145,7 +144,6 @@ in
       # be a second place for it to be wrong, and the floe refuses both answers
       # at once rather than picking one.
       netbird-operator = floes.netbird-operator {
-        chart = "${cataCharts.netbird-operator.chart}";
       };
     };
 
@@ -164,7 +162,6 @@ in
       # No netbird here. Its `MESH_NETWORK` hole finds nothing in this cluster
       # and resolves from the lab scope, which is the point of the lab.
       netbird-operator = floes.netbird-operator {
-        chart = "${cataCharts.netbird-operator.chart}";
 
         # Nothing here provides `MESH_ADMIN`, so the lab says where the
         # subscription below landed the token. That is the seam between the two

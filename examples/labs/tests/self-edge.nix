@@ -22,8 +22,6 @@
 # is instantiated here and nothing else — which is the claim (RFC 0005 §8.2).
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   ...
 }:
@@ -37,15 +35,11 @@ let
       serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
     };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
+    gateway-api = floes.gateway-api-crds { };
 
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
+    cert-manager = floes.cert-manager { };
 
     gateway = floes.gateway {
-      chart = "${cataCharts.traefik.chart}";
     };
 
     # The same app, at the same hostname, in both clusters. A route's name

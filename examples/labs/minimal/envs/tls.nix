@@ -6,7 +6,6 @@
 # that breaks the untrusted path is still caught.
 {
   lib,
-  cataCharts,
   floes,
   config,
   ...
@@ -44,7 +43,6 @@
     # Secret — so cert-manager must not mint a second one over the top.
     cert-manager = lib.mkForce (
       floes.cert-manager {
-        chart = "${cataCharts.cert-manager.chart}";
         rootFromLab = true;
       }
     );
@@ -53,12 +51,10 @@
     # workload can verify a certificate the lab signed. It reads the Secret
     # through X509_ISSUANCE — the edge that used to point the other way.
     trust-manager = floes.trust-manager {
-      chart = "${cataCharts.trust-manager.chart}";
     };
 
     gateway = lib.mkForce (
       floes.gateway {
-        chart = "${cataCharts.traefik.chart}";
         tlsEnable = true;
       }
     );

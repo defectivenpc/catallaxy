@@ -10,6 +10,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -22,6 +23,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.reloader.chart}";
+      defaultText = lib.literalExpression "cataCharts.reloader.chart";
       description = "Store path of the Reloader Helm chart. Required.";
     };
 

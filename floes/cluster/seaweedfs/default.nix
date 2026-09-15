@@ -2,6 +2,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -14,6 +15,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.seaweedfs.chart}";
+      defaultText = lib.literalExpression "cataCharts.seaweedfs.chart";
       description = "Store path of the SeaweedFS Helm chart. Required.";
     };
 

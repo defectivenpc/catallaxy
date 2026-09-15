@@ -11,8 +11,6 @@
 # two facts. A lab author picks floes.
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   config,
   ...
@@ -50,32 +48,24 @@ in
 
     # ---- the platform underneath ----------------------------------------
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
+    gateway-api = floes.gateway-api-crds { };
 
     cert-manager = floes.cert-manager {
-      chart = "${cataCharts.cert-manager.chart}";
       rootFromLab = true;
     };
 
     trust-manager = floes.trust-manager {
-      chart = "${cataCharts.trust-manager.chart}";
     };
 
     lab-dns = floes.lab-dns { };
 
     gateway = floes.gateway {
-      chart = "${cataCharts.traefik.chart}";
       tlsEnable = true;
     };
 
     # forgejo and argocd both mint credentials rather than letting their
     # charts write them into the rendered manifests, so both need a generator.
     external-secrets = floes.external-secrets {
-      chart = "${cataCharts.external-secrets.chart}";
-      crds = "${cataCharts.external-secrets.crds}";
     };
 
     # No openebs. k3s ships a `local-path` StorageClass and openebs installs
@@ -89,9 +79,9 @@ in
 
     # ---- the two that make it gitops ------------------------------------
 
-    forgejo = floes.forgejo { chart = "${cataCharts.forgejo.chart}"; };
+    forgejo = floes.forgejo { };
 
-    argocd = floes.argocd { chart = "${cataCharts.argocd.chart}"; };
+    argocd = floes.argocd { };
 
     # Something for Argo to have applied, so the lab proves more than that
     # Argo started.

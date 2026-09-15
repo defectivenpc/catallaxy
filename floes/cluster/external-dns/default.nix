@@ -21,6 +21,7 @@
 #     whoever brings the credentials.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   pkgs,
   floe,
@@ -40,6 +41,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.external-dns.chart}";
+      defaultText = lib.literalExpression "cataCharts.external-dns.chart";
       description = "Store path of the external-dns Helm chart. Required.";
     };
 

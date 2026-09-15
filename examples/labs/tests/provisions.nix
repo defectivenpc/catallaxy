@@ -21,8 +21,6 @@
 # runtime symptom short of that — the order — is exactly what this covers.
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   ...
 }:
@@ -40,12 +38,9 @@
       instanceName = "provisions-mgmt";
     };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-    gateway = floes.gateway { chart = "${cataCharts.traefik.chart}"; };
+    gateway-api = floes.gateway-api-crds { };
+    cert-manager = floes.cert-manager { };
+    gateway = floes.gateway { };
   };
 
   # Declared on the management cluster, and nowhere else. A cluster naming
@@ -71,12 +66,9 @@
       serviceSubnet = "10.113.0.0/16";
     };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-    gateway = floes.gateway { chart = "${cataCharts.traefik.chart}"; };
+    gateway-api = floes.gateway-api-crds { };
+    cert-manager = floes.cert-manager { };
+    gateway = floes.gateway { };
     podinfo = floes.podinfo { };
   };
 }

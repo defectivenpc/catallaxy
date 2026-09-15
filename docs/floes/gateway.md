@@ -8,7 +8,7 @@ Traefik as the Gateway API implementation, and the cluster's one Gateway.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the Traefik Helm chart. Required — the caller pins it in `lib/charts.nix` and interpolates it.  A path and not the derivation: `instantiate` deep-forces its inputs to check them eagerly, and a derivation is a self-referential attrset, so passing one overflows the stack before the floe is ever linked.  |
+| chart | string | `cataCharts.traefik.chart` | Store path of the Traefik Helm chart, defaulted from the pin in `lib/charts.nix`. Override to run a fork or a mirror.  A path and not the derivation: `instantiate` deep-forces its inputs to check them eagerly, and a derivation is a self-referential attrset, so passing one overflows the stack before the floe is ever linked. `defaultText` is what keeps the store hash out of the generated page.  |
 | className | string | `"traefik"` | GatewayClass the Gateway names. Traefik's chart installs it. |
 | gatewayName | string | `"default-gateway"` | Name of the Gateway resource routes attach to. |
 | httpPort | 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `8000` | Listener port. Traefik's chart maps its `web` entrypoint to 8000 in the pod and exposes it on 80, so the listener has to name the pod's port and not the service's.  |

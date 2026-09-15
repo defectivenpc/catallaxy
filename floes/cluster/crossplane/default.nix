@@ -6,6 +6,7 @@
 # reconciled needs the second.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   sigs,
   kinds,
@@ -19,11 +20,15 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.crossplane.chart}";
+      defaultText = lib.literalExpression "cataCharts.crossplane.chart";
       description = "Store path of the Crossplane Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.crossplane.crds}";
+      defaultText = lib.literalExpression "cataCharts.crossplane.crds";
       description = "Store path of the chart's CRDs. Required.";
     };
 

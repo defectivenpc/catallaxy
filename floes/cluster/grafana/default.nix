@@ -11,6 +11,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -23,6 +24,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.grafana.chart}";
+      defaultText = lib.literalExpression "cataCharts.grafana.chart";
       description = "Store path of the Grafana Helm chart. Required.";
     };
 

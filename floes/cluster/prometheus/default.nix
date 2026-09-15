@@ -13,6 +13,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -25,11 +26,15 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.prometheus.chart}";
+      defaultText = lib.literalExpression "cataCharts.prometheus.chart";
       description = "Store path of the kube-prometheus-stack Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.prometheus.crds}";
+      defaultText = lib.literalExpression "cataCharts.prometheus.crds";
       description = ''
         Store path of the stripped-down CRD manifest. Required.
 

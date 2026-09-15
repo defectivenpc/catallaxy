@@ -42,8 +42,6 @@
 # without writing the same value in two places.
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   config,
   ...
@@ -75,17 +73,13 @@ let
       serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
     };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
+    gateway-api = floes.gateway-api-crds { };
 
     # One root for the whole lab, minted on the host by `cert-generate` and
     # seeded into every cluster by `create-cluster`. Both clusters sign from
     # it, which is what lets one HAProxy terminate for both with one
     # certificate.
     cert-manager = floes.cert-manager {
-      chart = "${cataCharts.cert-manager.chart}";
       rootFromLab = true;
     };
 
@@ -98,7 +92,6 @@ let
     # signing keys is the first — fails x509 verification without it, and the
     # error names a certificate rather than the thing that is missing.
     trust-manager = floes.trust-manager {
-      chart = "${cataCharts.trust-manager.chart}";
     };
 
     # So a pod resolves `*.${zone}` too. Its resolver is the cluster's
@@ -106,15 +99,12 @@ let
     lab-dns = floes.lab-dns { };
 
     gateway = floes.gateway {
-      chart = "${cataCharts.traefik.chart}";
       tlsEnable = true;
     };
 
     # Both clusters mint credentials rather than letting a chart write them
     # into the rendered manifests, so both need a generator.
     external-secrets = floes.external-secrets {
-      chart = "${cataCharts.external-secrets.chart}";
-      crds = "${cataCharts.external-secrets.crds}";
     };
   };
 in
@@ -135,7 +125,7 @@ in
     # kaniop runs the CRDs; kanidm is the issuer. Its clients are rendered by
     # whoever needs one — there is no list of them here and kanidm does not
     # know who its consumers are.
-    kaniop = floes.kaniop { chart = "${cataCharts.kaniop.chart}"; };
+    kaniop = floes.kaniop { };
     kanidm = floes.kanidm { domain = "idm.${zone}"; };
 
     # ---- source control and registry ------------------------------------
@@ -144,27 +134,23 @@ in
     # `OIDC_PROVIDER`, renders its own client into its own namespace, and
     # reads back the credential kanidm's operator writes.
     forgejo = floes.forgejo {
-      chart = "${cataCharts.forgejo.chart}";
       oidc = true;
     };
 
     harbor = floes.harbor {
-      chart = "${cataCharts.harbor.chart}";
       oidc = true;
     };
 
     # Restarts what reads a Secret or ConfigMap that changed underneath it —
     # which on this cluster is every OIDC consumer above.
-    reloader = floes.reloader { chart = "${cataCharts.reloader.chart}"; };
+    reloader = floes.reloader { };
 
     # ---- backups --------------------------------------------------------
     #
     # velero takes its endpoint off `OBJECT_STORE` rather than from a hostname
     # written twice, so the two cannot drift.
-    seaweedfs = floes.seaweedfs { chart = "${cataCharts.seaweedfs.chart}"; };
+    seaweedfs = floes.seaweedfs { };
     velero = floes.velero {
-      chart = "${cataCharts.velero.chart}";
-      crds = "${cataCharts.velero.crds}";
       schedules.daily = {
         schedule = "0 2 * * *";
         ttl = "168h";
@@ -176,16 +162,14 @@ in
     # All three backends, so all three of the collector's optional holes
     # resolve and Grafana gets three datasources.
     prometheus = floes.prometheus {
-      chart = "${cataCharts.prometheus.chart}";
-      crds = "${cataCharts.prometheus.crds}";
     };
-    loki = floes.loki { chart = "${cataCharts.loki.chart}"; };
-    tempo = floes.tempo { chart = "${cataCharts.tempo.chart}"; };
+    loki = floes.loki { };
+    tempo = floes.tempo { };
 
-    otel-collector = floes.otel-collector { chart = "${cataCharts.otel-collector.chart}"; };
+    otel-collector = floes.otel-collector { };
 
     # No `oidc`. The issuer is on `core`, and the hole resolves within a
     # cluster — see the header.
-    grafana = floes.grafana { chart = "${cataCharts.grafana.chart}"; };
+    grafana = floes.grafana { };
   };
 }

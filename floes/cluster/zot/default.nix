@@ -17,6 +17,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -29,6 +30,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.zot.chart}";
+      defaultText = lib.literalExpression "cataCharts.zot.chart";
       description = "Store path of the zot Helm chart. Required.";
     };
 

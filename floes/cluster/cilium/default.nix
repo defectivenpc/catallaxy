@@ -23,6 +23,7 @@
 # knows which provisioner it is configuring.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   pkgs,
   floe,
@@ -34,12 +35,12 @@
 let
   mkValues = import ./values.nix { inherit lib; };
 
-  # A lab calls this and passes the result to its provisioner. It takes the
-  # chart rather than reading one, because the lab already pins charts and a
-  # second pin here could disagree with the one the floe installs.
+  # A lab calls this and passes the result to its provisioner. Both halves
+  # default from the same pin, which is what makes them the same chart: two
+  # versions is the failure this floe is most exposed to.
   mkBootstrapManifest =
     {
-      chart,
+      chart ? "${cataCharts.cilium.chart}",
       # `localhost` and `6443` are right for k3d, where the agent runs on the
       # same node as the apiserver. A managed control plane needs its real
       # address: there is no network yet to reach a Service over, which is the
@@ -69,8 +70,10 @@ let
     inputs = {
       chart = lib.mkOption {
         type = lib.types.str;
+        default = "${cataCharts.cilium.chart}";
+        defaultText = lib.literalExpression "cataCharts.cilium.chart";
         description = ''
-          Store path of the Cilium Helm chart. Required.
+          Store path of the Cilium Helm chart, defaulted from the pin.
 
           The same chart the lab templated for `mkBootstrapManifest`. Two
           versions is the failure this floe is most exposed to: the release

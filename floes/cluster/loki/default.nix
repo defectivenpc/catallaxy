@@ -6,6 +6,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -18,6 +19,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.loki.chart}";
+      defaultText = lib.literalExpression "cataCharts.loki.chart";
       description = "Store path of the Loki Helm chart. Required.";
     };
 

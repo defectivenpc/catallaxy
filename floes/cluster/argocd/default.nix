@@ -11,6 +11,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -23,6 +24,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.argocd.chart}";
+      defaultText = lib.literalExpression "cataCharts.argocd.chart";
       description = "Store path of the Argo CD Helm chart. Required.";
     };
 

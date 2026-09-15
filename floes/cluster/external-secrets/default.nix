@@ -10,6 +10,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -22,11 +23,15 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.external-secrets.chart}";
+      defaultText = lib.literalExpression "cataCharts.external-secrets.chart";
       description = "Store path of the external-secrets Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.external-secrets.crds}";
+      defaultText = lib.literalExpression "cataCharts.external-secrets.crds";
       description = ''
         Store path of the chart's CRD manifests. Separate from the chart
         because they install as their own bundle: the kinds have to be

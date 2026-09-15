@@ -8,6 +8,7 @@
 {
   lib,
   catallaxy,
+  k8sSpecs ? null,
   sigs,
   kinds,
   ...
@@ -20,6 +21,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     manifest = lib.mkOption {
       type = lib.types.str;
+      default = "${k8sSpecs.standaloneCrds.gateway-api}";
+      defaultText = lib.literalExpression "k8sSpecs.standaloneCrds.gateway-api";
       description = ''
         Store path of the upstream CRD bundle. Required — the caller pins the
         URL and hash in `lib/k8s-specs.nix`.
@@ -28,7 +31,12 @@ catallaxy.mkComponentFloe {
 
     version = lib.mkOption {
       type = lib.types.str;
-      description = "Gateway API release the manifest came from. Required.";
+      default = k8sSpecs.standaloneCrdVersions.gateway-api;
+      defaultText = lib.literalExpression "k8sSpecs.standaloneCrdVersions.gateway-api";
+      description = ''
+        Gateway API release the manifest came from, defaulted from the same
+        pin the manifest is fetched with, so the two cannot disagree.
+      '';
     };
   };
 

@@ -5,6 +5,8 @@
 {
   lib,
   pkgs,
+  cataCharts,
+  k8sSpecs,
   self,
   packages,
   treefmtEval,
@@ -58,7 +60,13 @@ in
   cliConfigDir = ../../examples/labs/tests/cli-configs;
 }
 // import ./floe-gates.nix {
-  inherit lib pkgs labDefs;
+  inherit
+    lib
+    pkgs
+    labDefs
+    cataCharts
+    k8sSpecs
+    ;
   floeSet = (import ../../floes).cluster;
   cannotKnowItsImages = [
     # Handed arbitrary resources and an optional chart by whoever
@@ -81,7 +89,12 @@ in
   inherit (packages) docs;
 }
 // import ./floe-names.nix {
-  inherit lib pkgs;
+  inherit
+    lib
+    pkgs
+    cataCharts
+    k8sSpecs
+    ;
   catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
   floeSet = allFloes;
 }

@@ -111,7 +111,13 @@
         # copies out of — so the fixture and the check cannot be produced by
         # two pipelines that disagree.
         floeInterfaces = import ./nix/floe-docs.nix {
-          inherit lib pkgs labDefs;
+          inherit
+            lib
+            pkgs
+            labDefs
+            cataCharts
+            k8sSpecs
+            ;
           catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs; };
           # Flattened, the way `lib/lab.nix` flattens it: the three groups are
           # how the set is organised on disk, not a namespace anything spells.
@@ -247,6 +253,8 @@
             self
             lib
             pkgs
+            cataCharts
+            k8sSpecs
             treefmtEval
             ;
           packages = packages';

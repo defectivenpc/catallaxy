@@ -273,6 +273,12 @@ in
     }:
     let
       def = import floeSet.${name} {
+        # Null, not the real set: a suite passes the chart it wants and the
+        # unit tests stay free of the chart pins and of `kubelib`. A floe's
+        # `defaultText` is what documents the default, so nothing here forces
+        # it.
+        cataCharts = null;
+        k8sSpecs = null;
         inherit
           lib
           pkgs

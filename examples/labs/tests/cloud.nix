@@ -25,20 +25,15 @@
 # It is a fixture and never enters the e2e set. Standing it up costs money.
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   ...
 }:
 
 let
   members = {
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-    gateway = floes.gateway { chart = "${cataCharts.traefik.chart}"; };
+    gateway-api = floes.gateway-api-crds { };
+    cert-manager = floes.cert-manager { };
+    gateway = floes.gateway { };
   };
 in
 {

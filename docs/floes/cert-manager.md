@@ -9,7 +9,7 @@ cert-manager, and an issuer for the lab's own certificates.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | caCommonName | string | `"catallaxy lab CA"` | Subject common name on the root certificate. |
-| chart | string | *(required)* | Store path of the cert-manager Helm chart. Required. |
+| chart | string | `cataCharts.cert-manager.chart` | Store path of the cert-manager Helm chart. Required. |
 | issuerName | string | `"lab-ca"` | Name of the ClusterIssuer signing from the lab's own CA. |
 | namespace | string | `"cert-manager"` | Namespace the controller and webhook run in. |
 | rootFromLab | boolean | `false` | Take the root from the lab instead of minting one.  A lab that runs the host ingress already has a root: `cert-generate` mints it, HAProxy serves from it, and `import_lab_ca` seeds it into this namespace as the issuer's backing Secret before any manifest is applied. Minting a second one would overwrite that Secret, and the two halves of the lab would then present certificates from different chains — a client trusting one rejecting the other, with nothing failing loudly enough to say why.  With this set the floe drops its `SelfSigned` bootstrap issuer and its root `Certificate`, and keeps only the `CA` ClusterIssuer that reads the Secret. Set it exactly when `lab.proxy.tls.enable` is on.  |

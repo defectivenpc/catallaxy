@@ -12,15 +12,23 @@ let
 
   # applyFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
   #
-  # `pkgs` is a definition-time argument, not a floe input: `instantiate`
-  # deep-forces inputs, so a derivation could not travel that way.
+  # `pkgs`, `cataCharts` and `k8sSpecs` are definition-time arguments rather
+  # than floe inputs: `instantiate` deep-forces inputs, so a derivation could
+  # not travel that way. A floe reads them to default its own `chart`, which
+  # is why a lab no longer threads one.
   applyFloes =
     set:
     lib.mapAttrs (
       _: path:
       let
         def = import path {
-          inherit lib pkgs catallaxy;
+          inherit
+            lib
+            pkgs
+            catallaxy
+            cataCharts
+            k8sSpecs
+            ;
           inherit (catallaxy) floe sigs kinds;
         };
       in

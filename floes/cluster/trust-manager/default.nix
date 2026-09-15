@@ -8,6 +8,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -20,6 +21,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.trust-manager.chart}";
+      defaultText = lib.literalExpression "cataCharts.trust-manager.chart";
       description = "Store path of the trust-manager Helm chart. Required.";
     };
 

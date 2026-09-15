@@ -19,6 +19,7 @@
 # legal value.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   pkgs,
   floe,
@@ -34,11 +35,15 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.velero.chart}";
+      defaultText = lib.literalExpression "cataCharts.velero.chart";
       description = "Store path of the Velero Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.velero.crds}";
+      defaultText = lib.literalExpression "cataCharts.velero.crds";
       description = ''
         Store path of the CRD manifest extracted from the chart. Required.
 

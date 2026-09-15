@@ -5,6 +5,7 @@
 # the first while a consumer waiting for reconciliation needs the second.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   pkgs,
   floe,
@@ -20,6 +21,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.kaniop.chart}";
+      defaultText = lib.literalExpression "cataCharts.kaniop.chart";
       description = "Store path of the kaniop Helm chart. Required.";
     };
 

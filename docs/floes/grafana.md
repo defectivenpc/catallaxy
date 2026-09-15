@@ -9,7 +9,7 @@ Grafana, wired to whichever metrics, logs and traces backends the cluster has.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | autoLogin | boolean | `false` | Skip the login form and go straight to the issuer.  Also disables the form, so a lab that turns this on and then loses its issuer has no way in at all. Off by default for that reason.  |
-| chart | string | *(required)* | Store path of the Grafana Helm chart. Required. |
+| chart | string | `cataCharts.grafana.chart` | Store path of the Grafana Helm chart. Required. |
 | namespace | string | `"monitoring"` | Namespace Grafana runs in. |
 | oidc | boolean | `false` | Log in through the lab's OIDC issuer.  Off by default: with nothing providing OIDC_PROVIDER this is refused rather than silently falling back to the admin password, and most labs that run Grafana do not run an issuer.  |
 | storage | string | `"2Gi"` | Size of the volume dashboards and settings live on. |

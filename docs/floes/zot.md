@@ -8,7 +8,7 @@ Zot, a small OCI registry used as the lab's pull-through cache.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the zot Helm chart. Required. |
+| chart | string | `cataCharts.zot.chart` | Store path of the zot Helm chart. Required. |
 | namespace | string | `"zot"` | Namespace it runs in. |
 | port | 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `5000` | Port the registry serves on. |
 | storage | string | `"8Gi"` | Size of the volume claim holding the images. |

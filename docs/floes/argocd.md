@@ -8,7 +8,7 @@ Argo CD, which takes ownership of applying the cluster's manifests.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the Argo CD Helm chart. Required. |
+| chart | string | `cataCharts.argocd.chart` | Store path of the Argo CD Helm chart. Required. |
 | insecureRepo | boolean | `true` | Skip TLS verification when cloning.  True by default, and only defensible because the repository this clones is inside the same cluster: `internalUrl` is a Service address over plain HTTP, so there is no certificate to verify in the first place. A lab pointing Argo at a repository outside itself should turn this off and give it a CA.  |
 | namespace | string | `"argocd"` | Namespace Argo CD runs in. |
 | project | string | `"default"` | Argo project the repository is registered under. |

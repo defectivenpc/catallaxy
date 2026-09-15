@@ -16,6 +16,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -28,6 +29,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.cert-manager.chart}";
+      defaultText = lib.literalExpression "cataCharts.cert-manager.chart";
       description = "Store path of the cert-manager Helm chart. Required.";
     };
 

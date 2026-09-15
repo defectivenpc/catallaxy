@@ -26,7 +26,6 @@
 # `lab-tsig-key-agrees` compares them, so the pair that would otherwise fail
 # with a bare NOTAUTH at runtime fails at `nix flake check` instead.
 {
-  cataCharts,
   floes,
   config,
   ...
@@ -44,7 +43,6 @@
   lab.egress.port = 3134;
 
   lab.clusters.core.floes.external-dns = floes.external-dns {
-    chart = "${cataCharts.external-dns.chart}";
     inherit (config.lab.dns) tsigKeyname tsigSecretAlg;
 
     tsigSecretRef = "external-dns/externaldns-tsig";

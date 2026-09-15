@@ -8,6 +8,7 @@
 # repository outside the lab — argocd clones from here.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   pkgs,
   floe,
@@ -23,6 +24,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.forgejo.chart}";
+      defaultText = lib.literalExpression "cataCharts.forgejo.chart";
       description = "Store path of the Forgejo Helm chart. Required.";
     };
 

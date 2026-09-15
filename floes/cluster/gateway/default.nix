@@ -11,6 +11,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -23,14 +24,17 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.traefik.chart}";
+      defaultText = lib.literalExpression "cataCharts.traefik.chart";
       description = ''
-        Store path of the Traefik Helm chart. Required — the caller pins it
-        in `lib/charts.nix` and interpolates it.
+        Store path of the Traefik Helm chart, defaulted from the pin in
+        `lib/charts.nix`. Override to run a fork or a mirror.
 
         A path and not the derivation: `instantiate` deep-forces its inputs
         to check them eagerly, and a derivation is a self-referential
         attrset, so passing one overflows the stack before the floe is ever
-        linked.
+        linked. `defaultText` is what keeps the store hash out of the
+        generated page.
       '';
     };
 

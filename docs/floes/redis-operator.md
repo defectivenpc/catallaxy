@@ -8,7 +8,7 @@ OT-Container-Kit's Redis operator.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the redis-operator Helm chart. Required. |
+| chart | string | `cataCharts.redis-operator.chart` | Store path of the redis-operator Helm chart. Required. |
 | namespace | string | `"redis-operator"` | Namespace the operator runs in. |
 
 ## Requires

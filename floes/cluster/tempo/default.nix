@@ -5,6 +5,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -17,6 +18,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.tempo.chart}";
+      defaultText = lib.literalExpression "cataCharts.tempo.chart";
       description = "Store path of the Tempo Helm chart. Required.";
     };
 

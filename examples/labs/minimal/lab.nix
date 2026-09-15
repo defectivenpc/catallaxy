@@ -6,8 +6,6 @@
 # install order from them.
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
   config,
   ...
@@ -39,19 +37,15 @@ in
       instanceName = instanceOf "app";
     };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
+    gateway-api = floes.gateway-api-crds { };
 
     # Every cluster with a gateway has an issuer: the gateway requires
     # X509_ISSUANCE outright, because a certificate needs one and floe-core
     # has no optional-exactly-one hole. `minimal.local` does not terminate
     # TLS, so nothing signs anything here; `minimal.tls` flips one input.
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
+    cert-manager = floes.cert-manager { };
 
     gateway = floes.gateway {
-      chart = "${cataCharts.traefik.chart}";
     };
 
     podinfo = floes.podinfo { };

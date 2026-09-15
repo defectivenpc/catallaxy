@@ -8,7 +8,7 @@ Rancher's local-path provisioner as the cluster's default StorageClass.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the local-path-provisioner Helm chart. Required. |
+| chart | string | `cataCharts.openebs.chart` | Store path of the local-path-provisioner Helm chart. Required. |
 | className | string | `"local-path"` | Name of the StorageClass it creates. |
 | namespace | string | `"openebs"` | Namespace the provisioner runs in. |
 

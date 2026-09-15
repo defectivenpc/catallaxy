@@ -8,7 +8,7 @@ Loki, the log store.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the Loki Helm chart. Required. |
+| chart | string | `cataCharts.loki.chart` | Store path of the Loki Helm chart. Required. |
 | namespace | string | `"loki"` | Namespace Loki runs in. |
 
 ## Requires

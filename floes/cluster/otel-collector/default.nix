@@ -13,6 +13,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -25,6 +26,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.otel-collector.chart}";
+      defaultText = lib.literalExpression "cataCharts.otel-collector.chart";
       description = "Store path of the opentelemetry-collector Helm chart. Required.";
     };
 

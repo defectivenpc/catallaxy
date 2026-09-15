@@ -15,7 +15,6 @@
 {
   lib,
   cataCharts,
-  k8sSpecs,
   floes,
   config,
   ...
@@ -77,7 +76,7 @@
     # Both halves of cilium, which is the point of having it here: the
     # bootstrap manifest is a derivation the lab hands to the provisioner, and
     # the floe below installs the same chart as a release that takes ownership
-    # once the cluster is up. One `cataCharts.cilium.chart` feeds both, so the
+    # once the cluster is up. The floe defaults both halves from one pin, so the
     # two cannot disagree about what is running.
     cluster = floes.k3d-cluster {
       name = "core";
@@ -87,16 +86,16 @@
       autoDeployManifests = [
         {
           name = "cilium";
-          path = "${floes.cilium.mkBootstrapManifest { chart = "${cataCharts.cilium.chart}"; }}";
+          path = "${floes.cilium.mkBootstrapManifest { }}";
         }
       ];
     };
 
-    cilium = floes.cilium { chart = "${cataCharts.cilium.chart}"; };
+    cilium = floes.cilium { };
 
     # ---- trust ----------------------------------------------------------
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-    trust-manager = floes.trust-manager { chart = "${cataCharts.trust-manager.chart}"; };
+    cert-manager = floes.cert-manager { };
+    trust-manager = floes.trust-manager { };
 
     # ---- routing --------------------------------------------------------
     lab-dns = floes.lab-dns { };
@@ -104,7 +103,6 @@
     # Service reports a cluster-internal LoadBalancer address that nothing
     # outside the cluster can reach.
     external-dns = floes.external-dns {
-      chart = "${cataCharts.external-dns.chart}";
       tsigSecretRef = "external-dns/externaldns-tsig";
       defaultTargets = [ config.lab.network.gateway ];
     };
@@ -121,29 +119,22 @@
     # `MESH_ADMIN` locally and the lab says nothing about either. In
     # `homelab.mesh` the same floe runs in a second cluster with neither.
     netbird-operator = floes.netbird-operator {
-      chart = "${cataCharts.netbird-operator.chart}";
     };
 
     # The first consumer of GIT_REPOSITORY, and the reason it carries two
     # URLs: argo clones from inside the cluster, over forgejo's Service.
-    argocd = floes.argocd { chart = "${cataCharts.argocd.chart}"; };
+    argocd = floes.argocd { };
 
     forgejo = floes.forgejo {
-      chart = "${cataCharts.forgejo.chart}";
       oidc = true;
     };
 
     harbor = floes.harbor {
-      chart = "${cataCharts.harbor.chart}";
       oidc = true;
     };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
+    gateway-api = floes.gateway-api-crds { };
     gateway = floes.gateway {
-      chart = "${cataCharts.traefik.chart}";
       tlsEnable = true;
     };
     podinfo = floes.podinfo { };
@@ -226,26 +217,22 @@
     };
 
     # ---- operators ------------------------------------------------------
-    cnpg = floes.cnpg { chart = "${cataCharts.cnpg.chart}"; };
+    cnpg = floes.cnpg { };
 
     crossplane-provider-nop = floes.crossplane-provider-nop { };
     nop-resource = floes.nop-resource { };
 
     crossplane = floes.crossplane {
-      chart = "${cataCharts.crossplane.chart}";
-      crds = "${cataCharts.crossplane.crds}";
     };
-    kaniop = floes.kaniop { chart = "${cataCharts.kaniop.chart}"; };
-    redis-operator = floes.redis-operator { chart = "${cataCharts.redis-operator.chart}"; };
-    reloader = floes.reloader { chart = "${cataCharts.reloader.chart}"; };
+    kaniop = floes.kaniop { };
+    redis-operator = floes.redis-operator { };
+    reloader = floes.reloader { };
     # The runtime store's server. `lab.secrets.stores.runtime.vault` above
     # names the same address, which is the wiring this floe's VAULT_SERVER
     # exists to make checkable rather than coincidental.
-    openbao = floes.openbao { chart = "${cataCharts.openbao.chart}"; };
+    openbao = floes.openbao { };
 
     external-secrets = floes.external-secrets {
-      chart = "${cataCharts.external-secrets.chart}";
-      crds = "${cataCharts.external-secrets.crds}";
     };
 
     secret-store = floes.secret-store {
@@ -255,15 +242,11 @@
 
     # ---- storage and telemetry ------------------------------------------
     prometheus = floes.prometheus {
-      chart = "${cataCharts.prometheus.chart}";
-      crds = "${cataCharts.prometheus.crds}";
     };
-    openebs = floes.openebs { chart = "${cataCharts.openebs.chart}"; };
-    seaweedfs = floes.seaweedfs { chart = "${cataCharts.seaweedfs.chart}"; };
-    zot = floes.zot { chart = "${cataCharts.zot.chart}"; };
+    openebs = floes.openebs { };
+    seaweedfs = floes.seaweedfs { };
+    zot = floes.zot { };
     velero = floes.velero {
-      chart = "${cataCharts.velero.chart}";
-      crds = "${cataCharts.velero.crds}";
       schedules.daily = {
         schedule = "0 2 * * *";
         ttl = "168h";
@@ -272,17 +255,16 @@
     # All three backends and the issuer are in this lab, so grafana gets three
     # datasources and OIDC login — the full width of both optional holes.
     grafana = floes.grafana {
-      chart = "${cataCharts.grafana.chart}";
       oidc = true;
     };
 
-    loki = floes.loki { chart = "${cataCharts.loki.chart}"; };
-    tempo = floes.tempo { chart = "${cataCharts.tempo.chart}"; };
+    loki = floes.loki { };
+    tempo = floes.tempo { };
 
     # All three backends are in this lab, so all three pipelines exist. That
     # is the point of the fixture: `every-floe` is where the collector's
     # fan-in is exercised at full width.
-    otel-collector = floes.otel-collector { chart = "${cataCharts.otel-collector.chart}"; };
+    otel-collector = floes.otel-collector { };
 
     # ---- policy ---------------------------------------------------------
     # Installs nothing; it is here so something reads its signature.

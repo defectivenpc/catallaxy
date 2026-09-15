@@ -32,6 +32,7 @@
 # routed name in *both* cases — see `managementUrl` below.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   sigs,
   kinds,
@@ -45,6 +46,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.netbird-operator.chart}";
+      defaultText = lib.literalExpression "cataCharts.netbird-operator.chart";
       description = ''
         Store path of the netbird-operator chart. Required.
 

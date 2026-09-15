@@ -17,7 +17,6 @@
 # `examples/labs/tests/provisions.nix` pins that ordering by rendering.
 {
   lib,
-  cataCharts,
   floes,
   config,
   ...
@@ -43,8 +42,6 @@ in
     };
 
     crossplane = floes.crossplane {
-      chart = "${cataCharts.crossplane.chart}";
-      crds = "${cataCharts.crossplane.crds}";
     };
 
     # Nothing here names crossplane. The provider requires a control plane and

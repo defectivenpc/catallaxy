@@ -8,7 +8,7 @@ external-dns, publishing routed hostnames into the lab's zone over RFC2136.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the external-dns Helm chart. Required. |
+| chart | string | `cataCharts.external-dns.chart` | Store path of the external-dns Helm chart. Required. |
 | defaultTargets | list of string | `[]` | Addresses every record points at, regardless of what the object says.  A lab behind one ingress needs this: the LoadBalancer address a k3d Service reports is a cluster-internal address that nothing outside can reach.  |
 | interval | string | `"1m"` | How often the reconcile loop runs when nothing has happened. |
 | namespace | string | `"external-dns"` | Namespace the controller runs in. |

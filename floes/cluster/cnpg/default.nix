@@ -6,6 +6,7 @@
 {
   lib,
   catallaxy,
+  cataCharts ? null,
   sigs,
   kinds,
   ...
@@ -18,6 +19,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.cnpg.chart}";
+      defaultText = lib.literalExpression "cataCharts.cnpg.chart";
       description = "Store path of the CloudNativePG Helm chart. Required.";
     };
 

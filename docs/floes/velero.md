@@ -9,8 +9,8 @@ Velero, cluster backup and restore against an object store.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | bucket | string | `"velero"` | Bucket backups are written to. It must already exist. |
-| chart | string | *(required)* | Store path of the Velero Helm chart. Required. |
-| crds | string | *(required)* | Store path of the CRD manifest extracted from the chart. Required.  Their own bundle, because the chart's `installCRDs` runs them through a hook that re-applies on every upgrade, and because a consumer emitting a `Backup` needs the kind to exist without waiting for the controller.  |
+| chart | string | `cataCharts.velero.chart` | Store path of the Velero Helm chart. Required. |
+| crds | string | `cataCharts.velero.crds` | Store path of the CRD manifest extracted from the chart. Required.  Their own bundle, because the chart's `installCRDs` runs them through a hook that re-applies on every upgrade, and because a consumer emitting a `Backup` needs the kind to exist without waiting for the controller.  |
 | namespace | string | `"velero"` | Namespace the controller runs in. |
 | region | string | `"us-east-1"` | Region the S3 client claims.  Meaningless to a self-hosted store and required by the client anyway: the AWS SDK refuses to sign a request without one.  |
 | schedules | attribute set of (submodule) | `{}` | Recurring backups, as Velero `Schedule` resources. |

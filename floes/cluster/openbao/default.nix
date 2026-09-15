@@ -20,6 +20,7 @@
 # again. Auto-unseal needs a KMS, which a lab on one docker host does not have.
 {
   catallaxy,
+  cataCharts ? null,
   lib,
   pkgs,
   floe,
@@ -40,6 +41,8 @@ catallaxy.mkComponentFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
+      default = "${cataCharts.openbao.chart}";
+      defaultText = lib.literalExpression "cataCharts.openbao.chart";
       description = "Store path of the OpenBao Helm chart. Required.";
     };
 

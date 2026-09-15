@@ -8,7 +8,7 @@ Cilium as the cluster's CNI, replacing the provisioner's default.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | *(required)* | Store path of the Cilium Helm chart. Required.  The same chart the lab templated for `mkBootstrapManifest`. Two versions is the failure this floe is most exposed to: the release would re-render a DaemonSet differing from the running one, the agents would restart, and the cluster would lose its network mid-apply.  |
+| chart | string | `cataCharts.cilium.chart` | Store path of the Cilium Helm chart, defaulted from the pin.  The same chart the lab templated for `mkBootstrapManifest`. Two versions is the failure this floe is most exposed to: the release would re-render a DaemonSet differing from the running one, the agents would restart, and the cluster would lose its network mid-apply.  |
 | hubble | boolean | `false` | Run Hubble's relay for flow visibility.  Must match what `mkBootstrapManifest` was given, for the same reason the chart must.  |
 | k8sServiceHost | string | `"localhost"` | Must match what `mkBootstrapManifest` was given. |
 | k8sServicePort | string | `"6443"` | Must match what `mkBootstrapManifest` was given. |

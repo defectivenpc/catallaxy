@@ -28,6 +28,8 @@
   floeSet,
   labDefs,
   catallaxy,
+  cataCharts,
+  k8sSpecs,
 }:
 
 let
@@ -36,7 +38,13 @@ let
   defOf =
     name:
     import floeSet.${name} {
-      inherit lib pkgs catallaxy;
+      inherit
+        lib
+        pkgs
+        catallaxy
+        cataCharts
+        k8sSpecs
+        ;
       inherit
         floe
         sigs
