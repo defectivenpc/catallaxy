@@ -15,13 +15,34 @@ pub async fn run(ctx: &VerifyContext<'_>) -> Vec<Diagnostic> {
         return Vec::new();
     }
 
+    // Said out loud rather than dropped. A cluster that is its own edge has
+    // hostnames this probe cannot reach, and reporting "verified" without
+    // mentioning them is the one way this check can lie.
+    let mut skipped: Vec<Diagnostic> = ctx
+        .unreachable_hosts()
+        .into_iter()
+        .filter(|(_, h, _)| h.tier == "public")
+        .map(|(cluster, host, mode)| {
+            diag(
+                Severity::Warning,
+                CHECK,
+                &host.host,
+                &cluster,
+                format!(
+                    "not probed: cluster '{cluster}' is edge mode {mode:?}, so this host does \
+                     not resolve through the lab's ingress. Nothing here checked it."
+                ),
+            )
+        })
+        .collect();
+
     let hosts: Vec<(String, _)> = ctx
         .exposed_hosts()
         .into_iter()
         .filter(|(_, h)| h.tier == "public")
         .collect();
     if hosts.is_empty() {
-        return Vec::new();
+        return skipped;
     }
 
     let Some((scheme, port)) = ctx.ingress() else {
@@ -88,5 +109,6 @@ pub async fn run(ctx: &VerifyContext<'_>) -> Vec<Diagnostic> {
             }
         }
     }
+    diags.append(&mut skipped);
     diags
 }

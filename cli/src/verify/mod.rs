@@ -2,8 +2,8 @@ pub mod checks;
 
 use serde::Serialize;
 
-use crate::domain::LabSpec;
 pub use crate::domain::diagnostic::{Diagnostic, Severity};
+use crate::domain::{EdgeMode, LabSpec};
 
 pub const CHECK_NAMES: [&str; 6] = [
     "clusters",
@@ -53,6 +53,32 @@ impl VerifyContext<'_> {
             .collect();
         out.sort_by(|a, b| a.1.host.cmp(&b.1.host));
         out.dedup_by(|a, b| a.1.host == b.1.host);
+        out
+    }
+
+    /// Routed hostnames the lab's proxy cannot be asked about, with the edge
+    /// mode that puts them out of reach.
+    ///
+    /// `exposed_hosts` drops these for a good reason — probing them at the
+    /// lab's ingress would fail for the wrong reason — but dropping them
+    /// silently meant `verified` was reported about hosts nothing looked at.
+    /// Naming them is not the discovery RFC 0005 §6.4 describes; it is the
+    /// difference between silence and a stated skip, which is what a report
+    /// claiming success owes the reader.
+    pub fn unreachable_hosts(&self) -> Vec<(String, ExposedHost, EdgeMode)> {
+        let mut out: Vec<(String, ExposedHost, EdgeMode)> = self
+            .lab
+            .clusters
+            .iter()
+            .filter(|(_, spec)| spec.edge.mode != crate::domain::EdgeMode::Proxy)
+            .flat_map(|(cluster, spec)| {
+                let mode = spec.edge.mode;
+                spec.exposed_hosts
+                    .iter()
+                    .map(move |host| (cluster.clone(), host.clone(), mode))
+            })
+            .collect();
+        out.sort_by(|a, b| a.1.host.cmp(&b.1.host));
         out
     }
 
@@ -317,6 +343,15 @@ mod tests {
             .map(|(_, h)| h.host)
             .collect();
         assert_eq!(hosts, vec!["here.test"]);
+
+        // Dropped from the probe, but named: a report that says "verified"
+        // while having looked at nothing for `cloud` is the lie this closes.
+        let unreachable: Vec<String> = ctx
+            .unreachable_hosts()
+            .into_iter()
+            .map(|(_, h, _)| h.host)
+            .collect();
+        assert_eq!(unreachable, vec!["there.test"]);
     }
 
     #[test]

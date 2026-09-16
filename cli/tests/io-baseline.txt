@@ -16,4 +16,4 @@ host/services.rs:5
 # Narrowing io::http::client to take the two settings these callers actually
 # want (timeout, user agent) would close it.
 images/mod.rs:250
-verify/checks/endpoints.rs:41
+verify/checks/endpoints.rs:62
