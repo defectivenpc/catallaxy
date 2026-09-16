@@ -38,9 +38,9 @@ an attrset of those:
 
 ```nix
 lab.clusters.app.floes = {
-  cluster      = floes.k3d-cluster  { name = "app"; instanceName = "minimal-app"; };
-  cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-  gateway      = floes.gateway      { chart = "${cataCharts.traefik.chart}"; };
+  cluster      = floes.k3d-cluster  { };
+  cert-manager = floes.cert-manager { };
+  gateway      = floes.gateway      { };
   podinfo      = floes.podinfo      { };
 };
 ```
@@ -114,15 +114,14 @@ already declared needs `lib.mkForce`, because a floe instance is an opaque
 value and the module system has no merge for two of them:
 
 ```nix
-gateway = lib.mkForce (floes.gateway {
-  chart     = "${cataCharts.traefik.chart}";
-  tlsEnable = true;
-});
+gateway = lib.mkForce (floes.gateway { tlsEnable = true; });
 ```
 
-Environments need distinct identities to run side by side — their own
-`lab.name`, subnet and host ports. A lab-level check refuses two labs that
-claim one host port or overlapping docker subnets.
+Environments need distinct identities to run side by side, and they get them
+from their own `lab.name`: the subnet and every host port are derived from
+it and recorded in `examples/labs/tests/allocations.json`. Set one by hand
+only when the address is somebody's contract — a firewall rule, a bookmark —
+and a lab-level check still refuses two labs that collide.
 
 ## The escape hatch
 

@@ -67,35 +67,34 @@ lab as an ordinary argument. See [Write a Floe](../using/writing-a-floe.md).
 
 ```nix
 { myFloes }:
-{ lib, cataCharts, floes, ... }:
+{ lib, floes, ... }:
 {
   lab.name = "my-platform";
   lab.dns.zone = "example.test";
 
   lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster {
-      name = "app";
-      instanceName = "my-platform-app";
-    };
-
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version  = "v1.2.1";
-    };
-
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-    gateway      = floes.gateway      { chart = "${cataCharts.traefik.chart}"; };
+    cluster = floes.k3d-cluster { };
+    gateway-api = floes.gateway-api-crds { };
+    cert-manager = floes.cert-manager { };
+    gateway = floes.gateway { };
 
     hello = myFloes.hello-world { replicas = 2; };
   };
 }
 ```
 
-Notice what is **not** there. Nothing says `hello-world` comes after
-`gateway`, and nothing passes the gateway's address or the lab's zone into
-it. Your floe declares `requires.gateway = sigs.API_GATEWAY`; the linker
-resolves it against this cluster, checks that exactly one floe provides it,
-and derives the ordering edge. See [The Model](../understanding/model.md).
+Notice what is **not** there. No chart paths — each floe defaults its own
+from the pin, and you override only to run a fork. No cluster name or
+container name — the attribute path already said `app`, and the lab's name
+tells two `app` clusters apart. No subnet and no host ports: those are
+derived from the lab's name and recorded in an allocation table, so two
+people adding labs on separate branches do not collide at merge.
+
+And nothing says `hello-world` comes after `gateway`, and nothing passes the
+gateway's address or the lab's zone into it. Your floe declares
+`requires.gateway = sigs.API_GATEWAY`; the linker resolves it against this
+cluster, checks that exactly one floe provides it, and derives the ordering
+edge. See [The Model](../understanding/model.md).
 
 ## Run it
 

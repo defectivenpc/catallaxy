@@ -48,6 +48,7 @@ in
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
 // import ./allocations.nix { inherit lib pkgs allocations; }
+// import ./teaching.nix { inherit lib pkgs; }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
   inherit

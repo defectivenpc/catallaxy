@@ -7,38 +7,24 @@
 
 {
   lib,
-  cataCharts,
-  k8sSpecs,
   floes,
-  config,
   ...
 }:
 
-let
-  instanceOf = clusterName: "${lib.replaceStrings [ "." ] [ "-" ] config.lab.name}-${clusterName}";
-in
 {
   lab.name = lib.mkDefault "my-platform";
   lab.dns.zone = lib.mkDefault "example.test";
 
   lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster {
-      name = "app";
-      instanceName = instanceOf "app";
-    };
+    cluster = floes.k3d-cluster { };
 
-    gateway-api = floes.gateway-api-crds {
-      manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-      version = "v1.2.1";
-    };
+    gateway-api = floes.gateway-api-crds { };
 
     # The gateway requires X509_ISSUANCE outright, so every cluster with a
     # gateway has an issuer even when nothing terminates TLS.
-    cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
+    cert-manager = floes.cert-manager { };
 
-    gateway = floes.gateway {
-      chart = "${cataCharts.traefik.chart}";
-    };
+    gateway = floes.gateway { };
 
     hello = myFloes.hello-world { };
   };
