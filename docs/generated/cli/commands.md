@@ -32,7 +32,7 @@ Every command and flag, generated from the parser. The judgement, the flake frag
 | [`cata lab ops`](#lab-ops) | Run a lab-declared ops command. Arguments after '--' are passed through |
 | [`cata lab dns`](#lab-dns) | Configure host DNS for the lab zone |
 | [`cata lab topology`](#lab-topology) | Show clusters, services and network |
-| [`cata lab env`](#lab-env) | Print shell exports that trust the lab CA in the current shell |
+| [`cata lab env`](#lab-env) | Print shell exports pointing KUBECONFIG at the lab and trusting its CA |
 | [`cata apply`](#apply) | Apply manifests to one cluster |
 | [`cata diagnose`](#diagnose) | Show pods, events and deployments for a cluster |
 | [`cata pki init`](#pki-init) | Initialize the cluster's client CA |
@@ -399,7 +399,7 @@ cata lab topology [OPTIONS] [NAME]
 
 ### `cata lab env` {#lab-env}
 
-Print shell exports that trust the lab CA in the current shell
+Print shell exports pointing KUBECONFIG at the lab and trusting its CA
 
 ```
 cata lab env [OPTIONS] [NAME]

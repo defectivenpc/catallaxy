@@ -289,7 +289,7 @@ pub enum LabCommands {
         live: bool,
     },
 
-    #[command(about = "Print shell exports that trust the lab CA in the current shell")]
+    #[command(about = "Print shell exports pointing KUBECONFIG at the lab and trusting its CA")]
     Env {
         #[arg(env = "CATALLAXY_LAB", help = LAB_NAME_HELP)]
         name: Option<String>,

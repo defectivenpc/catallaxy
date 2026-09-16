@@ -109,6 +109,25 @@ cata --flake .#my-platform lab up
 `--flake .` alone works too, if the lab name matches, but being explicit is
 clearer with more than one lab.
 
+### Reaching the cluster
+
+A lab's clusters go in the **lab's own kubeconfig**, not `~/.kube/config`:
+
+```bash
+eval "$(cata --flake .#my-platform lab env)"
+kubectl config get-contexts
+```
+
+That is why a fresh `kubectl config get-contexts` shows nothing after
+`lab up` — nothing is wrong, and nothing was written over. A lab cannot
+clobber a cluster you actually depend on, and `cata lab cleanup` can delete
+the whole file without taking your other contexts with it.
+
+`lab env` sets `KUBECONFIG` and, if the lab has a CA, the variables that
+trust it. `--shell fish`, `--shell json` and `--unset` are there too. The
+file itself is at `~/.local/share/catallaxy/labs/<lab>/kube/config` if you
+would rather point something at it directly.
+
 Tear it down with `cata --flake .#my-platform lab down`. That one does not
 prompt, so it takes no `--yes`; `cata lab cleanup <name> --yes` is the one
 that does, because it removes state a rebuild cannot recover.
