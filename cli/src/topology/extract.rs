@@ -14,6 +14,7 @@ pub fn extract_static(lab: &LabSpec) -> LabTopology {
     };
 
     let services = extract_services(lab);
+    let endpoints = extract_endpoints(lab, &services);
     let clusters = extract_clusters(lab);
     let mut edges = extract_edges_from_plan(lab);
 
@@ -29,8 +30,65 @@ pub fn extract_static(lab: &LabSpec) -> LabTopology {
         services,
         clusters,
         edges,
+        endpoints,
         deployment_plan: extract_plan_steps(lab),
     }
+}
+
+/// What this lab serves, and how to reach it.
+///
+/// Reuses `verify::ingress_endpoint` rather than re-deriving which published
+/// port is the ingress: two answers to that question would eventually differ,
+/// and the one that probes is the one that must be right.
+fn extract_endpoints(
+    lab: &LabSpec,
+    services: &BTreeMap<String, LabService>,
+) -> Vec<crate::topology::Endpoint> {
+    let ingress = services.get("proxy").and_then(|p| {
+        let published: Vec<(u16, u16)> = p
+            .ports
+            .iter()
+            .filter_map(|m| {
+                let parsed = crate::domain::port_mapping::PortMapping::parse(m)?;
+                parsed
+                    .is_host_reachable()
+                    .then_some((parsed.host, parsed.container))
+            })
+            .collect();
+        crate::verify::ingress_endpoint(&published)
+    });
+
+    let mut out: Vec<crate::topology::Endpoint> = lab
+        .clusters
+        .iter()
+        .flat_map(|(cluster, spec)| {
+            let mode = spec.edge.mode;
+            spec.exposed_hosts.iter().map(move |h| {
+                let scheme = ingress.map_or("https", |(s, _)| s);
+                crate::topology::Endpoint {
+                    host: h.host.clone(),
+                    cluster: cluster.clone(),
+                    tier: h.tier.clone(),
+                    url: format!("{scheme}://{}", h.host),
+                    // Reaches it without the host resolving the zone, which
+                    // is what `dig`/`curl` need before `lab dns --setup`.
+                    direct: ingress.map(|(s, port)| {
+                        format!(
+                            "curl -k --resolve {}:{port}:127.0.0.1 {s}://{}:{port}",
+                            h.host, h.host
+                        )
+                    }),
+                    unreachable: (mode != crate::domain::EdgeMode::Proxy).then(|| {
+                        format!("cluster '{cluster}' is its own edge; the lab's ingress does not route to it")
+                    }),
+                }
+            })
+        })
+        .collect();
+
+    out.sort_by(|a, b| a.host.cmp(&b.host));
+    out.dedup_by(|a, b| a.host == b.host);
+    out
 }
 
 fn extract_services(lab: &LabSpec) -> BTreeMap<String, LabService> {
@@ -263,6 +321,39 @@ pub fn health_of(pods: &[serde_json::Value]) -> ComponentHealthState {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    /// The scheme and port come from what the proxy actually publishes, not
+    /// from a guess: a lab publishing only :80 is an http lab.
+    #[test]
+    fn an_endpoints_url_follows_the_ingress_the_proxy_publishes() {
+        let https = LabService {
+            description: "p".into(),
+            container: "c".into(),
+            ports: vec!["127.0.0.1:8586:443".into()],
+            running: None,
+        };
+        let http = LabService {
+            ports: vec!["127.0.0.1:8186:80".into()],
+            ..https.clone()
+        };
+
+        let published = |svc: &LabService| {
+            let p: Vec<(u16, u16)> = svc
+                .ports
+                .iter()
+                .filter_map(|m| {
+                    let parsed = crate::domain::port_mapping::PortMapping::parse(m)?;
+                    parsed
+                        .is_host_reachable()
+                        .then_some((parsed.host, parsed.container))
+                })
+                .collect();
+            crate::verify::ingress_endpoint(&p)
+        };
+
+        assert_eq!(published(&https), Some(("https", 8586)));
+        assert_eq!(published(&http), Some(("http", 8186)));
+    }
 
     fn pod(phase: &str, ready: &[bool]) -> serde_json::Value {
         json!({

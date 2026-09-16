@@ -65,8 +65,35 @@ cata --flake .#minimal.local lab topology --format table
 ```
 
 `--live` queries the clusters for status instead of reporting it as unknown.
-`mermaid`, `json` and `dot` are the other formats, for pasting into a
-document or feeding to a graph tool.
+
+Its **Endpoints** section is what the lab serves, with the URL to open and,
+underneath, the one `curl` that reaches a host before the machine resolves
+the zone. It reports rather than probes, so it answers with the lab down —
+`cata lab verify` is what says whether an endpoint actually replies.
+
+### Opening one in a browser
+
+A lab's zone resolves through the lab's own DNS, so a browser knows nothing
+about it until the host does:
+
+```bash
+sudo cata --flake .#homelab.local lab dns --setup
+```
+
+The records point at the docker bridge, where the ingress listens on real 80
+and 443 — so the URL needs no port once that is done. For TLS without a
+warning, the lab's CA has to be trusted by the browser, which reads neither
+`lab env` nor the system store in every case:
+
+```bash
+# Chromium and anything else using NSS
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "catallaxy <lab>" \
+  -i ~/.local/share/catallaxy/labs/<lab>/proxy/ca.crt
+```
+
+Firefox imports the same file under Settings → Privacy & Security →
+Certificates → Authorities. `mermaid`, `json` and `dot` are the other
+formats, for pasting into a document or feeding to a graph tool.
 
 The application is served through the lab gateway over the lab's TLS:
 

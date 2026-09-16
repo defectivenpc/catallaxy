@@ -15,7 +15,30 @@ pub struct LabTopology {
     pub services: BTreeMap<String, LabService>,
     pub clusters: BTreeMap<String, ClusterTopology>,
     pub edges: Vec<TopologyEdge>,
+    pub endpoints: Vec<Endpoint>,
     pub deployment_plan: Vec<PlanStep>,
+}
+
+/// A hostname this lab serves, and what to type to reach it.
+///
+/// Assembled from what the clusters route and what the host services publish,
+/// which is the same pair `verify` probes — the difference being that this
+/// reports and does not dial, so it answers with the lab down.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Endpoint {
+    pub host: String,
+    pub cluster: String,
+    pub tier: String,
+    /// `https://git.homelab.test`, once the host resolves the zone.
+    pub url: String,
+    /// What reaches it without touching the host's resolver.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub direct: Option<String>,
+    /// Set when the lab's ingress cannot reach it at all — a cluster that is
+    /// its own edge. Reported rather than omitted, so a host never disappears
+    /// from the list without saying why.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unreachable: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

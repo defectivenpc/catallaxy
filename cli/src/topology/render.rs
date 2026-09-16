@@ -43,8 +43,55 @@ fn render_table(topo: &LabTopology) -> String {
     let _ = writeln!(out);
 
     out.push_str(&render_services(topo));
+    out.push_str(&render_endpoints(topo));
     out.push_str(&render_clusters(topo));
     out.push_str(&render_edges(topo));
+    out
+}
+
+/// What the lab serves. Static: this says what to type, and `cata lab verify`
+/// is what says whether it answers.
+fn render_endpoints(topo: &LabTopology) -> String {
+    let mut out = String::new();
+    if topo.endpoints.is_empty() {
+        return out;
+    }
+
+    let _ = writeln!(out, "{}", style("Endpoints:").bold());
+    for e in &topo.endpoints {
+        let tier = if e.tier == "public" {
+            style(&e.tier).green()
+        } else {
+            style(&e.tier).dim()
+        };
+        let _ = writeln!(
+            out,
+            "  {:<34} {} {}",
+            style(&e.url).cyan(),
+            tier,
+            style(format!("({})", e.cluster)).dim()
+        );
+        if let Some(why) = &e.unreachable {
+            let _ = writeln!(out, "    {} {}", style("!").yellow(), style(why).dim());
+        }
+    }
+
+    // The zone resolves through the lab's own DNS, not the host's, until
+    // someone says otherwise — which is the step that turns these into URLs a
+    // browser can open.
+    if topo.zone.is_some() {
+        let _ = writeln!(out);
+        let _ = writeln!(
+            out,
+            "  {}",
+            style("these resolve once the host uses the lab's DNS: sudo cata lab dns --setup")
+                .dim()
+        );
+        if let Some(first) = topo.endpoints.iter().find_map(|e| e.direct.as_ref()) {
+            let _ = writeln!(out, "  {}", style(format!("without that: {first}")).dim());
+        }
+    }
+    let _ = writeln!(out);
     out
 }
 
