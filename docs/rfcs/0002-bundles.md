@@ -27,9 +27,11 @@ RFC 0004.
 >   floe does exactly that, deliberately, with `scope = "per-cluster"` and a
 >   counter-argument in its own comment. There is no signature-lint
 >   mechanism.
-> - **§10.6 is not met.** A chart relying on Helm hook weights should be
->   "rejected with an explanation"; `lib/render/manifest.nix` drops hook
->   resources silently, with no count and no diagnostic.
+> - **§10.6 is met**, as of 0.9.0. `lib/render/manifest.nix` extracts every
+>   non-test hook `helm template` emits and refuses the build unless the
+>   chart's `replacedHooks` names it — so a chart whose hook does work
+>   catallaxy does elsewhere fails with the hook's name rather than being
+>   silently dropped.
 
 RFC 0001 defines a floe as a component with holes that declares an interface
 — `requires` and `provides`, which know nothing about how anything is
