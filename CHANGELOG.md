@@ -7,6 +7,68 @@ The format is based on
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-15
+
+### Added
+
+- **A lab is declared out of reusable pieces, and the pieces supply what
+  they know.** Five changes, each deleting ceremony a lab author was writing
+  about facts the tree already had.
+
+  A floe defaults its own chart from the pin in `lib/charts.nix` — **87
+  interpolations** across the example labs and fixtures, gone. `cataCharts`
+  and `k8sSpecs` are definition-time arguments beside `pkgs`, for the reason
+  `pkgs` already was: `instantiate` deep-forces inputs, so a derivation
+  cannot travel as one but its interpolated path can. `defaultText` keeps
+  the store hash out of the generated pages.
+
+  A cluster's `name` and `instanceName` are derived from the attribute path
+  and the lab's name. The obstacle was ordering — a floe is instantiated
+  before it is placed — so placement re-instantiates, with `supplied` merged
+  last. Derived equals hand-written, so no container was renamed.
+
+  Host ports and subnets are derived and **written down**:
+  `lib/allocation.nix` hashes the lab's name into one slot of 256, and
+  `examples/labs/tests/allocations.json` records the result, diff-checked.
+  RFC 0005 §5 asked for an address plan written once, not typed by hand; a
+  rename now appears as a reviewed line rather than silently. It also
+  corrects a plan that was wrong — the literals had drifted to
+  172.33–172.44, which is public address space.
+
+  An unfilled hole names the floes that could fill it, derived by mapping
+  `provides` over the floe definitions rather than from a maintained list.
+
+  **Presets**: a floe that includes floes, which is Backpack's unit
+  inclusion and the one mechanism the model lacked. `provides` is checked
+  against the members, so it is a claim rather than a comment — the shipped
+  `standard-cluster` declared `SECRET_STORE` when no member provided one,
+  and instantiating it said so.
+
+### Changed
+
+- **The vocabulary is borrowed rather than invented.** The design is
+  Haskell's Backpack applied to NixOS modules, recorded in
+  `understanding/model.md` with the mapping. `camp` is deleted — say bundles
+  and resources. `promise`/`offer` are `provision`/`expose`, which the
+  option had been called all along. `unit` was Backpack's word pointing the
+  wrong way and is `instName`.
+
+- **`cluster.security`** ships Pod Security Admission, audit logging and
+  default-deny NetworkPolicies, all off by default.
+
+### Fixed
+
+- **A verified lab stops claiming success about hosts it never looked at.**
+  `exposed_hosts` drops self-edge clusters for a good reason; dropping them
+  silently meant nothing said so.
+
+- **The scaffold stopped teaching ceremony the tree had removed.**
+  `templates/consumer` and the authoring guides still showed chart
+  threading, `instanceOf` and hand-assigned ports. `checks.teaching` refuses
+  them now.
+
+- Two RFC annotations claimed unbuilt things that had shipped.
+
 ## [0.9.0] - 2026-09-10
 
 ### Added

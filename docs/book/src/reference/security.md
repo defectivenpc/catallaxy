@@ -96,6 +96,11 @@ serve.
 
 ## What is still missing
 
-Per-floe traffic declarations. Until a floe can say what it needs to reach,
-`defaultDeny` on a namespace running anything real means writing the allow
-rules by hand.
+Per-floe traffic declarations, and deliberately after 1.0. Until a floe can
+say what it needs to reach, `defaultDeny` on a namespace running anything
+real means writing the allow rules by hand — which is why no shipped lab
+enables it.
+
+Doing it means every floe declaring its egress, a cross-cutting change
+across forty of them. Done badly it would be worse than this stated limit,
+and 1.0's claim is about composing a lab rather than hardening one.
