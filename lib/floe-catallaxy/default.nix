@@ -30,6 +30,8 @@ in
       }
     );
 
+  inherit (import ./preset.nix { inherit lib floe; }) mkPreset isPreset;
+
   policies = import ./policies.nix { inherit lib; };
 
   inherit (import ./elaborate.nix { inherit lib; }) elaborateCluster;

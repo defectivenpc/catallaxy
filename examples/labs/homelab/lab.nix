@@ -43,6 +43,7 @@
 {
   lib,
   floes,
+  presets,
   config,
   ...
 }:
@@ -50,57 +51,35 @@
 let
   zone = config.lab.dns.zone;
 
-  # What both clusters need before anything in them can be reached: the CRDs
-  # the gateway is written against, a root to sign from, a resolver a pod can
-  # use, and the gateway itself.
+  # What both clusters need before anything in them can be reached. The
+  # `standard-cluster` preset is this list, with an interface: it declares what
+  # it provides and that declaration is checked against its members.
   #
-  # A function rather than a module fragment. The parked lab's `aspects/` were
-  # modules imported into a cluster, which merged; a cluster is an attrset of
-  # instantiated floes now, so an aspect is a function returning one and `//`
-  # composes them. `examples/labs/tests/secret-sharing.nix` does the same.
-  platform = clusterName: {
-    cluster = floes.k3d-cluster {
-
+  # This was a closure — `platform = clusterName: { ... }` — copied in spirit
+  # into `self-edge` and `secret-sharing`. A preset is the same assembly that
+  # another lab can use without copying it.
+  platform =
+    clusterName:
+    presets.standard-cluster {
+      # The provisioner is the preset's input, so one preset serves k3d here
+      # and Talos or an external cluster elsewhere.
+      #
       # Two clusters on one docker network, so their pod and service ranges
       # have to be told apart. An address plan is a decision written down
       # (RFC 0005 §5), not something derived from the cluster's name — a
       # rename would silently move a running cluster's subnet.
-      podSubnet = if clusterName == "core" then "10.244.0.0/16" else "10.245.0.0/16";
-      serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
-    };
+      provisioner = floes.k3d-cluster {
+        podSubnet = if clusterName == "core" then "10.244.0.0/16" else "10.245.0.0/16";
+        serviceSubnet = if clusterName == "core" then "10.96.0.0/12" else "10.112.0.0/12";
+      };
 
-    gateway-api = floes.gateway-api-crds { };
-
-    # One root for the whole lab, minted on the host by `cert-generate` and
-    # seeded into every cluster by `create-cluster`. Both clusters sign from
-    # it, which is what lets one HAProxy terminate for both with one
-    # certificate.
-    cert-manager = floes.cert-manager {
+      # One root for the whole lab, minted on the host by `cert-generate` and
+      # seeded into every cluster by `create-cluster`. Both clusters sign from
+      # it, which is what lets one HAProxy terminate for both with one
+      # certificate.
       rootFromLab = true;
     };
 
-    # The other half of one root: cert-manager signs from the lab CA, and
-    # this puts that CA in a ConfigMap in every namespace so a workload can
-    # *verify* something the lab signed.
-    #
-    # Both clusters, and not only where something visibly needs it. A floe
-    # that dials an in-lab HTTPS endpoint — netbird fetching the issuer's
-    # signing keys is the first — fails x509 verification without it, and the
-    # error names a certificate rather than the thing that is missing.
-    trust-manager = floes.trust-manager { };
-
-    # So a pod resolves `*.${zone}` too. Its resolver is the cluster's
-    # CoreDNS, which has never heard of the lab.
-    lab-dns = floes.lab-dns { };
-
-    gateway = floes.gateway {
-      tlsEnable = true;
-    };
-
-    # Both clusters mint credentials rather than letting a chart write them
-    # into the rendered manifests, so both need a generator.
-    external-secrets = floes.external-secrets { };
-  };
 in
 {
   lab.name = lib.mkDefault "homelab";
@@ -113,7 +92,9 @@ in
   lab.proxy.enable = true;
   lab.registry.enable = true;
 
-  lab.clusters.core.floes = platform "core" // {
+  lab.clusters.core.floes = {
+    platform = platform "core";
+
     # ---- identity -------------------------------------------------------
     #
     # kaniop runs the CRDs; kanidm is the issuer. Its clients are rendered by
@@ -152,7 +133,9 @@ in
     };
   };
 
-  lab.clusters.obs.floes = platform "obs" // {
+  lab.clusters.obs.floes = {
+    platform = platform "obs";
+
     # All three backends, so all three of the collector's optional holes
     # resolve and Grafana gets three datasources.
     prometheus = floes.prometheus { };

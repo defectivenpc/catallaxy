@@ -255,6 +255,31 @@ let
 
   fails = expr: !(builtins.tryEval (builtins.deepSeq expr "evaluated")).success;
 
+  # ---- preset fixtures -----------------------------------------------------
+  #
+  # Two trivial members, one providing the signature the preset declares.
+  # Enough to exercise omit, overrides and the declaration check.
+  presetLib = import ../floe-catallaxy/preset.nix { inherit lib floe; };
+
+  echoFloe =
+    n:
+    floe.mkFloe {
+      name = n;
+      summary = "Fixture floe for a test suite.";
+      provides.store = sigs.SECRET_STORE;
+      modules = [ ];
+    };
+
+  samplePreset = presetLib.mkPreset {
+    name = "sample";
+    summary = "Fixture preset for a test suite.";
+    provides.store = sigs.SECRET_STORE;
+    members = _: {
+      one = (echoFloe "one").instantiate { };
+      two = (echoFloe "two").instantiate { };
+    };
+  };
+
   noProvider =
     fails
       (linkOf {
@@ -424,6 +449,52 @@ let
 
 in
 lib.runTests {
+
+  # ---- presets -------------------------------------------------------------
+  #
+  # A preset is not a floe instance. These cover the parts a closure could not
+  # have had: a declaration checked against the members, and refusals naming
+  # what was wrong.
+
+  testAPresetExpandsToItsMembers = {
+    expr = lib.attrNames (samplePreset { }).members;
+    expected = [
+      "one"
+      "two"
+    ];
+  };
+
+  testOmitRemovesAMember = {
+    expr = lib.attrNames (samplePreset { omit = [ "two" ]; }).members;
+    expected = [ "one" ];
+  };
+
+  # A typo that silently omits nothing is how a preset becomes something
+  # people fork instead of parameterise.
+  testOmittingSomethingItDoesNotHaveIsRefused = {
+    expr = fails (samplePreset { omit = [ "three" ]; }).members;
+    expected = true;
+  };
+
+  testOverridingSomethingItDoesNotHaveIsRefused = {
+    expr = fails (samplePreset { overrides.three = (echoFloe "three").instantiate { }; }).members;
+    expected = true;
+  };
+
+  # The declaration is the whole reason a preset is not a closure, so it is
+  # checked rather than trusted: omit every member providing it and
+  # instantiation refuses.
+  testAProvideNoMemberMakesIsRefused = {
+    expr =
+      fails
+        (samplePreset {
+          omit = [
+            "one"
+            "two"
+          ];
+        }).members;
+    expected = true;
+  };
 
   # ---- 1. the join is a monoid -------------------------------------------
   #

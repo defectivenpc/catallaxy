@@ -74,6 +74,56 @@ types.submodule (
       instanceName = "${lib.replaceStrings [ "." ] [ "-" ] lab.name}-${name}";
     };
 
+    # A preset stands for its members. Expanded here, before the linker sees
+    # anything, so RFC 0001's "an instance is one thing" holds underneath and
+    # a preset never reaches `link` at all.
+    #
+    # Flat, keeping each member's own key: an app resolving `API_GATEWAY` has
+    # to find the preset's gateway, and `provides` names a member as
+    # `<instName>/<provide>`. A member colliding with something the cluster
+    # wrote directly is refused by name — last-wins is what makes a preset
+    # untrustworthy.
+    expandPresets =
+      floeSet:
+      let
+        presets = lib.filterAttrs (_: catallaxy.isPreset) floeSet;
+        direct = lib.filterAttrs (_: v: !(catallaxy.isPreset v)) floeSet;
+
+        contributions = lib.mapAttrsToList (
+          presetKey: p: lib.mapAttrs (memberKey: v: { inherit presetKey memberKey v; }) p.members
+        ) presets;
+
+        collide =
+          a: b:
+          throw (
+            "cluster '${name}': '${b.memberKey}' comes from preset '${b.presetKey}' and "
+            + (
+              if a.presetKey == null then
+                "is also written directly in this cluster"
+              else
+                "from preset '${a.presetKey}'"
+            )
+            + ". Replace it with `overrides.${b.memberKey}` on the preset, or `omit` it."
+          );
+
+        merge =
+          acc: contribution:
+          lib.foldl' (
+            inner: key:
+            if inner ? ${key} then
+              collide inner.${key} contribution.${key}
+            else
+              inner // { ${key} = contribution.${key}; }
+          ) acc (lib.attrNames contribution);
+
+        seeded = lib.mapAttrs (_: v: {
+          presetKey = null;
+          memberKey = null;
+          inherit v;
+        }) direct;
+      in
+      lib.mapAttrs (_: c: c.v) (lib.foldl' merge seeded contributions);
+
     withPlacement =
       inst:
       if !(inst.__floeInstance or false) || !(providesCluster inst) then
@@ -91,7 +141,7 @@ types.submodule (
       floes = mkOption {
         type = types.attrsOf types.raw;
         default = { };
-        apply = lib.mapAttrs (_: withPlacement);
+        apply = floeSet: lib.mapAttrs (_: withPlacement) (expandPresets floeSet);
         description = ''
           Instantiated floes, keyed by the name they link under. One of them
           must provide `KUBERNETES_CLUSTER`; the rest are what installs into

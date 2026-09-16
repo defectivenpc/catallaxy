@@ -37,6 +37,26 @@ let
 
   floes = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: applyFloes) (import ../floes));
 
+  # Presets are applied after the floe set, because their members are drawn
+  # from it. Same definition-time arguments, plus `floes` itself.
+  presets = lib.mapAttrs (
+    _: path:
+    let
+      def = import path {
+        inherit
+          lib
+          pkgs
+          catallaxy
+          cataCharts
+          k8sSpecs
+          floes
+          ;
+        inherit (catallaxy) floe sigs kinds;
+      };
+    in
+    def // { __functor = _: def.instantiate; }
+  ) (import ../floes/presets);
+
   # catalogue :: { FloeName -> [SignatureName] }
   #
   # What each floe provides, read off its declaration — the same read
@@ -69,6 +89,7 @@ let
       cataCharts
       k8sSpecs
       floes
+      presets
       catalogue
       ;
   };

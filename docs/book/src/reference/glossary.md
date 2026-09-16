@@ -20,6 +20,7 @@ has the mapping and says why the rules follow from it.
 | **Instantiation** | One use of a floe, at a name, in a cluster. A stack is keyed by the instantiation and not the floe, because one floe can be used more than once.   | [The Model](../understanding/model.md)     |
 | **Bundle**        | A group of Kubernetes resources that install together. One floe usually emits several. Reconciled: the cluster is the record of truth.             | [Bundle Schema](./bundles.md)              |
 | **Resource**      | A thing created outside Kubernetes, by a tool that plans against recorded state. State-tracked: a state file is the record of truth.               | RFC 0003                                   |
+| **Preset**        | A floe that includes floes: a named, reusable assembly with a declared interface, expanded into its members where it is placed.                    | [The Model](../understanding/model.md)     |
 | **Signature**     | A named, typed interface: `API_GATEWAY`, `DNS_ZONE`. What a floe requires and provides.                                                            | [mkFloe API](./floe-api.md)                |
 
 ## Shapes a floe takes
@@ -34,6 +35,7 @@ declaring has produced so far.
 | **Provisioner floe** | Emits `catallaxy.cluster` — brings a cluster into existence, so it cannot require one.                                                                                                         |
 | **Resource floe**    | Emits `catallaxy.resources` and `catallaxy.publications`: infrastructure a state-tracking tool owns.                                                                                           |
 | **Lab floe**         | Requires no cluster and answers a signature at lab scope, for the things a lab has one of.                                                                                                     |
+| **Preset**           | Includes other floes and declares what they provide, checked against them. Not an instance: expanded into its members where it is placed, so `presets.<name>` and a floe sit side by side.     |
 
 ## Linking
 
