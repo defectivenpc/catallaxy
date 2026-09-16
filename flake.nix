@@ -291,7 +291,7 @@
       }
     )
     // {
-      # `nix flake init -t github:onepunchtech/catallaxy#consumer` — the
+      # `nix flake init -t github:defectivenpc/catallaxy#consumer` — the
       # scaffold `docs/book/src/start-here/your-own-lab.md` walks through.
       # System-independent, so it sits outside `eachDefaultSystem`.
       templates.consumer = {

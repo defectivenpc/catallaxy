@@ -5,7 +5,7 @@ For changing catallaxy itself. Read
 you know which of the three layers your change lands in.
 
 ```bash
-git clone https://github.com/onepunchtech/catallaxy
+git clone https://github.com/defectivenpc/catallaxy
 cd catallaxy
 nix develop
 ```

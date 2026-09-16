@@ -6,8 +6,8 @@ default-run = "cata"
 description = "CLI for catallaxy - declarative Kubernetes platform management"
 authors = ["Catallaxy Contributors"]
 license = "MIT"
-repository = "https://github.com/onepunchtech/catallaxy"
-homepage = "https://onepunchtech.github.io/catallaxy"
+repository = "https://github.com/defectivenpc/catallaxy"
+homepage = "https://defectivenpc.github.io/catallaxy"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive", "env"] }

@@ -23,7 +23,7 @@ numbers.
 > they cost is recorded in
 > [`docs/prior-implementations.md`](docs/prior-implementations.md).
 
-**[Documentation](https://onepunchtech.github.io/catallaxy)**
+**[Documentation](https://defectivenpc.github.io/catallaxy)**
 
 ---
 
@@ -72,7 +72,7 @@ identity, observability and GitOps; `homelab.mesh` is reachable only from a
 WireGuard mesh.
 
 Walkthrough:
-[Run the Example Lab](https://onepunchtech.github.io/catallaxy/start-here/first-lab.html).
+[Run the Example Lab](https://defectivenpc.github.io/catallaxy/start-here/first-lab.html).
 
 ## What it does
 
@@ -101,7 +101,7 @@ Walkthrough:
 
 Your flake takes catallaxy as an input; you never fork it. `examples/labs/`
 is the worked reference, and CI builds every lab in it. See
-[Build Your Own Lab](https://onepunchtech.github.io/catallaxy/start-here/your-own-lab.html).
+[Build Your Own Lab](https://defectivenpc.github.io/catallaxy/start-here/your-own-lab.html).
 
 ## Development
 
@@ -116,7 +116,7 @@ nix build .#docs                  # the book
 `nix flake check` needs the sandbox permitted to fetch; an in-sandbox run
 evaluates a stale tree and its green is not meaningful.
 
-[Contributing](https://onepunchtech.github.io/catallaxy/contributing.html)
+[Contributing](https://defectivenpc.github.io/catallaxy/contributing.html)
 
 ## License
 

@@ -136,7 +136,7 @@ cata --flake .#homelab.local lab ops idm init-user lab-admin
 ```
 
 Its plan is correspondingly longer. The
-[examples README](https://github.com/onepunchtech/catallaxy/tree/master/examples/labs)
+[examples README](https://github.com/defectivenpc/catallaxy/tree/master/examples/labs)
 describes what each example lab demonstrates.
 
 ## Next

@@ -6,7 +6,7 @@
 # on a floe directory outside `floes/`, and `mkLab` on a lab that mixes those
 # floes with the built-in set.
 #
-# Its own flake cannot be evaluated here: it names `github:onepunchtech/catallaxy`
+# Its own flake cannot be evaluated here: it names `github:defectivenpc/catallaxy`
 # as an input, which a check has no network to fetch. So the check does what
 # that flake does, against this tree — if the template's `lab.nix` or its floe
 # stops evaluating, this fails, and a scaffold that does not render is worse

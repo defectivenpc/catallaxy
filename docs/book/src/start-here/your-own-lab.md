@@ -7,7 +7,7 @@ it.
 
 ```bash
 mkdir my-platform && cd my-platform
-nix flake init -t github:onepunchtech/catallaxy#consumer
+nix flake init -t github:defectivenpc/catallaxy#consumer
 ```
 
 Four files:
@@ -26,7 +26,7 @@ floes/hello-world/default.nix      a worked example floe
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    catallaxy.url = "github:onepunchtech/catallaxy";
+    catallaxy.url = "github:defectivenpc/catallaxy";
   };
 
   outputs = { nixpkgs, flake-utils, catallaxy, ... }:
@@ -99,7 +99,7 @@ edge. See [The Model](../understanding/model.md).
 ## Run it
 
 ```bash
-nix develop github:onepunchtech/catallaxy
+nix develop github:defectivenpc/catallaxy
 
 cata --flake .#my-platform lab plan
 cata --flake .#my-platform lab lint
@@ -171,7 +171,7 @@ allLabs = {
 None of this is framework machinery. There is no `aspect` type. It is a
 directory convention that falls out of the module system. Copy the shape
 from
-[`examples/labs/homelab`](https://github.com/onepunchtech/catallaxy/tree/master/examples/labs/homelab).
+[`examples/labs/homelab`](https://github.com/defectivenpc/catallaxy/tree/master/examples/labs/homelab).
 
 ## Add checks early
 

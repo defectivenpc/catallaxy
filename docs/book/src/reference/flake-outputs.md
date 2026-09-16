@@ -35,7 +35,7 @@ See [Nix Helpers](./helpers.md) and [mkFloe API](./floe-api.md).
 ### `templates.consumer`
 
 ```bash
-nix flake init -t github:onepunchtech/catallaxy#consumer
+nix flake init -t github:defectivenpc/catallaxy#consumer
 ```
 
 A working lab plus a worked `mkFloe` example. See
@@ -99,8 +99,8 @@ what happens to be installed.
 ### `apps`
 
 ```
-nix run github:onepunchtech/catallaxy               # cata
-nix run github:onepunchtech/catallaxy#generate-k8s-types
+nix run github:defectivenpc/catallaxy               # cata
+nix run github:defectivenpc/catallaxy#generate-k8s-types
 nix run .#<lab>-ops                                 # per lab with ops commands
 ```
 

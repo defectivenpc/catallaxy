@@ -4,7 +4,7 @@
     flake-utils.url = "github:numtide/flake-utils";
     # Point this at a checkout to try a change before it is published:
     #   nix flake lock --override-input catallaxy /path/to/catallaxy
-    catallaxy.url = "github:onepunchtech/catallaxy";
+    catallaxy.url = "github:defectivenpc/catallaxy";
   };
 
   outputs =

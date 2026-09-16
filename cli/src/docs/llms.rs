@@ -103,7 +103,7 @@ pub fn render(pages: &[Page<'_>], omitted: usize, base_url: &str) -> LlmsOutput 
         String::new(),
         "## Source".into(),
         String::new(),
-        "- Repository: https://github.com/onepunchtech/catallaxy".into(),
+        "- Repository: https://github.com/defectivenpc/catallaxy".into(),
         format!("- Full text: {base_url}/llms-full.txt"),
         format!("- Generated option reference: {base_url}/reference/options/"),
     ]);
