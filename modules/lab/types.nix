@@ -14,6 +14,7 @@
   cataCharts,
   k8sSpecs,
   floes,
+  catalogue,
   ...
 }:
 
@@ -148,6 +149,7 @@ let
       cataCharts
       k8sSpecs
       floes
+      catalogue
       ;
     lab = config.lab;
     inherit scopeFor;

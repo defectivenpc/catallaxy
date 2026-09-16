@@ -21,5 +21,5 @@ in
     renderInputs
     ;
   inherit (floe) mkFloe;
-  inherit (link) link;
+  inherit (link) link candidatesFor;
 }

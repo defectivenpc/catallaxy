@@ -37,6 +37,16 @@ let
 
   floes = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: applyFloes) (import ../floes));
 
+  # catalogue :: { FloeName -> [SignatureName] }
+  #
+  # What each floe provides, read off its declaration — the same read
+  # `nix/floe-docs.nix` makes to generate its page. Derived, so adding a floe
+  # adds it here and deleting one removes it; there is no second list.
+  #
+  # Lazy: `link` forces this only when a hole has no provider and it has an
+  # error to write.
+  catalogue = lib.mapAttrs (_: def: map (s: s.name) (lib.attrValues def.provides)) floes;
+
   evalModule =
     {
       modules,
@@ -59,6 +69,7 @@ let
       cataCharts
       k8sSpecs
       floes
+      catalogue
       ;
   };
 

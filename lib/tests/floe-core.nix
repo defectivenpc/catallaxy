@@ -415,6 +415,30 @@ lib.runTests {
     expected = true;
   };
 
+  # What an unfilled hole is able to suggest. A throw's text is unreachable
+  # from `tryEval`, so the listing is tested here and the sentence around it
+  # is not tested at all.
+  testCandidatesNameEveryFloeProvidingIt = {
+    expr = floe.candidatesFor {
+      cert-manager = [ "X509_ISSUANCE" ];
+      external-secrets = [ "SECRET_STORE" ];
+      gateway = [ "API_GATEWAY" ];
+      openbao = [ "SECRET_STORE" ];
+    } "SECRET_STORE";
+    expected = [
+      "external-secrets"
+      "openbao"
+    ];
+  };
+
+  # An empty catalogue is the degradation, not an error: core ships no floe
+  # set, so a caller that passes none still links and still refuses, it just
+  # has nothing to suggest.
+  testNoCatalogueSuggestsNothing = {
+    expr = floe.candidatesFor { } "SECRET_STORE";
+    expected = [ ];
+  };
+
   # Collection is keyed by unit and disjoint by construction: no merge.
   testOutputsAreKeyedByUnit = {
     expr = lib.attrNames deployment.out."k8s.manifests";

@@ -8,13 +8,35 @@
   floeLib,
 }:
 
+let
+  # candidatesFor :: Catalogue -> SignatureName -> [FloeName]
+  #
+  # Named rather than inlined into the throw because a throw's text is not
+  # reachable from `builtins.tryEval`, so this is the only part of the
+  # message a test can hold.
+  candidatesFor =
+    catalogue: sigName:
+    lib.attrNames (lib.filterAttrs (_: sigNames: lib.elem sigName sigNames) catalogue);
+in
 {
+  inherit candidatesFor;
+
   link =
     {
       units,
       policies ? [ ],
 
       scope ? { },
+
+      # catalogue :: { FloeName -> [SignatureName] } — every floe a
+      # distribution ships, and what each provides. Used only to say what
+      # *could* fill an unfilled hole, so it is forced only on the error
+      # path and an empty one degrades to naming nothing.
+      #
+      # Core knows no floe set, which is why this is a parameter and not a
+      # lookup. It is derived rather than written: a maintained list would
+      # rot the first time a floe was added.
+      catalogue ? { },
     }:
     let
       instNames = lib.attrNames units;
@@ -98,10 +120,21 @@
             ps = providersOf sig.name;
           in
           if ps == [ ] then
+            let
+              candidates = candidatesFor catalogue sig.name;
+            in
             throw (
               "floe link error: no provider for signature '${sig.name}' "
-              + "(required by unit '${u}' as hole '${hole}'). "
-              + "Units in this link: ${lib.concatStringsSep ", " instNames}"
+              + "(required by '${u}' as hole '${hole}').\n"
+              + "  In this cluster: ${lib.concatStringsSep ", " instNames}\n"
+              + (
+                if candidates == [ ] then
+                  "  Nothing available provides it."
+                else
+                  "  Provided by: ${lib.concatStringsSep ", " candidates}. "
+                  + "Add one to this cluster, or expose it from another with "
+                  + "`lab.clusters.<c>.provides`."
+              )
             )
           else if lib.length ps > 1 then
             throw (

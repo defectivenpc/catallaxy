@@ -11,6 +11,7 @@
   cataCharts,
   k8sSpecs,
   floes,
+  catalogue,
   lab,
   scopeFor,
 }:
@@ -972,7 +973,7 @@ types.submodule (
       {
         link = catallaxy.floe.link {
           units = config.floes;
-          inherit scope;
+          inherit scope catalogue;
           policies = [
             catallaxy.policies.oneCluster
             catallaxy.policies.componentsTargetTheCluster
