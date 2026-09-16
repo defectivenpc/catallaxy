@@ -109,6 +109,24 @@ cata --flake .#my-platform lab up
 `--flake .` alone works too, if the lab name matches, but being explicit is
 clearer with more than one lab.
 
+Tear it down with `cata --flake .#my-platform lab down`. That one does not
+prompt, so it takes no `--yes`; `cata lab cleanup <name> --yes` is the one
+that does, because it removes state a rebuild cannot recover.
+
+### Against a checkout
+
+To try a change to catallaxy itself — or a version that is not published yet
+— point the input at a working copy:
+
+```bash
+nix flake lock --override-input catallaxy /path/to/catallaxy
+```
+
+Everything above then resolves against that tree. This is the loop for
+developing a floe and the lab that uses it at the same time, and it is worth
+knowing before you need it: without it the scaffold silently gets the last
+published catallaxy, which is the wrong one to be debugging against.
+
 ## Grow it
 
 The template is one file because one cluster in one environment is one
