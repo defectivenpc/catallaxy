@@ -234,7 +234,7 @@ fn refuse_colliding_subnet(name: &str, lab: &LabSpec) -> Result<()> {
          already exists here:\n  {}\n\
          A docker network owns its subnet exclusively, so creating this one would \
          fail. Nothing was started.\n    \
-         Set `lab.network.dockerSubnet` in this lab's env module to a range nothing \
+         Set `lab.network.subnet` in this lab's env module to a range nothing \
          else claims.{suggestion}",
         collisions.join("\n  "),
     )

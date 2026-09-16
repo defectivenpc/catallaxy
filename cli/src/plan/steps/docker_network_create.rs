@@ -43,7 +43,7 @@ pub fn run(sctx: &StepContext<'_>, p: &DockerNetworkCreateParams) -> Result<()> 
             "Failed to create docker network '{}' (subnet {}):\n{}\n\n\
              Common causes:\n  \
              - subnet overlap with an existing docker network — pick a distinct \
-             `lab.network.dockerSubnet` in your env module (e.g. \"172.30.0.0/16\")\n  \
+             `lab.network.subnet` in your env module (e.g. \"172.30.0.0/16\")\n  \
              - docker daemon not reachable / user not in the `docker` group",
             name,
             subnet,

@@ -393,6 +393,29 @@ in
           } > $out/infra/${stackName}/main.tf.json
         '') allStacks;
 
+        # Every hook bin either plan names, symlinked in so Nix retains it.
+        #
+        # This is what `run-script`'s `bin` option has always said happens, and
+        # it did not: the only thing holding a hook in the store was
+        # `deploymentPlan` riding along inside metadata.json, whose string
+        # context pulled the path in as a side effect of being printed. A
+        # teardown-only hook appears in neither, so it was never realized, and
+        # `lab destroy` on a machine that had not separately built it failed
+        # the step and left whatever the hook was meant to remove behind.
+        #
+        # external-dns's `purge-records` is the shipped instance of that; a
+        # lab whose datastore runs beside the cluster is another.
+        hookLinks =
+          map
+            (step: ''
+              ln -s ${step.params.bin} $out/hooks/${step.name}
+            '')
+            (
+              lib.filter (step: step.params.bin or null != null) (
+                config.lab.out.deploymentPlan ++ config.lab.out.teardownPlan
+              )
+            );
+
         autoDeployCopies = lib.concatLists (
           lib.mapAttrsToList (
             clusterName: c:
@@ -423,6 +446,9 @@ in
           ln -s $out/manifests $out/bootstrap
 
           jq . "$metadataTextPath" > $out/metadata.json
+
+          ${lib.optionalString (hookLinks != [ ]) "mkdir -p $out/hooks"}
+          ${lib.concatStringsSep "\n" hookLinks}
 
           ${lib.concatStringsSep "\n" autoDeployCopies}
 
