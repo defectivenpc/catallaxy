@@ -31,6 +31,12 @@ let
 
   # Every cluster needs the same three: the controller, a store pointed at the
   # shared backend, and the token that store authenticates with.
+  #
+  # A local function and not a preset, deliberately. A preset earns its
+  # interface by being useful to another lab; this trio is this fixture's
+  # internal repetition. `standard-cluster` does not fit — five of its seven
+  # members would be omitted and it would refuse itself for no longer
+  # providing what it declares, which is the check doing its job.
   sharedFloes = clusterName: {
     cluster = floes.k3d-cluster {
 

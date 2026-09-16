@@ -97,6 +97,26 @@ change.
 Presets live in `floes/presets/` and are applied after the floe set, because
 their members come from it. A lab reaches them as `presets.<name>`.
 
+## When not to
+
+A preset is for an assembly that means something **outside the lab that
+first wrote it**. Repetition inside one lab is what a local function is for,
+and reaching for a preset there buys nothing and costs an interface.
+
+`examples/labs/tests/secret-sharing.nix` is the worked counter-example. Two
+clusters share three floes — a provisioner, a generator and a store pointed
+at one backend — and it stays a closure. `standard-cluster` does not fit it:
+five of seven members would have to be omitted, and the preset then refuses
+itself, because a declaration it can no longer keep is exactly what `omit`
+is checked against.
+
+    preset 'standard-cluster': says it provides API_GATEWAY, GATEWAY_API,
+    X509_ISSUANCE, TRUST_BUNDLE, which no member does.
+
+That refusal is the design working. If you find yourself omitting most of a
+preset, you do not want that preset — you want a local function, or a
+different preset that someone else will also use.
+
 ## Two things to know
 
 **Members keep their own names.** `gateway` is `gateway`, not
