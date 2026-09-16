@@ -101,6 +101,39 @@ floe.mkFloe {
       '';
     };
 
+    extraK3sArgs = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            arg = lib.mkOption {
+              type = lib.types.str;
+              description = "The flag, as `k3s server` spells it.";
+            };
+            scope = lib.mkOption {
+              type = lib.types.str;
+              default = "server:*";
+              description = "k3d's node selector — `server:*`, `agent:0`, and so on.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = ''
+        Flags handed to `k3s server` itself.
+
+        Distinct from the apiserver args, which reach only kube-apiserver: a
+        cluster whose datastore is not its own embedded etcd says so with
+        `--datastore-endpoint`, and that is a k3s flag, not an apiserver one.
+
+        Written last, after the disables and the CIDRs, so a lab that needs to
+        override one of those can. k3s takes the last occurrence of a repeated
+        flag.
+
+        Nothing validates the contents. A flag k3s does not know fails when the
+        node starts, which is the only place that can be known.
+      '';
+    };
+
     serviceSubnet = lib.mkOption {
       type = lib.types.str;
       default = "10.96.0.0/12";
@@ -203,7 +236,7 @@ floe.mkFloe {
             ports = [ ];
             extraApiServerArgs = [ ];
             extraVolumes = [ ];
-            inherit (inputs) autoDeployManifests;
+            inherit (inputs) extraK3sArgs autoDeployManifests;
           };
         };
       }

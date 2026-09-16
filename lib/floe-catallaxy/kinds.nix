@@ -15,6 +15,15 @@ let
     noLocalStorage = T.bool;
     ports = T.listOf T.str;
     extraApiServerArgs = T.listOf T.str;
+    # Flags for `k3s server` itself. `extraApiServerArgs` reaches only
+    # kube-apiserver, so a k3s-level flag — `--datastore-endpoint` above all —
+    # has no route through it.
+    extraK3sArgs = T.listOf (
+      T.record {
+        arg = T.str;
+        scope = T.str;
+      }
+    );
     extraVolumes = T.listOf (
       T.record {
         hostPath = T.str;

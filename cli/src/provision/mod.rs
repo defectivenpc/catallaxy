@@ -287,6 +287,14 @@ fn provision_k3d(
         })
         .collect();
     refuse_missing_mounts(name, &extra_volumes)?;
+    // Verbatim, unlike the volumes above: a mount is a path on this machine and
+    // has to be resolved against the lab's state dir, while a k3s flag is
+    // whatever the lab wrote. Nothing here has an opinion on its contents.
+    let extra_k3s_args: Vec<(String, String)> = k3d
+        .extra_k3s_args
+        .iter()
+        .map(|a| (a.arg.clone(), a.scope.clone()))
+        .collect();
 
     let registries_yaml_str = registries_yaml.map(|p| p.to_string_lossy().to_string());
     let registry_dir = registries_yaml.and_then(|p| p.parent().map(|d| d.to_path_buf()));
@@ -319,6 +327,7 @@ fn provision_k3d(
         ports: &port_refs,
         network: k3d.network.as_deref(),
         extra_api_server_args: &k3d.extra_api_server_args,
+        extra_k3s_args: &extra_k3s_args,
         extra_volumes: &extra_volumes,
     })?;
 

@@ -58,6 +58,11 @@ pub struct ClusterShape {
     pub no_local_storage: bool,
     pub ports: Vec<String>,
     pub extra_api_server_args: Vec<String>,
+    /// Defaulted for the same reason as `no_local_storage`: a record written
+    /// before this field existed describes a cluster given no extra server
+    /// args, and `[]` says exactly that.
+    #[serde(default)]
+    pub extra_k3s_args: Vec<String>,
     pub extra_volumes: Vec<String>,
     pub auto_deploy_manifests: Vec<String>,
 }
@@ -107,6 +112,14 @@ impl ClusterShape {
             no_local_storage: k3d.no_local_storage,
             ports: k3d.ports.clone(),
             extra_api_server_args: k3d.extra_api_server_args.clone(),
+            // Flattened to the string k3d is actually handed, so the record
+            // reads as the instruction that was given rather than as the two
+            // halves it was assembled from.
+            extra_k3s_args: k3d
+                .extra_k3s_args
+                .iter()
+                .map(|a| format!("{}@{}", a.arg, a.scope))
+                .collect(),
             extra_volumes: k3d
                 .extra_volumes
                 .iter()
@@ -427,6 +440,11 @@ fn k3d_fields(
             &show_list(&recorded.extra_api_server_args),
         ),
         compare_node(
+            "provisioner.k3d.extraK3sArgs",
+            &show_list(&declared.extra_k3s_args),
+            &show_list(&recorded.extra_k3s_args),
+        ),
+        compare_node(
             "provisioner.k3d.extraVolumes",
             &show_list(&declared.extra_volumes),
             &show_list(&recorded.extra_volumes),
@@ -488,6 +506,7 @@ mod tests {
             no_local_storage: false,
             ports: vec!["8080:80@loadbalancer".into()],
             extra_api_server_args: vec!["--oidc-issuer-url=https://id.test".into()],
+            extra_k3s_args: vec!["--datastore-endpoint=http://db:2379@server:*".into()],
             extra_volumes: vec!["/host:/container".into()],
             auto_deploy_manifests: vec!["coredns-lab-dns".into()],
         }
@@ -526,6 +545,9 @@ mod tests {
             }),
             ("provisioner.k3d.extraApiServerArgs", |s| {
                 s.extra_api_server_args = vec![]
+            }),
+            ("provisioner.k3d.extraK3sArgs", |s| {
+                s.extra_k3s_args = vec![]
             }),
             ("provisioner.k3d.extraVolumes", |s| s.extra_volumes = vec![]),
             ("provisioner.k3d.autoDeployManifests", |s| {
@@ -683,6 +705,7 @@ mod tests {
             |s: &mut ClusterShape| s.extra_volumes = vec![],
             |s: &mut ClusterShape| s.image = Some("rancher/k3s:v1.30.0-k3s1".into()),
             |s: &mut ClusterShape| s.extra_api_server_args = vec![],
+            |s: &mut ClusterShape| s.extra_k3s_args = vec![],
         ] {
             let mut declared = shape();
             mutate(&mut declared);
@@ -817,6 +840,7 @@ mod tests {
         assert_eq!(recorded.image, None);
         assert!(!recorded.no_traefik);
         assert_eq!(recorded.extra_api_server_args, Vec::<String>::new());
+        assert_eq!(recorded.extra_k3s_args, Vec::<String>::new());
     }
 
     #[test]

@@ -141,6 +141,7 @@
           ],
           "clusterName": "minimal-cilium-app",
           "extraApiServerArgs": [],
+          "extraK3sArgs": [],
           "extraVolumes": [],
           "image": "rancher/k3s:v1.31.4-k3s1",
           "network": "minimal.cilium",

@@ -132,6 +132,7 @@
             "--audit-log-path=/var/log/kubernetes/audit.log",
             "--audit-log-maxage=7"
           ],
+          "extraK3sArgs": [],
           "extraVolumes": [
             {
               "containerPath": "/etc/rancher/k3s/audit-policy.yaml",

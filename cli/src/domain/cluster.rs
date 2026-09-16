@@ -328,8 +328,27 @@ pub struct K3dConfig {
     pub no_local_storage: bool,
     pub ports: Vec<String>,
     pub extra_api_server_args: Vec<String>,
+    /// Defaulted rather than versioned, for the same reason as
+    /// `no_local_storage`: a record written before this field existed describes
+    /// a cluster that was given no extra server args, and `[]` says exactly
+    /// that.
+    #[serde(default)]
+    pub extra_k3s_args: Vec<K3sArg>,
     pub extra_volumes: Vec<ExtraVolume>,
     pub auto_deploy_manifests: Vec<AutoDeployManifest>,
+}
+
+/// A flag handed to `k3s server` itself, rather than to one of the components
+/// it supervises. `extra_api_server_args` reaches only kube-apiserver; this
+/// reaches k3s, which is where `--datastore-endpoint` and its siblings live.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct K3sArg {
+    pub arg: String,
+    /// k3d's node selector — `server:*`, `agent:0`, and so on. Carried rather
+    /// than assumed: an arg meant for every server and one meant for a single
+    /// agent are different instructions, and k3d has no default.
+    pub scope: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

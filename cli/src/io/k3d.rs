@@ -24,6 +24,10 @@ pub struct ClusterCreate<'a> {
     pub ports: &'a [&'a str],
     pub network: Option<&'a str>,
     pub extra_api_server_args: &'a [String],
+    /// `(arg, scope)` pairs handed to `k3s server` itself. Distinct from
+    /// `extra_api_server_args`, which only ever reaches kube-apiserver — a k3s
+    /// flag like `--datastore-endpoint` has no route through that one.
+    pub extra_k3s_args: &'a [(String, String)],
     pub extra_volumes: &'a [(String, String)],
 }
 
@@ -51,6 +55,7 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
         ports,
         network,
         extra_api_server_args,
+        extra_k3s_args,
         extra_volumes,
     } = opts;
     println!("{} Creating k3d cluster '{name}'...", style(">>>").cyan());
@@ -84,6 +89,12 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
     );
     for arg in extra_api_server_args {
         cmd.args(["--k3s-arg", &format!("--kube-apiserver-arg={arg}@server:*")]);
+    }
+    // After the disables and the CIDRs, so a lab can override one of the flags
+    // `k3s_server_args` writes: k3s takes the last occurrence of a repeated
+    // flag, and this is the only place a lab gets to say anything about them.
+    for (arg, scope) in extra_k3s_args {
+        cmd.args(["--k3s-arg", &format!("{arg}@{scope}")]);
     }
     for (host_path, container_path) in extra_volumes {
         cmd.args([
