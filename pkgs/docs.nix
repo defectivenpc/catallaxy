@@ -24,8 +24,9 @@ let
   index = ''
     # Floes
 
-    One page per floe, generated from the floe definitions and from an actual
-    link. Each is diff-checked by its own flake check.
+    One page per floe and per preset, generated from their definitions and —
+    for a floe — from an actual link. Each is diff-checked by its own flake
+    check.
 
     Regenerate with `nix run .#refresh-floe-docs`.
 

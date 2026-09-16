@@ -120,6 +120,7 @@
             cataCharts
             k8sSpecs
             ;
+          inherit (labs) presetSet;
           catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs; };
           # Flattened, the way `lib/lab.nix` flattens it: the three groups are
           # how the set is organised on disk, not a namespace anything spells.

@@ -103,7 +103,9 @@ in
 // import ./floe-interface.nix {
   inherit lib pkgs floeInterfaces;
   docDir = ../../docs/floes;
-  floeSet = allFloes;
+  # Presets are rendered into the same directory and diffed the same way: a
+  # preset's interface is a contract like a floe's.
+  floeSet = allFloes // (import ../../floes/presets);
 }
 // import ./lab-scope.nix {
   inherit

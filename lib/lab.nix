@@ -147,6 +147,10 @@ in
     discoverFixtures
     ;
 
+  # The presets this distribution ships, as definitions — what `floe-docs`
+  # renders a page from.
+  presetSet = presets;
+
   # mkFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
   #
   # What a consumer calls on its own floe directory. The built-in set is

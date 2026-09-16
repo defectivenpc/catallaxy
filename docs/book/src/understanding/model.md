@@ -127,6 +127,12 @@ interface — if a consumer could read past it, the signature would not be
 one. And a floe is the unit, which is why `lab.clusters.<c>.floes.<name>` is
 an instantiation and not a definition.
 
+One piece of Backpack that had no counterpart here until recently is
+**inclusion**: a unit that includes other units and re-exports what they
+provide. Every lab had grown a private stand-in for it — a closure returning
+an attrset of floes — which is what [presets](../using/presets.md) now are,
+with the declaration checked rather than assumed.
+
 Two places the analogy stops. Backpack links a whole program at once;
 catallaxy links per cluster, with the lab as a second, wider scope that a
 cluster falls back to. And Backpack has no notion of a value being unusable
