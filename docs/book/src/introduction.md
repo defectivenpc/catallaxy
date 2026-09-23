@@ -95,3 +95,5 @@ changes between minor versions. Feedback and contributions are welcome.
 - [Run the Example Lab](./start-here/first-lab.md): ten minutes, one
   cluster, no cloud account.
 - [The Model](./understanding/model.md): lab, cluster, floe, bundle.
+- [Floes, in five minutes](./talks/floes-lightning/index.html): the
+  lightning talk, as slides.

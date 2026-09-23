@@ -603,5 +603,20 @@ at eval.
 - NixOS module system: intra-floe implementation language; option types
   reused via schema compilation.
 - Nixpkgs overlays: untyped fixpoint mixin linking in the wild.
+- NixOS RFC 0189, "contracts" (ibizaman, 2025; from SelfHostBlocks): the
+  closest living relative, and independent confirmation of §2 — a consumer
+  and a provider agree on typed `input`/`output` options and neither names
+  the other. It reaches that from inside the global option tree, which is
+  the substrate §6 rejects, and the two costs §6 predicts are its own
+  unresolved questions: the end user must wire consumer→provider _and_
+  provider→consumer by hand, because an `optionType` cannot reach the values
+  of an instantiated contract; and the manual will not build, because
+  `config.contracts` is not available where the type is needed. Its
+  structural typing is what forecloses automatic resolution — with no name
+  to key on, there is nothing for a linker to look up, so "exactly one
+  provider" cannot be an error it detects. What it has and floe does not is
+  `behaviorTest`: a generic VM test attached to the contract that every
+  provider must instantiate and pass, so conformance covers behaviour and
+  not only shape.
 - Terraform unknown values: prior art for deferred propagation (open
   question 1).

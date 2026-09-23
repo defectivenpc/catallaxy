@@ -72,7 +72,8 @@ let
       optionsJSON
       ;
   };
-  docs = import ./docs.nix { inherit lib pkgs; };
+  talks = import ./talks.nix { inherit lib pkgs; };
+  docs = import ./docs.nix { inherit lib pkgs talks; };
   refresh-plans = import ./refresh-plans.nix {
     inherit lib pkgs;
     cata = cataWrapped;
@@ -95,6 +96,7 @@ in
     refresh-allocations
     optionDocs
     refresh-plans
+    talks
     docs
     ;
 }

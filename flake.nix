@@ -191,6 +191,7 @@
             refresh-option-docs
             refresh-allocations
             refresh-plans
+            talks
             docs
             ;
         };

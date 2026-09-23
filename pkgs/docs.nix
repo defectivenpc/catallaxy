@@ -1,8 +1,9 @@
 # The book: `docs/book/src` plus the generated floe pages, their index and
-# nav, and CHANGELOG.md, spliced in at build time.
+# nav, CHANGELOG.md, and the talk decks, spliced in at build time.
 {
   lib,
   pkgs,
+  talks,
   bookSrc ? ../docs/book,
   floeDocs ? ../docs/floes,
   optionDocs ? ../docs/generated,
@@ -50,6 +51,10 @@ pkgs.runCommand "catallaxy-book"
     cp ${floeDocs}/*.md book/src/reference/floes/
     cp "$indexPath" book/src/reference/floes/index.md
     cp ${changelog} book/src/changelog.md
+
+    # mdBook copies anything under `src` that isn't markdown, so a deck
+    # lands verbatim at `/talks/<name>/index.html`.
+    cp -r --no-preserve=mode ${talks} book/src/talks
 
     # The option and CLI reference, and the nav that reaches them. The
     # generated SUMMARY is the committed one with those entries spliced in,
