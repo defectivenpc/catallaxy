@@ -55,6 +55,25 @@ in
 // import ./chart-values.nix { inherit lib pkgs labDefs; }
 // import ./allocations.nix { inherit lib pkgs allocations; }
 // import ./teaching.nix { inherit lib pkgs; }
+// import ./signature-reach.nix {
+  inherit
+    lib
+    pkgs
+    floes
+    labDefs
+    ;
+
+  # Why nothing reads these. Each is a decision; a signature that gains a
+  # consumer fails this check as a stale entry, so the list cannot rot.
+  unread = {
+    VAULT_SERVER = "the in-cluster address, and the only would-be reader needs the other one: `lab-secret-store` is dialled from the *host*, which its own option says.";
+    OCI_REGISTRY = "harbor and zot can both serve one, and nothing in the tree pushes to or pulls from an in-cluster registry yet.";
+    POSTGRES_OPERATOR = "cnpg ships the capability; no floe asks for a database yet.";
+    REDIS_OPERATOR = "redis-operator ships the capability; no floe asks for a cache yet.";
+    CONFIG_RELOAD = "reloader will restart a workload whose ConfigMap changed; no floe asks to be restarted yet.";
+    MESH_OPERATOR = "every field is link-local — a controller here, CRDs here — so neither cluster can offer it to the other and neither should.";
+  };
+}
 // import ./prose-writes-no-options.nix { inherit lib pkgs; }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
