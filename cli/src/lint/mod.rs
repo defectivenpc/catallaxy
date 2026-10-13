@@ -198,10 +198,6 @@ pub fn run_lint(package_path: &Path, skip: &[String]) -> Result<bool> {
             .map(|c| c.projections.keys().cloned().collect())
             .unwrap_or_default();
 
-        // An ExternalSecret produces a Secret that no manifest declares, the
-        // same way a projection does. Without this the checks report the
-        // Secret as unproduced and a probe waiting on it as waiting on an
-        // ExternalSecret, which is true and unhelpful.
         projection_names.extend(external_secret_targets(&resources));
 
         let lab_ns = metadata
@@ -478,7 +474,6 @@ pub fn render_report(diagnostics: &[Diagnostic]) -> String {
         return format!("  {} All checks passed\n", style("\u{2713}").green().bold());
     }
 
-    // Ordered, so two runs over the same lab print the same report.
     let mut by_cluster: std::collections::BTreeMap<&str, Vec<&Diagnostic>> =
         std::collections::BTreeMap::new();
     for d in diagnostics {

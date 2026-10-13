@@ -158,33 +158,48 @@ pub fn project_host_secrets(
 }
 
 /// Where the shape a cluster was built from is recorded.
-pub fn cluster_shape_path(lab_name: &str, cluster_name: &str) -> PathBuf {
-    lab_state_dir(lab_name)
+/// What a cluster on its own keeps on this machine, keyed by the instance
+/// name that is unique here by construction. A cluster inside a lab uses the
+/// lab's directory, because what is mounted into its nodes is the lab's.
+pub fn cluster_state_dir(instance_name: &str) -> PathBuf {
+    let home = crate::io::fs::home_or_tmp();
+    PathBuf::from(home)
+        .join(LABS_DIR)
         .join("clusters")
-        .join(format!("{cluster_name}.json"))
+        .join(instance_name)
+}
+
+/// Keyed by the cluster's instance name, which is unique on the host by
+/// construction — two `app` clusters are two instance names. It used to be
+/// keyed by (lab, cluster), which is the same uniqueness said in terms of a
+/// lab the cluster document no longer carries.
+pub fn cluster_shape_path(instance_name: &str) -> PathBuf {
+    let home = crate::io::fs::home_or_tmp();
+    PathBuf::from(home)
+        .join(LABS_DIR)
+        .join("clusters")
+        .join(format!("{instance_name}.json"))
 }
 
 pub fn write_cluster_shape(
-    lab_name: &str,
-    cluster_name: &str,
+    instance_name: &str,
     shape: &crate::domain::cluster_shape::ClusterShape,
 ) -> anyhow::Result<()> {
     use anyhow::Context;
-    let path = cluster_shape_path(lab_name, cluster_name);
+    let path = cluster_shape_path(instance_name);
     if let Some(parent) = path.parent() {
         crate::io::fs::create_dir_all(parent)
             .with_context(|| format!("creating {}", parent.display()))?;
     }
     crate::io::fs::write_atomic(&path, serde_json::to_string_pretty(shape)?.as_bytes())
-        .with_context(|| format!("recording the shape of '{cluster_name}'"))
+        .with_context(|| format!("recording the shape of '{instance_name}'"))
 }
 
 /// The recorded shape, or None if there is not one this catallaxy understands.
 pub fn read_cluster_shape(
-    lab_name: &str,
-    cluster_name: &str,
+    instance_name: &str,
 ) -> Option<crate::domain::cluster_shape::ClusterShape> {
-    let raw = crate::io::fs::read_to_string(cluster_shape_path(lab_name, cluster_name)).ok()?;
+    let raw = crate::io::fs::read_to_string(cluster_shape_path(instance_name)).ok()?;
     let shape: crate::domain::cluster_shape::ClusterShape = serde_json::from_str(&raw).ok()?;
     (shape.schema_version == crate::domain::cluster_shape::SCHEMA_VERSION).then_some(shape)
 }

@@ -58,8 +58,8 @@ flake must expose them at exactly these paths:
 
 ```nix
 legacyPackages = {
-  labs."my-platform" = lab.config.lab.out.cliConfig;
-  labPackages."my-platform" = lab.config.lab.out.package;
+  labs."my-platform" = lab.cliConfig;
+  labPackages."my-platform" = lab.package;
 };
 ```
 
@@ -67,20 +67,27 @@ They are under `legacyPackages` rather than `packages` because a lab config
 is not a derivation, and `nix flake check` warns about non-derivations under
 `packages`.
 
-```nix
-mkLab { modules = [ … ]; } -> { config, options, ... }
-```
+`mkLab` returns a plain record, so everything is one hop:
 
-The lab's own configuration hangs off `.config.lab.out.*`:
+```nix
+mkLab (labs.minimal { name = "minimal.local"; })
+  -> { name; zone; subnet; clusters; link; services;
+       cliConfig; package; deploymentPlan; teardownPlan; }
+```
 
 | Attribute                        | Is                                                                    |
 | -------------------------------- | --------------------------------------------------------------------- |
 | `cliConfig`                      | everything the CLI reads: clusters, plans, contexts, secrets metadata |
 | `package`                        | the rendered manifest tree, hooks, lint checks, ops tool              |
-| `manifests`                      | the manifest tree alone. Forcing it is the cheap eval check           |
 | `deploymentPlan`, `teardownPlan` | ordered step lists, feed these to `lab plan --from-file`              |
-| `allClusters`                    | per-cluster configs, including `assertions`                           |
-| `runtimeContexts`                | the kube context an operator should use for each cluster right now    |
+| `clusters`                       | per-cluster results, including `manifests`, `spec` and `assertions`   |
+| `link`                           | the one link: `out`, `wiring` and `floeNames` for the whole lab       |
+| `services`                       | the host containers it runs, keyed by the name the CLI knows each by  |
+
+A lab is a floe, so what goes in is one instantiation of a definition and
+what comes out is this record. There is no option tree on either side: this
+was `lab.config.lab.out.cliConfig`, and before the record it was a module
+evaluation whose `options` a reference generator read.
 
 ### `packages`
 
@@ -120,8 +127,9 @@ nix run .#<lab>-ops                                 # per lab with ops commands
 | `docs`, `rfc-refs`                       | the book builds with no dead link; every RFC `§N` citation resolves   |
 | `floe-<name>`                            | one test suite per floe, enforced 1:1                                 |
 | `floe-interface-<name>`                  | the generated page matches the floe. One per floe                     |
-| `floe-core`, `floe-cluster`              | the linker and the elaborator                                         |
+| `floe-cluster`                           | the elaborator                                                        |
 | `floe-headers`, `floe-names`             | no prose naming a removed primitive; one canonical name per signature |
+| `generated-types`                        | the committed Kubernetes and CRD types match what their sources emit  |
 | `plan-{deploy,teardown}-<lab>`           | committed plan snapshots                                              |
 | `manifest-digest-<lab>`                  | committed digests of the rendered tree                                |
 | `cliConfig-<lab>`                        | committed `cliConfig` for each lab                                    |

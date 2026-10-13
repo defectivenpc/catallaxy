@@ -39,10 +39,6 @@ in
     ${lib.concatStringsSep "\n" (
       lib.mapAttrsToList (pattern: instead: ''
         if hits=$(grep -rn --fixed-strings ${lib.escapeShellArg pattern} ${
-          # Interpolated, not `toString`: a path has to be copied into the
-          # store to exist inside the build. `toString` yields the source
-          # path, which is absent in the sandbox — so grep finds nothing and
-          # the check passes having looked at no files at all.
           lib.concatMapStringsSep " " (p: "${p}") scanned
         } 2>/dev/null); then
           echo "$hits" | sed 's|^|  |' >&2

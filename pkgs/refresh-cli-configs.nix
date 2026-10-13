@@ -9,7 +9,6 @@ pkgs.writeShellApplication {
   runtimeInputs = [
     pkgs.coreutils
 
-    # It shells out to `nix build`.
     pkgs.nix
   ];
 

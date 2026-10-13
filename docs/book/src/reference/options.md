@@ -1,86 +1,62 @@
 # Module Options
 
-The lab option tree is what a lab file writes: identity, DNS, networking,
-host services, secrets, and the clusters.
+There is one, and it is not a lab's.
 
-## The shape
-
-| Path                            | Is                                                      |
-| ------------------------------- | ------------------------------------------------------- |
-| `lab.name`                      | the lab's identity. Two labs on one host need two       |
-| `lab.dns.*`                     | the zone, and whether the lab serves it                 |
-| `lab.proxy.*`, `lab.registry.*` | host services, with their ports                         |
-| `lab.network.subnet`            | the docker network. Checked against every other lab's   |
-| `lab.secrets.stores.*`          | the encrypted stores, and what is projected out of them |
-| `lab.provides.*`                | what the lab offers its clusters as a scope             |
-| `lab.clusters.<c>`              | one cluster                                             |
-
-And per cluster:
-
-| Path                           | Is                                                     |
-| ------------------------------ | ------------------------------------------------------ |
-| `lab.clusters.<c>.floes.<n>`   | an instantiated floe                                   |
-| `lab.clusters.<c>.edge.*`      | where this cluster is reached from — see RFC 0005 §6.4 |
-| `lab.clusters.<c>.provisions`  | other clusters this one brings into existence          |
-| `lab.clusters.<c>.secrets.*`   | project, publish and subscribe                         |
-| `lab.clusters.<c>.waitTimeout` | how long a bundle may take to become ready             |
-
-Everything else on a cluster — `provides`, `link`, `stacks`, `out`,
-`manifests`, `spec` — is computed. You read those; you do not set them.
-
-## Where a floe's own options are
-
-**Not here.** A floe's options are its `inputs`, and they are passed as
-function arguments at the instantiation site:
+A lab is a floe and a cluster is a floe, so what either one takes is a
+floe's `inputs` — passed as function arguments at the instantiation site,
+not set on an option tree:
 
 ```nix
-gateway = floes.gateway { chart = "…"; tlsEnable = true; };
+labs.minimal { name = "minimal.tls"; tls = true; }
 ```
 
-Each floe's inputs, with types and defaults, are on its own generated page
-under **Floes** in the navigation. Those pages are generated from the floe
-definitions by `nix/floe-docs.nix`, and each is diff-checked by its own
-flake check — so a floe whose interface changes and whose page does not is a
-failing build, not a stale page.
+That is why this section holds a single page. The option tree a lab used to
+write against is gone; what replaced it is a declaration per module,
+rendered from the module's own definition.
 
-They carry two halves. The **declaration** — inputs, requires, provides — is
-read off the floe definition. What the floe **emits** — its bundles, its ops
-commands, its lint checks — is read off an actual link, because an ops
-command's name is not knowable until elaboration folds in the bundle it sits
-on. No header could state it, and one floe documented an ops command under
-the wrong name for as long as the page did not exist.
+## Where a lab's options are
+
+In its own `lab.nix`, as the `inputs` of a `mkLabFloe` call. The inputs
+every lab has whatever else its author declares — `name`, `zone`, `units`,
+`clusters`, `defaults` — come from `lib/floe-catallaxy/lab-floe.nix`, and a
+lab may refine one rather than redeclare it:
+
+```nix
+inputs.zone.default = "minimal.test";
+```
+
+These have no generated page yet. That is the one gap the move from an
+option tree to a declaration per module has left, and it is a generator to
+write rather than a question to answer — the declarations are already there
+to read.
+
+## Where a floe's options are
+
+On its own page under **Floes**. Each one carries two halves. The
+**declaration** — inputs, requires, provides — is read off the floe
+definition. What the floe **emits** — its bundles, its ops commands, its
+lint checks — is read off an actual link, because an ops command's name is
+not knowable until elaboration folds in the bundle it sits on. No header
+could state it, and one floe documented an ops command under the wrong name
+for as long as the page did not exist.
+
+## The one page that is here
+
+| Page                                   | Holds                                                      |
+| -------------------------------------- | ---------------------------------------------------------- |
+| [Plan Step Schema](./options/steps.md) | the fields a floe writes into its `LAB_STEPS` contribution |
+
+It is here and not on a floe's page because it is not any one floe's: it is
+the type every contributed step is checked against. `nixosOptionsDoc` runs
+over exactly the module `lib/eval/step-type.nix` exports and the merge uses,
+so the page cannot describe a field the merge would reject.
+
+What a given `kind` accepts in its `params` is a different document —
+[Plan Step Kinds](./step-kinds.md) — because the kind decides that, and the
+kinds live in the CLI.
 
 Regenerate with:
 
 ```bash
-nix run .#refresh-floe-docs
+nix run .#refresh-docs
 ```
-
-## The generated pages
-
-The table above is a map. Every option, with its type, default and the file
-it is declared in, is generated from the module tree by `nixosOptionsDoc`
-and split by route:
-
-| Page                                | Holds                      |
-| ----------------------------------- | -------------------------- |
-| [`lab.*`](./options/lab.md)         | lab scope                  |
-| [`lab.steps.*`](./options/steps.md) | steps you declare yourself |
-| [`cluster.*`](./options/cluster.md) | one cluster                |
-| [`bundles.*`](./options/bundles.md) | one bundle                 |
-
-The source is the same tree `mkLab` evaluates, so the reference cannot
-describe an option a lab does not have. `option-docs` diffs the committed
-pages against the generator and `option-descriptions` fails on any option
-that carries none.
-
-Regenerate with:
-
-```bash
-nix run .#refresh-option-docs
-```
-
-Floes are not among these pages. A floe's inputs are function arguments
-rather than options, so there is nothing under `floes.<n>` to route; their
-interfaces come from `nix/floe-docs.nix`, which can also say what a floe
-emits.

@@ -751,9 +751,6 @@ mod tests {
         }
     }
 
-    // The polarity this asserts is the bug that shipped: an unreachable but
-    // configured cluster was read as proof of deletion and recorded nothing,
-    // so teardown exited 0 while LoadBalancers and volumes stayed paid-for.
     #[test]
     fn a_configured_but_silent_cluster_records_a_failure() {
         use crate::io::kubectl::seam::fake::FakeKubectl;

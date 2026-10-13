@@ -13,10 +13,6 @@ pub fn test(
     report_dir: &Path,
 ) -> std::io::Result<std::process::Output> {
     let mut cmd = Command::new("chainsaw");
-    // Through the seam, so it gets the lab's KUBECONFIG. Chainsaw consults
-    // the default kubeconfig even when handed an explicit one per cluster,
-    // and a stale `current-context` there fails the run with a context this
-    // lab never named.
     crate::io::process::prepare_env(&mut cmd);
     cmd.args([
         "test",

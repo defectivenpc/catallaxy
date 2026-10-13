@@ -8,8 +8,8 @@ The CLI resolves exactly two attributes:
 
 ```nix
 legacyPackages.<system> = {
-  labs."my-platform"        = lab.config.lab.out.cliConfig;   # nix eval reads this
-  labPackages."my-platform" = lab.config.lab.out.package;     # nix build reads this
+  labs."my-platform"        = lab.cliConfig;   # nix eval reads this
+  labPackages."my-platform" = lab.package;     # nix build reads this
 };
 ```
 
@@ -18,30 +18,34 @@ matters to it. See [Flake Outputs](../reference/flake-outputs.md).
 
 ## A lab
 
-`mkLab` takes a list of modules and returns an evaluation:
+A lab is a floe. `lab.nix` is the definition and `mkLab` lowers one
+instantiation of it:
 
 ```nix
-lab = catallaxy.legacyPackages.${system}.mkLab {
-  modules = [ ./lab.nix ./envs/local.nix ];
-};
+lab = catallaxy.legacyPackages.${system}.mkLab (
+  (import ./lab.nix { inherit lib; inherit (cata) catallaxy floes; })
+    { name = "my-platform"; }
+);
 ```
 
-The lab file comes first and the environment files after, so the lab uses
-`lib.mkDefault` for anything an environment overrides.
 `examples/labs/minimal/` is the smallest complete worked example in this
 repo, and it and its five environments are built by CI, so they cannot rot.
 
 ## Instantiating floes
 
-A floe is a function. Calling it produces an opaque value, and a cluster is
-an attrset of those:
+A floe is a function. Calling it produces an opaque value, and a cluster
+floe's units are an attrset of those:
 
 ```nix
-lab.clusters.app.floes = {
-  cluster      = floes.k3d-cluster  { };
-  cert-manager = floes.cert-manager { };
-  gateway      = floes.gateway      { };
-  podinfo      = floes.podinfo      { };
+app = mkClusterFloe {
+  name = "app";
+  requires.claim = sigs.KUBERNETES_CLUSTER;
+
+  units = _: {
+    cert-manager = floes.cert-manager { };
+    gateway      = floes.gateway { };
+    podinfo      = floes.podinfo { };
+  };
 };
 ```
 
@@ -88,7 +92,7 @@ which.
 
 Portability is per field. A field marked local does not cross a cluster
 boundary, so a value that only makes sense inside one cluster cannot quietly
-be read from another. RFC 0005 §3.1 and §3.2 are the reference.
+be read from another.
 
 Reading a value across clusters gives you the right _address_ for something
 elsewhere — it does not move data. Moving an actual Secret between clusters
@@ -97,31 +101,40 @@ another subscribes from it.
 
 ## Layering across environments
 
-Lab configuration is ordinary module configuration, so put the shape in the
-lab file and the differences in an env file:
+An environment is an instantiation. The lab declares the inputs its
+environments may vary, with defaults, and each `envs/*.nix` answers them:
 
 ```nix
 # lab.nix
-lab.dns.zone = lib.mkDefault "minimal.test";
+inputs = {
+  zone.default = "minimal.test";
+
+  cluster = lib.mkOption {
+    type = catallaxy.floeInstance;
+    default = clusters.app { };
+  };
+};
 
 # envs/tls.nix
-lab.name            = "minimal.tls";
-lab.proxy.httpsPort = 8443;
+lab {
+  name = "minimal.tls";
+  cluster = clusters.app { tls = true; };
+  units.proxy = floes.lab-proxy { httpsPort = 8443; };
+}
 ```
 
-Adding a floe in an environment is a merge. _Replacing_ one the lab file
-already declared needs `lib.mkForce`, because a floe instance is an opaque
-value and the module system has no merge for two of them:
-
-```nix
-gateway = lib.mkForce (floes.gateway { tlsEnable = true; });
-```
+So what can differ between two environments is readable from the
+definition's header, and there is no merge to reason about: adding a floe is
+a key in `units`, and withdrawing one the lab placed is `units.<n> = null`.
+It was `lib.mkDefault` on every base value and `lib.mkForce` to replace one,
+because a floe instance is opaque and the module system had no merge for two
+of them.
 
 Environments need distinct identities to run side by side, and they get them
-from their own `lab.name`: the subnet and every host port are derived from
-it and recorded in `examples/labs/tests/allocations.json`. Set one by hand
-only when the address is somebody's contract — a firewall rule, a bookmark —
-and a lab-level check still refuses two labs that collide.
+from their own `name`: the subnet and every host port are derived from it
+and recorded in `examples/labs/tests/allocations.json`. Set one by hand only
+when the address is somebody's contract — a firewall rule, a bookmark — and
+a lab-level check still refuses two labs that collide.
 
 ## The escape hatch
 

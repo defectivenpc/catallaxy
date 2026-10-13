@@ -66,20 +66,19 @@ pub struct ClusterTopology {
     pub pod_subnet: String,
     pub service_subnet: String,
     pub components: BTreeMap<String, ComponentSummary>,
+
+    /// The namespaces this cluster's content declares, with how each one is
+    /// doing once something has looked. Health used to be per component,
+    /// against a namespace guessed from the unit's name.
+    pub namespaces: BTreeMap<String, Option<ComponentHealthState>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub live: Option<ClusterLiveState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentSummary {
-    pub enabled: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-    pub namespace: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub domain: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub health: Option<ComponentHealthState>,
+    /// How many of this unit's bundles are in the install order.
+    pub bundles: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

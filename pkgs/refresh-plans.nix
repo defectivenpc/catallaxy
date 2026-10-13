@@ -12,7 +12,6 @@ pkgs.writeShellApplication {
     pkgs.jq
     cata
 
-    # It shells out to `nix eval`.
     pkgs.nix
   ];
 

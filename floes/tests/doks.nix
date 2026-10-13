@@ -6,10 +6,14 @@
 # and that the two things a cloud cluster could have got wrong, it does not:
 # it pins a version rather than a prefix, and it declares the outputs it will
 # be checked against.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   r = support.evalFloe {
     name = "doks";
@@ -24,10 +28,7 @@ let
     inputs = {
       name = "workload";
       version = "1.31.1-do.4";
-      publishKubeconfigTo = {
-        store = "runtime";
-        key = "clusters/workload/kubeconfig";
-      };
+      publishKubeconfigKey = "clusters/workload/kubeconfig";
     };
   };
 
@@ -35,14 +36,14 @@ let
 in
 lib.runTests {
 
-  # Before any cluster exists — the case RFC 0003 §2 says a bundle
+  # Before any cluster exists — the case a bundle
   # cannot cover at all, because there is no reconciler yet to reconcile it.
   testAClusterIsMadeBeforeAnyClusterExists = {
     expr = resource.phase;
     expected = "before-clusters";
   };
 
-  # The registry's vocabulary, not a tool's. RFC 0003 §12.10: nothing in a
+  # The registry's vocabulary, not a tool's. nothing in a
   # floe names Terraform, OpenTofu or Pulumi.
   testItNamesAProviderAndNotATool = {
     expr = "${resource.provider}.${resource.type}";
@@ -58,7 +59,7 @@ lib.runTests {
     expected = "1.31.1-do.4";
   };
 
-  # Declared, never inferred (RFC 0003 §3). `kube_config` is what the
+  # Declared, never inferred. `kube_config` is what the
   # publication reads; the two subnets are read back so the apply can be
   # checked against what the lab decided rather than sampled.
   testItDeclaresTheOutputsItWillBeCheckedAgainst = {
@@ -89,14 +90,15 @@ lib.runTests {
     expected = { };
   };
 
-  # And when it is, it goes into a store the lab already declares — no second
-  # addressing scheme, which RFC 0003 §7 warns is the easy thing to get wrong.
+  # And when it is, it goes into the store this resolved — no second
+  # addressing scheme and no store name written here, which is the easy thing
+  # to get wrong.
   testAPublishedKubeconfigLandsInAnOrdinaryStore = {
     expr = published.link.out."catallaxy.publications".doks.kubeconfig;
     expected = {
       resource = "cluster";
       output = "kube_config";
-      store = "runtime";
+      store = "stub-labStore";
       key = "clusters/workload/kubeconfig";
     };
   };

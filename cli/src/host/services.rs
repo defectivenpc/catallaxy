@@ -132,11 +132,6 @@ pub fn start_service(
             drift.push("config file contents changed".to_string());
         }
 
-        // A container docker is restarting is not serving anything, whatever
-        // its configuration says. Recreating it is what picks up a repair made
-        // outside it -- a certificate this run just made readable is mounted
-        // into the old container, not the process that failed to open it --
-        // and if the cause is still there the fresh start's own check says so.
         if io::docker::container_restarting(container) {
             drift.push("docker is restarting it".to_string());
         }
@@ -566,8 +561,6 @@ mod drift_tests {
         assert!(d[0].contains("which lab owns"), "{d:?}");
     }
 
-    // The reported bug: bumping the tag in Nix left the old image serving and
-    // printed "already running" in green.
     #[test]
     fn a_bumped_image_tag_is_drift() {
         let drift = drift("traefik:v3.4.0", Some("traefik:v3.3.6"), &[], Some(&[]));
@@ -614,7 +607,6 @@ mod drift_tests {
         );
     }
 
-    // A container we cannot inspect is not a container that matches.
     #[test]
     fn an_unreadable_container_reports_nothing_rather_than_a_false_match() {
         assert!(drift("img", None, &["8080:80".to_string()], None).is_empty());

@@ -100,8 +100,6 @@ mod tests {
         );
     }
 
-    // A pod that has not started has no status at all, and it is exactly the
-    // pod whose image someone wants to know about.
     #[test]
     fn a_pod_with_no_status_still_reports_its_image() {
         let got = images_in_pods(&pods(json!([{
@@ -110,8 +108,6 @@ mod tests {
         assert_eq!(got.into_iter().collect::<Vec<_>>(), vec!["nginx:1.27"]);
     }
 
-    // The kubelet resolves a tag to whatever it pulled, so the status can
-    // name something the spec never did.
     #[test]
     fn the_status_can_name_an_image_the_spec_did_not() {
         let got = images_in_pods(&pods(json!([{
@@ -131,8 +127,6 @@ mod tests {
         assert!(images_in_pods(&pods(json!([{ "spec": { "containers": {} } }]))).is_empty());
     }
 
-    // The whole point: an operator made this pod, so no manifest catallaxy
-    // rendered ever mentioned it.
     #[test]
     fn reports_what_the_lab_never_rendered() {
         let actual = images_in_pods(&pods(json!([{
@@ -148,8 +142,6 @@ mod tests {
         );
     }
 
-    // A kubelet reports a digest the lab never wrote. Comparing the strings
-    // would call every image in the cluster a surprise.
     #[test]
     fn a_resolved_digest_is_not_a_surprise() {
         let actual = images_in_pods(&pods(json!([{

@@ -3,8 +3,8 @@
 # Its own subnet and its own host ports, so it stands up beside every other
 # lab in this tree rather than fighting them for the network. Nothing else
 # differs: the lab is already local.
-{ ... }:
-{
-  lab.name = "homelab.local";
+{ lab, ... }:
 
+lab {
+  name = "homelab.local";
 }

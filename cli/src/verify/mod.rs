@@ -2,8 +2,8 @@ pub mod checks;
 
 use serde::Serialize;
 
+use crate::domain::LabSpec;
 pub use crate::domain::diagnostic::{Diagnostic, Severity};
-use crate::domain::{EdgeMode, LabSpec};
 
 pub const CHECK_NAMES: [&str; 6] = [
     "clusters",
@@ -34,49 +34,54 @@ impl VerifyContext<'_> {
         self.lab.namespaces_for(cluster)
     }
 
-    /// Every routed hostname the lab's proxy can be asked about.
+    /// Whether the lab's ingress answers for this hostname.
     ///
-    /// Clusters that are their own edge (RFC 0005 §6.4) are left out: their
-    /// hostnames do not resolve through the lab, so probing them at the lab's
-    /// ingress tests a route nobody declared and fails for the wrong reason.
+    /// Asked per host rather than per cluster, because the host map is what
+    /// the ingress was built from: a `use_backend` line exists for exactly
+    /// these names. A cluster the lab does not front has no entry at all,
+    /// which is how "not ours to probe" is said.
+    fn routes(&self, cluster: &str, host: &str) -> bool {
+        self.lab
+            .routed_hosts
+            .get(cluster)
+            .is_some_and(|hosts| hosts.iter().any(|h| h == host))
+    }
+
+    /// Every routed hostname the lab's ingress can be asked about.
+    ///
+    /// Hostnames it does not answer for are left out: they do not resolve
+    /// through the lab, so probing them at its ingress tests a route nobody
+    /// declared and fails for the wrong reason.
     pub fn exposed_hosts(&self) -> Vec<(String, ExposedHost)> {
-        let mut out: Vec<(String, ExposedHost)> = self
-            .lab
-            .clusters
-            .iter()
-            .filter(|(_, spec)| spec.edge.mode == crate::domain::EdgeMode::Proxy)
-            .flat_map(|(cluster, spec)| {
-                spec.exposed_hosts
-                    .iter()
-                    .map(move |host| (cluster.clone(), host.clone()))
-            })
-            .collect();
-        out.sort_by(|a, b| a.1.host.cmp(&b.1.host));
+        let mut out = self.hosts_where(|ctx, cluster, host| ctx.routes(cluster, host));
         out.dedup_by(|a, b| a.1.host == b.1.host);
         out
     }
 
-    /// Routed hostnames the lab's proxy cannot be asked about, with the edge
-    /// mode that puts them out of reach.
+    /// Routed hostnames the lab's ingress cannot be asked about.
     ///
     /// `exposed_hosts` drops these for a good reason — probing them at the
     /// lab's ingress would fail for the wrong reason — but dropping them
     /// silently meant `verified` was reported about hosts nothing looked at.
-    /// Naming them is not the discovery RFC 0005 §6.4 describes; it is the
+    /// Naming them is not the discovery intended here; it is the
     /// difference between silence and a stated skip, which is what a report
     /// claiming success owes the reader.
-    pub fn unreachable_hosts(&self) -> Vec<(String, ExposedHost, EdgeMode)> {
-        let mut out: Vec<(String, ExposedHost, EdgeMode)> = self
+    pub fn unreachable_hosts(&self) -> Vec<(String, ExposedHost)> {
+        self.hosts_where(|ctx, cluster, host| !ctx.routes(cluster, host))
+    }
+
+    fn hosts_where(&self, keep: impl Fn(&Self, &str, &str) -> bool) -> Vec<(String, ExposedHost)> {
+        let mut out: Vec<(String, ExposedHost)> = self
             .lab
             .clusters
             .iter()
-            .filter(|(_, spec)| spec.edge.mode != crate::domain::EdgeMode::Proxy)
             .flat_map(|(cluster, spec)| {
-                let mode = spec.edge.mode;
-                spec.exposed_hosts
+                spec.content
+                    .exposed_hosts
                     .iter()
-                    .map(move |host| (cluster.clone(), host.clone(), mode))
+                    .map(move |host| (cluster.clone(), host.clone()))
             })
+            .filter(|(cluster, host)| keep(self, cluster, &host.host))
             .collect();
         out.sort_by(|a, b| a.1.host.cmp(&b.1.host));
         out
@@ -196,7 +201,6 @@ mod tests {
             super::published_port("127.0.0.1:9443:443"),
             Some((9443, 443))
         );
-        // The gateway publish is for pods, not for anything running here.
         assert_eq!(super::published_port("172.20.0.1:80:80"), None);
     }
     use super::*;
@@ -220,20 +224,18 @@ mod tests {
             "environment": "development",
             "clusterNames": [],
             "clusters": {},
-            "labNamespaces": {},
+            "routedHosts": {},
             "network": { "name": "l", "dockerSubnet": "172.20.0.0/16" },
             "dnsInfo": null,
             "registryPort": null,
             "registryUpstreams": [],
             "labOwnedRegistries": [],
             "opsToolPath": null,
-            "cd": { "strategy": "kapp", "bootstrap": "kubectl-ssa", "git": {} },
+            "cd": { "bootstrap": "kubectl-ssa", "git": {} },
             "secrets": { "envFile": null, "stores": {}, "managed": {}, "hostProjections": [] },
             "deploymentPlan": [],
             "teardownPlan": [],
-            "runtimeContexts": {},
             "services": {},
-            "selfContained": { "eligible": true, "envFile": null, "reasons": [] },
             "destroy": { "rescueHints": {} },
             "verify": {},
         })
@@ -241,26 +243,31 @@ mod tests {
 
     fn base_cluster(name: &str) -> Value {
         json!({
-            "name": name,
-            "labName": "l",
-            "provisioner": "k3d",
-            "provider": "docker",
-            "kubeContext": format!("k3d-{name}"),
-            "kubernetes": { "distribution": "k3s", "version": "1.31", "controlPlanes": 1, "workers": 0 },
-            "network": { "podSubnet": "10.244.0.0/16", "serviceSubnet": "10.96.0.0/12" },
-            "deploy": { "strategy": "kapp" },
-            "lifecycle": { "preProvision": [] },
-            "provisionerConfig": {
-                "k3d": { "clusterName": name, "image": null, "network": null,
-                         "noTraefik": true, "noServiceLB": false, "noFlannel": false, "noLocalStorage": false,
-                         "ports": [], "extraApiServerArgs": [], "extraVolumes": [],
-                         "autoDeployManifests": [] },
+            "claim": {
+                "name": name,
+                "instanceName": format!("l-{name}"),
+                "context": format!("k3d-{name}"),
+                "kubernetes": { "distribution": "k3s", "version": "1.31", "controlPlanes": 1, "workers": 0 },
+                "network": { "podSubnet": "10.244.0.0/16", "serviceSubnet": "10.96.0.0/12" },
             },
-            "host": { "waitTimeout": "10m",
-                      "colima": { "enable": true, "profile": "catallaxy", "cpu": 4, "disk": 60, "memory": 8 } },
-            "floes": {},
-            "exposedHosts": [],
-            "projections": {},
+            "provisioning": {
+                "config": {
+                    "k3d": { "clusterName": name, "image": null, "network": null,
+                             "noTraefik": true, "noServiceLB": false, "noFlannel": false, "noLocalStorage": false,
+                             "ports": [], "extraApiServerArgs": [], "extraVolumes": [],
+                             "autoDeployManifests": [] },
+                },
+                "hooks": [],
+                "wait": "10m",
+            },
+            "content": {
+                "tree": "/dev/null",
+                "namespaces": [],
+                "waves": [],
+                "exposedHosts": [],
+                "projections": {},
+            },
+            "delivery": { "strategy": "kapp", "waitTimeout": "10m" },
         })
     }
 
@@ -284,14 +291,15 @@ mod tests {
     fn exposed_hosts_are_collected_across_clusters_and_deduped() {
         let (lab, config) = with(json!({
             "clusterNames": ["mgmt", "apps"],
+            "routedHosts": { "mgmt": ["a.test", "b.test"], "apps": ["b.test"] },
             "clusters": {
-                "mgmt": { "exposedHosts": [
+                "mgmt": { "content": { "exposedHosts": [
                     { "host": "b.test", "tier": "public", "namespace": "n", "bundle": "x" },
                     { "host": "a.test", "tier": "internal", "namespace": "n", "bundle": "y" },
-                ]},
-                "apps": { "exposedHosts": [
+                ]}},
+                "apps": { "content": { "exposedHosts": [
                     { "host": "b.test", "tier": "public", "namespace": "n", "bundle": "z" },
-                ]},
+                ]}},
             },
         }));
         let ctx = VerifyContext {
@@ -308,27 +316,70 @@ mod tests {
         assert_eq!(hosts, vec!["a.test", "b.test"]);
     }
 
-    /// A cluster the lab is not the edge for is not probed through the lab.
+    /// The filter is per hostname, not per cluster.
+    ///
+    /// A fronted cluster can still render a route for a hostname nothing in
+    /// it claimed — the ingress has no `use_backend` for that name, so the
+    /// probe would get HAProxy's default 503 and blame the workload.
+    /// `checks.lab-routed-hosts-are-claimed` refuses the arrangement on the
+    /// Nix side; this is what happens to a document that has it anyway.
+    #[test]
+    fn an_unclaimed_host_in_a_fronted_cluster_is_not_probed() {
+        let (lab, config) = with(json!({
+            "clusterNames": ["app"],
+            "routedHosts": { "app": ["claimed.test"] },
+            "clusters": {
+                "app": { "content": { "exposedHosts": [
+                    { "host": "claimed.test", "tier": "public", "namespace": "n", "bundle": "x" },
+                    { "host": "stray.test", "tier": "public", "namespace": "n", "bundle": "y" },
+                ]}},
+            },
+        }));
+        let ctx = VerifyContext {
+            lab_name: "l",
+            lab: &lab,
+            config: &config,
+            package: None,
+        };
+        assert_eq!(
+            ctx.exposed_hosts()
+                .into_iter()
+                .map(|(_, h)| h.host)
+                .collect::<Vec<_>>(),
+            vec!["claimed.test"]
+        );
+        assert_eq!(
+            ctx.unreachable_hosts()
+                .into_iter()
+                .map(|(_, h)| h.host)
+                .collect::<Vec<_>>(),
+            vec!["stray.test"]
+        );
+    }
+
+    /// A cluster the lab does not front is not probed through the lab.
     ///
     /// `verify` resolves every routed host to the lab's ingress on loopback,
-    /// which is right exactly when the lab fronts every cluster. For one that
-    /// fronts itself the probe would dial HAProxy for a name HAProxy has no
+    /// which is right exactly for the names the ingress answers for. For one
+    /// it does not the probe would dial HAProxy for a name HAProxy has no
     /// backend for, get its default 503, and report the cluster as broken
     /// when nothing about it is.
+    ///
+    /// `cloud` is absent from the host map rather than present with a mode
+    /// saying to skip it: the map is what the ingress was built from, so
+    /// there is no second statement to disagree with it.
     #[test]
     fn a_self_edge_clusters_hosts_are_not_probed_through_the_lab() {
         let (lab, config) = with(json!({
             "clusterNames": ["local", "cloud"],
+            "routedHosts": { "local": ["here.test"] },
             "clusters": {
-                "local": { "exposedHosts": [
+                "local": { "content": { "exposedHosts": [
                     { "host": "here.test", "tier": "public", "namespace": "n", "bundle": "x" },
-                ]},
-                "cloud": {
-                    "edge": { "mode": "self", "backend": null, "httpPort": 80, "httpsPort": 443 },
-                    "exposedHosts": [
-                        { "host": "there.test", "tier": "public", "namespace": "n", "bundle": "y" },
-                    ],
-                },
+                ]}},
+                "cloud": { "content": { "exposedHosts": [
+                    { "host": "there.test", "tier": "public", "namespace": "n", "bundle": "y" },
+                ]}},
             },
         }));
         let ctx = VerifyContext {
@@ -344,12 +395,10 @@ mod tests {
             .collect();
         assert_eq!(hosts, vec!["here.test"]);
 
-        // Dropped from the probe, but named: a report that says "verified"
-        // while having looked at nothing for `cloud` is the lie this closes.
         let unreachable: Vec<String> = ctx
             .unreachable_hosts()
             .into_iter()
-            .map(|(_, h, _)| h.host)
+            .map(|(_, h)| h.host)
             .collect();
         assert_eq!(unreachable, vec!["there.test"]);
     }
@@ -413,10 +462,10 @@ mod tests {
     }
 
     #[test]
-    fn namespaces_come_from_the_lab_not_the_cluster() {
+    fn namespaces_come_from_the_clusters_own_content() {
         let (lab, config) = with(json!({
             "clusterNames": ["app"],
-            "labNamespaces": { "app": ["podinfo", "gateway"] },
+            "clusters": { "app": { "content": { "namespaces": ["podinfo", "gateway"] } } },
         }));
         let ctx = VerifyContext {
             lab_name: "l",
@@ -432,10 +481,13 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_runtime_context_is_no_context_at_all() {
+    fn an_empty_context_is_no_context_at_all() {
         let (lab, config) = with(json!({
-            "clusterNames": ["app"],
-            "runtimeContexts": { "app": "", "obs": "k3d-obs" },
+            "clusterNames": ["app", "obs"],
+            "clusters": {
+                "app": { "claim": { "context": "" } },
+                "obs": { "claim": { "context": "k3d-obs" } },
+            },
         }));
         let ctx = VerifyContext {
             lab_name: "l",

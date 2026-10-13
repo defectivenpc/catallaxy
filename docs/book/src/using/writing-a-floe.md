@@ -5,15 +5,37 @@ the shape below is that someone can read the top of the file and know what
 the floe needs, what it offers, and what it installs — without reading the
 body.
 
-`floes/cluster/podinfo/` is the smallest complete example in the repo, and
-the one this page follows.
+`floes/components/podinfo/` is the smallest complete example in the repo,
+and the one this page follows.
+
+## Is it a floe at all?
+
+Two trees look like they could hold the same thing, so one test decides:
+**could someone drop yours in its place?** `floes/` is a catalogue — every
+entry is a unit of a link, named by signature, and a consumer can
+`removeAttrs` one and register their own. `modules/lab/` is the shape of the
+declaration they write and the lowering from it: the option tree, the
+document, the plan.
+
+So "installs Kubernetes resources" does not make something a floe, and not
+installing any does not disqualify it. `floes/lab/zone.nix` installs nothing
+and is a floe, because a lab could answer `DNS_ZONE` some other way.
+`modules/lab/host/proxy.nix` runs a container and is not, because the lab's
+own ingress is part of what a lab is rather than a choice it makes.
+
+One exception, and it is written where it lives:
+`modules/lab/cluster/security.nix` emits content — Pod Security Admission
+labels and a default-deny NetworkPolicy — from the framework rather than
+from a floe. They are about _every_ namespace in the cluster, including ones
+other floes create, so no single floe can own them without declaring things
+about its neighbours.
 
 ## The whole shape
 
 ```nix
-{ lib, catallaxy, sigs, kinds, ... }:
+{ lib, floe, sigs, kinds, ... }:
 
-catallaxy.mkComponentFloe {
+floe.mkFloe {
   name = "podinfo";
   summary = "podinfo, a small routed workload for proving a cluster serves traffic.";
 
@@ -25,8 +47,10 @@ catallaxy.mkComponentFloe {
     };
   };
 
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
+  out.component = kinds.component;
   modules = [
     ({ config, lib, ... }: {
       config.floe.out.component = kinds.mkComponent { … };
@@ -35,26 +59,27 @@ catallaxy.mkComponentFloe {
 }
 ```
 
-Six keys, and the first five are the signature.
+Seven keys, and the first six are the signature.
 
-| Key        | Is                                             |
-| ---------- | ---------------------------------------------- |
-| `name`     | kebab-case, the floe's identity                |
-| `summary`  | one line saying what it installs. **Required** |
-| `inputs`   | `mkOption`s: what the deployer decides         |
-| `requires` | signatures it needs. Exactly one provider each |
-| `provides` | signatures it offers back                      |
-| `modules`  | the body — ordinary NixOS modules              |
+| Key        | Is                                                |
+| ---------- | ------------------------------------------------- |
+| `name`     | kebab-case, the floe's identity                   |
+| `summary`  | one line saying what it installs. **Required**    |
+| `inputs`   | `mkOption`s: what the deployer decides            |
+| `requires` | signatures it needs. Exactly one provider each    |
+| `provides` | signatures it offers back                         |
+| `out`      | the kinds it emits. `component` is the common one |
+| `modules`  | the body — ordinary NixOS modules                 |
 
 `summary` is required because Nix cannot read comments. A floe's header
 prose reaches no tool, so without it the generated interface page has no
 title and the only machine-readable thing about a floe is its name.
 
-`mkComponentFloe` is sugar over `mkFloe` that defaults two constants:
-`requires.cluster = sigs.KUBERNETES_CLUSTER` and `out.component`. Both are
-plumbing — every floe that installs into a cluster wrote the same two lines
-— and a check verifies the wiring exists rather than believing the author.
-Use `floe.mkFloe` directly for anything that is not a cluster component.
+There is one constructor. `requires.cluster` and `out.component` are written
+out like every other line of the interface, because a floe's header is the
+whole of what it promises: the two lines nearly every floe shares are the
+two a reader most needs to see, and a sugar that filled them in made 38
+headers quieter about what they require than about anything else.
 
 ## Requiring a capability
 
@@ -155,6 +180,55 @@ exists. Some edges are derived structurally as well — a namespaced resource
 after whatever declares its namespace, a custom resource after whatever
 declares its CRD.
 
+## Wrapping a chart
+
+Most floes are a Helm chart with the values a lab needs. The chart comes
+from `lib/charts.nix`, which pins it and extracts its CRDs; the floe
+defaults to that pin, so a lab author never spells a version:
+
+```nix
+bundles.grafana = kinds.mkBundle {
+  helmCharts.grafana = {
+    chart = inputs.chart;
+    namespace = ns;
+    values = {
+      replicas = 1;
+      persistence.enabled = false;
+    };
+  };
+};
+```
+
+`values` is the least-checked thing you will write, because a chart is a
+template and not a type. Four things do check it, and it is worth knowing
+which error each one gives you, because the gaps between them are where the
+mistakes live.
+
+**A quoted toggle is refused as you write it.** `enabled = "false"` is a
+string, every non-empty string is true in a Go template, and the quotes
+therefore turn the setting _on_. This fails evaluation naming the key.
+
+**A value the chart has no setting for is refused by `chart-values`.** It
+renders the chart with and without each value you wrote; one that changes
+nothing, and that the chart's own `values.yaml` does not mention, is a value
+Helm is ignoring. This is the normal outcome of a chart upgrade, and four
+were live in this tree when the check was written — one of them leaving an
+ApplicationSet controller running in every lab that ran Argo CD.
+
+**A type error that breaks a template is refused by the build**, because
+every build runs `helm template`. **A type error that does not** is refused
+by Helm's own schema validation for the nine of twenty-one charts that ship
+a `values.schema.json`, and by nothing for the rest.
+
+**Nothing checks that the chart did what you meant.** `manifest-digests`
+pins the rendered output, so a change shows up as a diff to read at review
+time — but a value that is wrong in a stable way renders the same wrong
+thing every time, and no digest will object. Writing a value equal to the
+chart's own default is fine and not reported: it pins the behaviour against
+upstream changing that default.
+
+The escape hatch, when a chart cannot express what you need, is `yamls`.
+
 ## What the tree will make you do
 
 Four things are checked that are easy to miss:
@@ -180,7 +254,7 @@ diff-checked, so changing a floe's interface without regenerating is a
 failing build:
 
 ```bash
-nix run .#refresh-floe-docs
+nix run .#refresh-docs
 ```
 
 Check the result. `openbao`'s page immediately showed a header documenting

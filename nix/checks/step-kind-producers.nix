@@ -12,7 +12,7 @@ let
     map (lib.removeSuffix ".nix") (
       lib.filter (n: n != "default.nix") (
         builtins.attrNames (
-          lib.filterAttrs (_: t: t == "regular") (builtins.readDir ../../modules/lab/planner/kinds)
+          lib.filterAttrs (_: t: t == "regular") (builtins.readDir ../../lib/lower/plan-kinds)
         )
       )
     )
@@ -32,10 +32,8 @@ in
         producers = lib.fileset.toSource {
           root = ../..;
           fileset = lib.fileset.unions [
-            ../../modules/lab/plan.nix
-            ../../modules/lab/cd.nix
-            ../../modules/lab/secrets.nix
-            ../../modules/lab/planner/provisions.nix
+            ../../lib/lower/plan.nix
+            ../../lib/lower/plan-provisions.nix
             ../../lib/floe-catallaxy
             ../../floes
             ../../examples/labs

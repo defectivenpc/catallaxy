@@ -1,13 +1,17 @@
 # otel-collector, alone.
 #
 # The floe exists to test one idea: three optional backends, expressed as
-# `requiresOptional` rather than as three `enable` flags with three endpoint
+# `optional` rather than as three `enable` flags with three endpoint
 # options and three assertions checking the lab set them consistently. So most
 # of this is about what happens at each width — all three, one, none.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   evalWith =
     without:

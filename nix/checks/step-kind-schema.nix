@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  kinds = import ../../modules/lab/planner/kinds { inherit lib; };
+  kinds = import ../../lib/lower/plan-kinds { inherit lib; };
 
   sampleFor =
     kindName: fieldName: type:
@@ -21,14 +21,6 @@ let
     else if type.name == "attrsOf" then
       { }
     else if type.name == "submodule" then
-      # Built from the submodule's own options rather than handed `{ }`.
-      #
-      # An empty object parses for a Rust struct whose fields are all
-      # optional and fails for one with a required field — so the old sample
-      # meant a submodule param was either untested or a build error, with no
-      # way to tell which from here. `getSubOptions` is what the module system
-      # already uses to document a submodule, so this asks the same question
-      # the manual does.
       lib.mapAttrs (subName: sub: sampleFor kindName "${fieldName}.${subName}" sub.type) (
         lib.filterAttrs (n: sub: n != "_module" && sub ? type) (type.getSubOptions [ ])
       )

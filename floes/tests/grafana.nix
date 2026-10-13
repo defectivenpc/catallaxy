@@ -2,10 +2,14 @@
 #
 # Two optional dependencies, so most of this is about what happens at each
 # width — three datasources, one, none, and with or without an issuer.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   evalWith =
     {

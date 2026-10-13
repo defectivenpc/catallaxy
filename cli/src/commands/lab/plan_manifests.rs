@@ -5,6 +5,7 @@ use console::style;
 use serde_json::Value;
 
 use crate::config::Context as CataContext;
+use crate::domain::WaveBundle;
 
 use super::golden;
 
@@ -41,7 +42,7 @@ fn load_waves(
     name: Option<&str>,
     cluster: Option<&str>,
     from_file: Option<&Path>,
-) -> Result<Vec<Vec<Value>>> {
+) -> Result<Vec<Vec<WaveBundle>>> {
     if let Some(path) = from_file {
         let raw = crate::io::fs::read_to_string(path)
             .with_context(|| format!("reading manifest-waves file {}", path.display()))?;
@@ -49,7 +50,7 @@ fn load_waves(
             .with_context(|| format!("parsing JSON from {}", path.display()))?;
         return extract_waves(&v, cluster).with_context(|| {
             format!(
-                "extracting manifestWaves from {} (expected a `[[bundle]]` array, or an object with a `manifestWaves` key at top level or under `clusters.<name>`)",
+                "reading the wave summary from {} (expected a `[[bundle]]` array, or a lab document whose `clusters.<name>.content.waves` holds one)",
                 path.display()
             )
         });
@@ -60,29 +61,23 @@ fn load_waves(
     let lab = crate::io::nix::get_lab_document(ctx, lab_name)?;
     extract_waves(&lab, cluster).with_context(|| {
         format!(
-            "extracting manifestWaves for lab '{lab_name}' cluster '{}'",
+            "reading the wave summary for lab '{lab_name}' cluster '{}'",
             cluster.unwrap_or("<any>")
         )
     })
 }
 
-fn extract_waves(v: &Value, cluster: Option<&str>) -> Result<Vec<Vec<Value>>> {
-    if let Some(outer) = v.as_array() {
-        let mut waves = Vec::with_capacity(outer.len());
-        for w in outer {
-            let inner = w
-                .as_array()
-                .ok_or_else(|| anyhow::anyhow!("expected `[[bundle]]` structure"))?;
-            waves.push(inner.clone());
-        }
-        return Ok(waves);
-    }
-
-    if let Some(w) = v.get("manifestWaves").and_then(|v| v.as_array()) {
-        return Ok(w
-            .iter()
-            .map(|inner| inner.as_array().cloned().unwrap_or_default())
-            .collect());
+/// The waves for one cluster, out of whatever was handed over.
+///
+/// Three shapes, because `--from-file` is how the golden test feeds a wave
+/// list without evaluating a lab: a bare `[[bundle]]`, a whole lab document,
+/// or a lab document with one cluster named. Typed through `WaveBundle` in
+/// every case, which is what makes the summary's fields read rather than
+/// dug out of a `Value` by key beside a struct nothing used.
+fn extract_waves(v: &Value, cluster: Option<&str>) -> Result<Vec<Vec<WaveBundle>>> {
+    if v.is_array() {
+        return serde_json::from_value(v.clone())
+            .context("expected `[[bundle]]`, with each bundle a wave summary entry");
     }
 
     let clusters = v
@@ -90,47 +85,34 @@ fn extract_waves(v: &Value, cluster: Option<&str>) -> Result<Vec<Vec<Value>>> {
         .and_then(|v| v.as_object())
         .ok_or_else(|| anyhow::anyhow!("no `clusters` object in JSON, cannot resolve waves"))?;
 
-    if let Some(target) = cluster {
-        let cluster_val = clusters.get(target).ok_or_else(|| {
+    let (name, value) = match cluster {
+        Some(target) => clusters.get_key_value(target).ok_or_else(|| {
             anyhow::anyhow!(
                 "cluster '{}' not found. Available: {}",
                 target,
                 clusters.keys().cloned().collect::<Vec<_>>().join(", ")
             )
-        })?;
-        let waves = cluster_val
-            .get("manifestWaves")
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| anyhow::anyhow!("cluster '{target}' has no manifestWaves"))?;
-        return Ok(waves
-            .iter()
-            .map(|inner| inner.as_array().cloned().unwrap_or_default())
-            .collect());
-    }
-
-    if clusters.len() > 1 {
-        bail!(
+        })?,
+        None if clusters.len() > 1 => bail!(
             "lab has {} clusters ({}); pass --cluster=<name>",
             clusters.len(),
             clusters.keys().cloned().collect::<Vec<_>>().join(", ")
-        );
-    }
+        ),
+        None => clusters
+            .iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("lab has no clusters"))?,
+    };
 
-    let (only_name, only_val) = clusters
-        .iter()
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("lab has no clusters"))?;
-    let waves = only_val
-        .get("manifestWaves")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| anyhow::anyhow!("cluster '{only_name}' has no manifestWaves"))?;
-    Ok(waves
-        .iter()
-        .map(|inner| inner.as_array().cloned().unwrap_or_default())
-        .collect())
+    let waves = value
+        .pointer("/content/waves")
+        .ok_or_else(|| anyhow::anyhow!("cluster '{name}' has no content.waves"))?;
+
+    serde_json::from_value(waves.clone())
+        .with_context(|| format!("reading the wave summary of '{name}'"))
 }
 
-fn format_stable(waves: &[Vec<Value>]) -> String {
+fn format_stable(waves: &[Vec<WaveBundle>]) -> String {
     let mut out = String::new();
     for (wave_idx, wave) in waves.iter().enumerate() {
         out.push_str(&format!(
@@ -140,48 +122,19 @@ fn format_stable(waves: &[Vec<Value>]) -> String {
             if wave.len() == 1 { "" } else { "s" }
         ));
         for (bundle_idx, bundle) in wave.iter().enumerate() {
-            let obj = match bundle.as_object() {
-                Some(o) => o,
-                None => {
-                    out.push_str(&format!(
-                        "[{:03}] <non-object bundle: {}>\n",
-                        bundle_idx + 1,
-                        serde_json::to_string(bundle).unwrap_or_default()
-                    ));
-                    continue;
-                }
-            };
-
-            let mut keys: Vec<&String> = obj
-                .keys()
-                .filter(|k| {
-                    if k.as_str() == "readyProbe" {
-                        return false;
-                    }
-                    match &obj[*k] {
-                        Value::Null => false,
-                        Value::Array(a) if a.is_empty() => false,
-                        Value::Object(m) if m.is_empty() => false,
-                        _ => true,
-                    }
-                })
-                .collect();
-            keys.sort();
-
-            out.push_str(&format!("[{:03}]", bundle_idx + 1));
-            for key in keys {
-                out.push(' ');
-                out.push_str(key);
-                out.push('=');
-                out.push_str(&golden::render_value(&obj[key]));
-            }
-            out.push('\n');
+            let name = bundle.name.as_str();
+            let probe = bundle.has_ready_probe;
+            let resources = bundle.resource_count;
+            out.push_str(&format!(
+                "[{:03}] name={name} hasReadyProbe={probe} resourceCount={resources}\n",
+                bundle_idx + 1,
+            ));
         }
     }
     golden::normalize_store_paths(&out)
 }
 
-fn render_pretty(lab_name: &str, cluster: &str, waves: &[Vec<Value>]) {
+fn render_pretty(lab_name: &str, cluster: &str, waves: &[Vec<WaveBundle>]) {
     let total: usize = waves.iter().map(Vec::len).sum();
     println!(
         "{} manifest waves for '{lab_name}' cluster '{cluster}'",
@@ -209,24 +162,13 @@ fn render_pretty(lab_name: &str, cluster: &str, waves: &[Vec<Value>]) {
             if wave.len() == 1 { "" } else { "s" },
         );
         for bundle in wave {
-            let name = bundle
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("<unnamed>");
-            let has_probe = bundle
-                .get("hasReadyProbe")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            let resource_count = bundle
-                .get("resourceCount")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
+            let probe = bundle.has_ready_probe;
+            let resources = bundle.resource_count;
             println!(
-                "    {} {} {} ({} resources)",
+                "    {} {} {} ({resources} resources)",
                 style("•").dim(),
-                if has_probe { "🩺" } else { "  " },
-                name,
-                resource_count,
+                if probe { "🩺" } else { "  " },
+                bundle.name,
             );
         }
     }

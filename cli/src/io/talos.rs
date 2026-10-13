@@ -383,8 +383,6 @@ mod tests {
         );
     }
 
-    // Every patch is a whole area of configuration: a dropped one is a cluster
-    // with no registry mirror or no CNI, and it starts fine either way.
     #[test]
     fn every_config_patch_reaches_the_command() {
         let mut cfg = talos();
@@ -420,8 +418,6 @@ mod tests {
         );
     }
 
-    // Node resources are per-role flags, and a lab that sizes its nodes means
-    // both roles.
     #[test]
     fn memory_and_cpu_apply_to_both_roles() {
         let a = args();
@@ -436,8 +432,6 @@ mod tests {
         assert_eq!(value_after(&a, "--cpus-workers").as_deref(), Some("2.0"));
     }
 
-    // There is no --controlplanes flag for the docker provisioner. Emitting
-    // one would fail at runtime; the count is refused in the module instead.
     #[test]
     fn no_control_plane_count_is_ever_passed() {
         assert!(!args().iter().any(|a| a.contains("controlplanes")

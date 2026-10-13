@@ -19,8 +19,8 @@ pub mod teardown;
 pub mod verify;
 
 pub use cluster::{
-    ClusterSpec, DeploySpec, DeployStrategy, EdgeMode, EdgeSpec, ExposedHost, FloeSpec,
-    ProvisionerConfig, ProvisionerKind,
+    Claim, ClusterSpec, Content, Delivery, DeployStrategy, ExposedHost, ProvisionerConfig,
+    ProvisionerKind, WaveBundle,
 };
 pub use diagnostic::{Diagnostic, Severity};
 pub use exit::ExitWith;

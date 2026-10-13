@@ -1,8 +1,12 @@
 # crossplane-provider-nop, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe { name = "crossplane-provider-nop"; };
 
   provider = r.bundles.provider.resources.provider;
@@ -50,9 +54,6 @@ lib.runTests {
     expected = {
       condition = "Healthy";
 
-      # Short kind, not `provider.pkg.crossplane.io`: `cata lab lint` matches
-      # a probe's target against the rendered object's normalised kind, and a
-      # qualified one never matches — the probe would block to its timeout.
       resource = "provider/provider-nop";
     };
   };

@@ -19,9 +19,6 @@ pkgs.writeShellApplication {
     pkgs.docker-client
     pkgs.gnugrep
 
-    # The parked script shelled out to `nix eval` without declaring it, which
-    # it got away with because CI always had nix on PATH and a workstation
-    # usually does too. It is a dependency either way.
     pkgs.nix
   ];
 
@@ -37,20 +34,13 @@ pkgs.writeShellApplication {
       echo "usage: cata-e2e <lab>" >&2
       echo "" >&2
       echo "labs this can stand up:" >&2
-      jq -r 'to_entries[] | select(.value.eligible) | "  " + .key' <<< "$labs" >&2
-      echo "" >&2
-      echo "and the ones it cannot, with the reason:" >&2
-      jq -r 'to_entries[] | select(.value.eligible | not) | "  \(.key): \(.value.reasons | join("; "))"' <<< "$labs" >&2
+      jq -r '.[] | "  " + .' <<< "$labs" >&2
       exit 64
     fi
 
-    # Re-checked here rather than trusted from the caller, so a name that does
-    # not belong in a CI matrix fails loudly on its own job instead of being
-    # silently dropped from a computed list.
-    eligible=$(jq -r --arg lab "$lab" '.[$lab].eligible // false' <<< "$labs")
-    if [ "$eligible" != "true" ]; then
-      echo "cata-e2e: '$lab' cannot be stood up here:" >&2
-      jq -r --arg lab "$lab" '.[$lab].reasons[]? | "  " + .' <<< "$labs" >&2
+    if ! jq -e --arg lab "$lab" 'index($lab)' <<< "$labs" > /dev/null; then
+      echo "cata-e2e: '$lab' is not in the e2e list." >&2
+      echo "  The list is \`e2eLabs\` in flake.nix. Add it there if it belongs." >&2
       exit 1
     fi
 
@@ -87,7 +77,7 @@ pkgs.writeShellApplication {
 
     step() { echo "" >&2; echo "=== $* ===" >&2; }
 
-    env_file=$(jq -r --arg lab "$lab" '.[$lab].envFile // ""' <<< "$labs")
+    env_file=$(nix eval --raw "$flake#labs.\"$lab\".secrets.envFile" 2> /dev/null || true)
     if [ -n "$env_file" ]; then
       env_path="$flake/$env_file"
       if [ ! -f "$env_path" ]; then

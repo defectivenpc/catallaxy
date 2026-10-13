@@ -1,143 +1,145 @@
 {
   "cd": {
     "bootstrap": "kubectl-ssa",
-    "git": {},
-    "strategy": "kapp"
+    "git": {}
   },
   "clusterNames": [
     "app"
   ],
   "clusters": {
     "app": {
-      "deploy": {
-        "strategy": "kapp"
+      "claim": {
+        "context": "admin@minimal-talos-app",
+        "instanceName": "minimal-talos-app",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "talos",
+          "version": "1.31",
+          "workers": 1
+        },
+        "name": "app",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
+        }
       },
-      "edge": {
-        "backend": "minimal-talos-app-controlplane-1",
-        "httpPort": 30080,
-        "httpsPort": 30443,
-        "mode": "proxy"
-      },
-      "exposedHosts": [
-        {
-          "bundle": "podinfo/podinfo",
-          "host": "podinfo.minimal.test",
-          "namespace": "podinfo",
-          "paths": [
-            "/"
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.minimal.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "cert-manager",
+          "external-secrets",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-app",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/coredns-zone/coredns",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/external-secrets/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/gateway-api/crds",
+              "resourceCount": 0
+            }
           ],
-          "tier": "public"
-        }
-      ],
-      "floes": {
-        "cert-manager": {
-          "enable": true
-        },
-        "cluster": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
-        },
-        "podinfo": {
-          "enable": true
-        }
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/cert-manager",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/external-secrets/external-secrets",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/controller",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/trust-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/gateway",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/bundles",
+              "resourceCount": 2
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ]
+        ]
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "admin@minimal-talos-app",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "talos",
-        "version": "1.31",
-        "workers": 1
-      },
-      "labName": "minimal.talos",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "talos": {
+            "clusterName": "minimal-talos-app",
+            "configPatches": [],
+            "cpus": "2.0",
+            "exposedPorts": [],
+            "image": null,
+            "kubernetesVersion": "1.31.4",
+            "memory": "2.0GiB",
+            "mounts": [],
+            "reachableFrom": [
+              "catallaxy-minimal.talos-ingress"
+            ],
+            "subnet": "10.7.0.0/24"
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 3
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "podinfo/podinfo",
-            "resourceCount": 3
-          }
-        ]
-      ],
-      "name": "app",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.96.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "talos",
-      "provisionerConfig": {
-        "talos": {
-          "clusterName": "minimal-talos-app",
-          "configPatches": [],
-          "cpus": "2.0",
-          "exposedPorts": [],
-          "image": null,
-          "kubernetesVersion": "1.31.4",
-          "memory": "2.0GiB",
-          "mounts": [],
-          "reachableFrom": [
-            "catallaxy-minimal.talos-ingress"
-          ],
-          "subnet": "10.7.0.0/24"
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     }
   },
@@ -145,12 +147,6 @@
   "dnsInfo": null,
   "infraPublications": [],
   "labName": "minimal.talos",
-  "labNamespaces": {
-    "app": [
-      "cert-manager",
-      "podinfo"
-    ]
-  },
   "labOwnedRegistries": [],
   "network": {
     "dockerSubnet": "172.27.112.0/20",
@@ -159,8 +155,10 @@
   "opsToolPath": "/nix/store/HASH-minimal.talos-ops/bin/minimal.talos-ops",
   "registryPort": null,
   "registryUpstreams": [],
-  "runtimeContexts": {
-    "app": "admin@minimal-talos-app"
+  "routedHosts": {
+    "app": [
+      "podinfo.minimal.test"
+    ]
   },
   "secrets": {
     "envFile": null,
@@ -170,9 +168,11 @@
   },
   "services": {
     "egress": {
+      "command": [],
       "container": "catallaxy-minimal.talos-egress",
       "description": "Forward proxy inside the lab network (minimal.test)",
       "dnsContainers": [],
+      "extraMounts": [],
       "image": "ghcr.io/querateam/docker-tinyproxy:latest",
       "networks": [
         "minimal.talos"
@@ -180,6 +180,7 @@
       "ports": [
         "127.0.0.1:3183:8888"
       ],
+      "readyProbe": null,
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
           "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
@@ -187,8 +188,10 @@
       }
     },
     "proxy": {
+      "command": [],
       "container": "catallaxy-minimal.talos-ingress",
       "description": "HAProxy lab ingress (minimal.test)",
+      "dnsContainers": [],
       "extraMounts": [
         {
           "container": "/etc/haproxy/certs/lab.pem",

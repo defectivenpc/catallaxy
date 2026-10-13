@@ -126,9 +126,6 @@ fn refuse_taken_ports(name: &str, lab: &LabSpec) -> Result<()> {
             continue;
         }
 
-        // Past the check above, every publisher is one of ours, so this is
-        // just "is anything publishing it". Re-running a lab that is already
-        // up must not look like a conflict.
         let ours_have_it = !publishers.is_empty();
 
         if !ours_have_it && port_state(port) == PortState::Taken {
@@ -166,14 +163,10 @@ fn declared_host_ports(lab: &LabSpec) -> Vec<(String, u16)> {
             .filter_map(move |mapping| host_port_of(mapping).map(|port| (name.clone(), port)))
     });
 
-    // A cluster publishes host ports too, and this used to look only at
-    // `lab.services`. A clash there was found by k3d or talosctl partway
-    // through building the cluster, after the network and the host services
-    // were already up, rather than by the preflight that exists to say
-    // "nothing was started".
     let clusters = lab.clusters.iter().flat_map(|(name, cluster)| {
         cluster
-            .provisioner_config
+            .provisioning
+            .config
             .published_ports()
             .iter()
             .filter_map(move |mapping| host_port_of(mapping).map(|port| (name.clone(), port)))
@@ -263,9 +256,6 @@ mod tests {
         }
     }
 
-    // A port below 1024 refuses a non-root bind with PermissionDenied whether
-    // or not anything holds it, and docker publishes it as root regardless.
-    // Reading that as "taken" made lab up refuse a lab that would have worked.
     #[test]
     fn a_privileged_port_we_may_not_bind_is_not_a_conflict() {
         assert_eq!(

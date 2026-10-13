@@ -58,17 +58,6 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<u64
 /// If `cp` cannot be spawned, or exits non-zero because the source is missing
 /// or the target is not writable.
 pub fn copy_tree_dereferencing(source: &str, target: &Path) -> Result<()> {
-    // `--no-preserve=mode`, because the source is always the Nix store and the
-    // target is always somewhere that has to be written to afterwards.
-    //
-    // Without it `cp -r` reproduces the store's `r-xr-xr-x` on every directory
-    // it creates, and the next write into one fails with EACCES. `lab publish`
-    // hit exactly that: it copied the manifest tree, then tried to put
-    // `metadata.json` beside it and could not.
-    //
-    // Fixed here rather than at the call site: copying out of the store into a
-    // writable tree is what this function is for, and a read-only result is
-    // never what a caller wants.
     let status = std::process::Command::new("cp")
         .args(["-rL", "--no-preserve=mode"])
         .arg(source)
@@ -90,9 +79,6 @@ pub fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
     std::fs::remove_dir_all(path)
 }
 
-// The dry-run path has always shelled out to `find` and dropped both its
-// status and, since it inherits stdout, nothing else. Preserved as-is rather
-// than deleted, because deleting it changes what a dry run prints.
 pub fn list_yaml_files(root: &str) {
     let _ = std::process::Command::new("find")
         .args([root, "-type", "f", "-name", "*.yaml"])
@@ -236,8 +222,6 @@ pub fn kubeconfig_path() -> String {
 }
 
 pub fn home_or_tmp() -> String {
-    // Five callers wanted this before it had a name, and they all fell back to
-    // /tmp rather than failing. home_dir() is the accessor that refuses to.
     std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string())
 }
 
@@ -272,9 +256,6 @@ pub fn write_atomic(path: &Path, contents: &[u8]) -> Result<()> {
 
     std::fs::write(&tmp, contents).with_context(|| format!("writing {}", tmp.display()))?;
 
-    // Clean up before building the message, not inside it: with_context's
-    // closure runs only on the error path today, and swapping it for context()
-    // would silently leave the temp file behind.
     if let Err(e) = std::fs::rename(&tmp, path) {
         let _ = std::fs::remove_file(&tmp);
         return Err(e).with_context(|| format!("replacing {}", path.display()));
@@ -388,9 +369,6 @@ pub fn erase_secure_temp_paths() {
         return;
     };
     for path in paths.drain(..) {
-        // A registered path is a directory or a file depending on which
-        // constructor made it, and by here it may be neither: the handle's own
-        // Drop may have run first. Both removals are best-effort.
         if path.is_dir() {
             let _ = std::fs::remove_dir_all(&path);
         } else {
@@ -410,8 +388,6 @@ mod secure_tempdir_tests {
     static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     fn serially() -> std::sync::MutexGuard<'static, ()> {
-        // A panicking test poisons the lock; the guard is still what the next
-        // test needs, and the panic is already reported.
         SERIAL.lock().unwrap_or_else(|e| e.into_inner())
     }
 

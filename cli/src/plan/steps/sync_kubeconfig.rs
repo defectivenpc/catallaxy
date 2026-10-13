@@ -13,9 +13,6 @@ pub fn run(sctx: &StepContext<'_>, p: &SyncKubeconfigParams) -> Result<()> {
     } = p;
     let kube_context_override = kube_context_override.as_deref();
 
-    // Two camps produce a kubeconfig in different places; what this step does
-    // with it — write it locally under the context the lab decided — is the
-    // same either way, which is why there is one step and not two.
     if let Some(secret) = from_secret {
         return from_store(sctx, clusters, secret);
     }
@@ -63,8 +60,6 @@ fn from_store(
         );
     };
 
-    // `store_of` rather than the store name written twice: a secret's owning
-    // store is a fact the lab already holds.
     let value = cache
         .get(&secret.store)
         .and_then(|secrets| secrets.values().find_map(|keys| keys.get(&secret.key)))

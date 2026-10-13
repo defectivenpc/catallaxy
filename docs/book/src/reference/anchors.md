@@ -148,8 +148,8 @@ velero/crds/established                     zot/registry/ready
 
 ## Built-in plan tokens
 
-Published by framework-emitted steps (`modules/lab/plan.nix` and
-`modules/lab/planner/`).
+Published by framework-emitted steps (`lib/lower/plan.nix` and
+`lib/lower/plan-provisions.nix`).
 
 **Deploy:**
 

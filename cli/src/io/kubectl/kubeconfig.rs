@@ -124,7 +124,7 @@ pub fn rename_context_in(kubeconfig: &Path, from: &str, to: &str) {
 /// The producing tool names the context whatever it likes — `doctl` writes
 /// `do-<region>-<name>` — and the lab decided a name of its own. Renaming on
 /// the way in is what keeps `KUBERNETES_CLUSTER.context` a decision rather
-/// than a discovery (RFC 0005 §6.3) for a cluster this machine did not make.
+/// than a discovery for a cluster this machine did not make.
 ///
 /// The same shape as `crossplane::sync_kubeconfig`, which reads its bytes out
 /// of a connection Secret instead of a secret store. Only the source differs.

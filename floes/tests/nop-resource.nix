@@ -1,8 +1,12 @@
 # nop-resource, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe { name = "nop-resource"; };
   nop = r.bundles.nop.resources.nop;
 in

@@ -6,13 +6,13 @@
 # derived from that link rather than declared here.
 {
   lib,
-  catallaxy,
+  floe,
   sigs,
   kinds,
   ...
 }:
 
-catallaxy.mkComponentFloe {
+floe.mkFloe {
   name = "hello-world";
   summary = "A single routed workload, as a starting point for your own floes.";
 
@@ -45,8 +45,10 @@ catallaxy.mkComponentFloe {
     };
   };
 
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires.gateway = sigs.API_GATEWAY;
 
+  out.component = kinds.component;
   modules = [
     (
       { config, ... }:

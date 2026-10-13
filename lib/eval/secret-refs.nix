@@ -10,11 +10,8 @@ let
   creators = {
     "Secret" = res: [ (res.metadata.name or null) ];
 
-    # cert-manager writes the issued keypair here.
     "Certificate" = res: [ (res.spec.secretName or null) ];
 
-    # external-secrets materialises into `target.name`, defaulting to the
-    # ExternalSecret's own name when it says nothing.
     "ExternalSecret" = res: [ (res.spec.target.name or res.metadata.name or null) ];
   };
 
@@ -23,7 +20,6 @@ let
     (node.secretRef.name or null)
     (node.secret.secretName or null)
 
-    # trust-manager's `Bundle.spec.sources[].secret`.
     (node.secret.name or null)
   ];
 

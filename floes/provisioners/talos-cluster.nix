@@ -27,6 +27,19 @@ floe.mkFloe {
   summary = "A Talos cluster in docker, on a network talosctl makes.";
 
   inputs = {
+    wait = lib.mkOption {
+      type = lib.types.str;
+      default = "10m";
+      description = ''
+        How long to wait for the API server to answer once the cluster has
+        been created.
+
+        Here rather than on the cluster, because how long a cluster takes to
+        come up is a property of what makes it. The wait for an *apply* to
+        settle belongs to whatever applies, and is `DELIVERY_POLICY`'s.
+      '';
+    };
+
     name = lib.mkOption {
       type = lib.types.str;
       description = "Cluster name, as members and the kubeconfig see it. Required.";
@@ -142,7 +155,11 @@ floe.mkFloe {
   };
 
   provides.cluster = sigs.KUBERNETES_CLUSTER;
-  out.cluster = kinds.cluster;
+
+  # talosctl's container naming, which nothing outside this floe knows.
+  provides.edge = sigs.CLUSTER_EDGE;
+
+  out.clusterDescriptor = kinds.cluster;
 
   modules = [
     (
@@ -151,18 +168,25 @@ floe.mkFloe {
         inputs = config.floe.inputs;
       in
       {
-        # The assembly point, as in the k3d floe: the signature and the output
-        # kind are both projections of this node, so a changed input moves
-        # what deploys and what members read together.
         options.kubeContext = lib.mkOption {
           type = lib.types.str;
           description = "kubectl context name talosctl writes for this cluster.";
         };
 
-        # What talosctl actually writes. The generic `<prefix>-<cluster>`
-        # default matches nothing, and every step after cluster creation
-        # addresses the cluster through this string.
+        options.edge = lib.mkOption {
+          type = lib.types.attrs;
+          description = "Where the lab's ingress dials this cluster's gateway.";
+        };
+
         config.kubeContext = "admin@${inputs.instanceName}";
+
+        config.edge = {
+          backend = "${inputs.instanceName}-controlplane-1";
+          httpPort = kinds.gatewayNodePorts.http;
+          httpsPort = kinds.gatewayNodePorts.https;
+        };
+
+        config.floe.provides.edge = config.edge;
 
         config.floe.provides.cluster = {
           inherit (inputs)
@@ -173,17 +197,13 @@ floe.mkFloe {
             ;
           context = config.kubeContext;
 
-          # Nothing here assigns one. A LoadBalancer Service stays Pending
-          # forever and port 80 of the node answers nothing — neither of which
-          # is an error anything reports, which is why this is a fact a member
-          # reads rather than something it finds out at runtime.
           assignsLoadBalancers = false;
         };
 
-        config.floe.out.cluster = {
-          inherit (inputs) name;
-          provider = "docker";
+        config.floe.out.clusterDescriptor = {
+          inherit (inputs) name instanceName;
           kubeContext = config.kubeContext;
+          inherit (inputs) wait;
 
           kubernetes = {
             distribution = "talos";
@@ -196,15 +216,10 @@ floe.mkFloe {
             inherit (inputs) podSubnet serviceSubnet;
           };
 
-          # The lab is still the edge — it is the same machine — but it
-          # reaches the cluster on a NodePort rather than on the node's own 80
-          # and 443, because there is no ServiceLB here to bind those.
           edge = {
             mode = "proxy";
-            backend = "${inputs.instanceName}-controlplane-1";
-            httpPort = kinds.gatewayNodePorts.http;
-            httpsPort = kinds.gatewayNodePorts.https;
-          };
+          }
+          // config.edge;
 
           config.talos = {
             clusterName = inputs.instanceName;
@@ -219,9 +234,6 @@ floe.mkFloe {
               ;
             inherit (inputs) kubernetesVersion;
 
-            # Which containers join this cluster's network is a lab fact: the
-            # cluster does not know what has to reach it. The lab fills it in,
-            # the same way it fills in k3d's docker network.
             reachableFrom = [ ];
           };
         };

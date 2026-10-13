@@ -344,21 +344,6 @@ let
       };
     };
 
-    capi-operator = {
-      repo = "https://kubernetes-sigs.github.io/cluster-api-operator";
-      chart = "cluster-api-operator";
-      version = "0.27.0";
-      chartHash = "sha256-XYJaGk3fU0rL9MMP8vWLS4OFrUdhHDcEwUumJUgHXPU=";
-      crd = {
-        type = "github";
-        owner = "kubernetes-sigs";
-        repo = "cluster-api-operator";
-        rev = "v0.27.0";
-        hash = "sha256-tmdmi23AEc9BsslQSG6N88RpE9qGuy+acIzw/Ni9v5g=";
-        crdPath = "config/crd/bases";
-      };
-    };
-
     openebs = {
       repo = "https://charts.containeroo.ch";
       chart = "local-path-provisioner";

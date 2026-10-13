@@ -252,8 +252,6 @@ mod tests {
         assert_eq!(p.orphaned_storage.len(), 1);
     }
 
-    // Something wearing the lab label with no bundle label was not put there
-    // by a render this understands, so guessing either way is wrong.
     #[test]
     fn a_resource_with_no_bundle_label_is_reported_not_deleted() {
         let p = plan(
@@ -281,10 +279,6 @@ mod tests {
         assert!(p.is_empty(), "{p:?}");
     }
 
-    // Found by running it: traefik's chart sets metadata.namespace on its own
-    // GatewayClass, which is cluster-scoped, so the manifest says kube-system
-    // and the API server says nothing. Comparing keys verbatim deleted a
-    // GatewayClass whose floe was still enabled.
     #[test]
     fn a_cluster_scoped_resource_matches_however_the_manifest_scoped_it() {
         let applied: BTreeSet<ResourceKey> = [ResourceKey::new(
@@ -305,8 +299,6 @@ mod tests {
         assert!(p.is_empty(), "{p:?}");
     }
 
-    // And the leniency is bounded: it must not make a genuinely dropped
-    // cluster-scoped resource look applied.
     #[test]
     fn a_cluster_scoped_resource_nothing_applied_is_still_deleted() {
         let applied: BTreeSet<ResourceKey> = [ResourceKey::new("ClusterRole", None, "kept")].into();
@@ -325,8 +317,6 @@ mod tests {
         );
     }
 
-    // A namespaced resource is still matched exactly, so the same name in two
-    // namespaces stays two resources.
     #[test]
     fn a_namespaced_resource_still_matches_on_its_namespace() {
         let applied: BTreeSet<ResourceKey> = [ResourceKey::new("Service", Some("a"), "svc")].into();

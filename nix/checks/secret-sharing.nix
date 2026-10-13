@@ -1,256 +1,285 @@
-# Two clusters agreeing on an address without talking to each other.
+# Two clusters agreeing on an address, by one of them naming it.
 #
-# The positive cases read the rendered `secret-sharing` fixture: the whole
-# design is that neither side reads the other's output, so the only way to
-# check they agree is to render both and compare.
+# The design used to be that neither side read the other's output and both
+# derived the same string from the producer's identity — so the only way to
+# check they agreed was to render both and compare, and five assertion
+# families stood in for the comparison the mechanism could not make.
 #
-# The negative cases matter more. Every one of them has no runtime symptom
-# short of an ExternalSecret waiting forever on a key nothing wrote, which is
-# indistinguishable from a store that is merely slow.
+# The producer names the key and provides it; the consumer reads it. So the
+# positive case is that the rendered pair point at one key, and every negative
+# case is a *mechanism* refusing rather than an assertion noticing: an
+# unfilled hole, a link with no provider, a floe's own check on what it was
+# handed.
 {
   lib,
   pkgs,
   labDefs,
   mkLab,
+  catallaxy,
+  floes,
 }:
 
 let
-  shared = labDefs."secret-sharing".config.lab.clusters;
+  shared = labDefs."secret-sharing".clusters;
 
   resourcesOf =
     cluster: bundle: (shared.${cluster}.out.bundles.${bundle} or { resources = { }; }).resources;
 
-  push = (resourcesOf "core" "secret-publication/lab-ca-ca-secret").push or null;
-  pull = (resourcesOf "obs" "secret-subscription/lab-ca-ca-secret").pull or null;
+  push = (resourcesOf "core" "publish-ca/publication").push or null;
+  pull = (resourcesOf "obs" "subscribe-ca/subscription").pull or null;
+
+  # Everything a store needs, shared by every case below.
+  units = {
+    kapp = floes.kapp { };
+
+    external-secrets = floes.external-secrets {
+      chart = "/dev/null";
+      crds = "/dev/null";
+    };
+
+    store = floes.secret-store { server = "https://vault.refuse.test"; };
+
+    projection = floes.secret-projection {
+      secret = "vault-token";
+      namespace = "external-secrets";
+      keys.token.from = "token";
+    };
+
+    cert-manager = floes.cert-manager { chart = "/dev/null"; };
+  };
+
+  # A cluster floe per side: `core` publishes and exports what it published,
+  # `obs` reads it. Authored rather than assembled, so the cases below bend one
+  # declaration at a time.
+  mkCluster =
+    {
+      name,
+      extraUnits ? { },
+      provides ? { },
+      exports ? { },
+      requires ? { },
+    }:
+    catallaxy.mkClusterFloe {
+      name = "refuse-${name}";
+      summary = "A cluster bent one way, for the secret-sharing refusals.";
+
+      requires = {
+        claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+
+        labStore = catallaxy.sigs.LAB_SECRET_STORE;
+        secret = catallaxy.sigs.LAB_SECRET;
+      }
+      // requires;
+
+      provides = {
+        delivery = catallaxy.sigs.DELIVERY_POLICY;
+      }
+      // provides;
+
+      exports = {
+        delivery = "kapp/delivery";
+      }
+      // exports;
+
+      units = _: units // extraUnits;
+    };
+
+  claimFor =
+    clusterName:
+    floes.k3d-cluster {
+      name = clusterName;
+      instanceName = "refuse-${clusterName}";
+    };
 
   # A minimal two-cluster lab, so a case can bend one thing and leave the rest
-  # correct. Everything a store needs is here; what varies is passed in.
+  # correct. Everything a store needs is above; what varies is passed in.
   labWith =
     {
-      stores,
-      core ? { },
-      obs ? { },
+      storeBinding ? "runtime",
+      publication ? { },
+      coreExports ? {
+        publication = "publish-ca/publication";
+      },
+      obsFloes ? _: { },
     }:
-    mkLab {
-      modules = [
-        (
-          { config, floes, ... }:
-          let
-            cluster = clusterName: {
-              cluster = floes.k3d-cluster {
-                name = clusterName;
-                instanceName = "refuse-${clusterName}";
-              };
-              external-secrets = floes.external-secrets {
-                chart = "/dev/null";
-                crds = "/dev/null";
-              };
-              store = floes.secret-store {
-                labStore = "runtime";
-                server = "https://vault.refuse.test";
-              };
+    mkLab (
+      catallaxy.mkLabFloe
+        {
+          name = "refuse";
+          summary = "Two clusters sharing a secret, bent one way.";
 
-              # So there is a Secret that genuinely exists to publish. Without
-              # it every case below fails the cluster's "who creates this
-              # Secret" check instead of the thing it means to test, and the
-              # refusals all pass for the wrong reason.
-              cert-manager = floes.cert-manager { chart = "/dev/null"; };
+          units = _: {
+            authored = floes.lab-secret-store { backend = "sops"; };
+
+            runtime = floes.lab-secret-store {
+              backend = "vault";
+              vaultServer = "https://vault.refuse.test";
             };
 
-            project.vault-token = {
-              source = "cred";
-              namespace = "external-secrets";
-              keys.token.from = "token";
-            };
-          in
-          {
-            lab.name = "refuse";
-            lab.network.subnet = "172.29.0.0/16";
+            cred =
+              (floes.lab-authored-secret {
+                keys.token.generator = "hex";
+                keys.token.length = 16;
+              }).bind
+                { labStore = "authored"; };
+          };
 
-            lab.secrets.stores = stores;
-            lab.secrets.managed.cred = {
-              store = "authored";
-              keys.token.generator = "hex";
-              keys.token.length = 16;
+          clusters = _: {
+            core = {
+              floe =
+                (mkCluster {
+                  name = "core";
+                  extraUnits.publish-ca = floes.secret-publication (
+                    {
+                      namespace = "cert-manager";
+                      secret = "lab-ca-ca-secret";
+                      key = "refuse/core/lab-ca";
+                    }
+                    // publication
+                  );
+                  provides = lib.mapAttrs (_: _: catallaxy.sigs.PUBLISHED_SECRET) coreExports;
+                  exports = coreExports;
+                } { }).bind
+                  { labStore = storeBinding; };
+
+              claim = claimFor "core";
             };
 
-            lab.clusters.core = {
-              floes = cluster "core";
-              secrets = {
-                inherit project;
-              }
-              // core;
-            };
-            lab.clusters.obs = {
-              floes = cluster "obs";
-              secrets = {
-                inherit project;
-              }
-              // obs;
-            };
-          }
-        )
-      ];
-    };
+            obs = {
+              floe =
+                (mkCluster {
+                  name = "obs";
+                  extraUnits = obsFloes floes;
+                  requires = lib.optionalAttrs (obsFloes floes != { }) {
+                    publication = catallaxy.sigs.PUBLISHED_SECRET;
+                  };
+                } { }).bind
+                  { labStore = "runtime"; };
 
-  bothStores = {
-    authored.backend = "sops";
-    runtime = {
-      backend = "vault";
-      vault.server = "https://vault.refuse.test";
+              claim = claimFor "obs";
+            };
+          };
+        }
+        {
+          name = "refuse";
+          zone = "refuse.test";
+          subnet = "172.29.0.0/16";
+        }
+    );
+
+  subscriber = floes: {
+    subscribe-ca = floes.secret-subscription {
+      namespace = "default";
+      secret = "core-lab-ca";
     };
   };
 
-  # `tryEval` catches the assertion `lib/lab.nix` throws. `deepSeq` because
-  # the failure is inside a lazily-built attribute.
-  refuses =
-    lab: !(builtins.tryEval (builtins.deepSeq lab.config.lab.out.cliConfig "evaluated")).success;
-
-  publishesCa = {
-    publish.lab-ca-ca-secret.namespace = "cert-manager";
-  };
+  # `tryEval` catches the assertion `lib/lab.nix` throws, and the link error
+  # the floe library throws. `deepSeq` because the failure is inside a lazily
+  # built attribute.
+  refuses = lab: !(builtins.tryEval (builtins.deepSeq lab.cliConfig "evaluated")).success;
 
   results = lib.runTests {
-    # ---- the two sides agree, unprompted -------------------------------
 
-    testThePublisherDerivesTheAddressFromItsOwnIdentity = {
-      expr = (lib.head push.spec.data).match.remoteRef.remoteKey;
-      expected = "secret-sharing/core/cert-manager/lab-ca-ca-secret";
-    };
-
-    testTheSubscriberDerivesTheSameAddressFromTheClusterItNames = {
-      expr = (lib.head pull.spec.dataFrom).extract.key;
-      expected = "secret-sharing/core/cert-manager/lab-ca-ca-secret";
-    };
-
-    # The address names the producing cluster, never the consuming one: a
-    # value means "the credential core minted", and two clusters publishing
-    # the same name are two different values.
-    testTheAddressNamesTheProducer = {
-      expr = lib.hasInfix "/core/" (lib.head pull.spec.dataFrom).extract.key;
-      expected = true;
-    };
-
-    # The subscriber never spells the producer's namespace or Secret name; it
-    # reads them off the producer's own declaration.
-    testTheSubscriberMaterialisesUnderItsOwnName = {
-      expr = pull.spec.target.name;
-      expected = "core-lab-ca";
-    };
-
-    testPublishingNoNamedKeysPushesTheSecretWhole = {
-      expr = (lib.head push.spec.data).match ? secretKey;
-      expected = false;
-    };
-
-    # What reads a Secret often finds it by label rather than by name.
-    testLabelsReachTheMaterialisedSecret = {
-      expr = pull.spec.target.template.metadata.labels;
+    testThePairPointsAtOneKey = {
+      expr = {
+        pushes = (lib.head push.spec.data).match.remoteRef.remoteKey;
+        reads = (lib.head pull.spec.dataFrom).extract.key;
+      };
       expected = {
-        "catallaxy.io/trust" = "lab-ca";
+        pushes = "secret-sharing/core/lab-ca";
+        reads = "secret-sharing/core/lab-ca";
       };
     };
 
-    # Both sides name the same ClusterSecretStore, derived from the lab store
-    # rather than configured on either.
-    testBothSidesNameTheSameStore = {
-      expr = (lib.head push.spec.secretStoreRefs).name == pull.spec.secretStoreRef.name;
-      expected = true;
+    testEachSideUsesItsOwnStoreObject = {
+      expr = {
+        pushes = (lib.head push.spec.secretStoreRefs).name;
+        reads = pull.spec.secretStoreRef.name;
+      };
+      expected = {
+        pushes = "catallaxy-runtime";
+        reads = "catallaxy-runtime";
+      };
     };
 
-    # A generator reruns on every refresh; a subscription must not.
-    testTheSubscriptionRefreshesRatherThanReminting = {
-      expr = pull.spec.refreshInterval;
-      expected = "1h";
+    testTheValueLandsUnderALocalName = {
+      expr = {
+        whole = (lib.head push.spec.data).match ? secretKey;
+        named = pull.spec.target.name;
+      };
+      expected = {
+        whole = false;
+        named = "core-lab-ca";
+      };
     };
 
-    # ---- and are refused when they do not -------------------------------
-
-    # The control, and it is not optional. Every refusal below is a `labWith`
-    # that bends one thing; if the harness itself were broken they would all
-    # pass while checking nothing. This is the same harness, correct, and it
-    # must evaluate.
     testTheHarnessBuildsALabThatIsAccepted = {
       expr = refuses (labWith {
-        stores = bothStores;
-        core = publishesCa;
-        obs.subscribe.lab-ca-ca-secret = {
-          from = "core";
-          namespace = "default";
-        };
+        obsFloes = subscriber;
       });
       expected = false;
     };
 
-    # Both sides derive the address from the producer's identity, so a name
-    # that does not match on both leaves the ExternalSecret waiting forever.
-    # Checking it is the point of naming the producer rather than asking it.
-    testSubscribingToSomethingUnpublishedIsRefused = {
+    testASubscriptionWithNoPublicationIsRefused = {
       expr = refuses (labWith {
-        stores = bothStores;
-        obs.subscribe.not-published = {
-          from = "core";
-          namespace = "default";
-        };
+        coreExports = { };
+        obsFloes = subscriber;
       });
       expected = true;
     };
 
-    testSubscribingFromAClusterThatIsNotInTheLabIsRefused = {
+    testPublishingIntoAReadOnlyStoreIsRefused = {
       expr = refuses (labWith {
-        stores = bothStores;
-        core = publishesCa;
-        obs.subscribe.lab-ca-ca-secret = {
-          from = "nowhere";
-          namespace = "default";
-        };
+        storeBinding = "authored";
+        obsFloes = subscriber;
       });
       expected = true;
     };
 
-    # An authored store is read-only and top-down. Publishing into one writes
-    # where nothing reads.
-    testPublishingIntoAnAuthoredStoreIsRefused = {
-      expr = refuses (labWith {
-        stores = bothStores;
-        core.publish.lab-ca-ca-secret = {
-          namespace = "cert-manager";
-          store = "authored";
-        };
-      });
-      expected = true;
-    };
+    testPublishingWithNoStoreInTheClusterIsRefused = {
+      expr = refuses (
+        mkLab (
+          catallaxy.mkLabFloe
+            {
+              name = "refuse-nostore";
+              summary = "A publication with no store in the cluster to name.";
 
-    # With no runtime store there is nothing to default to, and the message
-    # has to say that rather than picking one.
-    testSharingWithNoRuntimeStoreIsRefused = {
-      expr = refuses (labWith {
-        stores.authored.backend = "sops";
-        core = publishesCa;
-      });
-      expected = true;
-    };
+              clusters = _: {
+                core = {
+                  floe = catallaxy.mkClusterFloe {
+                    name = "refuse-nostore-core";
+                    summary = "A publication with no store in the cluster to name.";
 
-    # A `ClusterSecretStore` is not shared between clusters, only the backend
-    # behind it is. A publication naming a store this cluster does not install
-    # is admitted and then never reconciles.
-    #
-    # The lab declares `elsewhere` and the cluster installs a floe for
-    # `runtime`, so this bends exactly one thing from the accepted baseline:
-    # everything else, including what is published, still resolves.
-    testSharingThroughAStoreThisClusterDoesNotInstallIsRefused = {
-      expr = refuses (labWith {
-        stores = bothStores // {
-          elsewhere = {
-            backend = "vault";
-            vault.server = "https://other.refuse.test";
-          };
-        };
-        core.publish.lab-ca-ca-secret = {
-          namespace = "cert-manager";
-          store = "elsewhere";
-        };
-      });
+                    requires.claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+                    provides.delivery = catallaxy.sigs.DELIVERY_POLICY;
+                    exports.delivery = "kapp/delivery";
+
+                    units = _: {
+                      kapp = floes.kapp { };
+                      cert-manager = floes.cert-manager { chart = "/dev/null"; };
+                      publish-ca = floes.secret-publication {
+                        namespace = "cert-manager";
+                        secret = "lab-ca-ca-secret";
+                        key = "refuse/core/lab-ca";
+                      };
+                    };
+                  } { };
+
+                  claim = floes.k3d-cluster {
+                    name = "core";
+                    instanceName = "refuse-nostore-core";
+                  };
+                };
+              };
+            }
+            {
+              name = "refuse-nostore";
+              zone = "refuse-nostore.test";
+              subnet = "172.30.0.0/16";
+            }
+        )
+      );
       expected = true;
     };
   };

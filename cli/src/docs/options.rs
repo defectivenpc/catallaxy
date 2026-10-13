@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, HashMap};
 
 use serde::Deserialize;
 
-const CLUSTER_PREFIX: &str = "lab.clusters.<name>.";
-const BUNDLES_PREFIX: &str = "lab.clusters.<name>.bundles.";
-const LAB_STEPS_PREFIX: &str = "lab.steps.";
-const BUNDLE_ENTRY_PREFIX: &str = "lab.clusters.<name>.bundles.<name>.";
-const STEP_ENTRY_PREFIX: &str = "lab.steps.<name>.";
+use crate::docs::page;
+
+/// Every option on the page is one field of one step, so the page's own
+/// prefix is what gets stripped off each display name.
+const STEP_ENTRY_PREFIX: &str = "steps.<name>.";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OptionDoc {
@@ -46,30 +46,6 @@ pub enum Declaration {
     Plain(String),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Route {
-    Lab,
-    LabSteps,
-    Cluster,
-    ClusterBundles,
-}
-
-pub fn route(name: &str) -> Option<Route> {
-    if name.starts_with(BUNDLES_PREFIX) {
-        return Some(Route::ClusterBundles);
-    }
-    if name.starts_with(CLUSTER_PREFIX) {
-        return Some(Route::Cluster);
-    }
-    if name.starts_with(LAB_STEPS_PREFIX) {
-        return Some(Route::LabSteps);
-    }
-    if name.starts_with("lab.") {
-        return Some(Route::Lab);
-    }
-    None
-}
-
 pub fn escape_placeholders(text: &str) -> String {
     text.split('`')
         .enumerate()
@@ -84,11 +60,13 @@ pub fn escape_placeholders(text: &str) -> String {
         .join("`")
 }
 
+/// A default or an example. Long or multi-line goes in a fenced block, because
+/// a forty-line `values` attrset inside backticks is one unreadable line.
 fn block_or_inline(label: &str, text: &str) -> String {
     if text.len() > 80 || text.contains('\n') {
-        format!("**{label}:**\n```nix\n{text}\n```\n")
+        format!("**{label}:**\n```nix\n{text}\n```")
     } else {
-        format!("**{label}:** `{text}`\n")
+        format!("**{label}:** `{text}`")
     }
 }
 
@@ -112,29 +90,32 @@ fn group_of(display_name: &str) -> &str {
     }
 }
 
-pub fn render_option(name: &str, opt: &OptionDoc) -> String {
-    let mut lines: Vec<String> = vec![format!("### `{name}` {{#{}}}\n", anchor(name))];
+/// One option, as a `###` entry. Its paragraphs are what the module system
+/// knows about it: the description, the type, a default worth printing, and
+/// where it is declared.
+pub fn option_block(name: &str, opt: &OptionDoc) -> page::Block {
+    let mut lead: Vec<String> = Vec::new();
 
     if let Some(d) = opt.description.as_ref().filter(|d| !d.trim().is_empty()) {
-        lines.push(escape_placeholders(d.trim()));
-        lines.push(String::new());
+        lead.push(escape_placeholders(d.trim()));
     }
 
     if let Some(t) = opt.type_name.as_ref().filter(|t| !t.is_empty()) {
-        lines.push(format!("**Type:** `{t}`\n"));
+        lead.push(format!("**Type:** `{t}`"));
     }
 
     if let Some(default) = &opt.default {
         let text = default.text();
+
         if !text.is_empty() && text != "null" {
-            lines.push(block_or_inline("Default", &text));
+            lead.push(block_or_inline("Default", &text));
         }
     }
 
     if let Some(example) = &opt.example {
         let text = example.text();
         if !text.is_empty() {
-            lines.push(block_or_inline("Example", &text));
+            lead.push(block_or_inline("Example", &text));
         }
     }
 
@@ -147,48 +128,57 @@ pub fn render_option(name: &str, opt: &OptionDoc) -> String {
         })
         .collect();
     if !links.is_empty() {
-        lines.push(format!("**Declared in:** {}\n", links.join(", ")));
+        lead.push(format!("**Declared in:** {}", links.join(", ")));
     }
 
-    lines.push("---\n".to_string());
-    lines.join("\n")
-}
+    lead.push("---".to_string());
 
-fn render_index(displayed: &[(String, &OptionDoc)]) -> String {
-    let mut out = String::from("| Option | Type | Default |\n| --- | --- | --- |\n");
-    for (display, opt) in displayed {
-        let ty = opt.type_name.clone().unwrap_or_default();
-        let default = opt
-            .default
-            .as_ref()
-            .map(|d| d.text())
-            .filter(|t| !t.is_empty() && !t.contains('\n') && t.len() <= 40)
-            .map(|t| format!("`{t}`"))
-            .unwrap_or_default();
-        out.push_str(&format!(
-            "| [`{display}`](#{}) | `{ty}` | {default} |\n",
-            anchor(display)
-        ));
+    page::Block {
+        heading: format!("`{name}`"),
+        anchor: Some(anchor(name)),
+        lead,
+        table: None,
     }
-    out.push('\n');
-    out
 }
 
-pub fn render_page(
+/// The map at the top of the page: every option, its type, and a default short
+/// enough to read in a cell.
+fn index_table(displayed: &[(String, &OptionDoc)]) -> page::Table {
+    page::Table {
+        columns: vec!["Option".into(), "Type".into(), "Default".into()],
+        rows: displayed
+            .iter()
+            .map(|(display, opt)| {
+                let ty = opt.type_name.clone().unwrap_or_default();
+                let default = opt
+                    .default
+                    .as_ref()
+                    .map(|d| d.text())
+                    .filter(|t| !t.is_empty() && !t.contains('\n') && t.len() <= 40)
+                    .map(|t| format!("`{t}`"))
+                    .unwrap_or_default();
+                vec![
+                    format!("[`{display}`](#{})", anchor(display)),
+                    format!("`{ty}`"),
+                    default,
+                ]
+            })
+            .collect(),
+    }
+}
+
+/// One option page, as data.
+///
+/// Grouped by the first component of the option path, which is how a reader
+/// navigates it: `verify.endpoints.enable` sits under `verify` beside
+/// everything else about verification, and an option with no dot is top level.
+pub fn build_page(
+    path: &str,
     title: &str,
     description: &str,
     options: &BTreeMap<String, OptionDoc>,
     prefix_to_strip: &str,
-) -> Result<String, String> {
-    let mut out = format!("# {title}\n\n");
-    if !description.is_empty() {
-        out.push_str(&format!("{description}\n\n"));
-    }
-    if options.is_empty() {
-        out.push_str("No options in this category.\n");
-        return Ok(out);
-    }
-
+) -> Result<page::Page, String> {
     let mut displayed: Vec<(String, &OptionDoc)> = options
         .iter()
         .map(|(name, opt)| {
@@ -213,43 +203,47 @@ pub fn render_page(
         }
     }
 
-    out.push_str(&render_index(&displayed));
+    let mut sections = vec![page::Section {
+        heading: "Every option".into(),
+        lead: vec![],
+        table: Some(index_table(&displayed)),
+        blocks: vec![],
+    }];
 
-    let mut current_group: Option<&str> = None;
     for (display, opt) in &displayed {
         let group = group_of(display);
-        if current_group != Some(group) {
-            out.push_str(&format!(
-                "## {}\n\n",
-                if group.is_empty() {
-                    "Top level".to_string()
-                } else {
-                    format!("`{group}`")
-                }
-            ));
-            current_group = Some(group);
+        let heading = if group.is_empty() {
+            "Top level".to_string()
+        } else {
+            format!("`{group}`")
+        };
+
+        if sections.last().is_none_or(|s| s.heading != heading) {
+            sections.push(page::Section {
+                heading,
+                lead: vec![],
+                table: None,
+                blocks: vec![],
+            });
         }
-        out.push_str(&render_option(display, opt));
-    }
-    Ok(out)
-}
 
-pub fn render_floe_index(floe_names: &[String]) -> String {
-    let mut out = String::from("# Floe Options\n\n");
-    out.push_str(
-        "One page per built-in floe. Every option below is set inside a\n\
-         `lab.clusters.<name>` submodule, under `floes.<floe>.`\n\n",
-    );
-    for name in floe_names {
-        out.push_str(&format!("- [`floes.{name}`](./{name}.md)\n"));
+        sections
+            .last_mut()
+            .expect("a section was just pushed")
+            .blocks
+            .push(option_block(display, opt));
     }
-    out
-}
 
-#[derive(Debug)]
-pub struct Page {
-    pub path: String,
-    pub body: String,
+    Ok(page::Page {
+        path: path.into(),
+        title: title.into(),
+        lead: if description.is_empty() {
+            vec![]
+        } else {
+            vec![description.into()]
+        },
+        sections,
+    })
 }
 
 #[derive(Debug)]
@@ -260,7 +254,7 @@ pub enum RenderError {
 
 #[derive(Debug)]
 pub struct Rendered {
-    pub pages: Vec<Page>,
+    pub pages: Vec<page::Page>,
     pub option_count: usize,
     pub undescribed: Vec<String>,
 }
@@ -271,35 +265,31 @@ pub fn is_undescribed(opt: &OptionDoc) -> bool {
         .is_none_or(|d| d.trim().is_empty() || d.trim() == "This option has no description.")
 }
 
+/// The step schema, and nothing else. A lab is a floe, so what a lab writes
+/// is rendered from floe declarations by `nix/floe-docs.nix`; what is left
+/// here is a *floe author's* document — the fields a floe writes into each
+/// entry of its `LAB_STEPS` contribution.
+///
+/// An option that is not one of those fields is an error rather than a page
+/// nobody asked for: it means the module this is generated from grew
+/// something, and a reference silently dropping it is how a field goes
+/// undocumented.
 pub fn render_all(all: BTreeMap<String, OptionDoc>) -> Result<Rendered, RenderError> {
-    let mut lab = BTreeMap::new();
-    let mut lab_steps = BTreeMap::new();
-    let mut cluster = BTreeMap::new();
-    let mut bundles = BTreeMap::new();
+    let mut steps = BTreeMap::new();
     let mut unrouted = Vec::new();
     let mut undescribed = Vec::new();
 
     for (name, opt) in all {
-        if name == "_module.args" {
+        if name == "_module.args" || name == "steps" {
             continue;
         }
         if is_undescribed(&opt) {
             undescribed.push(name.clone());
         }
-        match route(&name) {
-            Some(Route::ClusterBundles) => {
-                bundles.insert(name, opt);
-            }
-            Some(Route::Cluster) => {
-                cluster.insert(name, opt);
-            }
-            Some(Route::LabSteps) => {
-                lab_steps.insert(name, opt);
-            }
-            Some(Route::Lab) => {
-                lab.insert(name, opt);
-            }
-            None => unrouted.push(name),
+        if name.starts_with(STEP_ENTRY_PREFIX) {
+            steps.insert(name, opt);
+        } else {
+            unrouted.push(name);
         }
     }
 
@@ -308,73 +298,22 @@ pub fn render_all(all: BTreeMap<String, OptionDoc>) -> Result<Rendered, RenderEr
         return Err(RenderError::Unrouted(unrouted));
     }
 
-    let option_count = lab.len() + lab_steps.len() + cluster.len() + bundles.len();
-    assemble_pages(lab, lab_steps, cluster, bundles, option_count, undescribed)
-}
-
-type OptionMap = BTreeMap<String, OptionDoc>;
-
-fn assemble_pages(
-    lab: OptionMap,
-    lab_steps: OptionMap,
-    cluster: OptionMap,
-    bundles: OptionMap,
-    option_count: usize,
-    mut undescribed: Vec<String>,
-) -> Result<Rendered, RenderError> {
-    let pages = vec![
-        Page {
-            path: "options/lab.md".into(),
-            body: render_page(
-                "Lab Options",
-                "Lab-scope options: identity, CD strategy, DNS, networking, secrets, \
-                 images, lint, plan steps, and operations.",
-                &lab,
-                "lab.",
-            )
-            .map_err(RenderError::AnchorCollision)?,
-        },
-        Page {
-            path: "options/cluster.md".into(),
-            body: render_page(
-                "Cluster Options",
-                "Options for an individual cluster within a lab: Kubernetes settings, \
-                 provisioners, phases, bundles, secrets projections, drift, lifecycle \
-                 hooks, and authentication.\n\nAll options are under `lab.clusters.<name>.`",
-                &cluster,
-                CLUSTER_PREFIX,
-            )
-            .map_err(RenderError::AnchorCollision)?,
-        },
-        Page {
-            path: "options/steps.md".into(),
-            body: render_page(
-                "Plan Step Options",
-                "Steps you declare yourself, at `lab.steps.<name>`. What each `kind` \
-                 accepts in `params` is in [Plan Step Kinds](../step-kinds.md).",
-                &lab_steps,
-                STEP_ENTRY_PREFIX,
-            )
-            .map_err(RenderError::AnchorCollision)?,
-        },
-        Page {
-            path: "options/bundles.md".into(),
-            body: render_page(
-                "Bundle Options",
-                "One installable group of Kubernetes resources, at \
-                 `lab.clusters.<name>.bundles.<name>`. The judgement calls are in \
-                 [Writing a Bundle](../bundles.md).",
-                &bundles,
-                BUNDLE_ENTRY_PREFIX,
-            )
-            .map_err(RenderError::AnchorCollision)?,
-        },
-    ];
-
+    let option_count = steps.len();
     undescribed.sort();
 
+    let page = build_page(
+        "options/steps.md",
+        "Plan Step Schema",
+        "What a floe writes into each entry of its `LAB_STEPS` \
+         contribution. What a given `kind` accepts in `params` is in \
+         [Plan Step Kinds](../step-kinds.md).",
+        &steps,
+        STEP_ENTRY_PREFIX,
+    )
+    .map_err(RenderError::AnchorCollision)?;
+
     Ok(Rendered {
-        pages,
+        pages: vec![page],
         option_count,
         undescribed,
     })
@@ -395,23 +334,6 @@ mod tests {
     }
 
     #[test]
-    fn a_floe_is_a_cluster_option_like_any_other() {
-        // Since RFC 0001 a floe's inputs are function arguments, not options,
-        // so nothing exists under `floes.<n>` to route. The instantiated floe
-        // itself is one cluster option, and belongs on the cluster page.
-        assert_eq!(
-            route("lab.clusters.<name>.floes.kanidm"),
-            Some(Route::Cluster)
-        );
-        assert_eq!(
-            route("lab.clusters.<name>.kubernetes.version"),
-            Some(Route::Cluster)
-        );
-        assert_eq!(route("lab.name"), Some(Route::Lab));
-        assert_eq!(route("nixpkgs.config"), None);
-    }
-
-    #[test]
     fn placeholders_are_escaped_only_outside_code_spans() {
         assert_eq!(
             escape_placeholders("set `floes.<n>.x` on <name> here"),
@@ -422,7 +344,7 @@ mod tests {
     #[test]
     fn long_defaults_become_code_blocks() {
         let inline = block_or_inline("Default", "true");
-        assert_eq!(inline, "**Default:** `true`\n");
+        assert_eq!(inline, "**Default:** `true`");
         let block = block_or_inline("Default", &"x".repeat(81));
         assert!(block.starts_with("**Default:**\n```nix\n"));
     }
@@ -443,22 +365,20 @@ mod tests {
     }
 
     #[test]
-    fn bundles_and_steps_route_to_their_own_pages() {
+    fn a_step_is_its_own_schema_and_the_parent_is_not() {
+        let all = BTreeMap::from([
+            ("steps".to_string(), opt("where the three producers merge")),
+            (
+                "steps.<name>.kind".to_string(),
+                opt("which of the step kinds this is"),
+            ),
+        ]);
+        let rendered = render_all(all).expect("a step field is the whole page");
         assert_eq!(
-            route("lab.clusters.<name>.bundles.<name>.after"),
-            Some(Route::ClusterBundles)
+            rendered.option_count, 1,
+            "the parent is the merge point, not a field a floe writes"
         );
-        assert_eq!(route("lab.steps.<name>.kind"), Some(Route::LabSteps));
-    }
-
-    #[test]
-    fn the_parent_bundles_option_stays_on_the_cluster_page() {
-        assert_eq!(
-            route("lab.clusters.<name>.bundles"),
-            Some(Route::Cluster),
-            "the parent carries the pointer description and belongs with the cluster"
-        );
-        assert_eq!(route("lab.steps"), Some(Route::Lab));
+        assert_eq!(rendered.pages[0].path, "options/steps.md");
     }
 
     #[test]
@@ -470,8 +390,9 @@ mod tests {
 
     #[test]
     fn an_option_heading_carries_its_anchor() {
-        let rendered = render_option("awaitRollout", &opt("wait for it"));
-        assert!(rendered.starts_with("### `awaitRollout` {#awaitrollout}"));
+        let block = option_block("awaitRollout", &opt("wait for it"));
+        assert_eq!(block.heading, "`awaitRollout`");
+        assert_eq!(block.anchor.as_deref(), Some("awaitrollout"));
     }
 
     #[test]
@@ -479,7 +400,7 @@ mod tests {
         let mut options = BTreeMap::new();
         options.insert("a.<name>.x".to_string(), opt("one"));
         options.insert("a.name.x".to_string(), opt("two"));
-        let err = render_page("T", "", &options, "").unwrap_err();
+        let err = build_page("p.md", "T", "", &options, "").unwrap_err();
         assert!(err.contains("a-name-x"), "{err}");
         assert!(
             err.contains("a.<name>.x") && err.contains("a.name.x"),
@@ -493,14 +414,14 @@ mod tests {
         options.insert("dns.zone".to_string(), opt("the zone"));
         options.insert("dns.enable".to_string(), opt("on"));
         options.insert("name".to_string(), opt("lab name"));
-        let page = render_page("T", "", &options, "").unwrap();
+        let body = page::render(&build_page("p.md", "T", "", &options, "").unwrap());
 
-        assert!(page.contains("| Option | Type | Default |"));
-        assert!(page.contains("| [`dns.zone`](#dns-zone) |"));
-        assert!(page.contains("## Top level"));
-        assert!(page.contains("## `dns`"));
+        assert!(body.contains("| Option | Type | Default |"));
+        assert!(body.contains("| [`dns.zone`](#dns-zone) |"));
+        assert!(body.contains("## Top level"));
+        assert!(body.contains("## `dns`"));
         assert!(
-            page.find("## Top level") < page.find("## `dns`"),
+            body.find("## Top level") < body.find("## `dns`"),
             "groups must be contiguous and sorted"
         );
     }
@@ -508,17 +429,17 @@ mod tests {
     #[test]
     fn undescribed_options_are_collected() {
         let mut all = BTreeMap::new();
-        all.insert("lab.described".to_string(), opt("has one"));
-        all.insert("lab.bare".to_string(), opt(""));
+        all.insert("steps.<name>.described".to_string(), opt("has one"));
+        all.insert("steps.<name>.bare".to_string(), opt(""));
         let rendered = render_all(all).unwrap();
-        assert_eq!(rendered.undescribed, vec!["lab.bare".to_string()]);
+        assert_eq!(rendered.undescribed, vec!["steps.<name>.bare".to_string()]);
     }
 
     #[test]
     fn module_args_is_dropped_without_being_unrouted() {
         let mut all = BTreeMap::new();
         all.insert("_module.args".to_string(), opt("internal"));
-        all.insert("lab.name".to_string(), opt("the lab"));
+        all.insert("steps.<name>.kind".to_string(), opt("the kind"));
         let rendered = render_all(all).expect("routes cleanly");
         assert_eq!(rendered.option_count, 1);
     }
@@ -526,16 +447,8 @@ mod tests {
     #[test]
     fn option_names_are_shown_with_their_page_prefix_stripped() {
         let mut all = BTreeMap::new();
-        all.insert(
-            "lab.clusters.<name>.kubernetes.version".to_string(),
-            opt("d"),
-        );
+        all.insert("steps.<name>.policy.onFailure".to_string(), opt("d"));
         let rendered = render_all(all).expect("routes cleanly");
-        let page = rendered
-            .pages
-            .iter()
-            .find(|p| p.path == "options/cluster.md")
-            .unwrap();
-        assert!(page.body.contains("## `kubernetes.version`"));
+        assert!(page::render(&rendered.pages[0]).contains("`policy.onFailure`"));
     }
 }

@@ -35,144 +35,58 @@
 # with nothing said here. `obs` cannot resolve that promise — a reference to a
 # Secret in another cluster's namespace means nothing, and `link` refuses to
 # let it try — so the *value* crosses the way every value does, through
-# `lab.secrets.{publish,subscribe}`, and `obs`'s operator is told where the
-# subscription put it.
+# the lab's runtime store, and `obs`'s operator is told where the subscription
+# put it.
 #
 # Two mechanisms, and the split is not an accident: a signature carries
 # configuration and a subscription carries content. Threading the token through
 # a signature would put secret material in a rendered manifest, which is the
 # one thing no floe may do.
 {
+  lab,
+  lib,
   floes,
-  config,
+  catallaxy,
   ...
 }:
 
 let
-  zone = config.lab.dns.zone;
-
-  # Where the runtime store answers, as seen from either cluster. Routed,
-  # because `obs` reads a value `core` wrote and an in-cluster Service address
-  # resolves in one of them — which is exactly what `VAULT_SERVER.address`
-  # being the in-cluster one, and this being a lab decision, means.
-  vaultServer = "https://vault.${zone}";
-
-  # Everything a cluster needs to take part in the runtime store. `core` also
-  # runs the store; `obs` only reads and writes through it.
-  storeClient = {
-    secret-store = floes.secret-store {
-      labStore = "runtime";
-      server = vaultServer;
-    };
-  };
-
-  tokenProjection.vault-token = {
-    source = "vault-credential";
-    namespace = "external-secrets";
-    keys.token.from = "token";
-  };
-
-  # The token, in the one place its address is written. `core`'s netbird mints
-  # it under this name and `obs`'s subscription lands it under the same one, so
-  # the two operators are instantiated identically apart from which of them has
-  # a control plane to ask.
-  patSecret = "netbird-api-token";
-  patNamespace = "netbird";
+  clusters = import ../clusters.nix { inherit catallaxy floes lib; };
 in
-{
-  lab.name = "homelab.mesh";
+lab {
+  name = "homelab.mesh";
 
-  lab.unstable = ''
-    netbird's operator needs a personal access token, minting one needs an
-    identity netbird will accept, and kanidm 1.6.4 cannot issue this platform
-    one without a human.
+  units = {
+    # Two stores: one a human authored, one the lab writes into at runtime. The
+    # Vault credential is minted by `cata secrets generate` and lands in the
+    # first; everything the clusters publish goes through the second.
+    #
+    # Both are units of the lab's link, so what reads them resolves them. With
+    # two in the link nothing resolves by default and every reader says which
+    # it means, which is the ambiguity being real rather than ceremony.
+    authored = floes.lab-secret-store { backend = "sops"; };
 
-    The token step exchanges the service account's kanidm API token for an
-    OIDC token with netbird's audience. kanidm's token endpoint supports
-    `authorization_code`, `client_credentials`, `refresh_token` and
-    `device_code` — and not `token-exchange`, which is what the parked floe
-    used and what this one inherited. `client_credentials` is the only
-    non-interactive one left, and it needs a *confidential* client, while
-    netbird's must be public so the dashboard can use PKCE. One audience,
-    two incompatible requirements.
-
-    So the first identity has to arrive through a browser: a human logs in,
-    becomes the account owner, and a PAT is minted from there. Everything
-    after that is declarative — both operators reconcile groups, setup keys,
-    routers and network resources from CRs, and the heal CronJob keeps the
-    token true.
-
-    Verified working up to this point, on a live cluster: kanidm answers
-    through the gateway, the service account reconciles, kaniop mints and
-    rotates its API token, and the token step reads it and reaches the
-    exchange endpoint.
-  '';
-
-  # Its own everything, so it renders and runs beside the other two.
-
-  # Two stores, because a value one cluster mints has to be writable. The
-  # authored one holds the runtime one's credential and nothing else.
-  lab.secrets.stores = {
-    authored.backend = "sops";
-    runtime = {
+    runtime = floes.lab-secret-store {
       backend = "vault";
-      vault.server = vaultServer;
-    };
-  };
-
-  lab.secrets.managed.vault-credential = {
-    store = "authored";
-    keys.token.generator = "hex";
-    keys.token.length = 32;
-  };
-
-  lab.clusters.core = {
-    floes = storeClient // {
-      # The store, and the one cluster that runs it.
-      openbao = floes.openbao { };
-
-      netbird = floes.netbird { };
-
-      # Beside the control plane, so `tokenSecret` is null: netbird promises
-      # `MESH_ADMIN` and the operator resolves it. Naming the Secret here would
-      # be a second place for it to be wrong, and the floe refuses both answers
-      # at once rather than picking one.
-      netbird-operator = floes.netbird-operator { };
+      inherit (clusters) vaultServer;
     };
 
-    # One promise, not the unit. `netbird` also provides `MESH_ADMIN`, which is
-    # a reference to a Secret in this cluster and can never mean anything
-    # anywhere else — offering the unit would offer both, and the lab refuses
-    # that where the line is written.
-    provides = [ "netbird/mesh" ];
-
-    secrets.project = tokenProjection;
-    secrets.publish.${patSecret}.namespace = patNamespace;
+    vault-credential =
+      (floes.lab-authored-secret {
+        keys.token.generator = "hex";
+        keys.token.length = 32;
+      }).bind
+        { labStore = "authored"; };
   };
 
-  lab.clusters.obs = {
-    floes = storeClient // {
-      # No netbird here. Its `MESH_NETWORK` hole finds nothing in this cluster
-      # and resolves from the lab scope, which is the point of the lab.
-      netbird-operator = floes.netbird-operator {
-
-        # Nothing here provides `MESH_ADMIN`, so the lab says where the
-        # subscription below landed the token. That is the seam between the two
-        # mechanisms, and it is one line.
-        tokenSecret = "${patNamespace}/${patSecret}";
-      };
-    };
-
-    secrets.project = tokenProjection;
-
-    secrets.subscribe.${patSecret} = {
-      from = "core";
-
-      # The operator's own namespace. The chart reads the token through a
-      # `secretKeyRef`, which resolves only within the pod's namespace, and the
-      # floe refuses a subscription that lands it anywhere else.
-      namespace = patNamespace;
-      secret = patSecret;
-    };
-  };
+  # Both clusters are different from `homelab.local`'s rather than those with a
+  # flag: `core` runs the mesh and publishes its PAT, `obs` joins the mesh and
+  # subscribes to the PAT. The crossing is `core`'s export and `obs` resolving
+  # against it, which is the same mechanism one cluster provisioning another
+  # uses.
+  #
+  # `runtime`, because that is the one a cluster pushes into. `secret` needs no
+  # binding: there is one `LAB_SECRET` in the link.
+  core = (clusters.coreWithMesh { }).bind { labStore = "runtime"; };
+  obs = (clusters.obsWithMesh { }).bind { labStore = "runtime"; };
 }

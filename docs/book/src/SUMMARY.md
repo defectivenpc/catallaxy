@@ -19,7 +19,7 @@
 
 - [Configure a Lab](./using/configuring.md)
 - [Write a Floe](./using/writing-a-floe.md)
-- [Reuse a Cluster](./using/presets.md)
+- [Reuse a Cluster](./using/cluster-floes.md)
 
 # Reference
 

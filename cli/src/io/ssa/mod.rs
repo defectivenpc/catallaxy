@@ -94,16 +94,6 @@ fn await_wave_bundles(
         if !bundle.has_content {
             continue;
         }
-        // Workloads first, then the probe, and never one instead of the
-        // other. A probe says "this bundle's own thing is working" -- an
-        // Issuer answers, a CR reports Ready -- which is a narrower question
-        // than "every Deployment I shipped is Available". Treating the probe
-        // as a replacement let the next wave start against a bundle whose
-        // pods were still coming up, which is how a webhook-owning bundle
-        // like cert-manager races the resources that need its webhook.
-        //
-        // A bundle with no workloads makes the wait a no-op, so this costs
-        // nothing where the probe was genuinely the only signal available.
         if !dry_run {
             wait_workloads_ready(kube_context, &manifest_root.join(&bundle.dir), timeout_str)?;
         }
@@ -203,8 +193,9 @@ fn apply_wave_ordered(
     let meta: WaveMeta = serde_json::from_str(&raw)
         .with_context(|| format!("parsing .wave-meta at {}", wave_meta_path.display()))?;
 
-    let projections: BTreeMap<String, ProjectionConfig> =
-        cluster.map(|c| c.projections.clone()).unwrap_or_default();
+    let projections: BTreeMap<String, ProjectionConfig> = cluster
+        .map(|c| c.content.projections.clone())
+        .unwrap_or_default();
 
     let projections_for_wave = |wave: &Wave| -> Vec<(String, ProjectionConfig)> {
         wave.bundles

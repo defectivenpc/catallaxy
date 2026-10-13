@@ -50,19 +50,9 @@ impl<'a> Converter<'a> {
             return self.convert_ref(ref_path);
         }
 
-        // `allOf`/`oneOf`/`anyOf` describe a type only when there is no type
-        // to describe. A CRD routinely carries them *beside* `properties`, as
-        // a validation rule — "exactly one of these may be set" — and the
-        // branches then hold required-key lists rather than alternatives.
-        // Reading them first threw the real schema away: gateway-api's
-        // `addresses[]` went from `{ type: str; value: str; }` with its
-        // descriptions to `either <freeform> <freeform>`.
         let describes_itself = schema.get("type").is_some() || schema.get("properties").is_some();
 
         if !describes_itself {
-            // Intersection, which Nix's module types cannot express, so the
-            // first member stands in. Kubernetes uses it to hang a
-            // description on a `$ref`.
             if let Some(all_of) = schema.get("allOf").and_then(|v| v.as_array())
                 && let Some(first) = all_of.first()
             {
@@ -91,8 +81,6 @@ impl<'a> Converter<'a> {
             Some("array") => self.convert_array(schema),
             Some("object") => self.convert_object(schema),
             Some("null") => NixType::NullOr(Box::new(NixType::Anything)),
-            // No `type` but properties is an object by implication, which is
-            // how much of the CRD corpus is written.
             None if schema.get("properties").is_some() => self.convert_object(schema),
             _ => NixType::Anything,
         }
@@ -109,10 +97,6 @@ impl<'a> Converter<'a> {
             }
         }
 
-        // `int-or-string` is the only format that changes the *type*.
-        // `date-time`, `date`, `time`, `byte` and `binary` constrain what a
-        // string may contain, which Nix's module system has no way to say, so
-        // they fall through with everything else.
         match schema.get("format").and_then(|v| v.as_str()) {
             Some("int-or-string") => {
                 NixType::Either(Box::new(NixType::Int), Box::new(NixType::Str))
@@ -141,8 +125,6 @@ impl<'a> Converter<'a> {
             }
         }
 
-        // A CRD saying it accepts fields it has not described. The submodule
-        // still declares what it does describe, and takes the rest freeform.
         let preserve_unknown = schema
             .get("x-kubernetes-preserve-unknown-fields")
             .and_then(Value::as_bool)

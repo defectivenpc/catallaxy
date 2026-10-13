@@ -171,8 +171,6 @@ fn lock(ctx: &CataContext, name: Option<&str>, out: &str) -> Result<()> {
     println!();
     println!("{} Wrote {}", style(">>>").green(), path.display());
 
-    // A reference nothing could resolve is left out rather than guessed at,
-    // and saying so matters: with `requireDigest` on, the lint will name it.
     if !failed.is_empty() {
         println!(
             "{} {} image(s) are not in the lockfile: {}",
@@ -213,21 +211,20 @@ fn actual(
     let lab = crate::io::nix::get_lab_spec(ctx, &ctx.resolve_lab_name(name)?)?;
 
     let clusters: Vec<(&String, &String)> = match cluster {
-        Some(wanted) => vec![
-            lab.runtime_contexts
-                .get_key_value(wanted)
-                .with_context(|| {
-                    format!(
-                        "cluster '{wanted}' is not in this lab (available: {})",
-                        lab.runtime_contexts
-                            .keys()
-                            .cloned()
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
-                })?,
-        ],
-        None => lab.runtime_contexts.iter().collect(),
+        Some(wanted) => {
+            let (name, spec) = lab.clusters.get_key_value(wanted).with_context(|| {
+                format!(
+                    "cluster '{wanted}' is not in this lab (available: {})",
+                    lab.clusters.keys().cloned().collect::<Vec<_>>().join(", ")
+                )
+            })?;
+            vec![(name, &spec.claim.context)]
+        }
+        None => lab
+            .clusters
+            .iter()
+            .map(|(name, spec)| (name, &spec.claim.context))
+            .collect(),
     };
 
     if clusters.is_empty() {
@@ -251,9 +248,6 @@ fn actual(
         }
     }
 
-    // A cluster that is down makes the answer incomplete, and an incomplete
-    // list handed to a mirror is a deploy that fails somewhere else later.
-    // Naming the gap beats printing a shorter list that looks whole.
     if !unreachable.is_empty() {
         for line in &unreachable {
             eprintln!(
@@ -422,8 +416,6 @@ pub async fn warm_to_target(
 mod tests {
     use super::*;
 
-    // Re-locking a lab that already renders digests has to give back the same
-    // keys, or the file grows a second entry per image every run.
     #[test]
     fn a_digest_is_stripped_back_to_the_reference_that_produced_it() {
         assert_eq!(lock_key("nginx:1.27@sha256:abc"), "nginx:1.27");
@@ -435,8 +427,6 @@ mod tests {
         );
     }
 
-    // A port colon is not a tag colon, and stripping on `@` never has to tell
-    // them apart.
     #[test]
     fn a_registry_port_survives_stripping() {
         assert_eq!(

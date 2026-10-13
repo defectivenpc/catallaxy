@@ -2,6 +2,21 @@
 
 ## Next
 
+- **A cluster authored on its own.** `cata cluster up` acts on one cluster's
+  document with no lab, and a cluster is still _written_ inside one: the
+  module reads three things of the lab around it — its name, the proxy a
+  cluster may be reached through, and the link. An `examples/clusters/`
+  fixture needs an answer for each, which is a small shim and not yet
+  written.
+- **The document's shape declared once.** The cluster document is a Nix
+  emission and a Rust struct, bound by a check that parses every lab's
+  document rather than by one declaration both sides are generated from.
+- **`argocd-tls-certs-cm`.** Argo takes repository CAs only from that
+  ConfigMap, mounted without `optional`, and nothing declares one — so a
+  gitops lab pointing Argo at an in-lab HTTPS repository needs the argocd
+  floe to declare it. Today's `gitops.local` works because the bootstrap
+  applies over plain HTTP inside the cluster.
+
 - **`kind:` and `floe:` anchors.** Both are implemented in the graph
   resolver but inert, because the wave builder passes `null` for those
   fields. Wiring them up makes "after every CRD bundle" expressible without

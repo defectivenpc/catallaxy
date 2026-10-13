@@ -13,218 +13,183 @@
       "path": "manifests",
       "provider": "forgejo",
       "repo": "https://git.gitops.test/forgejo-admin/lab.git"
-    },
-    "strategy": "argocd"
+    }
   },
   "clusterNames": [
     "app"
   ],
   "clusters": {
     "app": {
-      "deploy": {
-        "strategy": "kapp"
-      },
-      "edge": {
-        "backend": "k3d-gitops-local-app-server-0",
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "proxy"
-      },
-      "exposedHosts": [
-        {
-          "bundle": "argocd/argocd",
-          "host": "argocd.gitops.test",
-          "namespace": "argocd",
-          "paths": [
-            "/"
-          ],
-          "tier": "public"
+      "claim": {
+        "context": "k3d-gitops-local-app",
+        "instanceName": "gitops-local-app",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
         },
-        {
-          "bundle": "forgejo/forgejo",
-          "host": "git.gitops.test",
-          "namespace": "forgejo",
-          "paths": [
-            "/"
-          ],
-          "tier": "public"
-        },
-        {
-          "bundle": "podinfo/podinfo",
-          "host": "podinfo.gitops.test",
-          "namespace": "podinfo",
-          "paths": [
-            "/"
-          ],
-          "tier": "public"
-        }
-      ],
-      "floes": {
-        "argocd": {
-          "enable": true
-        },
-        "cert-manager": {
-          "enable": true
-        },
-        "cluster": {
-          "enable": true
-        },
-        "external-secrets": {
-          "enable": true
-        },
-        "forgejo": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
-        },
-        "lab-dns": {
-          "enable": true
-        },
-        "podinfo": {
-          "enable": true
-        },
-        "trust-manager": {
-          "enable": true
+        "name": "app",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
         }
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "argocd/argocd",
+            "host": "argocd.gitops.test",
+            "namespace": "argocd",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          },
+          {
+            "bundle": "forgejo/forgejo",
+            "host": "git.gitops.test",
+            "namespace": "forgejo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          },
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.gitops.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "argocd",
+          "forgejo",
+          "cert-manager",
+          "external-secrets",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-app",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/coredns-zone/coredns",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/external-secrets/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/gateway-api/crds",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/cert-manager",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/external-secrets/external-secrets",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/controller",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/trust-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/gateway",
+              "resourceCount": 2
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/bundles",
+              "resourceCount": 2
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "forgejo/forgejo",
+              "resourceCount": 3
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "argocd/argocd",
+              "resourceCount": 6
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "forgejo/bootstrap",
+              "resourceCount": 2
+            }
+          ]
+        ]
+      },
+      "delivery": {
+        "strategy": "argocd",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "k3d-gitops-local-app",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "k3s",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "gitops.local",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "external-secrets/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "lab-dns/coredns",
-            "resourceCount": 1
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "gitops-local-app",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "gitops.local",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": "registry",
+            "ports": []
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": true,
-            "name": "external-secrets/external-secrets",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": true,
-            "name": "trust-manager/trust-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 2
-          },
-          {
-            "hasReadyProbe": true,
-            "name": "trust-manager/bundles",
-            "resourceCount": 2
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "forgejo/forgejo",
-            "resourceCount": 3
-          },
-          {
-            "hasReadyProbe": true,
-            "name": "podinfo/podinfo",
-            "resourceCount": 3
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "argocd/argocd",
-            "resourceCount": 6
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "forgejo/bootstrap",
-            "resourceCount": 2
-          }
-        ]
-      ],
-      "name": "app",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.96.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "k3d",
-      "provisionerConfig": {
-        "k3d": {
-          "autoDeployManifests": [],
-          "clusterName": "gitops-local-app",
-          "extraApiServerArgs": [],
-          "extraK3sArgs": [],
-          "extraVolumes": [],
-          "image": "rancher/k3s:v1.31.4-k3s1",
-          "network": "gitops.local",
-          "noFlannel": false,
-          "noLocalStorage": false,
-          "noServiceLB": false,
-          "noTraefik": true,
-          "ports": []
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     }
   },
@@ -239,15 +204,6 @@
   },
   "infraPublications": [],
   "labName": "gitops.local",
-  "labNamespaces": {
-    "app": [
-      "argocd",
-      "cert-manager",
-      "external-secrets",
-      "forgejo",
-      "podinfo"
-    ]
-  },
   "labOwnedRegistries": [],
   "network": {
     "dockerSubnet": "172.31.192.0/20",
@@ -265,8 +221,12 @@
     "xpkg.upbound.io",
     "oci.external-secrets.io"
   ],
-  "runtimeContexts": {
-    "app": "k3d-gitops-local-app"
+  "routedHosts": {
+    "app": [
+      "argocd.gitops.test",
+      "git.gitops.test",
+      "podinfo.gitops.test"
+    ]
   },
   "secrets": {
     "envFile": null,
@@ -281,6 +241,8 @@
       ],
       "container": "catallaxy-gitops.local-dns",
       "description": "Knot DNS server (gitops.test)",
+      "dnsContainers": [],
+      "extraMounts": [],
       "image": "cznic/knot:latest",
       "networks": [
         "gitops.local"
@@ -289,21 +251,24 @@
         "5552:53/tcp",
         "5552:53/udp"
       ],
+      "readyProbe": null,
       "volumes": {
         "/config/knot.conf": {
           "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: gitops.test.\n    storage: /storage\n    file: gitops.test.zone\n    acl: update-acl\n"
         },
         "/storage/gitops.test.zone": {
-          "content": "$ORIGIN gitops.test.\n$TTL 300\n\n@   IN  SOA ns1.gitops.test. admin.gitops.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.gitops.test.\nns1 IN  A   127.0.0.1\n\n; Every host-facing endpoint arrives through the ingress, which routes\n; by Host header, so one wildcard answers for all of them. The target is\n; the docker bridge gateway because the same zone is served to the host\n; and to pods, and that address reaches the ingress's published port\n; from both.\n;\n; A more specific record always wins, so a DNS controller keeps control\n; of anything it publishes. Without this a lab that runs no such\n; controller resolves nothing at all.\n*   IN  A   172.31.192.1\n"
+          "content": "$ORIGIN gitops.test.\n$TTL 300\n\n@   IN  SOA ns1.gitops.test. admin.gitops.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.gitops.test.\nns1 IN  A   127.0.0.1\nargocd   IN  A   172.31.192.1\n    git   IN  A   172.31.192.1\n    podinfo   IN  A   172.31.192.1\n"
         }
       }
     },
     "egress": {
+      "command": [],
       "container": "catallaxy-gitops.local-egress",
       "description": "Forward proxy inside the lab network (gitops.test)",
       "dnsContainers": [
         "catallaxy-gitops.local-dns"
       ],
+      "extraMounts": [],
       "image": "ghcr.io/querateam/docker-tinyproxy:latest",
       "networks": [
         "gitops.local"
@@ -311,6 +276,7 @@
       "ports": [
         "127.0.0.1:3252:8888"
       ],
+      "readyProbe": null,
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
           "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
@@ -318,8 +284,10 @@
       }
     },
     "proxy": {
+      "command": [],
       "container": "catallaxy-gitops.local-ingress",
       "description": "HAProxy lab ingress (gitops.test)",
+      "dnsContainers": [],
       "extraMounts": [
         {
           "container": "/etc/haproxy/certs/lab.pem",
@@ -349,9 +317,13 @@
       }
     },
     "registry": {
+      "command": [],
       "container": "catallaxy-gitops.local-registry",
       "description": "Zot OCI registry (image cache)",
+      "dnsContainers": [],
+      "extraMounts": [],
       "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "networks": [],
       "ports": [
         "5252:5000"
       ],

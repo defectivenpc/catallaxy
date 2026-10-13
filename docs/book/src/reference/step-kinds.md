@@ -106,21 +106,25 @@ planner assertion enforces it.
 
 ## Declaring a step
 
+A floe declares one, by providing `LAB_STEPS`:
+
 ```nix
-lab.steps.<name> = {
-  kind        = "run-script";          # required, one of the above
-  direction   = "deploy";              # deploy | teardown | both
-  idempotency = "idempotent";          # required; intent, see above
-  after       = [ ];                   # anchors
-  before      = [ ];                   # anchors
-  requires    = [ ];                   # tokens (implies `after`)
-  provides    = [ ];                   # tokens
-  scope       = { cluster = null; namespace = null; lab = false; };
-  skipIfReachable = null;              # cluster name
-  params      = { };                   # kind-specific, hoisted
-  description = "";
+provides.step = sigs.LAB_STEPS;
+
+# in the body
+floe.out.step.mesh-join = {
+  kind = "run-script";
+  after = [ (needs (t.cluster "core").applied) ];
+  provides = [ "lab/mesh-joined" ];
+  params = { };
 };
 ```
+
+A floe's and not a lab's, because a step travels with the thing it is about:
+the floe that runs a mesh is what knows a mesh has to be joined, and no lab
+should have to be told. Every field, with its type and default, is on the
+[Plan Step Schema](./options/steps.md) page — generated from the type the
+merge checks against, so it cannot drift from what is accepted.
 
 Anchors use the plan grammar in [Anchors and Tokens](./anchors.md). Concepts
 are in [How It Works](../understanding/how-it-works.md).

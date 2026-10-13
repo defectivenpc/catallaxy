@@ -215,8 +215,6 @@ spec:
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].severity, Severity::Error);
         assert!(diags[0].message.contains("harbor/harbor-core"));
-        // It names what is lost, because that is what makes the report
-        // actionable without opening the chart.
         assert!(diags[0].message.contains("POSTGRESQL_PASSWORD"));
     }
 

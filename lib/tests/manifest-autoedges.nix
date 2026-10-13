@@ -167,8 +167,6 @@ lib.concatLists [
 
   (assertEq "a CRD delivered opaquely is covered by saying so once" (predsOf "issuer-cr" {
     bundles = {
-      # `yamls`, a chart: eval cannot see the kinds either way, so the
-      # bundle names them.
       crds-from-a-chart = b { provides = [ "kind:cert-manager.io/Issuer" ]; };
       issuer-cr = b { resources.r = cr "cert-manager.io" "Issuer" "primary" "cert-manager"; };
     };

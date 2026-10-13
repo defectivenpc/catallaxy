@@ -7,9 +7,6 @@ use super::*;
 
 pub fn render(topo: &LabTopology, format: TopologyFormat) -> Result<String> {
     Ok(match format {
-        // The table writes its own line breaks as it goes; the other three are
-        // documents that the caller used to hand to println!, which is one
-        // trailing newline more than the document carries.
         TopologyFormat::Table => render_table(topo),
         TopologyFormat::Json => serde_json::to_string_pretty(topo)? + "\n",
         TopologyFormat::Mermaid => render_mermaid(topo) + "\n",
@@ -76,9 +73,6 @@ fn render_endpoints(topo: &LabTopology) -> String {
         }
     }
 
-    // The zone resolves through the lab's own DNS, not the host's, until
-    // someone says otherwise — which is the step that turns these into URLs a
-    // browser can open.
     if topo.zone.is_some() {
         let _ = writeln!(out);
         let _ = writeln!(
@@ -184,22 +178,26 @@ fn render_component_lines(cluster: &ClusterTopology) -> String {
 
     let _ = writeln!(out, "  {}", style("Components:").dim());
     for (comp_name, comp) in &cluster.components {
-        let domain_str = comp
-            .domain
-            .as_ref()
-            .map(|d| format!(" {}", style(d).dim()))
-            .unwrap_or_default();
-
         let _ = writeln!(
             out,
-            "    {} {}{} {}{}{}",
+            "    {} {} {}",
             style("-").dim(),
             style(comp_name).cyan(),
-            style(version_suffix(comp.version.as_deref())).dim(),
-            style(format!("[{}]", comp.namespace)).dim(),
-            health_suffix(comp.health.as_ref()),
-            domain_str,
+            style(format!("[{} bundles]", comp.bundles)).dim(),
         );
+    }
+
+    if !cluster.namespaces.is_empty() {
+        let _ = writeln!(out, "  {}", style("Namespaces:").dim());
+        for (namespace, health) in &cluster.namespaces {
+            let _ = writeln!(
+                out,
+                "    {} {}{}",
+                style("-").dim(),
+                style(namespace).cyan(),
+                health_suffix(health.as_ref()),
+            );
+        }
     }
     out
 }
@@ -296,20 +294,13 @@ fn render_mermaid(topo: &LabTopology) -> String {
             "        subgraph {cluster_id}[\"{cluster_name} ({})\"]\n",
             cluster.provider
         ));
-        for (comp_name, comp) in &cluster.components {
+        for comp_name in cluster.components.keys() {
             let comp_id = format!(
                 "{}_{}",
                 sanitize_mermaid_id(cluster_name),
                 sanitize_mermaid_id(comp_name)
             );
-            let version = comp
-                .version
-                .as_deref()
-                .map(|v| format!(" v{v}"))
-                .unwrap_or_default();
-            out.push_str(&format!(
-                "            {comp_id}[\"{comp_name}{version}\"]\n"
-            ));
+            out.push_str(&format!("            {comp_id}[\"{comp_name}\"]\n"));
         }
         out.push_str("        end\n");
     }
@@ -372,14 +363,9 @@ fn render_dot(topo: &LabTopology) -> String {
                 sanitize_dot_id(cluster_name),
                 sanitize_dot_id(comp_name)
             );
-            let version = comp
-                .version
-                .as_deref()
-                .map(|v| format!(" v{v}"))
-                .unwrap_or_default();
             out.push_str(&format!(
-                "        {comp_id} [label=\"{comp_name}{version}\\n[{}]\"];\n",
-                comp.namespace
+                "        {comp_id} [label=\"{comp_name}\\n[{} bundles]\"];\n",
+                comp.bundles
             ));
         }
         out.push_str("    }\n\n");

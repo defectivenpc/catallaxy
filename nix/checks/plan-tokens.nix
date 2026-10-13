@@ -7,18 +7,30 @@
 # already declared, one inventing `mr-reconciled`, which the registry did not
 # have at all.
 #
-# `modules/` and `floes/` only: those write plan steps. `lib/tests/` and
-# `nix/checks/` name literals on purpose, because a test asserting on rendered
-# output should say the string it expects.
+# `lib/` and `floes/` only: those write plan steps. Three things inside them
+# are excluded. `lib/plan-tokens.nix` is the registry, so it is the one place
+# the literals belong. And test files name literals on purpose, because a test
+# asserting on rendered output should say the string it expects — so
+# `lib/tests/` and `floes/tests/` are out, as `nix/checks/` is by not being
+# scanned.
 { lib, pkgs }:
 
 let
   roots = lib.fileset.toSource {
     root = ../..;
-    fileset = lib.fileset.unions [
-      ../../modules
-      ../../floes
-    ];
+    fileset =
+      lib.fileset.difference
+        (lib.fileset.unions [
+          ../../lib
+          ../../floes
+        ])
+        (
+          lib.fileset.unions [
+            ../../floes/tests
+            ../../lib/tests
+            ../../lib/plan-tokens.nix
+          ]
+        );
   };
 
   # A token is `<scope>/…/<state>`. `cluster/crds` in `lib/charts.nix` is a
@@ -38,6 +50,6 @@ in
       echo "\`optional:\` anchor, and one that matches nothing is silent." >&2
       exit 1
     fi
-    echo "no plan-token literals under modules/ or floes/" > $out
+    echo "no plan-token literals under modules/ or floes/ (tests excepted)" > $out
   '';
 }

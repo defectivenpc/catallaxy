@@ -8,10 +8,14 @@
 # The isolation harness gives it a local `MESH_ADMIN` stub, which is the
 # control-plane cluster's arrangement. The cross-cluster one — `MESH_ADMIN`
 # absent, `tokenSecret` set — is the `without` case below.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   evalWith =
     args:
@@ -141,11 +145,30 @@ lib.runTests {
 
   # ---- what it promises --------------------------------------------------
 
-  # Every field local, which is what keeps it out of a lab scope: an operator
-  # in one cluster does not reconcile a CR applied in another, and the CRDs it
-  # names are installed here and nowhere else.
+  # It cannot travel, and the signature says so.
+  #
+  # An operator in one cluster does not reconcile a CR applied in another, and
+  # the CRDs it names are installed here and nowhere else — so a cluster that
+  # exported `MESH_OPERATOR` would hand a peer a reference to a controller
+  # that is not in it, and every resource rendered from that reference would
+  # apply cleanly.
+  #
+  # Three mechanisms have carried this. `isUncrossable` asked whether every
+  # field was `T.local`, which is a property of the fields rather than of the
+  # boundary and could be true by accident. Then absence from a `crossable`
+  # table, which was a decision encoded as a missing key in a third file. Now
+  # `mayExport = false` on the signature itself, refused by the linker where
+  # an export resolves — one fact, in the file that defines the thing.
   testWhatItPromisesCannotTravel = {
-    expr = support.catallaxy.floe.isUncrossable support.catallaxy.sigs.MESH_OPERATOR;
+    expr = support.catallaxy.sigs.MESH_OPERATOR.mayExport;
+    expected = false;
+  };
+
+  # And the mesh itself can, because that is what a mesh is for. The pair is
+  # the point: one floe provides both, so a per-*signature* answer is the only
+  # one that can distinguish them.
+  testTheMeshItselfCanTravel = {
+    expr = support.catallaxy.sigs.MESH_NETWORK_SHARED.mayExport;
     expected = true;
   };
 

@@ -14,280 +14,68 @@
 # another floe already holds.
 {
   lib,
-  cataCharts,
   floes,
-  config,
+  catallaxy,
   ...
 }:
-{
-  lab.name = "every-floe";
-  lab.dns.zone = "every-floe.test";
 
-  # The store floe authenticates with a token it does not create. Authored in
-  # sops and projected in, which is the shape the floe's docstring describes
-  # and what keeps the cluster's coherence check satisfiable.
-  lab.secrets.stores.authored.backend = "sops";
-  # No `vault.server`. openbao is in this cluster and knows its own address;
-  # naming one here would be a second place for it, and the two disagree
-  # silently because nothing dials the URL until something reads a secret.
-  # `modules/lab/out.nix` fills it from whatever provides VAULT_SERVER.
-  lab.secrets.stores.runtime.backend = "vault";
+let
+  zone = "every-floe.test";
 
-  lab.secrets.managed.vault-credential = {
-    store = "authored";
-    keys.token = {
-      generator = "hex";
-      length = 32;
-    };
+  clusters = import ./clusters/every-floe.nix {
+    inherit
+      catallaxy
+      floes
+      lib
+      zone
+      ;
   };
+in
+catallaxy.mkLabFloe
+  {
+    name = "every-floe";
+    summary = "Every floe in the catalogue, enabled somewhere.";
 
-  lab.clusters.core.secrets.project.vault-token = {
-    source = "vault-credential";
-    namespace = "external-secrets";
-    keys.token.from = "token";
-  };
+    units = _: {
+      # Three stores and two secrets, every one a unit of the lab's link.
+      # Nothing resolves by itself at this width, which is the point of having
+      # it here: each secret binds its store and the cluster binds each secret.
+      authored = floes.lab-secret-store { backend = "sops"; };
+      runtime = floes.lab-secret-store { backend = "vault"; };
+      knot = floes.lab-secret-store { backend = "env"; };
 
-  # external-dns authenticates to the RFC2136 server with a TSIG key it does
-  # not create either. Same shape as the vault token, and the reason the floe
-  # takes a reference rather than the value: a key in a Helm value renders
-  # into the Deployment's argv.
-  #
-  # Authored, not generated. It was generated here for as long as this was the
-  # only lab rendering external-dns, and a generated key cannot be the one
-  # Knot was configured with — so the controller would have been refused every
-  # update it ever made. Nothing caught it because a fixture never runs;
-  # `lab-tsig-key-agrees` does now.
-  lab.secrets.stores.knot.backend = "env";
-  lab.secrets.envFile = "examples/labs/tests/every-floe.env";
-
-  lab.secrets.managed.externaldns-tsig = {
-    store = "knot";
-    keys.tsig-secret.generator = null;
-  };
-
-  lab.clusters.core.secrets.project.externaldns-tsig = {
-    source = "externaldns-tsig";
-    namespace = "external-dns";
-    keys.tsig-secret.from = "tsig-secret";
-  };
-
-  lab.clusters.core.floes = {
-    # Both halves of cilium, which is the point of having it here: the
-    # bootstrap manifest is a derivation the lab hands to the provisioner, and
-    # the floe below installs the same chart as a release that takes ownership
-    # once the cluster is up. The floe defaults both halves from one pin, so the
-    # two cannot disagree about what is running.
-    cluster = floes.k3d-cluster {
-
-      disableFlannel = true;
-      autoDeployManifests = [
-        {
-          name = "cilium";
-          path = "${floes.cilium.mkBootstrapManifest { }}";
-        }
-      ];
-    };
-
-    cilium = floes.cilium { };
-
-    # ---- trust ----------------------------------------------------------
-    cert-manager = floes.cert-manager { };
-    trust-manager = floes.trust-manager { };
-
-    # ---- routing --------------------------------------------------------
-    lab-dns = floes.lab-dns { };
-    # Records for what the gateway routes. `defaultTargets` because a k3d
-    # Service reports a cluster-internal LoadBalancer address that nothing
-    # outside the cluster can reach.
-    external-dns = floes.external-dns {
-      tsigSecretRef = "external-dns/externaldns-tsig";
-      defaultTargets = [ config.lab.network.gateway ];
-    };
-    # The issuer. Its clients are rendered by whoever needs one — there is no
-    # fan-in and nothing here lists them.
-    kanidm = floes.kanidm { domain = "idm.${config.lab.dns.zone}"; };
-
-    # The mesh control plane. Its OIDC client is public and PKCE-based, which
-    # is the third shape of consumer kanidm has here — beside harbor's
-    # confidential client and forgejo's.
-    netbird = floes.netbird { };
-
-    # Beside the control plane, so it resolves both `MESH_NETWORK` and
-    # `MESH_ADMIN` locally and the lab says nothing about either. In
-    # `homelab.mesh` the same floe runs in a second cluster with neither.
-    netbird-operator = floes.netbird-operator { };
-
-    # The first consumer of GIT_REPOSITORY, and the reason it carries two
-    # URLs: argo clones from inside the cluster, over forgejo's Service.
-    argocd = floes.argocd { };
-
-    forgejo = floes.forgejo {
-      oidc = true;
-    };
-
-    harbor = floes.harbor {
-      oidc = true;
-    };
-
-    gateway-api = floes.gateway-api-crds { };
-    gateway = floes.gateway {
-      tlsEnable = true;
-    };
-    podinfo = floes.podinfo { };
-
-    # A real cloud cluster, declared and never applied. It renders here so
-    # its resource declaration is checked; `examples/labs/tests/cloud.nix` is
-    # where the arrangement around it is.
-    doks = floes.doks {
-      name = "every-floe-workload";
-      version = "1.31.1-do.4";
-    };
-
-    # Resources rather than bundles. Publishes into the runtime store, so this
-    # fixture covers the join between the two (RFC 0003 §7) and not only the
-    # resources on their own.
-    provisioned = floes.provisioned {
-      stateDir = "/tmp/catallaxy-every-floe";
-      publishTo = {
-        store = "runtime";
-        key = "provisioned/identity";
-      };
-    };
-
-    # The escape hatch, instantiated once per app the way a lab would.
-    hello = floes.custom {
-      name = "hello";
-      namespace = "hello";
-      servicePort = 5678;
-
-      # The whole of the OIDC redesign, from a consumer's side. `hello`
-      # renders its own client into its own namespace; kanidm collects
-      # nothing and does not know this app exists.
-      oidc = true;
-      images.echo = {
-        registry = "docker.io";
-        repository = "hashicorp/http-echo";
-        tag = "1.0";
-        digest = null;
-      };
-      resources.deployment = {
-        apiVersion = "apps/v1";
-        kind = "Deployment";
-        metadata = {
-          name = "hello";
-          namespace = "hello";
-        };
-        spec = {
-          replicas = 1;
-          selector.matchLabels."app.kubernetes.io/name" = "hello";
-          template = {
-            metadata.labels."app.kubernetes.io/name" = "hello";
-            spec.containers = [
-              {
-                name = "hello";
-                image = "docker.io/hashicorp/http-echo:1.0";
-                args = [ "-text=hello" ];
-                ports = [ { containerPort = 5678; } ];
-              }
-            ];
+      vault-credential =
+        (floes.lab-authored-secret {
+          keys.token = {
+            generator = "hex";
+            length = 32;
           };
-        };
-      };
-      resources.service = {
-        apiVersion = "v1";
-        kind = "Service";
-        metadata = {
-          name = "hello";
-          namespace = "hello";
-        };
-        spec = {
-          selector."app.kubernetes.io/name" = "hello";
-          ports = [
-            {
-              port = 5678;
-              targetPort = 5678;
-            }
-          ];
-        };
+        }).bind
+          { labStore = "authored"; };
+
+      externaldns-tsig = (floes.lab-authored-secret { keys.tsig-secret.generator = null; }).bind {
+        labStore = "knot";
       };
     };
 
-    # ---- operators ------------------------------------------------------
-    cnpg = floes.cnpg { };
-
-    crossplane-provider-nop = floes.crossplane-provider-nop { };
-    nop-resource = floes.nop-resource { };
-
-    crossplane = floes.crossplane { };
-    kaniop = floes.kaniop { };
-    redis-operator = floes.redis-operator { };
-    reloader = floes.reloader { };
-    # The runtime store's server. `lab.secrets.stores.runtime.vault` above
-    # names the same address, which is the wiring this floe's VAULT_SERVER
-    # exists to make checkable rather than coincidental.
-    openbao = floes.openbao { };
-
-    external-secrets = floes.external-secrets { };
-
-    secret-store = floes.secret-store {
-      labStore = "runtime";
-      server = "https://vault.${config.lab.dns.zone}";
-    };
-
-    # ---- storage and telemetry ------------------------------------------
-    prometheus = floes.prometheus { };
-    openebs = floes.openebs { };
-    seaweedfs = floes.seaweedfs { };
-    zot = floes.zot { };
-    velero = floes.velero {
-      schedules.daily = {
-        schedule = "0 2 * * *";
-        ttl = "168h";
+    clusters = _: {
+      core = {
+        floe = (clusters.core { }).bind {
+          labStore = "runtime";
+          vaultCredential = "vault-credential";
+          tsigSecret = "externaldns-tsig";
+        };
+        claim = floes.k3d-cluster { };
       };
     };
-    # All three backends and the issuer are in this lab, so grafana gets three
-    # datasources and OIDC login — the full width of both optional holes.
-    grafana = floes.grafana {
-      oidc = true;
-    };
+  }
+  {
+    name = "every-floe";
+    inherit zone;
 
-    loki = floes.loki { };
-    tempo = floes.tempo { };
+    secretsEnvFile = "examples/labs/tests/every-floe.env";
 
-    # All three backends are in this lab, so all three pipelines exist. That
-    # is the point of the fixture: `every-floe` is where the collector's
-    # fan-in is exercised at full width.
-    otel-collector = floes.otel-collector { };
-
-    # ---- policy ---------------------------------------------------------
-    # Installs nothing; it is here so something reads its signature.
-    # No `delivery` floe here. It answers DELIVERY_POLICY with "kapp
-    # applies", which is what a lab gets when nothing provides the signature
-    # at all — and `argocd` above answers the same signature with a real CD
-    # tool behind it. Two answers to one question is what `modules/lab/cd.nix`
-    # refuses, and it refused this.
-  };
-
-  # Every floe the set ships is instantiated above. When one is added and
-  # this is not, the lab that was supposed to catch it says so instead.
-  lab.assertions = [
-    (
-      let
-        shipped = lib.attrNames (import ../../../floes).cluster;
-
-        # Read off the instances rather than the attribute names: a lab names
-        # *units*, and a unit may be called anything. `def.name` is what floe
-        # it actually is.
-        rendered = map (i: i.def.name) (lib.attrValues config.lab.clusters.core.floes);
-
-        missing = lib.subtractLists rendered shipped;
-      in
-      {
-        assertion = missing == [ ];
-        message =
-          "every-floe does not render: ${lib.concatStringsSep ", " missing}. "
-          + "A floe no lab renders is a floe whose declarations nothing checks.";
-      }
-    )
-  ];
-}
+    # Cilium is in the cluster, and the provisioner starting without flannel is
+    # a separate decision. This is it.
+    defaults.CNI_BOOTSTRAP = "core";
+  }

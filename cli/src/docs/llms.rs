@@ -54,8 +54,6 @@ pub fn render(pages: &[Page<'_>], omitted: usize, base_url: &str) -> LlmsOutput 
         "# Catallaxy documentation".into(),
         String::new(),
         "Full text in navigation order. Generated from the book; do not edit.".into(),
-        "Per-floe option references are omitted -- fetch them individually".into(),
-        format!("from {base_url}/reference/options/floes/<floe>.html"),
         String::new(),
     ];
 

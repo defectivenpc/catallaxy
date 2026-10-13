@@ -3,10 +3,14 @@
 # The claim worth pinning here is the split: two provides, backed by
 # different bundles, which is half of what removes the cycle this floe used
 # to be in with trust-manager.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "cert-manager";
     inputs.chart = "/dev/null";

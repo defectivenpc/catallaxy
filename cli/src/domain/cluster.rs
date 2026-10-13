@@ -25,67 +25,103 @@ pub struct ProjectionKeyConfig {
     pub json_key: Option<String>,
 }
 
+/// One cluster, as `cata` is handed it.
+///
+/// Four blocks, and only the first two are the cluster: it *denotes* a claim
+/// and its content. `provisioning` is the function that establishes the claim
+/// and `delivery` is the one that converges the content onto it, carried here
+/// because `cata` is what applies them and has to be told which.
+/// `docs/cluster-spec.md` is the derivation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterSpec {
+    pub claim: Claim,
+    pub provisioning: Provisioning,
+    pub content: Content,
+    pub delivery: Delivery,
+}
+
+/// What can be observed of a cluster that already exists.
+///
+/// The membership rule is observability, which is decidable because
+/// `cluster_shape` already runs it: a field belongs here exactly when drift
+/// detection could compare it against a running cluster. `provider` used to
+/// sit beside these and held `"docker"` or `"external"` — read only to be
+/// printed, and already carried by the provisioning union's own key.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Claim {
     pub name: String,
 
-    pub lab_name: String,
+    /// Unique on the host that holds it. A composition holding two clusters
+    /// supplies it; the cluster's own name is the default.
+    pub instance_name: String,
 
-    pub provisioner: ProvisionerKind,
-
-    pub provider: String,
-
-    pub kube_context: String,
+    pub context: String,
 
     pub kubernetes: KubernetesSpec,
 
     pub network: ClusterNetwork,
+}
 
-    pub deploy: DeploySpec,
+/// What establishes the claim: which tool, with which arguments.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Provisioning {
+    /// Externally tagged, so the key *is* the tool. A second field naming it
+    /// could disagree with the block beside it.
+    pub config: ProvisionerConfig,
 
-    pub lifecycle: Lifecycle,
-
-    pub provisioner_config: ProvisionerConfig,
-
-    /// What the operator's machine contributes. `#[serde(default)]` because
-    /// a lab that names no timeout and runs no VM has nothing to say here.
     #[serde(default)]
-    pub host: HostConfig,
+    pub hooks: Vec<Hook>,
 
-    /// Who fronts this cluster — RFC 0005 §6.4.
-    #[serde(default)]
-    pub edge: EdgeSpec,
+    /// How long this host waits for an API server to answer. Not the wait for
+    /// an apply to settle, which belongs to `delivery` and had the same name.
+    pub wait: String,
+}
 
-    pub floes: BTreeMap<String, FloeSpec>,
+/// The desired state: what the components fold up to.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Content {
+    /// The rendered waves, as a path. A document carrying the resources
+    /// themselves would put every object into the thing every `nix eval` has
+    /// to serialise; carrying where they are is what lets `cata cluster up`
+    /// act on a cluster with no lab to look inside.
+    pub tree: String,
+
+    /// Which namespaces are the lab's, so pruning knows what it may delete.
+    pub namespaces: Vec<String>,
+
+    /// The install order, as names and probe flags rather than the resources
+    /// themselves: `plan-manifests` prints it without building the tree. A
+    /// cache of what the rendered tree says, and checked against it.
+    pub waves: Vec<Vec<WaveBundle>>,
 
     pub exposed_hosts: Vec<ExposedHost>,
 
     #[serde(default)]
     pub projections: BTreeMap<String, ProjectionConfig>,
-
-    #[serde(default)]
-    pub trust: ClusterTrust,
-
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
 }
 
-/// Where this cluster wants the lab's CA certificate to appear.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+/// One bundle, as the wave summary carries it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ClusterTrust {
-    #[serde(default)]
-    pub ca_config_maps: Vec<CaConfigMap>,
-}
-
-/// One ConfigMap key the lab CA should be written to.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CaConfigMap {
-    pub namespace: String,
+pub struct WaveBundle {
     pub name: String,
-    pub key: String,
+    pub has_ready_probe: bool,
+    pub resource_count: usize,
+}
+
+/// How content reaches the claim.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Delivery {
+    pub strategy: DeployStrategy,
+
+    /// How long an apply may take to settle. The other half of what one
+    /// `waitTimeout` used to mean.
+    pub wait_timeout: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -93,8 +129,19 @@ pub struct CaConfigMap {
 pub enum ProvisionerKind {
     K3d,
     Talos,
-    Crossplane,
     External,
+}
+
+impl ProvisionerKind {
+    /// The word a human reads, which is the union's own key. `provider` used
+    /// to carry it as a separate string, so the two could disagree.
+    pub fn tag(self) -> &'static str {
+        match self {
+            Self::K3d => "k3d",
+            Self::Talos => "talos",
+            Self::External => "external",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,15 +158,6 @@ pub struct KubernetesSpec {
 pub struct ClusterNetwork {
     pub pod_subnet: String,
     pub service_subnet: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeploySpec {
-    pub strategy: DeployStrategy,
-
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,7 +188,7 @@ impl DeployStrategy {
 /// How this cluster is made, and the settings for that one way.
 ///
 /// Externally tagged, which is serde's default for an enum and exactly what
-/// `T.taggedUnion` in `lib/floe-core/types.nix` emits: `{"k3d": {…}}`. One
+/// `T.taggedUnion` in the floe library's `types.nix` emits: `{"k3d": {…}}`. One
 /// key, named for the variant.
 ///
 /// It was a struct with one required field per provisioner, so a cluster made
@@ -221,7 +259,6 @@ impl ProvisionerConfig {
         match self {
             ProvisionerConfig::K3d(c) => &c.ports,
             ProvisionerConfig::Talos(c) => &c.exposed_ports,
-            // Nothing on this host publishes a port for it.
             ProvisionerConfig::External(_) => &[],
         }
     }
@@ -238,60 +275,10 @@ impl ProvisionerConfig {
     }
 }
 
-/// Who fronts this cluster, and where.
-///
-/// `verify` needs it: a hostname routed by a cluster the lab is *not* the edge
-/// for cannot be reached through the lab's proxy, and resolving it to loopback
-/// probes the wrong thing and reports the wrong failure.
-///
-/// Defaults to `proxy` with no backend so an older lab document still parses.
-/// That combination is refused at evaluation, so it cannot arrive from Nix.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EdgeSpec {
-    pub mode: EdgeMode,
-    pub backend: Option<String>,
-    pub http_port: u16,
-    pub https_port: u16,
-}
-
-impl Default for EdgeSpec {
-    fn default() -> Self {
-        EdgeSpec {
-            mode: EdgeMode::Proxy,
-            backend: None,
-            http_port: 80,
-            https_port: 443,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum EdgeMode {
-    /// The lab fronts this cluster, at `backend`.
-    #[default]
-    Proxy,
-    /// The cluster is its own edge; the lab routes nothing to it.
-    #[serde(rename = "self")]
-    Own,
-    /// Nothing routes to this cluster at all.
-    None,
-}
-
 /// What the operator's machine contributes, as opposed to the provisioner.
 ///
 /// Colima is a VM the operator runs and the timeout is how long this lab is
 /// willing to wait; k3d is told neither. They lived under
-/// `provisionerConfig.docker` beside a `clusterName` that nothing read.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HostConfig {
-    pub wait_timeout: String,
-    #[serde(default)]
-    pub colima: ColimaConfig,
-}
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TalosConfig {
@@ -321,6 +308,23 @@ pub struct K3dConfig {
     pub cluster_name: String,
     pub image: Option<String>,
     pub network: Option<String>,
+
+    /// The host service whose state directory holds the containerd config a
+    /// node pulls through — `registries.yaml`, `certs.d/` and
+    /// `lab-resolv.conf`. `None` for a cluster that does not mirror.
+    ///
+    /// A name and not a path: the path is this crate's to build and already
+    /// was. What it could not do was know *which* service, so `create_cluster`
+    /// joined a literal `"registry"` and probed for the files — which made
+    /// mirroring something discovered on the filesystem rather than something
+    /// the cluster declared. A stale directory mounted a mirror nobody asked
+    /// for; a cluster whose `registry-setup` had not run mounted none and said
+    /// nothing.
+    ///
+    /// Defaulted, so a record written before this field existed describes a
+    /// cluster that was given no mirror.
+    #[serde(default)]
+    pub node_config_from: Option<String>,
     pub no_traefik: bool,
     #[serde(rename = "noServiceLB")]
     pub no_service_lb: bool,
@@ -375,13 +379,6 @@ pub struct ColimaConfig {
     pub disk: u64,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Lifecycle {
-    #[serde(default)]
-    pub pre_provision: Vec<Hook>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hook {
@@ -390,24 +387,6 @@ pub struct Hook {
     pub bin: String,
     #[serde(default)]
     pub order: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FloeSpec {
-    pub enable: bool,
-
-    #[serde(default)]
-    pub namespace: Option<String>,
-
-    #[serde(default)]
-    pub version: Option<String>,
-
-    #[serde(default)]
-    pub domain: Option<String>,
-
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -448,87 +427,96 @@ impl ClusterSpec {
     pub fn from_value(value: Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
-
-    pub fn enabled_floes(&self) -> impl Iterator<Item = (&String, &FloeSpec)> {
-        self.floes.iter().filter(|(_, f)| f.enable)
-    }
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
 
-    /// A spec as the Nix layer actually emits one. Shared so other modules
-    /// test against the real shape rather than a hand-built approximation.
+    /// A document as the Nix layer actually emits one. Shared so other
+    /// modules test against the real shape rather than a hand-built
+    /// approximation.
     pub(crate) fn cluster_json() -> Value {
         serde_json::json!({
-            "name": "app",
-            "labName": "minimal.local",
-            "provisioner": "k3d",
-            "provider": "docker",
-            "kubeContext": "k3d-minimal-local-app",
-            "kubernetes": {
-                "distribution": "k3s",
-                "version": "1.31",
-                "controlPlanes": 1,
-                "workers": 0,
-            },
-            "network": { "podSubnet": "10.244.0.0/16", "serviceSubnet": "10.96.0.0/12" },
-            "deploy": { "strategy": "kapp", "argocd": {}, "fleet": {}, "kapp": {} },
-            "lifecycle": { "preProvision": [] },
-            "provisionerConfig": {
-                "k3d": {
-                    "clusterName": "minimal-local-app",
-                    "image": "rancher/k3s:v1.31.4-k3s1",
-                    "network": "minimal.local",
-                    "noTraefik": true,
-                    "noServiceLB": false,
-                    "noLocalStorage": false,
-                    "noFlannel": false,
-                    "ports": [],
-                    "extraApiServerArgs": [],
-                    "extraVolumes": [],
-                    "autoDeployManifests": [],
+            "claim": {
+                "name": "app",
+                "instanceName": "minimal-local-app",
+                "context": "k3d-minimal-local-app",
+                "kubernetes": {
+                    "distribution": "k3s",
+                    "version": "1.31",
+                    "controlPlanes": 1,
+                    "workers": 0,
                 },
+                "network": { "podSubnet": "10.244.0.0/16", "serviceSubnet": "10.96.0.0/12" },
             },
-            "host": {
-                "waitTimeout": "10m",
-                "colima": { "enable": true, "profile": "catallaxy", "cpu": 4, "disk": 60, "memory": 8 },
+            "provisioning": {
+                "config": {
+                    "k3d": {
+                        "clusterName": "minimal-local-app",
+                        "image": "rancher/k3s:v1.31.4-k3s1",
+                        "network": "minimal.local",
+                        "noTraefik": true,
+                        "noServiceLB": false,
+                        "noLocalStorage": false,
+                        "noFlannel": false,
+                        "ports": [],
+                        "extraApiServerArgs": [],
+                        "extraVolumes": [],
+                        "autoDeployManifests": [],
+                    },
+                },
+                "hooks": [],
+                "wait": "10m",
             },
-            "floes": {
-                "cert-manager": { "enable": true, "namespace": "cert-manager", "version": "v1.16.1", "domain": "" },
-                "argocd": { "enable": false, "namespace": "argocd", "version": "", "domain": "" },
+            "content": {
+                "tree": "/nix/store/0000000000000000000000000000000-manifests",
+                "namespaces": ["cert-manager"],
+                "waves": [[{ "name": "cert-manager/crds", "hasReadyProbe": false, "resourceCount": 3 }]],
+                "exposedHosts": [],
+                "projections": {},
             },
-            "exposedHosts": [],
-            "projections": {},
+            "delivery": { "strategy": "kapp", "waitTimeout": "10m" },
         })
     }
 
     #[test]
-    fn a_cluster_parses_from_the_config_nix_emits() {
-        let spec = ClusterSpec::from_value(cluster_json()).expect("cluster spec parses");
-        assert_eq!(spec.provisioner, ProvisionerKind::K3d);
-        assert_eq!(spec.kube_context, "k3d-minimal-local-app");
-        assert_eq!(spec.kubernetes.workers, 0);
-        assert_eq!(spec.deploy.strategy, DeployStrategy::Kapp);
+    fn a_cluster_parses_from_the_document_nix_emits() {
+        let spec = ClusterSpec::from_value(cluster_json()).expect("cluster document parses");
+        assert_eq!(spec.provisioning.config.kind(), ProvisionerKind::K3d);
+        assert_eq!(spec.claim.context, "k3d-minimal-local-app");
+        assert_eq!(spec.claim.kubernetes.workers, 0);
+        assert_eq!(spec.delivery.strategy, DeployStrategy::Kapp);
     }
 
     #[test]
-    fn the_provisioner_config_carries_what_nix_computed() {
+    fn the_provisioning_config_carries_what_nix_computed() {
         let spec = ClusterSpec::from_value(cluster_json()).unwrap();
-        let k3d = spec.provisioner_config.k3d().expect("a k3d cluster");
+        let k3d = spec.provisioning.config.k3d().expect("a k3d cluster");
         assert_eq!(k3d.cluster_name, "minimal-local-app");
         assert!(!k3d.no_flannel);
-        assert_eq!(spec.host.colima.cpu, 4);
     }
 
-    /// The tag and the block are one fact on the Nix side — `provisioner` is
-    /// read off the union's key in `modules/lab/cluster.nix` — and this is
-    /// where that stays true after the wire.
+    /// The two waits one `waitTimeout` used to mean, now each on the process
+    /// that does the waiting.
     #[test]
-    fn spec_provisioner_agrees_with_its_config() {
+    fn the_two_waits_are_separate_fields() {
         let spec = ClusterSpec::from_value(cluster_json()).unwrap();
-        assert_eq!(spec.provisioner, spec.provisioner_config.kind());
+        assert_eq!(spec.provisioning.wait, "10m");
+        assert_eq!(spec.delivery.wait_timeout, "10m");
+    }
+
+    /// Only the claim carries what could be observed of a running cluster, so
+    /// a field of it missing is a parse error rather than a default that
+    /// reads as a fact.
+    #[test]
+    fn a_claim_missing_a_field_is_refused() {
+        let mut json = cluster_json();
+        json["claim"]
+            .as_object_mut()
+            .unwrap()
+            .remove("instanceName");
+        assert!(ClusterSpec::from_value(json).is_err());
     }
 
     /// Two variants at once is not a `ProvisionerConfig`. Serde's
@@ -537,21 +525,14 @@ pub(crate) mod tests {
     #[test]
     fn a_config_naming_two_provisioners_is_refused() {
         let mut json = cluster_json();
-        json["provisionerConfig"]["talos"] = serde_json::json!({ "clusterName": "x" });
+        json["provisioning"]["config"]["talos"] = serde_json::json!({ "clusterName": "x" });
         assert!(ClusterSpec::from_value(json).is_err());
-    }
-
-    #[test]
-    fn only_enabled_floes_are_listed() {
-        let spec = ClusterSpec::from_value(cluster_json()).unwrap();
-        let names: Vec<&str> = spec.enabled_floes().map(|(n, _)| n.as_str()).collect();
-        assert_eq!(names, vec!["cert-manager"]);
     }
 
     #[test]
     fn a_provisioner_nix_does_not_declare_is_rejected() {
         let mut json = cluster_json();
-        json["provisioner"] = serde_json::json!("kubeadm");
+        json["provisioning"]["config"] = serde_json::json!({ "kubeadm": {} });
         let err = ClusterSpec::from_value(json).expect_err("unknown provisioner must not parse");
         assert!(
             err.to_string().contains("kubeadm"),
@@ -560,12 +541,12 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn a_missing_kube_context_is_an_error_rather_than_a_guess() {
+    fn a_missing_context_is_an_error_rather_than_a_guess() {
         let mut json = cluster_json();
-        json.as_object_mut().unwrap().remove("kubeContext");
+        json["claim"].as_object_mut().unwrap().remove("context");
         assert!(
             ClusterSpec::from_value(json).is_err(),
-            "kubeContext is always emitted; its absence means the contract broke"
+            "the claim's context is always emitted; its absence means the contract broke"
         );
     }
 
@@ -602,15 +583,33 @@ pub(crate) mod tests {
         assert_eq!(exposed(&[]).probe_path(), "/");
     }
 
+    /// Every variant the module declares, round-tripped through the key that
+    /// names it. There is no second field to disagree with the block now, so
+    /// what this holds is that each variant parses and reports itself.
     #[test]
     fn every_provisioner_the_module_declares_round_trips() {
-        for tag in ["k3d", "talos", "crossplane", "external"] {
+        let blocks = [
+            (
+                "k3d",
+                cluster_json()["provisioning"]["config"]["k3d"].clone(),
+            ),
+            (
+                "talos",
+                serde_json::to_value(TalosConfig::default()).unwrap(),
+            ),
+            (
+                "external",
+                serde_json::json!({ "madeBy": "someone else", "kubeconfigFrom": null }),
+            ),
+        ];
+
+        for (tag, block) in blocks {
             let mut json = cluster_json();
-            json["provisioner"] = serde_json::json!(tag);
+            json["provisioning"]["config"] = serde_json::json!({ tag: block });
             let spec = ClusterSpec::from_value(json)
                 .unwrap_or_else(|e| panic!("provisioner '{tag}' should parse: {e}"));
             assert_eq!(
-                serde_json::to_value(spec.provisioner).unwrap(),
+                serde_json::to_value(spec.provisioning.config.kind()).unwrap(),
                 serde_json::json!(tag)
             );
         }

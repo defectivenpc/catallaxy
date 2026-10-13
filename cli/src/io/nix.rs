@@ -332,13 +332,9 @@ pub fn list_labs(ctx: &CataContext) -> Result<Vec<String>> {
 #[serde(rename_all = "camelCase")]
 pub struct LabSummary {
     pub clusters: usize,
-    #[serde(default)]
-    pub eligible: bool,
-    #[serde(default)]
-    pub reasons: Vec<String>,
 }
 
-/// Every lab with its cluster count and unattended eligibility, in name order.
+/// Every lab with its cluster count, in name order.
 ///
 /// # Errors
 ///
@@ -357,8 +353,6 @@ pub fn list_labs_with_cluster_counts(ctx: &CataContext) -> Result<Vec<(String, L
         "--apply",
         "labs: builtins.mapAttrs (_: lab: {
            clusters = builtins.length lab.clusterNames;
-           eligible = lab.selfContained.eligible or true;
-           reasons = lab.selfContained.reasons or [];
          }) labs",
     ])?;
     let map: std::collections::BTreeMap<String, LabSummary> =

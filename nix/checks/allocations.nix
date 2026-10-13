@@ -1,6 +1,6 @@
 # The committed address plan matches what the lab names derive.
 #
-# RFC 0005 §5 wants an address plan written down. It is derived now rather than
+# An address plan has to be written down. It is derived now rather than
 # chosen, so this is what "written down" means: a rename reallocates a lab, and
 # the move appears here as a reviewed line rather than happening quietly.
 {

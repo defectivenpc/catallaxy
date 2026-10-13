@@ -1,164 +1,146 @@
 {
   "cd": {
     "bootstrap": "kubectl-ssa",
-    "git": {},
-    "strategy": "kapp"
+    "git": {}
   },
   "clusterNames": [
     "app"
   ],
   "clusters": {
     "app": {
-      "deploy": {
-        "strategy": "kapp"
+      "claim": {
+        "context": "k3d-minimal-tls-app",
+        "instanceName": "minimal-tls-app",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
+        },
+        "name": "app",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
+        }
       },
-      "edge": {
-        "backend": "k3d-minimal-tls-app-server-0",
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "proxy"
-      },
-      "exposedHosts": [
-        {
-          "bundle": "podinfo/podinfo",
-          "host": "podinfo.minimal.test",
-          "namespace": "podinfo",
-          "paths": [
-            "/"
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.minimal.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "cert-manager",
+          "external-secrets",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-app",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/coredns-zone/coredns",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/external-secrets/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/gateway-api/crds",
+              "resourceCount": 0
+            }
           ],
-          "tier": "public"
-        }
-      ],
-      "floes": {
-        "cert-manager": {
-          "enable": true
-        },
-        "cluster": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
-        },
-        "lab-dns": {
-          "enable": true
-        },
-        "podinfo": {
-          "enable": true
-        },
-        "trust-manager": {
-          "enable": true
-        }
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/cert-manager",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/external-secrets/external-secrets",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/controller",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/trust-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/gateway",
+              "resourceCount": 2
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/bundles",
+              "resourceCount": 2
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ]
+        ]
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "k3d-minimal-tls-app",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "k3s",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "minimal.tls",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "lab-dns/coredns",
-            "resourceCount": 1
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "minimal-tls-app",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "minimal.tls",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": "registry",
+            "ports": []
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": true,
-            "name": "trust-manager/trust-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 2
-          },
-          {
-            "hasReadyProbe": true,
-            "name": "trust-manager/bundles",
-            "resourceCount": 2
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "podinfo/podinfo",
-            "resourceCount": 3
-          }
-        ]
-      ],
-      "name": "app",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.96.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "k3d",
-      "provisionerConfig": {
-        "k3d": {
-          "autoDeployManifests": [],
-          "clusterName": "minimal-tls-app",
-          "extraApiServerArgs": [],
-          "extraK3sArgs": [],
-          "extraVolumes": [],
-          "image": "rancher/k3s:v1.31.4-k3s1",
-          "network": "minimal.tls",
-          "noFlannel": false,
-          "noLocalStorage": false,
-          "noServiceLB": false,
-          "noTraefik": true,
-          "ports": []
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     }
   },
@@ -173,12 +155,6 @@
   },
   "infraPublications": [],
   "labName": "minimal.tls",
-  "labNamespaces": {
-    "app": [
-      "cert-manager",
-      "podinfo"
-    ]
-  },
   "labOwnedRegistries": [],
   "network": {
     "dockerSubnet": "172.21.128.0/20",
@@ -196,8 +172,10 @@
     "xpkg.upbound.io",
     "oci.external-secrets.io"
   ],
-  "runtimeContexts": {
-    "app": "k3d-minimal-tls-app"
+  "routedHosts": {
+    "app": [
+      "podinfo.minimal.test"
+    ]
   },
   "secrets": {
     "envFile": null,
@@ -212,6 +190,8 @@
       ],
       "container": "catallaxy-minimal.tls-dns",
       "description": "Knot DNS server (minimal.test)",
+      "dnsContainers": [],
+      "extraMounts": [],
       "image": "cznic/knot:latest",
       "networks": [
         "minimal.tls"
@@ -220,21 +200,24 @@
         "5388:53/tcp",
         "5388:53/udp"
       ],
+      "readyProbe": null,
       "volumes": {
         "/config/knot.conf": {
           "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: minimal.test.\n    storage: /storage\n    file: minimal.test.zone\n    acl: update-acl\n"
         },
         "/storage/minimal.test.zone": {
-          "content": "$ORIGIN minimal.test.\n$TTL 300\n\n@   IN  SOA ns1.minimal.test. admin.minimal.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.minimal.test.\nns1 IN  A   127.0.0.1\n\n; Every host-facing endpoint arrives through the ingress, which routes\n; by Host header, so one wildcard answers for all of them. The target is\n; the docker bridge gateway because the same zone is served to the host\n; and to pods, and that address reaches the ingress's published port\n; from both.\n;\n; A more specific record always wins, so a DNS controller keeps control\n; of anything it publishes. Without this a lab that runs no such\n; controller resolves nothing at all.\n*   IN  A   172.21.128.1\n"
+          "content": "$ORIGIN minimal.test.\n$TTL 300\n\n@   IN  SOA ns1.minimal.test. admin.minimal.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.minimal.test.\nns1 IN  A   127.0.0.1\npodinfo   IN  A   172.21.128.1\n"
         }
       }
     },
     "egress": {
+      "command": [],
       "container": "catallaxy-minimal.tls-egress",
       "description": "Forward proxy inside the lab network (minimal.test)",
       "dnsContainers": [
         "catallaxy-minimal.tls-dns"
       ],
+      "extraMounts": [],
       "image": "ghcr.io/querateam/docker-tinyproxy:latest",
       "networks": [
         "minimal.tls"
@@ -242,6 +225,7 @@
       "ports": [
         "127.0.0.1:3088:8888"
       ],
+      "readyProbe": null,
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
           "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
@@ -249,8 +233,10 @@
       }
     },
     "proxy": {
+      "command": [],
       "container": "catallaxy-minimal.tls-ingress",
       "description": "HAProxy lab ingress (minimal.test)",
+      "dnsContainers": [],
       "extraMounts": [
         {
           "container": "/etc/haproxy/certs/lab.pem",
@@ -280,9 +266,13 @@
       }
     },
     "registry": {
+      "command": [],
       "container": "catallaxy-minimal.tls-registry",
       "description": "Zot OCI registry (image cache)",
+      "dnsContainers": [],
+      "extraMounts": [],
       "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "networks": [],
       "ports": [
         "5088:5000"
       ],

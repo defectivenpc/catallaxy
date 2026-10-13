@@ -56,27 +56,16 @@ fn nav_line(page: &str) -> Option<String> {
     let link = format!("./reference/{page}");
     let entry = |indent: &str, title: &str| Some(format!("{indent}- [{title}]({link})"));
     match page {
-        "options/lab.md" => entry("  ", "lab.*"),
-        "options/steps.md" => entry("    ", "lab.steps.*"),
-        "options/cluster.md" => entry("  ", "cluster.*"),
-        "options/bundles.md" => entry("    ", "bundles.*"),
-        "options/floes/index.md" => entry("  ", "floes.*"),
+        "options/steps.md" => entry("  ", "Plan Step Schema"),
         "cli/commands.md" => entry("  ", "Commands"),
-        _ => {
-            let floe = page.strip_prefix("options/floes/")?.strip_suffix(".md")?;
-            entry("    ", floe)
-        }
+        _ => None,
     }
 }
 
 pub fn nav_block(pages: &[String]) -> Vec<String> {
     let rank = |page: &str| match page {
-        "options/lab.md" => 0,
-        "options/steps.md" => 1,
-        "options/cluster.md" => 2,
-        "options/bundles.md" => 3,
-        "options/floes/index.md" => 4,
-        _ => 5,
+        "options/steps.md" => 0,
+        _ => 1,
     };
     let mut ordered: Vec<&String> = pages.iter().collect();
     ordered.sort_by(|a, b| rank(a).cmp(&rank(b)).then_with(|| a.cmp(b)));
@@ -124,19 +113,10 @@ pub fn splice_nav(summary: &str, pages: &[String]) -> String {
 mod tests {
     use super::*;
 
-    const SUMMARY: &str = "# Summary\n\n# Reference\n\n- [CLI](./reference/cli.md)\n- [Module Options](./reference/options.md)\n  - [lab.*](./reference/options/lab.md)\n    - [stale](./reference/options/floes/stale.md)\n- [Glossary](./reference/glossary.md)\n";
+    const SUMMARY: &str = "# Summary\n\n# Reference\n\n- [CLI](./reference/cli.md)\n- [Module Options](./reference/options.md)\n  - [stale](./reference/options/stale.md)\n- [Glossary](./reference/glossary.md)\n";
 
     fn pages() -> Vec<String> {
-        [
-            "options/lab.md",
-            "options/cluster.md",
-            "options/floes/index.md",
-            "options/floes/argocd.md",
-            "options/floes/kanidm.md",
-        ]
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
+        ["options/steps.md"].iter().map(|s| s.to_string()).collect()
     }
 
     #[test]
@@ -153,24 +133,25 @@ mod tests {
     }
 
     #[test]
-    fn floes_are_nested_one_level_deeper_than_the_top_three() {
+    fn the_step_schema_nests_under_the_options_page() {
         let block = nav_block(&pages());
-        assert_eq!(block[0], "  - [lab.*](./reference/options/lab.md)");
         assert_eq!(
-            block[2],
-            "  - [floes.*](./reference/options/floes/index.md)"
+            block,
+            ["  - [Plan Step Schema](./reference/options/steps.md)"]
         );
-        assert_eq!(
-            block[3],
-            "    - [argocd](./reference/options/floes/argocd.md)"
-        );
+    }
+
+    #[test]
+    fn an_unknown_page_is_not_navigated_to() {
+        assert_eq!(nav_line("options/floes/argocd.md"), None);
+        assert_eq!(nav_line("whatever.md"), None);
     }
 
     #[test]
     fn splice_replaces_the_whole_generated_subtree() {
         let out = splice_nav(SUMMARY, &pages());
         assert!(!out.contains("stale.md"), "the old subtree must be gone");
-        assert!(out.contains("    - [kanidm](./reference/options/floes/kanidm.md)"));
+        assert!(out.contains("  - [Plan Step Schema](./reference/options/steps.md)"));
     }
 
     #[test]
@@ -193,7 +174,7 @@ mod tests {
             )
         );
         assert!(
-            !out.contains("  - [Commands](./reference/cli/commands.md)\n  - [lab.*]"),
+            !out.contains("  - [Commands](./reference/cli/commands.md)\n  - [Plan Step Schema]"),
             "cli pages must not leak into the options subtree"
         );
     }

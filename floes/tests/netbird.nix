@@ -4,10 +4,14 @@
 # between workloads that fail apart rather than together, an OIDC client whose
 # audience has to match in three places, and three hostnames that have to be
 # inside the gateway's zone and agree with the certificate covering it.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "netbird";
   };
@@ -59,9 +63,6 @@ lib.runTests {
     expected = {
       relay = "«fromSecret»";
 
-      # A placeholder, not the value: the init container substitutes it. A
-      # credential reaching the ConfigMap would reach the manifest, the digest
-      # that pins it, and the Nix store.
       inConfig = "@RELAY_AUTH_SECRET@";
       secretRef = {
         name = "netbird-relay-auth";
@@ -420,8 +421,6 @@ lib.runTests {
       {
         sameCommand =
           (lib.head cronSpec.containers).command == (lib.head job.spec.template.spec.containers).command;
-        # A slow run against an unreachable management must not stack up
-        # behind itself.
         concurrency = cron.spec.concurrencyPolicy;
       };
     expected = {

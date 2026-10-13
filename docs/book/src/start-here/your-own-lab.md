@@ -36,13 +36,18 @@ floes/hello-world/default.nix      a worked example floe
 
         myFloes = cata.mkFloes (import ./floes);
 
-        lab = cata.mkLab {
-          modules = [ (import ./lab.nix { inherit myFloes; }) ];
-        };
+        lab = cata.mkLab (
+          (import ./lab.nix {
+            inherit myFloes;
+            inherit (cata) catallaxy floes;
+            inherit (nixpkgs) lib;
+          })
+          { name = "my-platform"; }
+        );
       in {
         legacyPackages = {
-          labs."my-platform" = lab.config.lab.out.cliConfig;
-          labPackages."my-platform" = lab.config.lab.out.package;
+          labs."my-platform" = lab.cliConfig;
+          labPackages."my-platform" = lab.package;
         };
       });
 }
@@ -66,19 +71,37 @@ lab as an ordinary argument. See [Write a Floe](../using/writing-a-floe.md).
 ## The lab
 
 ```nix
-{ myFloes }:
-{ lib, floes, ... }:
-{
-  lab.name = "my-platform";
-  lab.dns.zone = "example.test";
+{ lib, floes, catallaxy, myFloes }:
 
-  lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster { };
-    gateway-api = floes.gateway-api-crds { };
-    cert-manager = floes.cert-manager { };
-    gateway = floes.gateway { };
+catallaxy.mkLabFloe {
+  name = "my-platform";
+  summary = "One cluster, and the floes you wrote in it.";
 
-    hello = myFloes.hello-world { replicas = 2; };
+  inputs.zone.default = "example.test";
+
+  clusters = _: {
+    app = {
+      floe =
+        catallaxy.mkClusterFloe {
+          name = "app";
+          summary = "A platform behind a gateway, and your app.";
+          requires.claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+          provides.delivery = catallaxy.sigs.DELIVERY_POLICY;
+          exports.delivery = "kapp/delivery";
+
+          units = _: {
+            kapp = floes.kapp { };
+            gateway-api = floes.gateway-api-crds { };
+            cert-manager = floes.cert-manager { };
+            gateway = floes.gateway { };
+
+            hello = myFloes.hello-world { replicas = 2; };
+          };
+        }
+        { };
+
+      claim = floes.k3d-cluster { };
+    };
   };
 }
 ```
@@ -178,7 +201,7 @@ from
 The scaffold ships one:
 
 ```nix
-checks.lab-renders = lab.config.lab.out.package;
+checks.lab-renders = lab.package;
 ```
 
 Rendering the lab touches every option, so an unmet `requires`, a bad

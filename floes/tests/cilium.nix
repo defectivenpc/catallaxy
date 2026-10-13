@@ -2,10 +2,14 @@
 #
 # The floe is in two halves that must agree, so most of this is about the
 # agreement rather than about either half.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "cilium";
     inputs.chart = "/dev/null";
@@ -16,7 +20,7 @@ let
   # The same function the bootstrap manifest is templated from. Reached
   # directly rather than through the floe, because the point of the file is
   # that both halves read it.
-  mkValues = import ../cluster/cilium/values.nix { inherit lib; };
+  mkValues = import ../components/cilium/values.nix { inherit lib; };
 in
 lib.runTests {
 

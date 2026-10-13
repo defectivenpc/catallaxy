@@ -22,8 +22,6 @@ pub fn run(script: &Path, env: &[(&str, &OsStr)]) -> std::io::Result<std::proces
 
     for attempt in 1..=ATTEMPTS {
         match cmd.output() {
-            // The script was written moments ago and the kernel may still hold
-            // it open for writing.
             Err(e) if e.raw_os_error() == Some(ETXTBSY) && attempt < ATTEMPTS => {
                 std::thread::sleep(std::time::Duration::from_millis(10 * attempt as u64));
             }

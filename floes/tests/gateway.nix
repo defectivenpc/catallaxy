@@ -3,10 +3,14 @@
 # Two claims worth pinning: the listener a consumer attaches to follows
 # whether TLS is on, and the fan-in gives the gateway something it can check
 # that no consumer could — that a route's hostname is inside its zone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   plain = support.evalFloe {
     name = "gateway";
@@ -120,9 +124,6 @@ lib.runTests {
     };
     expected = {
       type = "NodePort";
-      # One value, in the distribution: the provisioner answers `edge.httpPort`
-      # from the same attrset, so what the proxy dials and what the gateway
-      # binds cannot drift.
       http = 30080;
       https = 30443;
     };

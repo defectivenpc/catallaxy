@@ -4,10 +4,14 @@
 # that it differs from k3d in exactly the ways a provisioner is allowed to,
 # and in no others: the same signature, the same kind, a different variant of
 # the config union, and three facts a member reads instead of inferring.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   r = support.evalFloe {
     name = "talos-cluster";
@@ -19,7 +23,7 @@ let
 
   descriptor = r.link.out."catallaxy.cluster".talos-cluster;
 
-  kinds = (import ../../lib/floe-catallaxy { inherit lib pkgs; }).kinds;
+  kinds = (import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; }).kinds;
 in
 lib.runTests {
 

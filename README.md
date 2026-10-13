@@ -16,12 +16,11 @@ manifests it emits, and the capabilities it needs, and the install order is
 _derived_ from those declarations rather than typed as a sequence of
 numbers.
 
-> **Built on RFC 0001.** The floe interface is
-> [RFC 0001](docs/rfcs/0001-floes.md) (`lib/floe-core/`), and the shipped
-> tree runs on it: ten example labs, 40 floes, host DNS, the registry, the
-> proxy and secrets. Two earlier implementations preceded this one; what
-> they cost is recorded in
-> [`docs/prior-implementations.md`](docs/prior-implementations.md).
+> **Built on floe.** The floe interface is a library in its own repository,
+> consumed through the `floes` flake input, and the shipped tree runs on it:
+> ten example labs, 58 floes, host DNS, the registry, the proxy and secrets.
+> Two earlier implementations preceded this one; what they cost is recorded
+> in [`docs/prior-implementations.md`](docs/prior-implementations.md).
 
 **[Documentation](https://defectivenpc.github.io/catallaxy)**
 
@@ -32,11 +31,15 @@ It declares the capabilities it needs by name, and the linker finds whatever
 provides them.
 
 ```nix
-lab.clusters.core.floes = {
-  cluster      = floes.k3d-cluster  { name = "core"; instanceName = "homelab-core"; };
-  cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-  gateway      = floes.gateway      { chart = "${cataCharts.traefik.chart}"; };
-  forgejo      = floes.forgejo      { chart = "${cataCharts.forgejo.chart}"; oidc = true; };
+core = mkClusterFloe {
+  name = "core";
+  requires.claim = sigs.KUBERNETES_CLUSTER;
+
+  units = _: {
+    cert-manager = floes.cert-manager { };
+    gateway      = floes.gateway { };
+    forgejo      = floes.forgejo { oidc = true; };
+  };
 };
 ```
 
@@ -85,14 +88,15 @@ Walkthrough:
 - **Failures that happen early.** Types, link errors naming both floes, lint
   over rendered manifests, and snapshot tests over the plan — none of which
   needs a cluster.
-- **40 floes.** CNI, gateway, PKI, identity, observability, databases,
+- **58 floes.** CNI, gateway, PKI, identity, observability, databases,
   registries, GitOps, backup, and yours built the same way, in your own
   repository. Each has a generated interface page under
-  [`docs/floes/`](docs/floes/) that a check keeps honest.
+  [`docs/generated/floes/`](docs/generated/floes/) that a check keeps
+  honest.
 - **Cloud clusters.** `doks` provisions a DigitalOcean cluster through
-  OpenTofu ([RFC 0003](docs/rfcs/0003-resources.md)); `talos-cluster` and
-  `external-cluster` cover bare metal and one you already have. A cluster
-  elsewhere is its own edge, so the lab does not assume it can route to it.
+  OpenTofu; `talos-cluster` and `external-cluster` cover bare metal and one
+  you already have. A cluster elsewhere is its own edge, so the lab does not
+  assume it can route to it.
 - **Secrets that stay out of the store.** A credential is minted in the
   cluster that needs it, and moving one between clusters goes through a lab
   secret store rather than through Nix.

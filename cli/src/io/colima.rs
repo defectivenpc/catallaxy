@@ -5,6 +5,14 @@ use console::style;
 
 use crate::io::process::run_streaming;
 
+/// What the operator set for their docker VM, or None where they said
+/// nothing. Here rather than in `config.rs` because reading the environment
+/// is I/O, and `io/` owns it so the rest of the tree stays testable without
+/// one.
+pub fn env_setting(key: &str) -> Option<String> {
+    std::env::var(key).ok()
+}
+
 pub fn is_macos() -> bool {
     cfg!(target_os = "macos")
 }

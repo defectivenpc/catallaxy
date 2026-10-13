@@ -13,22 +13,57 @@
 # previously checked by nobody.
 #
 # Diffed against `nix/floe-docs.nix` rather than recomputed, so this and
-# `refresh-floe-docs` read one store path instead of two pipelines that can
+# `refresh-docs` read one store path instead of two pipelines that can
 # disagree — the same construction `cliConfig-<lab>` uses.
 {
   lib,
   pkgs,
-  floeInterfaces,
+  referencePages,
   docDir,
   floeSet,
 }:
 
-lib.foldl' lib.mergeAttrs { } (
+{
+  # Every floe is rendered by some lab, so every page says what the floe does
+  # and not only what it declares.
+  #
+  # A page with nothing linked to read is honest, and it is also half a page:
+  # the declaration is the floe's promise and the emission is what keeping it
+  # looks like. `floe-gates` already refuses a floe with no isolation suite;
+  # this refuses one no lab places, which is the other way a floe goes
+  # unexercised.
+  #
+  # It fires on the grep rather than on a Nix-side list because the note is
+  # what a reader sees, and the note is what has been wrong: thirteen pages
+  # carried it about floes every lab in the tree renders, because `placement`
+  # looked only inside clusters and a host floe is a unit of the lab.
+  floe-pages-are-rendered =
+    pkgs.runCommand "floe-pages-are-rendered" { nativeBuildInputs = [ pkgs.gnugrep ]; }
+      ''
+        unrendered=$(grep -l 'No lab in this tree renders this floe' ${referencePages}/floes/*.md || true)
+
+        if [ -n "$unrendered" ]; then
+          echo "floe(s) no lab in this tree renders:" >&2
+          for f in $unrendered; do
+            echo "  $(basename "$f" .md)" >&2
+          done
+          echo "" >&2
+          echo "Each gets a declaration section and an honest note instead of an" >&2
+          echo "emitted interface, so half its page is missing. Place it in a lab —" >&2
+          echo "\`examples/labs/tests/every-floe.nix\` is the one built to hold" >&2
+          echo "whatever has nowhere else to go — or delete the floe." >&2
+          exit 1
+        fi
+
+        echo "${toString (lib.length (lib.attrNames floeSet))} floe pages, all rendered by some lab" > $out
+      '';
+}
+// lib.foldl' lib.mergeAttrs { } (
   map (name: {
     "floe-interface-${name}" =
       pkgs.runCommand "floe-interface-${name}" { nativeBuildInputs = [ pkgs.diffutils ]; }
         ''
-          if ! diff -u ${docDir}/${name}.md ${floeInterfaces}/${name}.md; then
+          if ! diff -u ${docDir}/${name}.md ${referencePages}/floes/${name}.md; then
             echo "" >&2
             echo "The interface of '${name}' changed." >&2
             echo "" >&2
@@ -40,7 +75,7 @@ lib.foldl' lib.mergeAttrs { } (
             echo "" >&2
             echo "If intended, refresh it and read the diff:" >&2
             echo "" >&2
-            echo "  nix run .#refresh-floe-docs" >&2
+            echo "  nix run .#refresh-docs" >&2
             exit 1
           fi
           touch $out

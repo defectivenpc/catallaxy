@@ -126,8 +126,6 @@ mod tests {
         let value = no_proxy.to_string_lossy();
         assert!(value.contains("127.0.0.1"));
         assert!(value.contains("localhost"));
-        // k3d writes the API server as https://0.0.0.0:<port>, so this one is
-        // load-bearing rather than defensive.
         assert!(value.contains("0.0.0.0"));
     }
 }

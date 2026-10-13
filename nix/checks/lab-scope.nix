@@ -1,21 +1,45 @@
-# The lab as a scope, from the lab's side.
+# What crosses between a cluster and the lab around it.
 #
-# `lib/tests/floe-core.nix` pins the mechanism — nearer-wins, sealing, no
-# ordering edge — against a fixture distribution. What it cannot pin is the
-# assembly, because floe-core has no idea what a cluster or a lab is: which
-# entries reach which cluster's scope, and what happens when two of them claim
-# one signature.
+# The floe library's own suite pins the mechanism — inclusion, sealing, a
+# parent filling a declared hole, an export naming a unit that is there. What
+# it cannot pin is the *assembly*, because the library has no idea what a
+# cluster or a lab is: that a cluster's claim is a unit beside it, that the
+# claim it gets is its own, and that the descriptor reaches elaboration.
 #
-# Every case here is invisible at runtime. A cluster that resolved the wrong
-# provider renders manifests that apply cleanly and point somewhere else.
+# Every case here is invisible at runtime. A cluster handed the wrong claim
+# renders manifests that apply cleanly and point at another cluster.
+#
+# This file used to be twice the size and most of it checked mechanisms that
+# are gone. It pinned a *scope* — entries offered per cluster, nearer-wins, a
+# lab-wide collision check — and then, after that went, the shape of an
+# offer: that `provides = [ "unit/promise" ]` named something real, that two
+# offers nobody read were fine, that a signature absent from a table of
+# crossable forms was refused. A cluster declares its own `requires`,
+# `provides` and `exports` now, so:
+#
+#   - an export naming a unit that is not there is the library's refusal,
+#     with the units listed (`floes/lib/refusals.nix`);
+#   - a declared hole nothing inside reads is the library's too, the other
+#     direction of the same check;
+#   - two clusters exporting one signature is an ordinary ambiguity, refused
+#     at the hole that could not choose rather than lab-wide;
+#   - which fields cross is the export signature the author chose, so there
+#     is no table left to be absent from. That check is genuinely gone, and
+#     `floes/tests/netbird-operator.nix` records what was lost with it.
+#
+# What is left is what only an assembly can be wrong about.
 {
   lib,
   pkgs,
   mkLab,
   labDefs,
+  catallaxy,
+  floes,
 }:
 
 let
+  inherit (import ../../lib/lower/cluster.nix { inherit lib catallaxy; }) placeCluster;
+
   # Ports and subnets differ per lab because two labs evaluated in one
   # expression are still two labs, and the host-port checks are real.
   mkScopeLab =
@@ -23,189 +47,207 @@ let
       name,
       subnet,
       dnsPort,
-      body,
+      units ? { },
+      clusters,
     }:
-    mkLab {
-      modules = [
-        (
-          { floes, ... }:
-          lib.recursiveUpdate
-            {
-              lab.name = name;
-              lab.network.subnet = subnet;
-              lab.dns.hostPort = dnsPort;
-            }
-            (body {
-              inherit floes;
-            })
-        )
-      ];
+    mkLab (
+      catallaxy.mkLabFloe
+        {
+          inherit name;
+          summary = "A lab assembled for one case of the lab/cluster boundary.";
+          units = _: units;
+          clusters = _: clusters;
+        }
+        {
+          inherit name subnet;
+
+          zone = "${name}.test";
+          zonePort = dnsPort;
+        }
+    );
+
+  # A cluster floe with nothing in it but what a case needs.
+  #
+  # `kapp` because every cluster must say how its content reaches it, and
+  # `gateway-api-crds` because something inside has to *read* the claim — a
+  # declared hole nothing reads is refused by the library, which is the other
+  # direction of the check that an export must name a unit that is there.
+  # Both are the cheapest floe that does its job.
+  mkTestCluster =
+    {
+      name,
+      units ? { },
+      requires ? { },
+      provides ? { },
+      exports ? { },
+    }:
+    catallaxy.mkClusterFloe {
+      name = "lab-scope-${name}";
+      summary = "A cluster assembled for one case of the lab/cluster boundary.";
+
+      requires = {
+        claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+      }
+      // requires;
+
+      provides = {
+        delivery = catallaxy.sigs.DELIVERY_POLICY;
+      }
+      // provides;
+
+      exports = {
+        delivery = "kapp/delivery";
+      }
+      // exports;
+
+      units =
+        _:
+        {
+          kapp = floes.kapp { };
+          gateway-api = floes.gateway-api-crds { };
+        }
+        // units;
     };
 
-  # ---- downward: the lab provides ----------------------------------------
+  refuses = l: !(builtins.tryEval (builtins.deepSeq l.cliConfig "evaluated")).success;
 
-  # `lab-dns` is the whole downward path in one floe: it requires `DNS_ZONE`,
-  # takes no inputs at all, and every field it renders came from the lab.
+  # ---- downward: a fact the lab holds reaches a cluster -------------------
+
+  # `coredns-zone` is the whole downward path in one floe: it requires
+  # `DNS_ZONE`, takes no inputs at all, and every field it renders came from
+  # the lab.
   dnsLab = mkScopeLab {
     name = "scope-dns";
     subnet = "172.31.0.0/16";
     dnsPort = 5373;
-    body =
-      { floes }:
-      {
-        lab.dns.zone = "scope-dns.test";
-        lab.clusters.core.floes = {
-          cluster = floes.k3d-cluster {
-            name = "core";
-            instanceName = "scope-dns-core";
-          };
-          lab-dns = floes.lab-dns { };
-        };
-      };
+    clusters.core = {
+      floe = mkTestCluster {
+        name = "dns";
+        requires.zone = catallaxy.sigs.DNS_ZONE;
+        units.coredns-zone = floes.coredns-zone { };
+      } { };
+
+      claim = floes.k3d-cluster { };
+    };
   };
 
   corednsCustom =
-    dnsLab.config.lab.clusters.core.out.bundles."lab-dns/coredns".resources.coredns-custom.data."lab.server";
+    dnsLab.clusters.core.out.bundles."coredns-zone/coredns".resources.coredns-custom.data."lab.server";
 
-  # ---- upward: a cluster offers ------------------------------------------
+  # ---- the claim is a unit beside its cluster ----------------------------
 
-  # `cert-manager` requires nothing but a cluster, and `trust-manager`
-  # consumes both of its provides. That is the pair an offer-shadowing bug
-  # shows up in: the cluster that offers is also the one that consumes.
-  offering = mkScopeLab {
-    name = "scope-offer";
+  # Two clusters, each leaving `KUBERNETES_CLUSTER` open, each with a claim of
+  # its own. Nothing a deployer writes says which claim answers which cluster:
+  # writing it under the cluster is the whole of saying so, and the submodule
+  # binds the hole. Get that wrong and both clusters resolve one descriptor —
+  # two kubeconfigs that are the same kubeconfig, which every render and every
+  # digest accepts.
+  twoClusters = mkScopeLab {
+    name = "scope-claims";
     subnet = "172.30.0.0/16";
     dnsPort = 5374;
-    body =
-      { floes }:
-      {
-        lab.clusters.core = {
-          floes = {
-            cluster = floes.k3d-cluster {
-              name = "core";
-              instanceName = "scope-offer-core";
-            };
-            cert-manager = floes.cert-manager { chart = "/dev/null"; };
-            trust-manager = floes.trust-manager { chart = "/dev/null"; };
-          };
-          provides = [ "cert-manager/issuance" ];
-        };
+    clusters = {
+      core = {
+        floe = mkTestCluster { name = "core"; } { };
+        claim = floes.k3d-cluster { podSubnet = "10.244.0.0/16"; };
       };
+
+      obs = {
+        floe = mkTestCluster { name = "obs"; } { };
+        claim = floes.k3d-cluster { podSubnet = "10.245.0.0/16"; };
+      };
+    };
   };
 
-  # Two clusters that both hold a `lab-zone`, varying only in which of them
-  # offers it upward.
-  #
-  # `lab-zone` is the vehicle because every field of `DNS_ZONE` travels, so
-  # the eager all-local refusal in `link.nix` cannot be what fires; and
-  # because nothing here consumes one, neither can the exactly-one check,
-  # which only runs where a hole resolves. Nothing else in these two clusters
-  # can fail at all — which is what makes `refuses` mean the collision here.
-  offeringZoneFrom =
-    offerers:
-    mkScopeLab {
-      name = "scope-two";
-      subnet = "172.27.0.0/16";
-      dnsPort = 5375;
-      body =
-        { floes }:
-        {
-          lab.clusters = lib.genAttrs [ "core" "obs" ] (clusterName: {
-            floes = {
-              cluster = floes.k3d-cluster {
-                name = clusterName;
-                instanceName = "scope-two-${clusterName}";
-              };
-              zone = floes.lab-zone {
-                zone = "scope-two.test";
-                server = "172.27.0.1";
-              };
-            };
-            provides = lib.optional (lib.elem clusterName offerers) "zone/zone";
-          });
-        };
-    };
+  claimOf = c: lib.head (lib.attrValues twoClusters.clusters.${c}.out.cluster);
 
-  # One cluster, one floe, nothing else that could fail — so `tryEval`
-  # catching *something* can only be the offer.
-  offeringOnly =
-    {
-      subnet,
-      dnsPort,
-      name,
-    }:
-    spec:
-    mkScopeLab {
-      inherit name subnet dnsPort;
-      body =
-        { floes }:
-        {
-          lab.clusters.core = {
-            floes.cluster = floes.k3d-cluster {
-              name = "core";
-              instanceName = "${name}-core";
-            };
-            provides = [ spec ];
-          };
+  # A cluster floe whose claim is not open has nothing for the claim written
+  # beside it to answer, and the submodule says so by name rather than letting
+  # the claim become a unit nothing reads.
+  sealedClaim = mkScopeLab {
+    name = "scope-sealed";
+    subnet = "172.29.0.0/16";
+    dnsPort = 5375;
+    clusters.core = {
+      floe = catallaxy.mkClusterFloe {
+        name = "lab-scope-sealed";
+        summary = "A cluster that creates its own claim, which a lab cannot place.";
+        provides.delivery = catallaxy.sigs.DELIVERY_POLICY;
+        exports.delivery = "kapp/delivery";
+        units = _: {
+          kapp = floes.kapp { };
+          cluster = floes.k3d-cluster { };
         };
-    };
+      } { };
 
-  offeringUnit = offeringOnly {
+      claim = floes.k3d-cluster { };
+    };
+  };
+
+  # ---- upward: what a cluster reads of a sibling -------------------------
+
+  # A cluster that reads something another cluster holds has to declare the
+  # hole, and the refusal names the signature and the inclusion. This is the
+  # case that caught `homelab.mesh` and `tests/secret-sharing` independently
+  # while they were being written — under the old mechanism neither
+  # declaration existed anywhere, and resolution found the value by searching.
+  undeclaredRead = mkScopeLab {
     name = "scope-undeclared";
-    subnet = "172.26.0.0/16";
+    subnet = "172.28.0.0/16";
     dnsPort = 5376;
+    clusters = {
+      core = {
+        floe = mkTestCluster {
+          name = "mesh-holder";
+          units.netbird = floes.netbird { };
+          provides.mesh = catallaxy.sigs.MESH_NETWORK_SHARED;
+          exports.mesh = "netbird/mesh";
+        } { };
+
+        claim = floes.k3d-cluster { podSubnet = "10.244.0.0/16"; };
+      };
+
+      obs = {
+        floe = mkTestCluster {
+          name = "mesh-reader";
+          units.netbird-operator = floes.netbird-operator { };
+        } { };
+
+        claim = floes.k3d-cluster { podSubnet = "10.245.0.0/16"; };
+      };
+    };
   };
 
-  # A cluster with a cert-manager, offering one promise or the other. One of
-  # the two can cross and one cannot, which is the case the offer surface is
-  # per promise for.
-  offeringCertManager =
-    spec:
-    mkScopeLab {
-      name = "scope-cm";
-      subnet = "172.25.0.0/16";
-      dnsPort = 5377;
-      body =
-        { floes }:
-        {
-          lab.clusters.core = {
-            floes = {
-              cluster = floes.k3d-cluster {
-                name = "core";
-                instanceName = "scope-cm-core";
-              };
-              cert-manager = floes.cert-manager { chart = "/dev/null"; };
-            };
-            provides = [ spec ];
-          };
-        };
-    };
-
-  refuses = l: !(builtins.tryEval (builtins.deepSeq l.config.lab.out.cliConfig "evaluated")).success;
-
-  # ---- the shipped lab that actually crosses ------------------------------
+  # ---- the shipped lab that actually crosses -----------------------------
   #
-  # Everything above is a fixture bent one way at a time. This is `homelab.mesh`
-  # as it ships: `core` runs netbird and offers `netbird/mesh`, `obs` runs an
-  # operator and nothing else of the mesh.
-  mesh = labDefs."homelab.mesh".config.lab.clusters;
+  # Everything above is a fixture bent one way at a time. This is
+  # `homelab.mesh` as it ships: `core` runs netbird and exports the mesh in
+  # its shared form, `obs` declares `requires.mesh` and runs an operator.
+  mesh = labDefs."homelab.mesh".clusters;
 
   operatorValues =
     cluster: mesh.${cluster}.out.bundles."netbird-operator/operator".helmCharts.netbird-operator.values;
 
   results = lib.runTests {
 
-    # ---- downward --------------------------------------------------------
+    # Placement re-instantiates a claim to fill in what only placement knows,
+    # and `instantiate` returns a fresh instance — so a binding a deployer
+    # wrote has to be carried over by hand. Dropped, it is an unwired hole and
+    # no word about why: no lab in this tree binds a claim, so nothing else
+    # here would fail.
+    testPlacementKeepsAClaimsBindings = {
+      expr =
+        (placeCluster {
+          clusterName = "core";
+          labName = "scope-bindings";
+          floe = mkTestCluster { name = "bindings"; } { };
+          claim = (floes.external-cluster { context = "x"; }).bind { labStore = "somewhere"; };
+        }).claim.bindings;
+      expected = {
+        labStore = "somewhere";
+      };
+    };
 
-    # The appliance, end to end: `lab.dns.zone` and `lab.dns.port` are written
-    # in one place, the lab builds `lab-zone` out of the merged result, and a
-    # floe in a cluster reads all three fields back. Nothing in the cluster
-    # was handed a zone.
-    #
-    # The port is what makes this more than a rename. `lab.dns.port` defaults
-    # to `hostPort`, so a lab that moves its DNS off 5354 moves what a pod
-    # forwards to as well — and `every-floe` pointed external-dns at 53 for
-    # exactly as long as those were two hand-passed arguments.
     testAClusterResolvesTheLabsZone = {
       expr = corednsCustom;
       expected = ''
@@ -217,84 +259,34 @@ let
       '';
     };
 
-    # ---- upward ----------------------------------------------------------
-
-    # A cluster that offers a unit still resolves against it itself. Nearer
-    # wins, so the local unit answers before the scope is consulted at all.
-    #
-    # Not hypothetical. The flat threading this replaced injected every export
-    # into every cluster including the exporter, where it *competed* with the
-    # local one — so a cluster that offered its gateway could then no longer
-    # route through it, for "two providers".
-    #
-    # Self-exclusion in `scopeFor` is a separate guarantee and is not what
-    # this pins: it breaks the evaluation cycle a cluster reading its own link
-    # result would form, which shows up as infinite recursion rather than as a
-    # value a test can compare.
-    testOfferingAUnitDoesNotDisplaceItAtHome = {
-      expr = lib.attrNames offering.config.lab.clusters.core.link.wiring.scope.trust-manager;
-      expected = [ ];
+    testEachClusterResolvesItsOwnClaim = {
+      expr = {
+        core = (claimOf "core").network.podSubnet;
+        obs = (claimOf "obs").network.podSubnet;
+      };
+      expected = {
+        core = "10.244.0.0/16";
+        obs = "10.245.0.0/16";
+      };
     };
 
-    # The same claim at the value. `X509_WEBHOOK` is entirely local, so this
-    # namespace reads only because the resolution stayed inside one link — had
-    # it crossed, this would be the throw `sealedScope` puts there.
-    testTheLocalProvideIsStillReadable = {
-      expr = offering.config.lab.clusters.core.link.provides.cert-manager.webhook.namespace;
-      expected = "cert-manager";
+    testTheClaimsDescriptorReachesTheCluster = {
+      expr = lib.length (lib.attrValues twoClusters.clusters.core.out.cluster);
+      expected = 1;
     };
 
-    # ---- the refusals ----------------------------------------------------
-
-    # A lab scope holds one provider per signature, so two clusters offering
-    # one leaves whichever a third resolved arbitrary. Caught once here rather
-    # than N-1 times as each other cluster fails to choose.
-    testTwoClustersOfferingOneSignatureIsRefused = {
-      expr = refuses (offeringZoneFrom [
-        "core"
-        "obs"
-      ]);
+    testAClusterThatSealsItsClaimIsRefused = {
+      expr = refuses sealedClaim;
       expected = true;
     };
 
-    # The paired positive, and the whole reason the case above can be read as
-    # a collision: the same two clusters, the same floe in both, one offer.
-    testOneOfferOfTheSameSignatureIsFine = {
-      expr = refuses (offeringZoneFrom [ "core" ]);
-      expected = false;
+    testReadingASiblingUndeclaredIsRefused = {
+      expr = refuses undeclaredRead;
+      expected = true;
     };
 
-    # A name resolving to nothing, in each of the three ways it can. Refused
-    # rather than silently contributing no entry, which is what a typo would
-    # otherwise do.
-    testAnOfferThatNamesNothingIsRefused = {
-      expr = map (spec: refuses (offeringUnit spec)) [
-        "cluster" # no promise named
-        "nope/it" # no such unit
-        "cluster/nope" # unit, no such promise
-      ];
-      expected = [
-        true
-        true
-        true
-      ];
-    };
-
-    # `X509_ISSUANCE` is a mix — `publicIssuer` is true wherever it is asked —
-    # so the promise crosses even though most of its fields do not.
-    testAPromiseWithSomethingPortableCanBeOffered = {
-      expr = refuses (offeringCertManager "cert-manager/issuance");
-      expected = false;
-    };
-
-    # `X509_WEBHOOK` is entirely local. Refused where it is offered, which is
-    # where a lab author can do something about it — not in whichever cluster
-    # first resolved a hole against it.
-    #
-    # The pair is the point of naming promises rather than units: one floe,
-    # one offerable and one not.
-    testAPromiseThatCannotTravelIsRefused = {
-      expr = refuses (offeringCertManager "cert-manager/webhook");
+    testTheShippedLabCrossesTheMesh = {
+      expr = (operatorValues "obs").managementURL == (operatorValues "core").managementURL;
       expected = true;
     };
   };

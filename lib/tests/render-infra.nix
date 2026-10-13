@@ -1,4 +1,4 @@
-# Stacks and what they render — RFC 0003 §§5, 6, 10.
+# Stacks and what they render.
 #
 # Most of the resources category is text: which stack a resource lands in,
 # what the reference to another resource becomes, which remote states get
@@ -16,11 +16,10 @@ let
   ref = unit: resource: output: {
     __deferred = true;
     source = unit;
-    path = [
-      resource
-      output
-    ];
-    phase = "post-apply";
+    retrieval = "catallaxy.resourceOutput";
+    ref = {
+      inherit resource output;
+    };
   };
 
   providers = {
@@ -67,7 +66,6 @@ let
         type = "random_password";
         inputs = {
           length = 32;
-          # Across units as well as across stacks.
           keepers.zone = ref "dns" "zone" "id";
         };
         outputs = [ "result" ];
@@ -294,8 +292,11 @@ lib.runTests {
       content = {
         __deferred = true;
         source = "u";
-        path = [ "zone" ];
-        phase = "post-apply";
+        retrieval = "catallaxy.resourceOutput";
+        ref = {
+          resource = "zone";
+          output = "id";
+        };
       };
     });
     expected = true;

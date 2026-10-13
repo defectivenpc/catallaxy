@@ -10,14 +10,8 @@ let
     chart = T.str;
     releaseName = T.str;
     namespace = T.k8sName;
-    values = T.attrsOf T.any;
+    values = T.helmValues;
 
-    # `<hook name> -> what does the job instead`. Install order here comes
-    # from the wave graph, so a chart's lifecycle hooks are dropped; saying so
-    # is what keeps the drop a decision rather than an accident. Keyed by name
-    # because a hook is a Job and its RBAC sharing one. Test hooks are dropped
-    # without asking; `lib/render/manifest.nix` refuses any other undeclared
-    # one.
     replacedHooks = T.attrsOf T.str;
   };
 
@@ -97,7 +91,6 @@ let
   };
 
   bundleSchema = T.record {
-    # install — RFC 0002 §3's three shapes
     resources = T.attrsOf T.any;
     helmCharts = T.attrsOf helmChartSchema;
     yamls = T.listOf T.str;
@@ -105,8 +98,6 @@ let
     createNamespaces = T.listOf T.str;
 
     crds = T.listOf T.str;
-
-    # ---- Secrets, as `<namespace>/<name>` -------------------------------
 
     secrets = T.listOf T.str;
 
@@ -149,8 +140,6 @@ let
 
     imagesComplete = T.bool;
 
-    # Folded to the cluster with the floe's name prefixed, so a failure names
-    # the floe that objected rather than landing in one flat list.
     assertions = T.listOf assertionSchema;
     warnings = T.listOf T.str;
 

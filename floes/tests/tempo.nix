@@ -1,8 +1,12 @@
 # tempo, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "tempo";
     inputs.chart = "/dev/null";

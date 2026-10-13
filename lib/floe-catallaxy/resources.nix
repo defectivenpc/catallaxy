@@ -1,4 +1,4 @@
-# The `resources` delivery category — RFC 0003.
+# The `resources` delivery category.
 { lib, floe }:
 
 let
@@ -10,13 +10,9 @@ let
   ];
 
   resourceSchema = T.record {
-    # Which provider reconciles it, and the type in that provider's
-    # vocabulary. Both are registry names, not tool names.
     provider = T.str;
     type = T.str;
 
-    # Its configuration. May hold deferred tokens, which is what makes an
-    # ordering edge between stacks — see `lib/render/infra.nix`.
     inputs = T.attrsOf T.any;
 
     outputs = T.listOf T.str;
@@ -25,11 +21,9 @@ let
   };
 
   publicationSchema = T.record {
-    # The resource, and which of its declared outputs.
     resource = T.str;
     output = T.str;
 
-    # Where it lands: an entry in `lab.secrets.stores`, and a key in it.
     store = T.str;
     key = T.str;
   };
@@ -37,15 +31,17 @@ in
 {
   inherit phases;
 
-  resources = floe.mkOutputKind {
+  resources = floe.mkSig {
     name = "catallaxy.resources";
+    canonicalName = "resources";
     description = "Infrastructure declared for a state-based tool to create, for the case no cluster can own it.";
-    schema = T.attrsOf resourceSchema;
+    fields = T.attrsOf resourceSchema;
   };
 
-  publications = floe.mkOutputKind {
+  publications = floe.mkSig {
     name = "catallaxy.publications";
+    canonicalName = "publications";
     description = "Where a resource's output lands once it exists, as an address in a lab secret store.";
-    schema = T.attrsOf publicationSchema;
+    fields = T.attrsOf publicationSchema;
   };
 }

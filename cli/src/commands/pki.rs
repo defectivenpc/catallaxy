@@ -248,9 +248,6 @@ fn init(ctx: &CataContext, cluster_name: &str, force: bool) -> Result<()> {
     println!("  Algorithm: {algorithm}");
     println!("  Validity:  {validity_str} ({validity_days} days)");
 
-    // The same mint the lab's own CA goes through. This used to repeat the
-    // rcgen parameters inline and the two copies had drifted: this one left
-    // out DigitalSignature, so a CA depended on which command made it.
     let ca = crate::io::pki::self_signed_ca(cn, algorithm, validity_days)?;
 
     let dir = pki_dir(cluster_name);

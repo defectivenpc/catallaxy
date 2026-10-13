@@ -58,7 +58,6 @@ pub async fn execute(
         lab: &lab,
         lab_package: &lab_package,
         secrets_cache,
-        strategy: lab.cd.strategy,
         bootstrap: lab.cd.bootstrap,
         dry_run,
         allow_infra,

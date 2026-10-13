@@ -1,23 +1,35 @@
-# The local environment of the minimal lab.
+# The minimal lab as it runs by default: audited, and with Pod Security on.
 #
-# An environment is the same lab with different settings. Everything the lab
-# declares with `mkDefault` is what an environment may change.
-{ ... }:
+# An environment is an instantiation, so this is `lab.nix`'s defaults with two
+# of its inputs answered.
 {
-  lab.name = "minimal.local";
+  lab,
+  lib,
+  floes,
+  catallaxy,
+  ...
+}:
 
-  # The lab that proves PSA labelling works, because it is the fastest one
-  # that runs. `enforce` is what the API server refuses below; `warn` is
-  # left at the default `restricted`, so the run reports what raising it
-  # would cost without refusing anything.
-  lab.clusters.app.security.podSecurity.enable = true;
+let
+  clusters = import ../clusters.nix { inherit catallaxy floes lib; };
+in
+lab {
+  name = "minimal.local";
 
-  # podinfo satisfies `restricted`, so it is held to it. cert-manager and
-  # traefik are not, and stay at the cluster's `baseline`.
-  lab.clusters.app.security.podSecurity.override.podinfo = "restricted";
+  # The one lab that enforces Pod Security Admission, so the labels are
+  # applied somewhere rather than only rendered. `podinfo` is held to
+  # `restricted` because it already satisfies it, which is the up direction of
+  # the override reading both ways.
+  #
+  # Re-instantiated rather than set beside the cluster, because what a cluster
+  # asks of every namespace in it is the cluster's own declaration — the same
+  # reason the claim below is an instantiation and not a flag.
+  cluster = clusters.app {
+    podSecurity = {
+      enable = true;
+      override.podinfo = "restricted";
+    };
+  };
 
-  # The same lab proves the audit log, for the same reason: it is the one
-  # that runs fastest. `Metadata` is the level that does not write Secret
-  # contents to disk.
-  lab.clusters.app.security.auditLogging.enable = true;
+  claim = floes.k3d-cluster { auditLogging.enable = true; };
 }

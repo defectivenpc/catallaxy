@@ -20,9 +20,6 @@ pub async fn run(
     }
 
     let lab_name = ctx.resolve_lab_name(name.as_deref())?;
-    // One parse. This read the same document twice — once untyped, to reach
-    // `raw["verify"]`, and once into `LabSpec` — because `LabSpec.verify` was
-    // itself a `serde_json::Value`.
     let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
     let config = lab.verify.clone();
 

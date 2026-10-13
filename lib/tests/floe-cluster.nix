@@ -9,16 +9,16 @@
 #   3. install order is derived, including the edge between two floes that
 #      neither of them wrote
 #   4. the errors a wrong composition produces
-{ lib }:
+{ lib, floeCore }:
 
 let
   # The distribution's prelude, not core's: `component.nix` is a
   # distribution module and speaks its domain's types.
-  floe = import ../floe-catallaxy/prelude.nix { inherit lib; };
+  floe = import ../floe-catallaxy/prelude.nix { inherit lib floeCore; };
   kinds = import ../floe-catallaxy/component.nix { inherit lib floe; };
   sigs = import ../floe-catallaxy/sigs.nix { inherit floe; };
-  policies = import ../floe-catallaxy/policies.nix { inherit lib; };
-  elaborate = import ../floe-catallaxy/elaborate.nix { inherit lib; };
+  policies = import ../floe-catallaxy/policies.nix { inherit lib sigs; };
+  elaborate = import ../floe-catallaxy/elaborate.nix { inherit lib floe; };
 
   inherit (kinds)
     mkBundle
@@ -41,10 +41,11 @@ let
     Secret = true;
   };
 
-  clusterKind = floe.mkOutputKind {
+  clusterKind = floe.mkSig {
     name = "catallaxy.cluster";
+    canonicalName = "clusterDescriptor";
     description = "Fixture kind: a permissive stand-in for the real cluster descriptor.";
-    schema = floe.T.attrsOf floe.T.any;
+    fields = floe.T.attrsOf floe.T.any;
   };
 
   # ---- fixtures ----------------------------------------------------------
@@ -53,7 +54,7 @@ let
     name = "k3d";
     summary = "Fixture floe for a test suite.";
     provides.cluster = sigs.KUBERNETES_CLUSTER;
-    out.cluster = clusterKind;
+    out.clusterDescriptor = clusterKind;
     modules = [
       {
         config.floe.provides.cluster = {
@@ -62,8 +63,9 @@ let
           context = "k3d-app";
           podSubnet = "10.244.0.0/16";
           serviceSubnet = "10.96.0.0/12";
+          assignsLoadBalancers = true;
         };
-        config.floe.out.cluster.name = "app";
+        config.floe.out.clusterDescriptor.name = "app";
       }
     ];
   };
@@ -217,12 +219,60 @@ let
     floe.link {
       inherit units;
       policies = [
-        policies.oneCluster
         policies.componentsTargetTheCluster
         policies.needsNameSiblings
         policies.backsNameOwnBundles
+        policies.promisedHostsAreRouted
       ];
     };
+
+  # ---- promised hosts ----------------------------------------------------
+  #
+  # A signature carrying an address, which is how a floe promises a hostname
+  # to whatever reads its provide.
+  PROMISE = floe.mkSig {
+    name = "fixture.promise";
+    canonicalName = "promise";
+    description = "Fixture: a provide carrying a URL.";
+    fields = {
+      url = floe.T.str;
+    };
+  };
+
+  # Promises a host in the gateway's zone and renders a bundle with no route
+  # to it. Whatever reads this reaches the lab's ingress and is answered 503,
+  # by a component that is running and healthy.
+  promiserFloe = floe.mkFloe {
+    name = "promiser";
+    summary = "Fixture floe for a test suite.";
+    requires.cluster = sigs.KUBERNETES_CLUSTER;
+    requires.gateway = sigs.API_GATEWAY;
+    provides.promise = PROMISE;
+    out.component = kinds.component;
+    modules = [
+      (
+        { config, ... }:
+        {
+          config.floe.provides.promise.url = "https://orphan.${config.floe.requires.gateway.baseDomain}";
+          config.floe.out.component = mkComponent {
+            bundles.app = mkBundle { createNamespaces = [ "promiser" ]; };
+          };
+        }
+      )
+    ];
+  };
+
+  # The same promise, by a unit that installs nothing. It is carrying a value
+  # from somewhere else, so the thing that answers for the host runs there and
+  # this cluster is the wrong one to ask.
+  carrierFloe = floe.mkFloe {
+    name = "carrier";
+    summary = "Fixture floe for a test suite.";
+    provides.promise = PROMISE;
+    body = _: {
+      provides.promise.url = "https://elsewhere.lab.test";
+    };
+  };
 
   fullLink = linkOf {
     k3d = clusterFloe.instantiate { };
@@ -237,6 +287,24 @@ let
   };
 
   waveNames = map (w: map (b: b.name) w) cluster.waves;
+
+  # ---- promised-host links -----------------------------------------------
+
+  withPromiser = linkOf {
+    k3d = clusterFloe.instantiate { };
+    crds = crdsFloe.instantiate { };
+    gateway = gatewayFloe.instantiate { };
+    svc = serviceFloe.instantiate { };
+    promiser = promiserFloe.instantiate { };
+  };
+
+  withCarrier = linkOf {
+    k3d = clusterFloe.instantiate { };
+    crds = crdsFloe.instantiate { };
+    gateway = gatewayFloe.instantiate { };
+    svc = serviceFloe.instantiate { };
+    carrier = carrierFloe.instantiate { };
+  };
 
   # ---- monoid fixtures ---------------------------------------------------
 
@@ -254,31 +322,6 @@ let
   # ---- failure fixtures --------------------------------------------------
 
   fails = expr: !(builtins.tryEval (builtins.deepSeq expr "evaluated")).success;
-
-  # ---- preset fixtures -----------------------------------------------------
-  #
-  # Two trivial members, one providing the signature the preset declares.
-  # Enough to exercise omit, overrides and the declaration check.
-  presetLib = import ../floe-catallaxy/preset.nix { inherit lib floe; };
-
-  echoFloe =
-    n:
-    floe.mkFloe {
-      name = n;
-      summary = "Fixture floe for a test suite.";
-      provides.store = sigs.SECRET_STORE;
-      modules = [ ];
-    };
-
-  samplePreset = presetLib.mkPreset {
-    name = "sample";
-    summary = "Fixture preset for a test suite.";
-    provides.store = sigs.SECRET_STORE;
-    members = _: {
-      one = (echoFloe "one").instantiate { };
-      two = (echoFloe "two").instantiate { };
-    };
-  };
 
   noProvider =
     fails
@@ -326,8 +369,6 @@ let
             kind = "ConfigMap";
             metadata.name = "c";
           };
-          # A `condition` probe needs `resource`. Without it the wait renders
-          # with an empty argument and times out instead of failing.
           ready = {
             kind = "condition";
             condition = "Available";
@@ -371,7 +412,18 @@ let
       namespace = "app";
     };
     spec.template.spec.containers = [
-      { env = [ { valueFrom.secretKeyRef.name = secret; } ]; }
+      {
+        name = "w";
+        env = [
+          {
+            name = "FROM_SECRET";
+            valueFrom.secretKeyRef = {
+              name = secret;
+              key = "value";
+            };
+          }
+        ];
+      }
     ];
   };
 
@@ -450,50 +502,28 @@ let
 in
 lib.runTests {
 
-  # ---- presets -------------------------------------------------------------
+  # ---- promised hosts ----------------------------------------------------
   #
-  # A preset is not a floe instance. These cover the parts a closure could not
-  # have had: a declaration checked against the members, and refusals naming
-  # what was wrong.
+  # The policy had no test at all, so a refactor of it was a refactor of
+  # something nothing exercised. Both directions, because the interesting half
+  # is the one that must *not* fire.
 
-  testAPresetExpandsToItsMembers = {
-    expr = lib.attrNames (samplePreset { }).members;
-    expected = [
-      "one"
-      "two"
-    ];
-  };
-
-  testOmitRemovesAMember = {
-    expr = lib.attrNames (samplePreset { omit = [ "two" ]; }).members;
-    expected = [ "one" ];
-  };
-
-  # A typo that silently omits nothing is how a preset becomes something
-  # people fork instead of parameterise.
-  testOmittingSomethingItDoesNotHaveIsRefused = {
-    expr = fails (samplePreset { omit = [ "three" ]; }).members;
+  # A unit that installs something and promises a host in the gateway's zone
+  # owes a route to it. Nothing reports this at runtime: the component is
+  # running and healthy, and the ingress answers 503 for a name it has no
+  # backend for.
+  testAPromisedHostWithNoRouteIsRefused = {
+    expr = fails withPromiser.graph;
     expected = true;
   };
 
-  testOverridingSomethingItDoesNotHaveIsRefused = {
-    expr = fails (samplePreset { overrides.three = (echoFloe "three").instantiate { }; }).members;
-    expected = true;
-  };
-
-  # The declaration is the whole reason a preset is not a closure, so it is
-  # checked rather than trusted: omit every member providing it and
-  # instantiation refuses.
-  testAProvideNoMemberMakesIsRefused = {
-    expr =
-      fails
-        (samplePreset {
-          omit = [
-            "one"
-            "two"
-          ];
-        }).members;
-    expected = true;
+  # The same promise from a unit that installs nothing is fine. It is carrying
+  # a value from wherever the thing actually runs, so this cluster is the
+  # wrong one to ask for the route — which is what the policy derives rather
+  # than being handed a list of such units.
+  testACarriedPromiseIsNotThisClustersToRoute = {
+    expr = fails withCarrier.graph;
+    expected = false;
   };
 
   # ---- 1. the join is a monoid -------------------------------------------
@@ -587,8 +617,6 @@ lib.runTests {
           }
         ];
       };
-      # No policies: `oneCluster` would want a cluster floe, and this is
-      # about the name the join produces, not about a well-formed cluster.
       linked = floe.link {
         units.velero = solo.instantiate { };
         policies = [ ];
@@ -777,6 +805,78 @@ lib.runTests {
 
   # A registry may carry a port and a tag may not, so the split is on the
   # rightmost colon rather than the first.
+  # ---- Behaviour obligations ---------------------------------------------
+  #
+  # Compatibility settles a provider's shape; nothing settles that what
+  # answers `X509_ISSUANCE` signs anything. A signature names the runtime
+  # checks a provider owes, discharged by the `verify.<name>` a floe already
+  # declares, and the policy refuses a provider that declared none.
+  #
+  # Both directions, because a conformance check nobody has seen fail is a
+  # check that the code still runs.
+  testAProviderMissingItsObligationIsRefused = {
+    expr =
+      let
+        result = {
+          providersOf =
+            sigName:
+            lib.optional (sigName == "X509_ISSUANCE") {
+              instName = "pretender";
+              provideName = "issuance";
+            };
+          out."catallaxy.component".pretender = {
+            bundles.only = {
+              verify = { };
+            };
+          };
+        };
+      in
+      lib.length (policies.providersVerifyWhatTheyPromise result);
+    expected = 1;
+  };
+
+  testAProviderDeclaringItPasses = {
+    expr =
+      let
+        result = {
+          providersOf =
+            sigName:
+            lib.optional (sigName == "X509_ISSUANCE") {
+              instName = "honest";
+              provideName = "issuance";
+            };
+          out."catallaxy.component".honest = {
+            bundles.only = {
+              verify.issuers-ready = { };
+            };
+          };
+        };
+      in
+      policies.providersVerifyWhatTheyPromise result;
+    expected = [ ];
+  };
+
+  # A unit that installs nothing cannot be asked to verify anything: a
+  # lab-scope floe, a provisioner, or a unit carrying a value in from another
+  # cluster emits no component. Skipped rather than excused, so no marking on
+  # a signature is needed to say so.
+  testAUnitWithNoComponentOwesNothing = {
+    expr =
+      let
+        result = {
+          providersOf =
+            sigName:
+            lib.optional (sigName == "X509_ISSUANCE") {
+              instName = "from-outside/core/issuance";
+              provideName = "issuance";
+            };
+          out."catallaxy.component" = { };
+        };
+      in
+      policies.providersVerifyWhatTheyPromise result;
+    expected = [ ];
+  };
+
   testARegistryPortIsNotMistakenForATag = {
     expr = (kinds.mkImage "localhost:5000/app:v1").registry;
     expected = "localhost:5000";

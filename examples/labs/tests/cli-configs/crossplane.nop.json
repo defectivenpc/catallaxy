@@ -1,116 +1,95 @@
 {
   "cd": {
     "bootstrap": "kubectl-ssa",
-    "git": {},
-    "strategy": "kapp"
+    "git": {}
   },
   "clusterNames": [
     "control"
   ],
   "clusters": {
     "control": {
-      "deploy": {
-        "strategy": "kapp"
-      },
-      "edge": {
-        "backend": "k3d-crossplane-nop-control-server-0",
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "proxy"
-      },
-      "exposedHosts": [],
-      "floes": {
-        "cluster": {
-          "enable": true
+      "claim": {
+        "context": "k3d-crossplane-nop-control",
+        "instanceName": "crossplane-nop-control",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
         },
-        "crossplane": {
-          "enable": true
-        },
-        "provider": {
-          "enable": true
-        },
-        "workload": {
-          "enable": true
+        "name": "control",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
         }
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "content": {
+        "exposedHosts": [],
+        "namespaces": [
+          "crossplane-system"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-control",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "crossplane/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "crossplane/crossplane",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "provider/provider",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "workload/nop",
+              "resourceCount": 1
+            }
+          ]
+        ]
+      },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "k3d-crossplane-nop-control",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "k3s",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "crossplane.nop",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "crossplane/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "crossplane-nop-control",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "crossplane.nop",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": "registry",
+            "ports": []
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "crossplane/crossplane",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "provider/provider",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "workload/nop",
-            "resourceCount": 1
-          }
-        ]
-      ],
-      "name": "control",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.96.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "k3d",
-      "provisionerConfig": {
-        "k3d": {
-          "autoDeployManifests": [],
-          "clusterName": "crossplane-nop-control",
-          "extraApiServerArgs": [],
-          "extraK3sArgs": [],
-          "extraVolumes": [],
-          "image": "rancher/k3s:v1.31.4-k3s1",
-          "network": "crossplane.nop",
-          "noFlannel": false,
-          "noLocalStorage": false,
-          "noServiceLB": false,
-          "noTraefik": true,
-          "ports": []
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     }
   },
@@ -118,11 +97,6 @@
   "dnsInfo": null,
   "infraPublications": [],
   "labName": "crossplane.nop",
-  "labNamespaces": {
-    "control": [
-      "crossplane-system"
-    ]
-  },
   "labOwnedRegistries": [],
   "network": {
     "dockerSubnet": "172.26.0.0/20",
@@ -140,9 +114,7 @@
     "xpkg.upbound.io",
     "oci.external-secrets.io"
   ],
-  "runtimeContexts": {
-    "control": "k3d-crossplane-nop-control"
-  },
+  "routedHosts": {},
   "secrets": {
     "envFile": null,
     "hostProjections": [],
@@ -151,9 +123,13 @@
   },
   "services": {
     "registry": {
+      "command": [],
       "container": "catallaxy-crossplane.nop-registry",
       "description": "Zot OCI registry (image cache)",
+      "dnsContainers": [],
+      "extraMounts": [],
       "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "networks": [],
       "ports": [
         "5160:5000"
       ],

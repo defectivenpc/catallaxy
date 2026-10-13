@@ -4,10 +4,14 @@
 # `catallaxy.cluster` rather than a component. What is worth pinning is the
 # seam it sits on: two names that must not be confused, one context computed
 # once, and the fields it deliberately leaves for the lab to fill.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   r = support.evalFloe {
     name = "k3d-cluster";
@@ -53,8 +57,7 @@ lib.runTests {
   };
 
   # The ranges reach members through the signature rather than an ambient
-  # cluster namespace, and they are chosen rather than discovered (RFC 0005
-  # §6.3).
+  # cluster namespace, and they are chosen rather than discovered.
   testMembersReadTheRangesThroughTheSignature = {
     expr = {
       inherit (r.provides.cluster) podSubnet serviceSubnet version;
@@ -94,40 +97,88 @@ lib.runTests {
     };
   };
 
-  # Starting with no CNI is the lab's call, and it travels as an input rather
-  # than as a writeback from whichever floe provides the network — the link
-  # graph has no direction for that, and it is what kept cilium unmigrated.
-  testTheCniIsAnInputNotAWriteback =
+  # Starting with no CNI is resolved, not written. It used to be a
+  # `disableFlannel` input a lab set alongside an `autoDeployManifests` entry
+  # that had to agree with it, because the link graph had no direction from a
+  # component to the thing that establishes its cluster. A claim is a unit
+  # beside its cluster now, so there is one — the cluster exports what its CNI
+  # floe provides and this resolves it.
+  testTheCniIsResolvedNotWritten = {
+    expr = lib.attrNames r.def.optional;
+    expected = [
+      "cniBootstrap"
+      "ociMirror"
+    ];
+  };
+
+  # And the input is gone, so the two halves cannot disagree: a lab can no
+  # longer ask for no flannel without saying what replaces it.
+  testNoFlannelCannotBeAskedForAlone = {
+    expr = r.def.inputs ? disableFlannel;
+    expected = false;
+  };
+
+  # Nothing resolved means the provisioner keeps its own network. An optional
+  # hole is never wired by a provider merely being present, so a cluster that
+  # happens to contain cilium is not thereby a cluster with no CNI at boot.
+  testWithoutACniItKeepsFlannel =
     let
-      cilium = support.evalFloe {
+      plain = support.evalFloe {
         name = "k3d-cluster";
         inputs = {
           name = "app";
           instanceName = "app";
-          disableFlannel = true;
         };
       };
     in
     {
-      expr = cilium.link.out."catallaxy.cluster".k3d-cluster.config.k3d.noFlannel;
-      expected = true;
+      expr = plain.link.out."catallaxy.cluster".k3d-cluster.config.k3d.noFlannel;
+      expected = false;
     };
 
+  # Whether a node pulls through the lab's cache is resolved, and resolving it
+  # is what puts the state directory in the descriptor. `create_cluster` used
+  # to join `service_state_dir(lab, "registry")` from a literal and probe the
+  # filesystem for the file — so a stale directory mounted a mirror nobody
+  # asked for, and a cluster whose `registry-setup` had not run mounted none
+  # and said nothing.
+  #
+  # This floe declares the hole because k3d can mount a containerd config at
+  # creation. `talos-cluster` cannot, declares none, and that is the whole of
+  # why a Talos lab does not mirror.
+  testTheMirrorIsNamedNotGuessed = {
+    expr =
+      let
+        unmirrored = support.evalFloe {
+          name = "k3d-cluster";
+          inputs = {
+            name = "app";
+            instanceName = "app";
+          };
+          without = [ "ociMirror" ];
+        };
+      in
+      {
+        resolved = descriptor.config.k3d.nodeConfigFrom;
+        unresolved = unmirrored.link.out."catallaxy.cluster".k3d-cluster.config.k3d.nodeConfigFrom;
+      };
+    expected = {
+      resolved = "stub-ociMirror";
+      unresolved = null;
+    };
+  };
+
   # The lab is a k3d cluster's edge, and the floe says so rather than the lab
-  # inferring it. `modules/lab/cluster.nix` used to test `provisioner == "k3d"`
-  # and build this container name itself, which made every new provisioner an
-  # edit to the lab — the one thing RFC 0005 §8.2 says adding one must not be.
+  # inferring it. `modules/lab/cluster/default.nix` used to test
+  # `provisioner == "k3d"` and build this container name itself, which made
+  # every new provisioner an edit to the lab — the one thing adding one must
+  # not be.
   testItNamesTheLabAsItsEdge = {
     expr = descriptor.edge;
     expected = {
       mode = "proxy";
-      # The instance name, not the cluster name: two labs each holding a
-      # cluster called `app` have distinct containers and so distinct edges.
       backend = "k3d-homelab-local-app-server-0";
 
-      # k3s's ServiceLB binds these on the node. A provisioner without one
-      # answers a NodePort here instead, which is the whole reason the ports
-      # are the provisioner's to say rather than the lab's to assume.
       httpPort = 80;
       httpsPort = 443;
     };
@@ -141,16 +192,11 @@ lib.runTests {
 
   testItProvisionsItselfOnDocker = {
     expr = {
-      # The provisioner is the union's key. There is no separate field
-      # to read, which is the point: a tag beside an untagged block is two
-      # facts that can disagree.
       provisioner = lib.head (lib.attrNames descriptor.config);
-      inherit (descriptor) provider;
       inherit (descriptor.kubernetes) distribution controlPlanes workers;
     };
     expected = {
       provisioner = "k3d";
-      provider = "docker";
       distribution = "k3s";
       controlPlanes = 1;
       workers = 0;

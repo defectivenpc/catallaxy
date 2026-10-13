@@ -96,9 +96,24 @@ pub struct K8sResourceType {
     pub api_version: String,
     pub spec: Option<NixType>,
     pub status: Option<NixType>,
+
+    /// The object's other authorable top-level fields: `Role.rules`,
+    /// `Secret.type`, `RoleBinding.roleRef`. Converting `spec` alone left the
+    /// whole top level freeform, so a misspelled `metadataa` was a new key
+    /// rather than an error — the class we close inside `spec`, one level up.
+    ///
+    /// `status` is deliberately absent. It is the controller's, a floe writes
+    /// desired state, and leaving it undeclared is what makes writing one a
+    /// refusal rather than a silently discarded field.
+    pub top_level: BTreeMap<String, NixOption>,
+
     pub description: Option<String>,
     pub namespaced: bool,
 }
+
+/// Top-level keys a resource's generated type does not take from the schema:
+/// three the constructor declares itself, and `status`.
+pub const NOT_TOP_LEVEL: &[&str] = &["apiVersion", "kind", "metadata", "spec", "status"];
 
 impl K8sResourceType {
     pub fn new(group: String, version: String, kind: String) -> Self {
@@ -115,6 +130,7 @@ impl K8sResourceType {
             api_version,
             spec: None,
             status: None,
+            top_level: BTreeMap::new(),
             description: None,
             namespaced: true,
         }
@@ -149,6 +165,14 @@ impl K8sTypeSet {
 
 #[derive(Debug, Clone)]
 pub struct GeneratorOptions {
+    /// Make *every* object schema freeform, not only the ones declaring
+    /// `x-kubernetes-preserve-unknown-fields`.
+    ///
+    /// Off by default. A freeform schema cannot tell a misspelling from a
+    /// field it has not described, so `configMapp` becomes a new key rather
+    /// than an error and reaches the apiserver, which prunes it silently under
+    /// a structural schema. Kubernetes already marks the schemas that are
+    /// genuinely open, and `convert` honours that marking either way.
     pub freeform_type: bool,
     pub include_descriptions: bool,
     pub exclude_groups: Vec<String>,
@@ -157,7 +181,7 @@ pub struct GeneratorOptions {
 impl Default for GeneratorOptions {
     fn default() -> Self {
         Self {
-            freeform_type: true,
+            freeform_type: false,
             include_descriptions: true,
             exclude_groups: vec!["internal.apiserver.k8s.io".to_string()],
         }

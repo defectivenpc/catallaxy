@@ -4,10 +4,14 @@
 # mechanism that exists because gateway and cilium both need them and a
 # bundle declared by two floes is a conflicting definition. Exactly-one
 # provider is that rule already.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "gateway-api-crds";
     inputs = {

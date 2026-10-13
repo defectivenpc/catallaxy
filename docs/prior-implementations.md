@@ -1,9 +1,9 @@
 # Prior implementations, and what they cost
 
-The floe interface has been built three times. The third is
-[RFC 0001](rfcs/0001-floes.md) — `lib/floe-core/` — and is what ships. The
-first two, and everything written against them, lived in `old-floes/` until
-they were deleted; this is what was worth keeping from them.
+The floe interface has been built three times. The third is RFC 0001 —
+`lib/floe-core/` — and is what ships. The first two, and everything written
+against them, lived in `old-floes/` until they were deleted; this is what
+was worth keeping from them.
 
 The code is in git. `git show cec7fdc^:old-floes/` reaches the mixin spike,
 and the tree just before the deletion commit that removed the rest has all
@@ -99,11 +99,10 @@ interface, and each would be written against RFC 0001 rather than ported:
   (`local`, `random`), which is what makes it iterable without an account.
 
   The channel that would drive a cluster provisioned by another now exists:
-  a cluster declares its `provisions`, and
-  `modules/lab/planner/provisions.nix` turns that into apply-order edges. So
-  `release-cluster-cloud-resources`, `{reconcile,delete}-managed-resource`
-  and `sync-kubeconfig` are all emitted, and this file said otherwise for
-  longer than it was true.
+  a cluster declares its `provisions`, and `lib/lower/plan-provisions.nix`
+  turns that into apply-order edges. So `release-cluster-cloud-resources`,
+  `{reconcile,delete}-managed-resource` and `sync-kubeconfig` are all
+  emitted, and this file said otherwise for longer than it was true.
 
   What remains orphaned is now decided by a check rather than by this
   paragraph — `nix/checks/step-kind-producers.nix` holds the list with a

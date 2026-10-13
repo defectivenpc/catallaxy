@@ -12,7 +12,6 @@ pkgs.writeShellApplication {
     pkgs.gnused
     pkgs.jq
 
-    # It shells out to `nix eval` and `nix build`.
     pkgs.nix
   ];
 

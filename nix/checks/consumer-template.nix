@@ -16,24 +16,36 @@
   pkgs,
   mkLab,
   mkFloes,
+  catallaxy,
+  floes,
 }:
 
 let
   myFloes = mkFloes (import ../../templates/consumer/floes);
 
-  lab = mkLab {
-    modules = [ (import ../../templates/consumer/lab.nix { inherit myFloes; }) ];
-  };
+  lab = mkLab (
+    (import ../../templates/consumer/lab.nix {
+      inherit
+        lib
+        catallaxy
+        floes
+        myFloes
+        ;
+    })
+      {
+        name = "my-platform";
+      }
+  );
 
   # The two the template's own flake names. Spelled here so renaming one
   # fails this check rather than a consumer's first `nix flake init`.
   named = {
-    inherit (lab.config.lab.out) cliConfig package;
+    inherit (lab) cliConfig package;
   };
 in
 {
   consumer-template = pkgs.runCommand "consumer-template" { } ''
     ln -s ${named.package} rendered
-    echo "${lab.config.lab.name}: ${toString (lib.length (lib.attrNames lab.config.lab.clusters))} cluster, cliConfig ${named.cliConfig.labName}" > $out
+    echo "${lab.name}: ${toString (lib.length (lib.attrNames lab.clusters))} cluster, cliConfig ${named.cliConfig.labName}" > $out
   '';
 }

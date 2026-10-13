@@ -30,10 +30,6 @@ pub fn env(lab_name: &str, shell: Shell, unset: bool) -> Result<()> {
     let bundle = trust::bundle_path(lab_name);
     let lab_ca = trust::lab_ca_path(lab_name);
 
-    // The lab's clusters live in its own kubeconfig rather than in
-    // ~/.kube/config, so this is what makes a bare `kubectl` reach them. Set
-    // outside the CA branch below on purpose: a lab serving plain HTTP has no
-    // CA and still has clusters, and that case used to get nothing at all.
     let kubeconfig = crate::io::kubeconfig::env_pairs(&lab_kubeconfig_path(lab_name));
 
     let keys: Vec<&str> = kubeconfig
@@ -87,10 +83,6 @@ pub fn env(lab_name: &str, shell: Shell, unset: bool) -> Result<()> {
             }
             Ok(())
         }
-        // Not an error any more: KUBECONFIG is already out, and it is the
-        // half that a lab serving plain HTTP actually needs. Failing here
-        // would mean `eval "$(cata lab env ...)"` returned non-zero for every
-        // lab with TLS off, having already printed something useful.
         Outcome::NoLabCa => {
             if shell == Shell::Json {
                 let map: serde_json::Map<String, serde_json::Value> = kubeconfig

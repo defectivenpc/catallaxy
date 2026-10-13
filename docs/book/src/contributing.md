@@ -117,8 +117,8 @@ gate on them being established.
 runs the real linker and elaborator, so a suite exercises what the lab will
 do rather than an approximation of it.
 
-**Regenerate the floe's interface page** with `nix run .#refresh-floe-docs`
-and commit it, or its diff check fails.
+**Regenerate the floe's interface page** with `nix run .#refresh-docs` and
+commit it, or its diff check fails.
 
 ## Docs
 
@@ -130,11 +130,11 @@ are spliced in at build time by `pkgs/docs.nix`.
 nix build .#docs && open result/index.html
 ```
 
-The 37 per-floe pages come from `docs/floes/`, which `nix/floe-docs.nix`
-generates and 37 checks diff. `pkgs/docs.nix` copies them in, derives an
-index and the `SUMMARY.md` nav entries from the file list, and appends the
-repo's `CHANGELOG.md`. So adding a floe adds a page and a nav entry with no
-edit to anything.
+The per-floe pages come from `docs/generated/floes/`, which
+`nix/floe-docs.nix` generates and 37 checks diff. `pkgs/docs.nix` copies
+them in, derives an index and the `SUMMARY.md` nav entries from the file
+list, and appends the repo's `CHANGELOG.md`. So adding a floe adds a page
+and a nav entry with no edit to anything.
 
 Two checks hold it. `book.toml` sets `create-missing = false`, so a
 `SUMMARY.md` entry with no file fails the build rather than rendering a

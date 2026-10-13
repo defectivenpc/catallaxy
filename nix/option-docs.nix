@@ -1,26 +1,22 @@
-# The lab option tree, written out.
+# The plan step schema, written out.
 #
-# `cata-build docs render` has existed and been reachable the whole time; what
-# was missing was the JSON to feed it. This is that: `nixosOptionsDoc` over the
-# same module tree `mkLab` evaluates, so the reference cannot describe options
-# a lab does not have.
+# One page, and it is the one thing in the old option reference that was never
+# the lab's. A floe declares `provides.step = sigs.LAB_STEPS` and writes these
+# fields; `lib/eval/step-type.nix` is the type that accepts them, and
+# `nixosOptionsDoc` over exactly that module is what makes the page unable to
+# describe a field the merge would reject.
 #
-# Floes are not in here. Since RFC 0001 a floe's inputs are function arguments
-# rather than options, so `lab.clusters.<c>.floes.<n>` is one opaque option and
-# there is nothing under it to route. Floe interfaces come from
-# `nix/floe-docs.nix`, which reads the definitions and can also say what a floe
-# emits. Two generators, two sources, no overlap.
+# The lab's own reference used to be here too, from `nixosOptionsDoc` over the
+# tree `mkLab` evaluated. A lab is a floe now, so its inputs are a floe's and
+# `nix/floe-docs.nix` renders them from the same declarations it renders every
+# other module's from — one generator over one source, where there were two.
 {
   lib,
   pkgs,
-  mkLab,
 }:
 
 let
-  # A lab with no clusters: the option tree is what is declared, not what any
-  # particular lab sets, and `<name>` placeholders come from the module system
-  # rather than from an instance.
-  evaluated = mkLab { modules = [ { lab.name = "options-reference"; } ]; };
+  stepTypes = import ../lib/eval/step-type.nix { inherit lib; };
 
   # `declarations` are absolute store paths, so they carry the hash of the
   # source and move on every commit. Repo-relative is both stable and what a
@@ -33,7 +29,7 @@ let
     if matched == null then toString path else builtins.head matched;
 
   doc = pkgs.nixosOptionsDoc {
-    inherit (evaluated) options;
+    inherit (lib.evalModules { modules = [ stepTypes.stepsModule ]; }) options;
     warningsAreErrors = false;
     transformOptions = opt: opt // { declarations = map relative opt.declarations; };
   };

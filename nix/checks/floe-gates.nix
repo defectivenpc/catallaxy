@@ -1,8 +1,8 @@
 # What a floe is held to, as a function of the floe set.
 #
 # Two of the four parked gates are gone rather than missing. `floe-boundary`
-# regexed `config.floes.<name>.<field>` — a path RFC 0001 removed, and sealing
-# (`lib/floe-core/types.nix`) rebuilds a provide from its signature's field
+# regexed `config.floes.<name>.<field>` — a path the library removed, and sealing
+# (the floe library's `types.nix`) rebuilds a provide from its signature's field
 # list, so reading another floe's internals is now unrepresentable rather than
 # merely checked. `every-floe-export-has-a-default` likewise: `link.nix` throws
 # when a body never defines a declared provide.
@@ -13,6 +13,7 @@
 {
   lib,
   pkgs,
+  floeCore,
   cataCharts,
   k8sSpecs,
   labDefs,
@@ -35,14 +36,14 @@ let
   #
   # Both gates below are about a floe's *bundles*: images are what its
   # manifests pull and network is what its workloads talk to. A floe in the
-  # other delivery camp (RFC 0003 `resources`) has neither — its provider
+  # other delivery camp (`resources`) has neither — its provider
   # binaries come from the lab's own tool, not from a registry, and nothing it
   # declares runs in the cluster at all.
   #
   # Exempted by what it emits rather than by name, so the exemption cannot go
   # stale: a resources floe that later grows bundles rejoins the gate on its
   # own, and a name in a list would have had to be noticed and removed.
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
+  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
 
   defOf =
     name:
@@ -53,9 +54,20 @@ let
         catallaxy
         cataCharts
         k8sSpecs
+        floes
         ;
       inherit (catallaxy) floe sigs kinds;
     };
+
+  # A floe whose units are other floes reaches them through this, built the
+  # way `lib/lab.nix` builds it and lazy for the same reason.
+  floes = lib.mapAttrs (
+    name: _:
+    let
+      def = defOf name;
+    in
+    def // { __functor = _: def.instantiate; }
+  ) floeSet;
 
   installsIntoACluster =
     name: lib.any (k: k.name == "catallaxy.component") (lib.attrValues (defOf name).out);
@@ -65,9 +77,9 @@ let
   # A lab names *units*, and a unit may be called anything. `def.name` is what
   # floe it actually is, which is what a claim about the shipped set has to be
   # keyed on.
-  floeNameOf = cluster: unit: cluster.floes.${unit}.def.name;
+  floeNameOf = cluster: unit: cluster.link.floeNames.${unit};
 
-  clustersOf = lab: lab.config.lab.clusters;
+  clustersOf = lab: lab.clusters;
 
   # Every (lab, cluster, unit) whose floe says its image set is exhaustive.
   claims = lib.concatLists (
@@ -113,15 +125,6 @@ let
   completenessCheck =
     c:
     let
-      # `@<digest>` when the declaration pins one, because that is what the
-      # rendered ref looks like and the two are compared as strings.
-      #
-      # This used to drop `digest` on the floor. Every chart migrated before
-      # cilium's pinned by tag alone, so the declared and rendered sides
-      # happened to agree and nothing noticed — but a floe installing a
-      # digest-pinning chart could not have satisfied this gate at all, no
-      # matter what it declared. `imageSchema` has carried the field the whole
-      # time.
       declared = lib.mapAttrsToList (
         _: img:
         "${img.registry}/${img.repository}:${if img.tag == null then "" else img.tag}"
@@ -137,7 +140,7 @@ let
         ];
       }
       ''
-        tree=${c.lab.config.lab.out.package}/manifests/${c.clusterName}
+        tree=${c.lab.package}/manifests/${c.clusterName}
 
         : > $TMPDIR/found
         for dir in "$tree"/*/${c.unit}__*/; do

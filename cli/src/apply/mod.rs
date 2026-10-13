@@ -74,7 +74,7 @@ fn resolve_lab<'a>(
 fn kube_context_for<'a>(args: &ApplyRequest<'a>, spec: &'a ClusterSpec) -> &'a str {
     args.kube_context_override
         .filter(|s| !s.is_empty())
-        .unwrap_or(&spec.kube_context)
+        .unwrap_or(&spec.claim.context)
 }
 
 fn cluster_manifests(
@@ -126,7 +126,7 @@ pub fn apply(ctx: &CataContext, args: ApplyRequest<'_>) -> Result<()> {
     let lab = resolve_lab(ctx, &args)?;
     let spec = lab.cluster(&cluster)?;
 
-    let strategy = spec.deploy.strategy;
+    let strategy = spec.delivery.strategy;
     if strategy.is_gitops() && !args.force {
         return Err(deployed_through_git(strategy));
     }
@@ -149,7 +149,7 @@ pub fn diff(ctx: &CataContext, args: ApplyRequest<'_>) -> Result<bool> {
     let lab = resolve_lab(ctx, &args)?;
     let spec = lab.cluster(&cluster)?;
 
-    let strategy = spec.deploy.strategy;
+    let strategy = spec.delivery.strategy;
     if strategy.is_gitops() && !args.force {
         return Err(deployed_through_git(strategy));
     }
@@ -274,39 +274,22 @@ fn discover_bundles(cluster_manifests: &Path) -> Result<Vec<BundleDir>> {
     Ok(bundles)
 }
 
-fn wait_timeout_in(content: &str) -> Option<&str> {
-    content
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("waitTimeout:"))
-        .map(str::trim)
-}
-
-fn read_deploy_timeout(cluster_manifests: &Path) -> Result<String> {
-    let config_file = cluster_manifests.join(".deploy-config");
-    let content = crate::io::fs::read_to_string(&config_file).with_context(|| {
-        format!(
-            "reading {}. The lab declares `waitTimeout` there; substituting a \
-             default would deploy with a timeout the lab never asked for",
-            config_file.display()
-        )
-    })?;
-
-    let timeout = wait_timeout_in(&content).ok_or_else(|| {
-        anyhow::anyhow!(
-            "{} has no `waitTimeout:` line. Re-render the lab",
-            config_file.display()
-        )
-    })?;
-
+/// How long an apply may take to settle, off the document.
+///
+/// It used to be read out of `.deploy-config`, a file the renderer baked into
+/// the manifest tree — so the lab path read the tree and the standalone path
+/// read `delivery.waitTimeout`, and a lab that raised the timeout moved one
+/// of them. Both were read, which is why nothing caught it: the tightness
+/// check sees a field nobody reads, not one fact with two sources.
+fn deploy_timeout(spec: &ClusterSpec) -> Result<String> {
+    let timeout = &spec.delivery.wait_timeout;
     crate::io::kubectl::parse_timeout(timeout).ok_or_else(|| {
         anyhow::anyhow!(
-            "`waitTimeout: {timeout}` in {} is not a duration (expected e.g. 30s, \
-             10m, 1h). kapp would have been handed it verbatim",
-            config_file.display()
+            "`delivery.waitTimeout` is '{timeout}', which is not a duration \
+             (expected e.g. 30s, 10m, 1h). kapp would have been handed it verbatim"
         )
     })?;
-
-    Ok(timeout.to_string())
+    Ok(timeout.clone())
 }
 
 fn apply_kapp(
@@ -322,7 +305,7 @@ fn apply_kapp(
     }
 
     let cluster_manifests = Path::new(manifests_path);
-    let timeout = read_deploy_timeout(cluster_manifests)?;
+    let timeout = deploy_timeout(spec)?;
     let mut bundles = discover_bundles(cluster_manifests)?;
 
     if let Some(key) = args.bundle {
@@ -332,7 +315,7 @@ fn apply_kapp(
         }
     }
 
-    let projections = &spec.projections;
+    let projections = &spec.content.projections;
     if !projections.is_empty() {
         println!(
             "{} Found {} projection(s){}",
@@ -553,7 +536,7 @@ where
 }
 
 fn cleanup_bootstrap_resources(kube_context: &str, spec: &ClusterSpec) {
-    if spec.provisioner_config.auto_deploy_manifests().is_empty() {
+    if spec.provisioning.config.auto_deploy_manifests().is_empty() {
         return;
     }
 
@@ -633,21 +616,22 @@ fn deployed_through_git(strategy: crate::domain::DeployStrategy) -> anyhow::Erro
 mod tests {
     use super::*;
 
+    /// The timeout comes off the document, which is the same value
+    /// `cata cluster up` reads. It used to come out of a file in the manifest
+    /// tree, so the two paths could disagree and both were "read".
     #[test]
-    fn the_declared_timeout_is_read_from_the_config() {
-        let content = "strategy: kapp\nwaitTimeout: 45m\n";
-        assert_eq!(wait_timeout_in(content), Some("45m"));
+    fn the_timeout_is_read_from_the_document() {
+        let spec = crate::domain::cluster::tests::cluster_json();
+        let spec = ClusterSpec::from_value(spec).unwrap();
+        assert_eq!(deploy_timeout(&spec).unwrap(), "10m");
     }
 
     #[test]
-    fn a_config_without_the_key_yields_nothing_rather_than_a_default() {
-        assert_eq!(wait_timeout_in("strategy: kapp\n"), None);
-        assert_eq!(wait_timeout_in("waitTimeoutSeconds: 600\n"), None);
-    }
-
-    #[test]
-    fn surrounding_whitespace_is_not_part_of_the_duration() {
-        assert_eq!(wait_timeout_in("   waitTimeout:   45m   \n"), Some("45m"));
+    fn a_duration_kapp_cannot_read_is_refused_rather_than_defaulted() {
+        let mut json = crate::domain::cluster::tests::cluster_json();
+        json["delivery"]["waitTimeout"] = serde_json::json!("soon");
+        let spec = ClusterSpec::from_value(json).unwrap();
+        assert!(deploy_timeout(&spec).is_err());
     }
 
     #[test]

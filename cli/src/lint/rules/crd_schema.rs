@@ -321,21 +321,7 @@ fn validate_object(
                     || schema.properties.is_empty()
                     || (path.is_empty() && API_SERVER_OWNED_FIELDS.contains(&key))
                 {
-                    // Nothing to say. `preserve_unknown` means the API server
-                    // keeps whatever is here; an empty `properties` means the
-                    // CRD declared no shape at this level — `metadata` is
-                    // usually the latter — and a schema that describes nothing
-                    // cannot be violated. At the root, the three fields the
-                    // API machinery supplies are present on every object and
-                    // declared by almost no CRD.
                 } else {
-                    // A closed object, and this key is not in it. The API
-                    // server prunes it under a normal apply and *rejects* the
-                    // whole object under server-side apply, with
-                    // "field not declared in schema" — which is a failed
-                    // deploy, not a warning. This branch used to be absent, so
-                    // the one error class this rule most obviously exists for
-                    // was the one it stayed silent about.
                     diags.push(Diagnostic {
                         severity: Severity::Error,
                         check: "crd-schema",
@@ -662,8 +648,6 @@ spec:
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].severity, Severity::Error);
         assert!(diags[0].message.contains("'version' is not declared"));
-        // And it names what the schema does have, so the near miss is visible
-        // without opening the CRD.
         assert!(diags[0].message.contains("known: image"));
     }
 

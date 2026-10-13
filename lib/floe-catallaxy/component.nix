@@ -6,6 +6,7 @@
 let
   T = floe.T;
 
+  inherit (import ../kubernetes/conform.nix { inherit lib; }) checked;
   inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;
   inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
 
@@ -33,8 +34,6 @@ let
       beforeDigest = lib.head atParts;
       digest = if lib.length atParts > 1 then lib.last atParts else null;
 
-      # Rightmost colon, because a registry may carry a port and a tag may not
-      # contain one.
       slashParts = lib.splitString "/" beforeDigest;
       registry = lib.head slashParts;
       rest = lib.concatStringsSep "/" (lib.tail slashParts);
@@ -61,10 +60,11 @@ let
   verifyTypes = import ../verify-types.nix { inherit lib; };
 in
 rec {
-  component = floe.mkOutputKind {
+  component = floe.mkSig {
     name = "catallaxy.component";
+    canonicalName = "component";
     description = "What a floe installs into a cluster: bundles, and the operator surface around them.";
-    schema = componentSchema;
+    fields = componentSchema;
   };
 
   inherit (verifyTypes) conditionIsNot fieldIsNot;
@@ -123,8 +123,9 @@ rec {
       verify ? { },
     }:
     {
+      resources = lib.mapAttrs (_: checked) resources;
+
       inherit
-        resources
         helmCharts
         yamls
         createNamespaces
@@ -239,8 +240,6 @@ rec {
       namespace,
       service,
       port,
-      # Defaults to `<name>.<zone>`, which is what every consumer wanted and
-      # each was computing for itself.
       hostname ? "${name}.${gateway.baseDomain}",
       path ? "/",
     }:
@@ -292,14 +291,10 @@ rec {
       provider,
       name,
       namespace,
-      # Where the app lives. The default redirect is the one nearly every
-      # OIDC library uses; a consumer whose library differs says so.
       origin,
       redirectUrls ? [ "${origin}/oauth2/callback" ],
       displayName ? name,
       scopeMap ? [ ],
-      # A public client is one that cannot keep a secret — a SPA or a CLI.
-      # The operator writes no Secret for one, so there is nothing to read.
       public ? false,
     }:
     let
@@ -359,8 +354,6 @@ rec {
       namespace,
       tokenSecret,
       displayName ? name,
-      # `readwrite`, because the point of one of these is to change something.
-      # A read-only identity is a legitimate thing to want and says so.
       purpose ? "readwrite",
       rotationDays ? 30,
 
@@ -431,8 +424,6 @@ rec {
       key ? "password",
       length ? 24,
       digits ? null,
-      # Zero, because a consumer that puts the value in a URL, a connection
-      # string, or a config file it does not quote breaks on them.
       symbols ? 0,
       symbolCharacters ? null,
       allowRepeat ? true,
@@ -621,8 +612,6 @@ rec {
 
       steps.${unit} = c.steps;
 
-      # A failure has to name the floe that objected, which is exactly what a
-      # flat list at the cluster cannot do.
       assertions = map (a: a // { message = "floe '${unit}': ${a.message}"; }) c.assertions;
       warnings = map (w: "floe '${unit}': ${w}") c.warnings;
 

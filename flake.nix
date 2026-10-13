@@ -1,7 +1,8 @@
 {
   description = "catallaxy: declarative Kubernetes platform management";
 
-  # The platform is built on the floe interface of RFC 0001 (`lib/floe-core`).
+  # The platform is built on the floe interface, which lives in its
+  # own repository and arrives as the `floes` input below.
   # Two earlier implementations preceded it; what they cost is recorded in
   # `docs/prior-implementations.md`, and the code is in git.
   #
@@ -13,6 +14,11 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     nix-kube-generators.url = "github:farcaller/nix-kube-generators";
+
+    # The floe interface, extracted into its own repository. Local while the
+    # port is in flight; this becomes a pinned `github:` input before it goes
+    # anywhere, and that is the only line that changes.
+    floes.url = "path:/home/whitehead/workspace/praxiotic/floes";
 
     crane.url = "github:ipetkov/crane";
     rust-overlay = {
@@ -32,12 +38,16 @@
       nixpkgs,
       flake-utils,
       nix-kube-generators,
+      floes,
       crane,
       rust-overlay,
       treefmt-nix,
     }:
     let
       lib = nixpkgs.lib;
+
+      # One `lib` reaches both, so floe's own nixpkgs pin decides nothing here.
+      floeCore = floes.mkFloeLib lib;
     in
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -58,6 +68,24 @@
         cataCharts = import ./lib/charts.nix { inherit lib pkgs kubelib; };
         k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs cataCharts; };
 
+        # The CRD artifacts the types are generated from, which are the same
+        # ones the floes install. See `nix/crd-types.nix`.
+        crdSources = import ./nix/crd-types.nix { inherit lib cataCharts k8sSpecs; };
+
+        # One derivation holding the whole generated tree, which the check
+        # diffs against and `refresh-generated-types` copies out of — so the
+        # committed tree and the check cannot be produced by two pipelines
+        # that disagree.
+        generatedTypes = import ./nix/generated-types.nix {
+          inherit
+            lib
+            pkgs
+            k8sSpecs
+            crdSources
+            ;
+          inherit (packages') cata;
+        };
+
         packages' = import ./pkgs {
           inherit
             lib
@@ -66,12 +94,9 @@
             rustToolchain
             ;
 
-          # `let` is recursive: `labs` is defined below and the option tree
-          # comes from the same `mkLab` a consumer calls.
-          optionsJSON = import ./nix/option-docs.nix {
-            inherit lib pkgs;
-            inherit (labs) mkLab;
-          };
+          # The step schema, from the module that accepts one. No lab in it:
+          # a lab is a floe, so its reference is `nix/floe-docs.nix`'.
+          optionsJSON = import ./nix/option-docs.nix { inherit lib pkgs; };
         };
 
         allocations = import ./nix/allocations.nix { inherit lib pkgs labDefs; };
@@ -80,6 +105,7 @@
           inherit
             lib
             pkgs
+            floeCore
             cataCharts
             k8sSpecs
             ;
@@ -92,15 +118,39 @@
         fixtureLabs = labs.discoverFixtures;
         labDefs = exampleLabs // fixtureLabs;
 
-        # One binding, two readers: the flake output the e2e runner evaluates,
-        # and the check that pins what it says. Computing it twice would let
-        # them disagree about the very thing one exists to check.
-        e2eLabs = lib.mapAttrs (_: l: l.config.lab.out.selfContained) exampleLabs;
+        # The labs `nix run .#e2e` stands up, by hand.
+        #
+        # A predicate used to decide this: eight derived reasons a lab might
+        # not be runnable unattended, an `unstable` string for the one that
+        # was mid-migration, and a check pinning the table the predicate
+        # produced. All of it to answer a question with ten possible answers
+        # that changes a few times a year.
+        #
+        # A name here is a claim that someone has seen the lab come up. Adding
+        # one is a line, removing one is a line, and the diff says which.
+        e2eLabs = [
+          "crossplane.nop"
+          "gitops.local"
+          "homelab.dns"
+          "homelab.local"
+          "minimal.cilium"
+          "minimal.local"
+          "minimal.secrets"
+          "minimal.talos"
+          "minimal.tls"
+        ];
 
-        # The billable matrix, over every lab including fixtures: a cloud lab
-        # is a fixture until someone has an account, and `nix run .#e2e-cloud`
-        # is how it stops being one.
-        cloudE2eLabs = lib.mapAttrs (_: l: l.config.lab.out.cloudE2e) labDefs;
+        # And the ones that spend money, which `nix run .#e2e-cloud` stands up
+        # when a human asks, each with what it needs in the environment before
+        # it creates anything billable. Never in `nix flake check`.
+        cloudE2eLabs = {
+          "cloud" = [ "DIGITALOCEAN_TOKEN" ];
+          "every-floe" = [ "DIGITALOCEAN_TOKEN" ];
+
+          # Nothing: the account this reaches is the management cluster's, and
+          # the credential is held by the Crossplane controller there.
+          "provisions" = [ ];
+        };
 
         # Same reason, for the document the CLI parses: the check diffs
         # against this and `refresh-cli-configs` copies out of it, so the
@@ -109,10 +159,10 @@
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
         # And for the floes themselves. One derivation holding every floe's
-        # interface, which the check diffs against and `refresh-floe-docs`
+        # interface, which the check diffs against and `refresh-docs`
         # copies out of — so the fixture and the check cannot be produced by
         # two pipelines that disagree.
-        floeInterfaces = import ./nix/floe-docs.nix {
+        floePages = import ./nix/floe-docs.nix {
           inherit
             lib
             pkgs
@@ -120,36 +170,98 @@
             cataCharts
             k8sSpecs
             ;
-          inherit (labs) presetSet;
-          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs; };
+          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs floeCore; };
           # Flattened, the way `lib/lab.nix` flattens it: the three groups are
           # how the set is organised on disk, not a namespace anything spells.
           floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+        };
+
+        # And one page per signature. A floe declares the signatures it touches
+        # and cannot name its peers, so "which floe answers this" is computed
+        # here, off the whole set — which is the one thing no floe's own page
+        # can say.
+        signaturePages = import ./nix/signature-docs.nix {
+          inherit
+            lib
+            pkgs
+            cataCharts
+            k8sSpecs
+            ;
+          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs floeCore; };
+          floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+        };
+
+        # Clusters written with no lab around them, as `mkCluster`
+        # evaluates them. One fixture today, which is the thing a lab used
+        # to be the only way to write.
+        standaloneClusters = lib.mapAttrs (
+          name: path:
+          labs.mkCluster (
+            {
+              inherit name;
+            }
+            // import path {
+              inherit lib pkgs;
+              inherit (labs) catallaxy floes;
+            }
+          )
+        ) { minimal = ./examples/clusters/minimal.nix; };
+
+        # The one renderer over both emitters. Nix says what each page is;
+        # `cata-build docs pages` decides what it looks like.
+        referencePages = import ./pkgs/reference-pages.nix {
+          inherit
+            lib
+            pkgs
+            floePages
+            signaturePages
+            ;
+          inherit (packages') cata;
         };
       in
       {
         legacyPackages = {
           charts = cataCharts;
 
-          # What `refresh-option-docs` copies out of and `option-docs` diffs.
+          # What `refresh-docs` copies out of and `option-docs` diffs.
           inherit (packages') optionDocs;
 
-          # The address plan, written down. RFC 0005 §5.
+          # The address plan, written down.
           inherit allocations;
 
-          # The two a consumer flake calls. `mkLab` is here rather than in
-          # `packages` because a lab is not a derivation.
-          inherit (labs) mkLab mkFloes;
+          # The three a consumer flake calls. None is a derivation, which is
+          # why they are here rather than in `packages`.
+          inherit (labs) mkLab mkCluster mkFloes;
 
           # The two the CLI resolves, and the only two.
-          labs = lib.mapAttrs (_: l: l.config.lab.out.cliConfig) exampleLabs;
-          labPackages = lib.mapAttrs (_: l: l.config.lab.out.package) labDefs;
+          labs = lib.mapAttrs (_: l: l.cliConfig) exampleLabs;
+          labPackages = lib.mapAttrs (_: l: l.package) labDefs;
 
-          # The intermediate the lab is lowered from, for reading by hand.
-          clusters = lib.mapAttrs (_: l: lib.mapAttrs (_: c: c.out) l.config.lab.clusters) labDefs;
+          inherit standaloneClusters;
 
-          # What the e2e runner builds its matrix from. Example labs only:
-          # a fixture exists to be rendered and checked, never stood up.
+          # One artifact per cluster: its document and the tree the document
+          # names, buildable on its own.
+          #
+          # `cata cluster up --from-file <doc>` acts on one of these with no
+          # lab in the path, which is the test of whether a cluster is a
+          # concept on its own: every field that leaks back to the lab is a
+          # parse failure naming the field rather than something nobody sees.
+          clusters = lib.mapAttrs (
+            _: l:
+            lib.mapAttrs (
+              name: c:
+              pkgs.runCommand "cluster-${name}" { } ''
+                mkdir -p $out
+                cp ${pkgs.writeText "cluster.json" (builtins.toJSON c.spec)} $out/cluster.json
+                ln -s ${c.manifests} $out/manifests
+              ''
+            ) l.clusters
+          ) labDefs;
+
+          # The intermediate a cluster is lowered from, for reading by hand.
+          clusterPictures = lib.mapAttrs (_: l: lib.mapAttrs (_: c: c.out) l.clusters) labDefs;
+
+          # The lists the e2e runners read.
           inherit e2eLabs cloudE2eLabs;
 
           # What `refresh-digests` iterates and what the digest checks cover —
@@ -163,15 +275,22 @@
           # exactly the thing a fixture is cheapest to pin.
           labCliConfigs = cliConfigs;
 
-          # Every floe's interface, one file each.
-          inherit floeInterfaces;
+          # Every generated reference page, rendered: `floes/<name>.md` and
+          # `signatures/<name>.md`. What `refresh-docs` copies out of and the
+          # per-page checks diff against, so the committed tree and the check
+          # cannot come from two pipelines that disagree.
+          inherit referencePages;
+
+          # What `refresh-generated-types` copies out of and the
+          # `generated-types` check diffs.
+          inherit generatedTypes;
 
           # Both plans per lab, for `cata lab plan --from-file`. A fixture is
           # not in `labs`, so the CLI cannot resolve one by name — and the
           # snapshot check compares fixtures too, so there has to be a way to
           # produce the same text for them.
           labPlans = lib.mapAttrs (_: l: {
-            inherit (l.config.lab.out) deploymentPlan teardownPlan;
+            inherit (l) deploymentPlan teardownPlan;
           }) labDefs;
         };
 
@@ -187,9 +306,9 @@
             cloud-reap
             refresh-digests
             refresh-cli-configs
-            refresh-floe-docs
-            refresh-option-docs
+            refresh-docs
             refresh-allocations
+            refresh-generated-types
             refresh-plans
             talks
             docs
@@ -234,19 +353,19 @@
           program = "${packages'.refresh-cli-configs}/bin/refresh-cli-configs";
         };
 
-        apps.refresh-floe-docs = {
+        apps.refresh-docs = {
           type = "app";
-          program = "${packages'.refresh-floe-docs}/bin/refresh-floe-docs";
-        };
-
-        apps.refresh-option-docs = {
-          type = "app";
-          program = "${packages'.refresh-option-docs}/bin/refresh-option-docs";
+          program = "${packages'.refresh-docs}/bin/refresh-docs";
         };
 
         apps.refresh-allocations = {
           type = "app";
           program = "${packages'.refresh-allocations}/bin/refresh-allocations";
+        };
+
+        apps.refresh-generated-types = {
+          type = "app";
+          program = "${packages'.refresh-generated-types}/bin/refresh-generated-types";
         };
 
         apps.refresh-plans = {
@@ -266,6 +385,7 @@
             self
             lib
             pkgs
+            floeCore
             cataCharts
             k8sSpecs
             treefmtEval
@@ -276,17 +396,26 @@
           # `labDefs` includes fixtures; `counts` wants the runnable set.
           inherit exampleLabs;
 
+          # Clusters with no lab around them, read on their own by
+          # `cluster-artifact-standalone-<name>`.
+          inherit standaloneClusters;
+
           # A check that a *wrong* lab is refused has to build one, and only
-          # `mkLab` can: the refusal is an assertion inside the module tree,
-          # so there is nothing to inspect without evaluating it.
-          inherit (labs) mkLab mkFloes;
+          # `mkLab` can: nothing about a link is inspectable without
+          # evaluating it. The distribution and the floe set come with it,
+          # because building a lab means writing a floe definition.
+          inherit (labs)
+            mkLab
+            mkFloes
+            catallaxy
+            floes
+            ;
           inherit (packages') optionDocs;
           inherit allocations;
           inherit
-            e2eLabs
-            cloudE2eLabs
             cliConfigs
-            floeInterfaces
+            referencePages
+            generatedTypes
             ;
         };
       }

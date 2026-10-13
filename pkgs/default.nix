@@ -61,9 +61,9 @@ let
   e2e-cloud = import ./e2e-cloud.nix { inherit lib pkgs cataWrapped; };
   refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
   refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
-  refresh-floe-docs = import ./refresh-floe-docs.nix { inherit lib pkgs; };
-  refresh-option-docs = import ./refresh-option-docs.nix { inherit lib pkgs; };
+  refresh-docs = import ./refresh-docs.nix { inherit lib pkgs; };
   refresh-allocations = import ./refresh-allocations.nix { inherit lib pkgs; };
+  refresh-generated-types = import ./refresh-generated-types.nix { inherit lib pkgs; };
   optionDocs = import ./option-docs.nix {
     inherit
       lib
@@ -91,9 +91,9 @@ in
     cloud-reap
     refresh-digests
     refresh-cli-configs
-    refresh-floe-docs
-    refresh-option-docs
+    refresh-docs
     refresh-allocations
+    refresh-generated-types
     optionDocs
     refresh-plans
     talks

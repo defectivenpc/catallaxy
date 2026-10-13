@@ -16,9 +16,14 @@ pub fn run(sctx: &StepContext<'_>, p: &DeployManifestsParams) -> Result<()> {
     } = p;
     let kube_context_override = kube_context_override.as_deref();
 
+    let strategy = sctx
+        .lab
+        .delivery_for(target)
+        .unwrap_or(DeployStrategy::Kapp);
+
     let subdir = if *bootstrap {
         "stage1"
-    } else if sctx.strategy == DeployStrategy::Kapp {
+    } else if strategy == DeployStrategy::Kapp {
         "manifests"
     } else {
         "bootstrap"

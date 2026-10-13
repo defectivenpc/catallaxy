@@ -4,10 +4,14 @@
 # the name. What is worth pinning is that it still answers everything a member
 # reads — a cluster this lab did not create is not a cluster its members know
 # less about.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   r = support.evalFloe {
     name = "external-cluster";
@@ -24,7 +28,7 @@ let
 in
 lib.runTests {
 
-  # Every field of `KUBERNETES_CLUSTER` is still concrete — RFC 0005 §6.3.
+  # Every field of `KUBERNETES_CLUSTER` is still concrete.
   # This is the case that could have broken the rule and does not: the
   # cluster's *endpoint* is a discovery, and nothing here exposes it, because
   # an endpoint reaches kubectl through a kubeconfig and never reaches a
@@ -49,16 +53,17 @@ lib.runTests {
     expected = "cata-demo-workload";
   };
 
-  # Not `docker`. `modules/lab/plan.nix` reads this to decide whether the
-  # cluster joins the lab's network, so a lab of nothing but these creates no
-  # docker network at all.
+  # The variant's own key says it. `lib/lower/plan.nix` reads that to decide
+  # whether the cluster joins the lab's network, so a lab of nothing but these
+  # creates no docker network at all — and there is no `provider` string beside
+  # the block to disagree with it.
   testItIsNotOnTheLabsDockerNetwork = {
-    expr = descriptor.provider;
-    expected = "external";
+    expr = lib.attrNames descriptor.config;
+    expected = [ "external" ];
   };
 
   # `self`, never `proxy`: the lab's proxy reaches backends on its own docker
-  # network and this cluster is not on it. RFC 0005 §6.4 calls that a refusal
+  # network and this cluster is not on it. it calls that a refusal
   # to route rather than a deferred address.
   testTheLabIsNotItsEdge = {
     expr = descriptor.edge;
@@ -70,23 +75,50 @@ lib.runTests {
     };
   };
 
-  # Free text, carried for the operator reading a plan, and never dispatched
-  # on — dispatching would make it a provisioner enum again.
+  # What made it, for the operator reading a plan. The harness wires every
+  # stub, so the optional `CLUSTER_PROVISIONING` hole is filled here and
+  # `madeBy` is the object's coordinates — which is also what the planner
+  # waits on, so the text an operator reads and the thing being waited for
+  # cannot drift. A cluster nothing in the lab creates says so in free text
+  # instead, through the input of the same name.
   #
-  # `kubeconfigFrom` is null here: this fixture is the bundle case,
-  # where the kubeconfig is in a connection Secret and the lab reaches it
-  # through the management cluster's `provisions`. The lab strips this field
-  # before the descriptor becomes a `ClusterSpec` — it derives a step from it
-  # and the step carries the address, so passing it on would be the same fact
-  # in the document twice.
-  testItSaysWhatMakesItWithoutTheLabActingOnThat = {
+  # `kubeconfigFrom` is null here: this fixture is the bundle case, where the
+  # kubeconfig is in a connection Secret and the lab reaches it through the
+  # cluster that reconciles the object. The lab strips the field before the
+  # descriptor becomes a `ClusterSpec` — it derives a step from it and the
+  # step carries the address, so passing it on would be the same fact in the
+  # document twice.
+  testItSaysWhatMakesIt = {
     expr = descriptor.config;
     expected = {
       external = {
-        madeBy = "crossplane on 'mgmt'";
+        madeBy = "clusters.example.com/stub-workload";
+        provisionedBy = {
+          resourceKind = "clusters.example.com";
+          resourceName = "stub-workload";
+        };
         kubeconfigFrom = null;
       };
     };
+  };
+
+  # And the other way: a cluster nothing here creates leaves the hole empty
+  # and says so in words.
+  testAClusterNobodyHereMakesSaysSoInWords = {
+    expr =
+      ((support.evalFloe {
+        name = "external-cluster";
+        inputs = {
+          name = "demo";
+          context = "cata-demo-workload";
+          madeBy = "a hand, once, in 2019";
+          podSubnet = "10.246.0.0/16";
+          serviceSubnet = "10.113.0.0/16";
+        };
+        without = [ "provisioning" ];
+      }).link.out."catallaxy.cluster".external-cluster
+      ).config.external.madeBy;
+    expected = "a hand, once, in 2019";
   };
 
   # Zero rather than one. Whoever made it decided the shape; a record claiming

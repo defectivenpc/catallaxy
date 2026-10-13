@@ -92,9 +92,6 @@ fn check(
                 continue;
             }
 
-            // A projected Secret never appears in the rendered tree: the value
-            // is decrypted and applied at deploy. The projection machinery
-            // already asserts it lands no later than its consumer.
             if want_kind == "secret" && projection_names.contains(name) {
                 continue;
             }

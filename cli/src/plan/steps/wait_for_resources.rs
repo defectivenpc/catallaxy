@@ -177,9 +177,6 @@ mod tests {
         assert_eq!(classify_readiness(true, ""), Readiness::NotReady);
     }
 
-    // A kubectl that failed says nothing about readiness. Reading its empty
-    // stdout as "not ready yet" is how a broken query became a cluster
-    // timeout.
     #[test]
     fn a_failing_kubectl_is_not_evidence_of_being_unready() {
         assert_eq!(classify_readiness(false, ""), Readiness::CannotTell);

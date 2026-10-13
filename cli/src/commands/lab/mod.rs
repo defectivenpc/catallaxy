@@ -16,6 +16,7 @@ pub mod env;
 mod golden;
 mod lint_cmd;
 mod ops;
+pub mod parse;
 pub mod plan;
 pub mod plan_manifests;
 pub mod publish;
@@ -153,6 +154,15 @@ pub enum LabCommands {
 
         #[arg(long, value_name = "PATH", help = DIFF_HELP)]
         diff: Option<std::path::PathBuf>,
+    },
+
+    #[command(about = "Parse a lab document and say what it declares")]
+    Parse {
+        #[arg(help = LAB_NAME_HELP)]
+        name: Option<String>,
+
+        #[arg(long, value_name = "PATH", help = FROM_FILE_HELP)]
+        from_file: Option<std::path::PathBuf>,
     },
 
     #[command(about = "Show the install-wave layout for a cluster")]
@@ -388,6 +398,9 @@ pub async fn run(ctx: &CataContext, command: LabCommands) -> Result<()> {
                 from_file,
                 diff,
             )
+        }
+        LabCommands::Parse { name, from_file } => {
+            parse::run(ctx, name.as_deref(), from_file.as_deref())
         }
         LabCommands::PlanManifests {
             name,

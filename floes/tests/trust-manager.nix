@@ -4,10 +4,14 @@
 # the old tree cert-manager emitted the Bundle CRs and read trust-manager's
 # export to know whether it could, so the two were mutually dependent. Here
 # trust-manager reads cert-manager and cert-manager reads nothing.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "trust-manager";
     inputs.chart = "/dev/null";
@@ -20,7 +24,7 @@ lib.runTests {
   testDependsOnCertManagerRatherThanTheReverse = {
     expr =
       lib.attrNames
-        (import ../cluster/trust-manager {
+        (import ../components/trust-manager {
           inherit lib pkgs;
           catallaxy = support.catallaxy;
           inherit (support.catallaxy) floe sigs kinds;

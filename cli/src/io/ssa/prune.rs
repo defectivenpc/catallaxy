@@ -30,9 +30,6 @@ pub(super) fn prune_undeclared(
         ..
     } = opts;
 
-    // No file means a tree rendered before pruning existed. Deleting on that
-    // basis would treat every bundle as undeclared, so say nothing and do
-    // nothing.
     let Some(declared) = declared_bundles(manifest_root) else {
         return Ok(());
     };

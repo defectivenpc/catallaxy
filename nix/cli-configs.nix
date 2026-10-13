@@ -37,7 +37,7 @@ let
           pkgs.jq
           pkgs.gnused
         ];
-        raw = builtins.toJSON (removeAttrs lab.config.lab.out.cliConfig omitted);
+        raw = builtins.toJSON (removeAttrs lab.cliConfig omitted);
         passAsFile = [ "raw" ];
       }
       ''

@@ -1,11 +1,8 @@
 # bundles + link edges -> cluster metadata.
-{ lib }:
+{ lib, floe }:
 
 let
-  componentLib = import ./component.nix {
-    inherit lib;
-    floe = import ../floe-core { inherit lib; };
-  };
+  componentLib = import ./component.nix { inherit lib floe; };
 
   waitUtil = import ../kubernetes/wait.nix { inherit lib; };
   manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };
@@ -50,8 +47,6 @@ in
       linkResult,
       coreKinds ? { },
 
-      projectedSecrets ? { },
-
       extraBundles ? { },
 
       defaultOwner ? {
@@ -62,7 +57,11 @@ in
     let
       components = linkResult.out."catallaxy.component" or { };
 
-      # ---- 1. join ---------------------------------------------------------
+      projections = lib.foldl' lib.mergeAttrs { } (
+        lib.attrValues (linkResult.out."catallaxy.projections" or { })
+      );
+
+      projectedSecrets = lib.mapAttrs (_: p: p.namespace) projections;
 
       joined = componentLib.joinAll (
         lib.mapAttrsToList (unit: c: componentLib.qualify unit c) components
@@ -70,8 +69,6 @@ in
 
       bundles = joined.bundles // extraBundles;
       backs = joined.backs;
-
-      # ---- 2. cross-floe edges --------------------------------------------
 
       bundlesOfUnit = unit: lib.attrNames (lib.filterAttrs (_: b: b.declaredBy == unit) joined.bundles);
 
@@ -86,7 +83,12 @@ in
           lib.unique (
             lib.concatLists (
               lib.mapAttrsToList (
-                _hole: p: backs."${p.instName}/${p.provideName}" or (bundlesOfUnit p.instName)
+                _hole: p:
+                let
+                  unit = p.backedBy or p.instName;
+                  provide = p.backedProvide or p.provideName;
+                in
+                backs."${unit}/${provide}" or (bundlesOfUnit unit)
               ) holes
             )
           )
@@ -99,8 +101,6 @@ in
           requires = map (n: "bundle:${n}") (lib.filter (n: !(lib.elem n b.needs)) (upstreamOf b.declaredBy));
         }
       ) bundles;
-
-      # ---- 3. lower onto the graph's vocabulary ---------------------------
 
       probeOf =
         name: b:
@@ -215,8 +215,6 @@ in
 
       waves = manifestGraph.computeWaves { bundles = graphBundles; };
 
-      # ---- 4. lift the operator surface -----------------------------------
-
       liftChannel =
         channel:
         lib.foldl' lib.mergeAttrs { } (
@@ -258,8 +256,6 @@ in
         ) bundles
       );
 
-      # ---- 5. namespaces ---------------------------------------------------
-
       created = lib.unique (lib.concatMap (b: b.createNamespaces) (lib.attrValues bundles));
 
       known = created ++ builtinNamespaces;
@@ -272,8 +268,6 @@ in
           )
         ) bundles
       );
-
-      # ---- secrets ---------------------------------------------------------
 
       secretsMade = lib.unique (
         lib.mapAttrsToList (name: namespace: secretAddress namespace name) projectedSecrets
@@ -290,8 +284,6 @@ in
           )
         ) withCrossFloeEdges
       );
-
-      # ---- exposed hosts ---------------------------------------------------
 
       routeKinds = [
         "HTTPRoute"
@@ -403,6 +395,8 @@ in
         );
 
         owners = lib.mapAttrs (_: resolveOwner defaultOwner) bundles;
+
+        inherit projections;
 
         cluster = linkResult.out."catallaxy.cluster" or { };
 

@@ -1,31 +1,56 @@
 # Your topology.
 #
-# `floes` is catallaxy's set, handed in by `mkLab`. `myFloes` is yours,
-# handed in by the flake — a floe is a function, not a module to import, so
-# it reaches the lab as an ordinary argument.
-{ myFloes }:
-
+# A lab is a floe, so this is a floe definition: it declares what its
+# environments may vary and places the units and clusters it holds. The
+# cluster's own composition is in `clusters.nix`, where its header states its
+# interface.
+#
+# Three sets of floes reach it as ordinary arguments, because a floe is a
+# function rather than a module to import. `floes` is catallaxy's set and
+# `catallaxy` the distribution — both handed in by the flake from
+# `cata.floes` and `cata.catallaxy` — and `myFloes` is yours.
 {
   lib,
   floes,
-  ...
+  catallaxy,
+  myFloes,
 }:
 
-{
-  lab.name = lib.mkDefault "my-platform";
-  lab.dns.zone = lib.mkDefault "example.test";
-
-  lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster { };
-
-    gateway-api = floes.gateway-api-crds { };
-
-    # The gateway requires X509_ISSUANCE outright, so every cluster with a
-    # gateway has an issuer even when nothing terminates TLS.
-    cert-manager = floes.cert-manager { };
-
-    gateway = floes.gateway { };
-
-    hello = myFloes.hello-world { };
+let
+  clusters = import ./clusters.nix {
+    inherit
+      catallaxy
+      floes
+      myFloes
+      lib
+      ;
   };
+in
+catallaxy.mkLabFloe {
+  name = "my-platform";
+  summary = "One cluster, and the floes you wrote in it.";
+
+  inputs = {
+    zone.default = "example.test";
+
+    claim = lib.mkOption {
+      type = catallaxy.floeInstance;
+      default = floes.k3d-cluster { };
+      defaultText = lib.literalExpression "floes.k3d-cluster { }";
+      description = ''
+        What establishes the claim the cluster leaves open. Beside the cluster
+        and not inside it, so an environment swaps the provisioner — k3d here,
+        Talos or a managed cluster elsewhere — without touching a component.
+      '';
+    };
+  };
+
+  clusters =
+    { inputs, ... }:
+    {
+      app = {
+        floe = clusters.app { };
+        inherit (inputs) claim;
+      };
+    };
 }

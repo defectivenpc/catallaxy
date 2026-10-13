@@ -1,19 +1,19 @@
 # A cluster something else brings into existence.
 #
-# RFC 0005 §2 calls this "providing without running": the floe answers
+# it calls this "providing without running": the floe answers
 # `KUBERNETES_CLUSTER` like any provisioner, and `cata` creates nothing. What
 # makes it a lab cluster is that a lab names it and installs into it.
 #
 # It covers both ways a cluster arrives without this machine making it:
 # reconciled from a CR by a controller in another cluster (Crossplane, Cluster
-# API), or applied by a state-based tool (RFC 0003). Neither is a special
+# API), or applied by a state-based tool. Neither is a special
 # case here, because the difference is *who acts*, and in both cases the
 # answer is "not the lab".
 #
 # The lab still has to know *when* it exists. That is the management cluster's
 # `provisions` declaration, not this floe's business — a cluster cannot say
-# who creates it without naming something outside itself, and RFC 0005 §6.2
-# forbids exactly that.
+# who creates it without naming something outside itself, which is exactly
+# what the stratification forbids.
 {
   lib,
   floe,
@@ -27,6 +27,19 @@ floe.mkFloe {
   summary = "A cluster something else brings into existence, which this lab installs into.";
 
   inputs = {
+    wait = lib.mkOption {
+      type = lib.types.str;
+      default = "10m";
+      description = ''
+        How long to wait for the API server to answer once the cluster has
+        been created.
+
+        Here rather than on the cluster, because how long a cluster takes to
+        come up is a property of what makes it. The wait for an *apply* to
+        settle belongs to whatever applies, and is `DELIVERY_POLICY`'s.
+      '';
+    };
+
     name = lib.mkOption {
       type = lib.types.str;
       description = "Cluster name, as members and the kubeconfig see it. Required.";
@@ -35,24 +48,31 @@ floe.mkFloe {
     context = lib.mkOption {
       type = lib.types.str;
       description = ''
-        kubectl context this cluster answers on.
+               kubectl context this cluster answers on.
 
-        A decision, not a discovery: `cata` writes the kubeconfig under this
-        name after fetching it, rather than taking whatever the producing tool
-        called it. That is what keeps `KUBERNETES_CLUSTER.context` concrete
-        (RFC 0005 §6.3) even though the cluster's endpoint is not.
+               A decision, not a discovery: `cata` writes the kubeconfig under this
+               name after fetching it, rather than taking whatever the producing tool
+               called it. That is what keeps `KUBERNETES_CLUSTER.context` concrete
+        even though the cluster's endpoint is not.
       '';
     };
 
     madeBy = lib.mkOption {
       type = lib.types.str;
-      example = "crossplane on 'mgmt'";
+      default = "";
+      example = "a hand, once, in 2019";
       description = ''
         What brings it into existence, for the operator reading a plan.
 
-        Free text and never dispatched on. A `create-cluster` step that does
-        nothing reads as broken; one that says what it is waiting for reads as
-        waiting.
+        Free text and never dispatched on, for a cluster nothing in this lab
+        creates. One that *is* created by something here says so through
+        `optional.provisioning` instead, where the planner can read it — and
+        a cluster that answers neither is refused, because a cluster nothing
+        creates and nothing fetches a kubeconfig for is a context that will
+        not exist.
+
+        A `create-cluster` step that does nothing reads as broken; one that
+        says what it is waiting for reads as waiting.
       '';
     };
 
@@ -97,33 +117,22 @@ floe.mkFloe {
       '';
     };
 
-    kubeconfigFrom = lib.mkOption {
-      type = lib.types.nullOr (
-        lib.types.submodule {
-          options = {
-            store = lib.mkOption {
-              type = lib.types.str;
-              description = "A `lab.secrets.stores` entry the kubeconfig is published to.";
-            };
-            key = lib.mkOption {
-              type = lib.types.str;
-              description = "Key inside that store.";
-            };
-          };
-        }
-      );
+    kubeconfigKey = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
       default = null;
+      example = "clusters/workload/kubeconfig";
       description = ''
-        Where this cluster's kubeconfig is published, when a state-based
-        apply is what produced it (RFC 0003 §7).
+        Key this cluster's kubeconfig is published under, when a state-based
+        apply is what produced it. *Which* store is resolved —
+        `optional.labStore`.
 
         Null for a cluster a controller in another cluster reconciles: there
         the kubeconfig is in a connection Secret and the lab reaches it
-        through the management cluster's `provisions` declaration instead.
-        One of the two has to say how the cluster becomes reachable, and a
-        lab check refuses one that says neither — a cluster the lab deploys
-        to and has no kubeconfig for fails at the first kubectl call with a
-        context that does not exist.
+        through the management cluster's `provisions` declaration instead. One
+        of the two has to say how the cluster becomes reachable, and a lab
+        check refuses one that says neither — a cluster the lab deploys to and
+        has no kubeconfig for fails at the first kubectl call with a context
+        that does not exist.
       '';
     };
 
@@ -134,7 +143,7 @@ floe.mkFloe {
       ];
       default = "self";
       description = ''
-        Who fronts it — RFC 0005 §6.4.
+        Who fronts it.
 
         Never `proxy`: the lab's proxy reaches backends on its own docker
         network, and a cluster this lab did not create is not on it. `self`
@@ -145,13 +154,33 @@ floe.mkFloe {
   };
 
   provides.cluster = sigs.KUBERNETES_CLUSTER;
-  out.cluster = kinds.cluster;
+
+  # And no `CLUSTER_EDGE`. A cluster this lab did not create has no address
+  # this lab can derive: there is no container of ours to name, and the
+  # endpoint whoever made it published is not something a docker bridge
+  # reaches. Declining is the complete answer, and it is what makes the hole
+  # a consumer declares for this optional.
+  # Zero or one, which is the shape of the question: a cluster this lab
+  # creates reads the coordinates of the object that creates it, and one that
+  # already existed reads nothing. Optional holes resolve only when a deployer
+  # names the provider, which here is the lab saying which cluster runs the
+  # controller.
+  optional.provisioning = sigs.CLUSTER_PROVISIONING;
+
+  # The other way a kubeconfig arrives: a state-based apply published it into
+  # a lab store. Which store is resolved rather than spelled; the key is
+  # written on both sides because the publisher and this cluster have
+  # different names and neither can derive the other's.
+  optional.labStore = sigs.LAB_SECRET_STORE;
+
+  out.clusterDescriptor = kinds.cluster;
 
   modules = [
     (
       { config, ... }:
       let
         inputs = config.floe.inputs;
+        labStore = config.floe.requires.labStore;
       in
       {
         config.floe.provides.cluster = {
@@ -165,23 +194,16 @@ floe.mkFloe {
             ;
         };
 
-        config.floe.out.cluster = {
+        config.floe.out.clusterDescriptor = {
           inherit (inputs) name;
 
-          # Not `docker`. Read by `modules/lab/plan.nix` to decide whether the
-          # cluster joins the lab's network, and this one does not — so the
-          # `needs lab.network` edge drops and a lab of nothing but these
-          # makes no docker network at all.
-          provider = "external";
+          instanceName = inputs.name;
 
           kubeContext = inputs.context;
+          inherit (inputs) wait;
 
           kubernetes = {
             inherit (inputs) distribution version;
-            # Unknown and not guessed. Whoever made it decided; the drift
-            # report compares what it finds against the record, and a record
-            # claiming one control plane would report drift on every cluster
-            # that has three.
             controlPlanes = 0;
             workers = 0;
           };
@@ -198,7 +220,29 @@ floe.mkFloe {
           };
 
           config.external = {
-            inherit (inputs) madeBy kubeconfigFrom;
+            madeBy =
+              let
+                by = config.floe.requires.provisioning or null;
+              in
+              if by != null then "${by.resourceKind}/${by.resourceName}" else inputs.madeBy;
+
+            provisionedBy = config.floe.requires.provisioning or null;
+
+            kubeconfigFrom =
+              if inputs.kubeconfigKey == null then
+                null
+              else if labStore == null then
+                throw (
+                  "external-cluster '${inputs.name}': kubeconfigKey is "
+                  + "'${inputs.kubeconfigKey}' and no LAB_SECRET_STORE resolved, so there is "
+                  + "no store to read it from. Declare `optional.labStore` on the cluster floe "
+                  + "and name the store with `lab.defaults.LAB_SECRET_STORE`."
+                )
+              else
+                {
+                  store = labStore.name;
+                  key = inputs.kubeconfigKey;
+                };
           };
         };
       }

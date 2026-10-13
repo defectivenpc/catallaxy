@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -14,10 +13,6 @@ pub fn ensure_ingress_cert(lab_name: &str, zone: &str) -> Result<PathBuf> {
     let ingress_dir = service_state_dir(lab_name, crate::host::state::PROXY_SERVICE);
     let cert_pem = ingress_dir.join("lab.pem");
 
-    // Every run, not only the one that writes the certificate. A lab whose
-    // cert is still valid takes the early return below, so enforcing the modes
-    // alongside the write left anything issued before this rule was in place
-    // unreadable for the rest of that certificate's year.
     io::fs::create_dir_private(&ingress_dir)?;
 
     if cert_pem.exists() && !needs_reissue(&cert_pem, &ingress_dir.join("ca.crt")) {
@@ -255,12 +250,6 @@ fn sign_server_cert(
     io::fs::write(ingress_dir.join("lab.crt"), &server.cert_pem)?;
     io::fs::write_private(&ingress_dir.join("lab.key"), server.key_pem.as_bytes())?;
 
-    // Readable, unlike the key beside it, because haproxy's image runs as its
-    // own user and this file is bind-mounted straight into it: the kernel
-    // checks the mode against the container's uid, so 0600 owned by whoever
-    // ran `cata` means the ingress cannot read its own certificate and
-    // crash-loops on "cannot open the file". The directory is 0700, which is
-    // what keeps it from other users here.
     io::fs::write(
         cert_pem,
         format!("{}{}", server.cert_pem, server.key_pem).as_bytes(),
@@ -324,8 +313,6 @@ fn signed_by(cert_pem: &Path, ca_cert: &Path) -> bool {
     let Ok(ca) = io::fs::read_to_string(ca_cert) else {
         return true;
     };
-    // None means neither name could be read, so this cannot tell. It answers
-    // "yes, signed by that CA" so an unreadable pair does not reissue.
     crate::io::pki::issued_by(&cert, &ca).unwrap_or(true)
 }
 
@@ -360,59 +347,6 @@ pub fn import_lab_ca(lab_name: &str, lab: &LabSpec, cluster_name: &str) -> Resul
         style(">>>").green()
     );
 
-    write_ca_config_maps(lab, cluster_name, context, &ca_crt)?;
-
-    Ok(())
-}
-
-/// The lab CA as ConfigMaps, wherever the cluster asked for it.
-///
-/// The trust bundle in every namespace covers anything that reads a system
-/// trust store. This covers what does not: argocd takes repository CAs only
-/// from `argocd-tls-certs-cm`, keyed by hostname, and the chart mounts that
-/// ConfigMap without `optional`, so it has to exist before the repo-server
-/// starts. Writing it here, while the cluster is being created, is earlier
-/// than anything that reads it.
-fn write_ca_config_maps(
-    lab: &LabSpec,
-    cluster_name: &str,
-    context: &str,
-    ca_crt: &Path,
-) -> Result<()> {
-    let Some(cluster) = lab.clusters.get(cluster_name) else {
-        return Ok(());
-    };
-    let wanted = &cluster.trust.ca_config_maps;
-    if wanted.is_empty() {
-        return Ok(());
-    }
-
-    let pem =
-        io::fs::read_to_string(ca_crt).with_context(|| format!("reading {}", ca_crt.display()))?;
-
-    // Entries naming one ConfigMap become one object with a key each, so a
-    // cluster verifying two hosts against the lab CA does not get two
-    // ConfigMaps that overwrite one another.
-    let mut by_object: BTreeMap<(&str, &str), BTreeMap<&str, &str>> = BTreeMap::new();
-    for entry in wanted {
-        by_object
-            .entry((entry.namespace.as_str(), entry.name.as_str()))
-            .or_default()
-            .insert(entry.key.as_str(), pem.as_str());
-    }
-
-    for ((namespace, name), data) in by_object {
-        crate::io::kubectl::create_namespace_if_missing(context, namespace)?;
-        let manifest = crate::io::kubectl::render_config_map(namespace, name, &data);
-        crate::io::kubectl::apply_stdin(context, manifest.as_bytes()).with_context(|| {
-            format!("writing the lab CA to {namespace}/{name} in '{cluster_name}'")
-        })?;
-        println!(
-            "{} Lab CA available in '{cluster_name}' as {namespace}/{name}",
-            style(">>>").green(),
-        );
-    }
-
     Ok(())
 }
 
@@ -420,10 +354,6 @@ fn write_ca_config_maps(
 mod tests {
     use super::*;
 
-    // A throwaway RSA CA, minted by openssl exactly as a lab's CA was before
-    // this code used rcgen. rcgen cannot generate an RSA key but it can sign
-    // with one, which is what lets the switch happen without reminting a CA
-    // users have already told their machine to trust.
     const LEGACY_CA_CERT: &str = include_str!("../../tests/fixtures/legacy-rsa-ca.crt");
     const LEGACY_CA_KEY: &str = include_str!("../../tests/fixtures/legacy-rsa-ca.key");
 
@@ -495,9 +425,6 @@ mod tests {
         assert_eq!(TrustState::of("ABCD", "EF01"), TrustState::CaChanged);
     }
 
-    // These replace two tests over `issuer_matches`, a helper that compared
-    // the strings openssl printed for a DN. There is no such string now: the
-    // encoded names are compared directly, so the test works on certificates.
     #[test]
     fn a_certificate_is_recognised_as_issued_by_its_own_ca() {
         let ca = crate::io::pki::self_signed_ca(

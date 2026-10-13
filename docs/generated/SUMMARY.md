@@ -19,17 +19,14 @@
 
 - [Configure a Lab](./using/configuring.md)
 - [Write a Floe](./using/writing-a-floe.md)
-- [Reuse a Cluster](./using/presets.md)
+- [Reuse a Cluster](./using/cluster-floes.md)
 
 # Reference
 
 - [CLI](./reference/cli.md)
   - [Commands](./reference/cli/commands.md)
 - [Module Options](./reference/options.md)
-  - [lab.*](./reference/options/lab.md)
-    - [lab.steps.*](./reference/options/steps.md)
-  - [cluster.*](./reference/options/cluster.md)
-    - [bundles.*](./reference/options/bundles.md)
+  - [Plan Step Schema](./reference/options/steps.md)
 - [Floes](./reference/floes/index.md)
 - [mkFloe API](./reference/floe-api.md)
 - [Bundle Schema](./reference/bundles.md)

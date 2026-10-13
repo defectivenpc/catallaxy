@@ -63,25 +63,26 @@ deployment plan.
 These catch what no per-cluster rule can: a copy step whose source cluster
 renders no such Secret is invisible from either cluster alone.
 
-## Custom checks
+## Checks a floe declares
 
-A lab declares its own, and they run alongside the built-ins:
+A check is declared on the bundle it is a claim about, and runs alongside
+the built-ins:
 
 ```nix
-lab.lint.checks.no-latest-tag = {
-  description = "Container images must not use the floating `latest` tag";
+lint.route-listener-exists = {
+  description = "Every HTTPRoute and TLSRoute attaches to a listener some Gateway declares";
   severity = "error";          # error | warning     (default warning)
   scope = "per-cluster";       # per-file | per-cluster  (default per-file)
   format = "json";             # exit-code | json    (default exit-code)
-  command = ''
-    find "$MANIFEST_DIR" -name '*.yaml' -print0 \
-      | xargs -0 yq -o=json -I0 '.. | select(has("image")) | .image' 2>/dev/null \
-      | grep -E ':latest"?$' \
-      | jq -R '{severity: "error", resource: ., message: "image uses the `latest` tag"}' \
-      | jq -s '.'
-  '';
+  command = builtins.readFile ./lint/route-listener-exists.sh;
 };
 ```
+
+On the bundle and not on the lab, because a check is a claim about rendered
+output and the floe that rendered it is what can state one.
+`floes/components/gateway/` declares the two above: each reads every route
+in the cluster against the listeners _its_ bundle declares, which is a
+question only that bundle knows to ask.
 
 | `scope`       | Invoked            | Environment                 |
 | ------------- | ------------------ | --------------------------- |
@@ -133,7 +134,7 @@ Every example lab gets a check:
 checks.<lab>-lint = pkgs.runCommand "<lab>-lint" {
   nativeBuildInputs = [ cata ];
 } ''
-  cata lab lint --path ${lab.config.lab.out.package}
+  cata lab lint --path ${lab.package}
   touch $out
 '';
 ```

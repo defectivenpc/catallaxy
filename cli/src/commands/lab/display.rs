@@ -24,8 +24,6 @@ struct RunningJson {
 }
 
 pub fn list(ctx: &CataContext, json: bool) -> Result<()> {
-    // Non-fatal on purpose: a lab whose flake no longer evaluates is one of
-    // the ways a lab gets orphaned, and it must not hide its own leftovers.
     let defined = crate::io::nix::list_labs_with_cluster_counts(ctx);
     let inventory = crate::domain::inventory::correlate(&io::host_inventory::gather());
 
@@ -79,11 +77,6 @@ fn print_defined(defined: &Result<Vec<(String, crate::io::nix::LabSummary)>>) {
                     "clusters"
                 };
                 println!("  {} ({} {})", style(name).green(), summary.clusters, unit);
-                if !summary.eligible {
-                    for reason in &summary.reasons {
-                        println!("      {} {}", style("needs").yellow(), reason);
-                    }
-                }
             }
         }
     }
@@ -312,7 +305,12 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
         println!();
     }
 
-    let strategy = lab.cd.strategy.tag();
+    let strategy = lab
+        .delivery_strategies()
+        .iter()
+        .map(|s| s.tag())
+        .collect::<Vec<_>>()
+        .join(", ");
     let zone = lab.dns_info.as_ref().map_or("?", |d| d.zone.as_str());
     println!(
         "  {} {} {} {} {}",

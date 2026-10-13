@@ -1,8 +1,7 @@
 {
   "cd": {
     "bootstrap": "kubectl-ssa",
-    "git": {},
-    "strategy": "kapp"
+    "git": {}
   },
   "clusterNames": [
     "core",
@@ -10,267 +9,223 @@
   ],
   "clusters": {
     "core": {
-      "deploy": {
-        "strategy": "kapp"
+      "claim": {
+        "context": "k3d-self-edge-core",
+        "instanceName": "self-edge-core",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
+        },
+        "name": "core",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
+        }
       },
-      "edge": {
-        "backend": "k3d-self-edge-core-server-0",
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "proxy"
-      },
-      "exposedHosts": [
-        {
-          "bundle": "podinfo/podinfo",
-          "host": "podinfo.self-edge.test",
-          "namespace": "podinfo",
-          "paths": [
-            "/"
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.self-edge.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "cert-manager",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-core",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "gateway-api/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            }
           ],
-          "tier": "public"
-        }
-      ],
-      "floes": {
-        "cert-manager": {
-          "enable": true
-        },
-        "cluster": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
-        },
-        "podinfo": {
-          "enable": true
-        }
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/cert-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/controller",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/gateway",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ]
+        ]
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "k3d-self-edge-core",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "k3s",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "self-edge",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "self-edge-core",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "self-edge",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": null,
+            "ports": []
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 3
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "podinfo/podinfo",
-            "resourceCount": 3
-          }
-        ]
-      ],
-      "name": "core",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.96.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "k3d",
-      "provisionerConfig": {
-        "k3d": {
-          "autoDeployManifests": [],
-          "clusterName": "self-edge-core",
-          "extraApiServerArgs": [],
-          "extraK3sArgs": [],
-          "extraVolumes": [],
-          "image": "rancher/k3s:v1.31.4-k3s1",
-          "network": "self-edge",
-          "noFlannel": false,
-          "noLocalStorage": false,
-          "noServiceLB": false,
-          "noTraefik": true,
-          "ports": []
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     },
     "edge": {
-      "deploy": {
-        "strategy": "kapp"
+      "claim": {
+        "context": "k3d-self-edge-edge",
+        "instanceName": "self-edge-edge",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
+        },
+        "name": "edge",
+        "network": {
+          "podSubnet": "10.245.0.0/16",
+          "serviceSubnet": "10.112.0.0/12"
+        }
       },
-      "edge": {
-        "backend": null,
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "self"
-      },
-      "exposedHosts": [
-        {
-          "bundle": "podinfo/podinfo",
-          "host": "podinfo.self-edge.test",
-          "namespace": "podinfo",
-          "paths": [
-            "/"
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.self-edge.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "cert-manager",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-edge",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "gateway-api/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            }
           ],
-          "tier": "public"
-        }
-      ],
-      "floes": {
-        "cert-manager": {
-          "enable": true
-        },
-        "cluster": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
-        },
-        "podinfo": {
-          "enable": true
-        }
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/cert-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/controller",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/gateway",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ]
+        ]
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "k3d-self-edge-edge",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "k3s",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "self-edge",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "self-edge-edge",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "self-edge",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": null,
+            "ports": []
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 3
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "podinfo/podinfo",
-            "resourceCount": 3
-          }
-        ]
-      ],
-      "name": "edge",
-      "network": {
-        "podSubnet": "10.245.0.0/16",
-        "serviceSubnet": "10.112.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "k3d",
-      "provisionerConfig": {
-        "k3d": {
-          "autoDeployManifests": [],
-          "clusterName": "self-edge-edge",
-          "extraApiServerArgs": [],
-          "extraK3sArgs": [],
-          "extraVolumes": [],
-          "image": "rancher/k3s:v1.31.4-k3s1",
-          "network": "self-edge",
-          "noFlannel": false,
-          "noLocalStorage": false,
-          "noServiceLB": false,
-          "noTraefik": true,
-          "ports": []
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     }
   },
@@ -285,16 +240,6 @@
   },
   "infraPublications": [],
   "labName": "self-edge",
-  "labNamespaces": {
-    "core": [
-      "cert-manager",
-      "podinfo"
-    ],
-    "edge": [
-      "cert-manager",
-      "podinfo"
-    ]
-  },
   "labOwnedRegistries": [],
   "network": {
     "dockerSubnet": "172.16.160.0/20",
@@ -303,9 +248,10 @@
   "opsToolPath": "/nix/store/HASH-self-edge-ops/bin/self-edge-ops",
   "registryPort": null,
   "registryUpstreams": [],
-  "runtimeContexts": {
-    "core": "k3d-self-edge-core",
-    "edge": "k3d-self-edge-edge"
+  "routedHosts": {
+    "core": [
+      "podinfo.self-edge.test"
+    ]
   },
   "secrets": {
     "envFile": null,
@@ -320,6 +266,8 @@
       ],
       "container": "catallaxy-self-edge-dns",
       "description": "Knot DNS server (self-edge.test)",
+      "dnsContainers": [],
+      "extraMounts": [],
       "image": "cznic/knot:latest",
       "networks": [
         "self-edge"
@@ -328,21 +276,24 @@
         "5310:53/tcp",
         "5310:53/udp"
       ],
+      "readyProbe": null,
       "volumes": {
         "/config/knot.conf": {
           "content": "server:\n  listen: 0.0.0.0@53\n\nlog:\n  - target: stdout\n    any: info\n\nkey:\n  - id: externaldns-key\n    algorithm: hmac-sha256\n    secret: kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=\n\nacl:\n  - id: update-acl\n    key: externaldns-key\n    action: [update, transfer]\n\nzone:\n  - domain: self-edge.test.\n    storage: /storage\n    file: self-edge.test.zone\n    acl: update-acl\n"
         },
         "/storage/self-edge.test.zone": {
-          "content": "$ORIGIN self-edge.test.\n$TTL 300\n\n@   IN  SOA ns1.self-edge.test. admin.self-edge.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.self-edge.test.\nns1 IN  A   127.0.0.1\n\n; No wildcard: some cluster here is its own edge, and a wildcard would\n; answer for its hostnames too — sending them to a proxy that has no\n; backend for them (RFC 0005 §6.4). One record per hostname the lab\n; really is the edge for, and nothing for the rest.\npodinfo   IN  A   172.16.160.1\n"
+          "content": "$ORIGIN self-edge.test.\n$TTL 300\n\n@   IN  SOA ns1.self-edge.test. admin.self-edge.test. (\n        2024010101  ; serial\n        3600        ; refresh\n        900         ; retry\n        604800      ; expire\n        300         ; minimum TTL\n    )\n\n@   IN  NS  ns1.self-edge.test.\nns1 IN  A   127.0.0.1\npodinfo   IN  A   172.16.160.1\n"
         }
       }
     },
     "egress": {
+      "command": [],
       "container": "catallaxy-self-edge-egress",
       "description": "Forward proxy inside the lab network (self-edge.test)",
       "dnsContainers": [
         "catallaxy-self-edge-dns"
       ],
+      "extraMounts": [],
       "image": "ghcr.io/querateam/docker-tinyproxy:latest",
       "networks": [
         "self-edge"
@@ -350,6 +301,7 @@
       "ports": [
         "127.0.0.1:3010:8888"
       ],
+      "readyProbe": null,
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
           "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
@@ -357,8 +309,10 @@
       }
     },
     "proxy": {
+      "command": [],
       "container": "catallaxy-self-edge-ingress",
       "description": "HAProxy lab ingress (self-edge.test)",
+      "dnsContainers": [],
       "extraMounts": [
         {
           "container": "/etc/haproxy/certs/lab.pem",

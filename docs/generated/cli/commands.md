@@ -15,6 +15,7 @@ Every command and flag, generated from the parser. The judgement, the flake frag
 | [`cata cluster init`](#cluster-init) | Provision the cluster only, applying no manifests |
 | [`cata cluster up`](#cluster-up) | Provision the cluster and apply its manifests |
 | [`cata cluster down`](#cluster-down) | Stop and remove the cluster |
+| [`cata cluster parse`](#cluster-parse) | Read a cluster document and say what it declares |
 | [`cata cluster status`](#cluster-status) | Show the cluster's current state |
 | [`cata lab cleanup`](#lab-cleanup) | Remove what a lab left on this machine. Needs no flake |
 | [`cata lab list`](#lab-list) | Labs this flake defines, and labs running on this machine |
@@ -23,6 +24,7 @@ Every command and flag, generated from the parser. The judgement, the flake frag
 | [`cata lab down`](#lab-down) | Stop clusters, preserving state. Restartable with 'lab up' |
 | [`cata lab destroy`](#lab-destroy) | Run the teardown plan: clusters, cloud resources, services, network |
 | [`cata lab plan`](#lab-plan) | Show the ordered deploy plan |
+| [`cata lab parse`](#lab-parse) | Parse a lab document and say what it declares |
 | [`cata lab plan-manifests`](#lab-plan-manifests) | Show the install-wave layout for a cluster |
 | [`cata lab diff`](#lab-diff) | Show what applying would change in the running clusters |
 | [`cata lab apply`](#lab-apply) | Apply manifests to existing clusters, without the provisioning steps |
@@ -92,6 +94,7 @@ cata cluster up [OPTIONS] [NAME]
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
+| `--from-file <PATH>` |  | Stand the cluster up from its own document, with no lab |
 | `--bundle <BUNDLE>` |  | Apply only this bundle |
 | `--dry-run` |  | Print what would happen without doing it |
 | `--force` |  | Apply directly even when the cluster's deploy strategy is GitOps |
@@ -107,6 +110,18 @@ cata cluster down [NAME]
 | Argument | Required | Meaning |
 | --- | --- | --- |
 | `NAME` | no | Cluster to act on. Defaults to the flake fragment |
+
+### `cata cluster parse` {#cluster-parse}
+
+Read a cluster document and say what it declares
+
+```
+cata cluster parse <PATH>
+```
+
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `PATH` | yes | The cluster document to read |
 
 ### `cata cluster status` {#cluster-status}
 
@@ -239,6 +254,22 @@ cata lab plan [OPTIONS] [NAME]
 | `--stable` |  | Deterministic snapshot text: no colour, no emoji, no descriptions, store hashes normalized |
 | `--from-file <PATH>` |  | Read plan JSON from a file instead of evaluating |
 | `--diff <PATH>` |  | Diff the stable output against a baseline, exiting non-zero on mismatch. Implies --stable |
+
+### `cata lab parse` {#lab-parse}
+
+Parse a lab document and say what it declares
+
+```
+cata lab parse [OPTIONS] [NAME]
+```
+
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `NAME` | no | Lab to act on. Defaults to the flake fragment |
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--from-file <PATH>` |  | Read plan JSON from a file instead of evaluating |
 
 ### `cata lab plan-manifests` {#lab-plan-manifests}
 

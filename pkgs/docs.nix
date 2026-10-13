@@ -5,7 +5,8 @@
   pkgs,
   talks,
   bookSrc ? ../docs/book,
-  floeDocs ? ../docs/floes,
+  floeDocs ? ../docs/generated/floes,
+  signatureDocs ? ../docs/generated/signatures,
   optionDocs ? ../docs/generated,
   changelog ? ../CHANGELOG.md,
 }:
@@ -22,6 +23,24 @@ let
 
   navBlock = lib.concatMapStringsSep "\n" (n: "  - [${n}](./reference/floes/${n}.md)") floeNames;
 
+  signatureNames = lib.sort (a: b: a < b) (
+    lib.filter (n: n != "index") (
+      map (lib.removeSuffix ".md") (
+        builtins.attrNames (
+          lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".md" n) (builtins.readDir signatureDocs)
+        )
+      )
+    )
+  );
+
+  # Every page, not just the index: mdBook renders what `SUMMARY.md` lists and
+  # nothing else, so an unlisted page is a 404 from the fifty-eight floe pages
+  # that link to it. `docs-tests` is what said so.
+  signatureNav = lib.concatStringsSep "\n" (
+    [ "- [Signatures](./reference/signatures/index.md)" ]
+    ++ map (n: "  - [${n}](./reference/signatures/${n}.md)") signatureNames
+  );
+
   index = ''
     # Floes
 
@@ -29,7 +48,7 @@ let
     for a floe — from an actual link. Each is diff-checked by its own flake
     check.
 
-    Regenerate with `nix run .#refresh-floe-docs`.
+    Regenerate with `nix run .#refresh-docs`.
 
     ${lib.concatMapStringsSep "\n" (n: "- [${n}](./${n}.md)") floeNames}
   '';
@@ -41,15 +60,20 @@ pkgs.runCommand "catallaxy-book"
       "navBlock"
       "index"
     ];
-    inherit navBlock index;
+    inherit navBlock index signatureNav;
   }
   ''
     cp -r ${bookSrc} book
     chmod -R u+w book
 
-    mkdir -p book/src/reference/floes
+    mkdir -p book/src/reference/floes book/src/reference/signatures
     cp ${floeDocs}/*.md book/src/reference/floes/
     cp "$indexPath" book/src/reference/floes/index.md
+
+    # Every signature, and its own generated index. The floe pages link to
+    # these by name, so a missing page here is a broken link on fifty-eight
+    # others — which is what `docs-tests` reports.
+    cp ${signatureDocs}/*.md book/src/reference/signatures/
     cp ${changelog} book/src/changelog.md
 
     # mdBook copies anything under `src` that isn't markdown, so a deck
@@ -62,9 +86,9 @@ pkgs.runCommand "catallaxy-book"
     cp -r --no-preserve=mode ${optionDocs}/options ${optionDocs}/cli book/src/reference/
     cp --no-preserve=mode ${optionDocs}/SUMMARY.md book/src/SUMMARY.md
 
-    awk -v block="$(cat "$navBlockPath")" '
+    awk -v block="$(cat "$navBlockPath")" -v sigs="$signatureNav" '
       { print }
-      /^- \[Floes\]/ { print block }
+      /^- \[Floes\]/ { print block; print sigs }
     ' book/src/SUMMARY.md > book/src/SUMMARY.md.new
     mv book/src/SUMMARY.md.new book/src/SUMMARY.md
 
@@ -73,7 +97,7 @@ pkgs.runCommand "catallaxy-book"
       exit 1
     }
 
-    grep -q "reference/options/lab.md" book/src/SUMMARY.md || {
+    grep -q "reference/options/steps.md" book/src/SUMMARY.md || {
       echo "the generated option nav is missing — is docs/generated stale?" >&2
       exit 1
     }

@@ -121,15 +121,6 @@ fn parse_items(raw: &str) -> Vec<LiveResource> {
             let kind = item.get("kind")?.as_str()?;
             let metadata = item.get("metadata")?;
 
-            // Something else's, whatever label it carries. Controllers copy
-            // the labels of the object they were told to build onto what they
-            // build: cert-manager stamps a Certificate's labels onto its
-            // CertificateRequest, and prometheus-operator stamps a Prometheus
-            // CR's onto the StatefulSet it creates. Both then read as "this
-            // lab's, and not declared", and pruning deleted them seconds after
-            // they came up. Kubernetes already records who owns a thing, and
-            // deleting the owner takes it with it, so an owned resource is
-            // never ours to remove.
             if has_owner(metadata) {
                 return None;
             }
@@ -215,8 +206,6 @@ mod tests {
         assert_eq!(got[0].key.namespace, None);
     }
 
-    // An empty bundle label is not a bundle named "". The distinction decides
-    // whether the resource is judged or reported, so it cannot be collapsed.
     #[test]
     fn a_missing_or_empty_bundle_label_reads_as_absent() {
         let raw = r#"{"items":[
@@ -228,9 +217,6 @@ mod tests {
         assert!(got.iter().all(|r| r.bundle.is_none()));
     }
 
-    // kubectl prints nothing when nothing matches, and an empty list is not
-    // the same as a parse failure, but both must yield no candidates rather
-    // than a panic.
     #[test]
     fn nothing_to_parse_yields_no_resources() {
         assert!(parse_items("").is_empty());

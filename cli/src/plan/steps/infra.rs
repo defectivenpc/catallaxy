@@ -168,9 +168,6 @@ pub async fn apply(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
     );
     stack.prepare()?;
 
-    // Apply the artifact `plan` wrote, so what runs is what was shown. The
-    // tool refuses a plan made against different state, which is the whole
-    // guarantee — RFC 0003 §8.
     let saved = stack.plan_file();
     if crate::io::fs::metadata(&saved).is_ok_and(|m| m.is_file()) {
         stack.run("apply", &["-input=false", "-no-color", PLAN_FILE])?;
@@ -228,7 +225,7 @@ pub async fn destroy(sctx: &StepContext<'_>, p: &InfraParams) -> Result<()> {
     stack.run("destroy", &["-input=false", "-auto-approve", "-no-color"])?;
 
     // What the stack published outlived the thing that produced it until now
-    // (RFC 0003 §7). After the destroy, so a failed destroy leaves the value
+    //. After the destroy, so a failed destroy leaves the value
     // in place for the retry rather than stranding a subscriber.
     unpublish(sctx, &stack).await;
 

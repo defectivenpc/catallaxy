@@ -2,10 +2,14 @@
 #
 # The test service, and the one that pins the point of the whole exercise:
 # it names nothing of the gateway's, and it declares no ordering.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe { name = "podinfo"; };
 
   route = r.bundles.podinfo.resources.podinfo-route;

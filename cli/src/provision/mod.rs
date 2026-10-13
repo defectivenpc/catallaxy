@@ -10,15 +10,14 @@ use crate::io;
 
 /// What the provisioner calls this cluster's containers.
 ///
-/// Matched on the config rather than on `spec.provisioner`: the arms are then
+/// Matched on the config rather than on `spec.provisioning.config.kind()`: the arms are then
 /// exhaustive by construction and each has the data it names, where before
 /// the two carried the same fact and a new provisioner had to be added to
 /// both or fall through to `""`.
 pub fn provisioner_cluster_name(spec: &ClusterSpec) -> &str {
-    match &spec.provisioner_config {
+    match &spec.provisioning.config {
         ProvisionerConfig::K3d(c) => &c.cluster_name,
         ProvisionerConfig::Talos(c) => &c.cluster_name,
-        // Nothing on this host is named after it.
         ProvisionerConfig::External(_) => "",
     }
 }
@@ -31,33 +30,33 @@ pub fn provisioner_cluster_name(spec: &ClusterSpec) -> &str {
 /// at all — every spec carried a k3d block — so a mis-dispatched Talos
 /// cluster was provisioned with k3d's defaults instead.
 fn k3d_config(spec: &ClusterSpec) -> Result<&K3dConfig> {
-    spec.provisioner_config.k3d().with_context(|| {
+    spec.provisioning.config.k3d().with_context(|| {
         format!(
             "cluster '{}' reached the k3d path carrying a {:?} configuration",
-            spec.name,
-            spec.provisioner_config.kind()
+            spec.claim.name,
+            spec.provisioning.config.kind()
         )
     })
 }
 
 /// The Talos settings, on a code path that only runs for a Talos cluster.
 fn talos_config(spec: &ClusterSpec) -> Result<&TalosConfig> {
-    match &spec.provisioner_config {
+    match &spec.provisioning.config {
         ProvisionerConfig::Talos(c) => Ok(c),
         other => bail!(
             "cluster '{}' reached the Talos path carrying a {:?} configuration",
-            spec.name,
+            spec.claim.name,
             other.kind()
         ),
     }
 }
 
-pub fn resolve_docker_host(_ctx: &CataContext, spec: &ClusterSpec) -> Result<Option<String>> {
+pub fn resolve_docker_host(ctx: &CataContext, _spec: &ClusterSpec) -> Result<Option<String>> {
     if !io::colima::is_macos() {
         return Ok(None);
     }
 
-    let colima = &spec.host.colima;
+    let colima = &ctx.colima;
     if !colima.enable {
         return Ok(None);
     }
@@ -76,7 +75,7 @@ pub fn resolve_docker_host(_ctx: &CataContext, spec: &ClusterSpec) -> Result<Opt
 }
 
 fn run_pre_provision_hooks(name: &str, spec: &ClusterSpec) -> Result<()> {
-    for hook in &spec.lifecycle.pre_provision {
+    for hook in &spec.provisioning.hooks {
         if hook.bin.is_empty() {
             continue;
         }
@@ -115,16 +114,13 @@ pub fn provision_cluster_with_registry(
 
     run_pre_provision_hooks(name, spec)?;
 
-    match spec.provisioner {
+    match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
             provision_k3d(ctx, name, &cluster_name, spec, registries_yaml, lab_package)?;
         }
         ProvisionerKind::Talos => {
             let docker_host = resolve_docker_host(ctx, spec)?;
             if io::talos::cluster_exists(&cluster_name, docker_host.as_deref()) {
-                // Existing is not the same as matching. `cluster_create` below
-                // reads controlPlanes and workers, so raising either used to
-                // change the declaration and nothing else, under a green run.
                 match converge_existing_cluster(
                     name,
                     spec,
@@ -140,39 +136,20 @@ pub fn provision_cluster_with_registry(
 
             io::talos::cluster_create(io::talos::ClusterCreate {
                 name: &cluster_name,
-                workers: spec.kubernetes.workers,
+                workers: spec.claim.kubernetes.workers,
                 talos: talos_config(spec)?,
                 docker_host: docker_host.as_deref(),
             })?;
 
-            // talosctl returns as soon as it has started the containers, so
-            // without this the run marches on to a deploy against an API that
-            // is not up. The k3d path has always waited here.
-            wait_until_answering(&spec.kube_context, &spec.host.wait_timeout)?;
+            wait_until_answering(&spec.claim.context, &spec.provisioning.wait)?;
 
             crate::host::state::write_cluster_shape(
-                &spec.lab_name,
-                name,
+                &spec.claim.instance_name,
                 &crate::domain::cluster_shape::ClusterShape::of(spec),
             )?;
         }
-        ProvisionerKind::Crossplane => {
-            // Nothing to do here, and that is the whole answer: the cluster is
-            // a Cluster CR applied with the rest of the manifests, so its
-            // declaration converges when Crossplane reconciles it rather than
-            // through a shape comparison catallaxy performs.
-            println!(
-                "{} Cluster '{name}' is declared as a Crossplane resource; \
-                 the manifest apply is what converges it",
-                style(">>>").cyan()
-            );
-        }
         ProvisionerKind::External => {
-            // Say what brings it into existence. A step that does nothing and
-            // says nothing reads as broken; one that names what it is waiting
-            // for reads as waiting, which is what it is doing — the plan has
-            // already ordered this after whatever reconciles the cluster.
-            let made_by = match &spec.provisioner_config {
+            let made_by = match &spec.provisioning.config {
                 ProvisionerConfig::External(c) if !c.made_by.is_empty() => {
                     format!(" It is made by {}.", c.made_by)
                 }
@@ -193,7 +170,7 @@ pub fn provision_cluster_with_registry(
 pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result<()> {
     let cluster_name = provisioner_cluster_name(spec).to_string();
 
-    match spec.provisioner {
+    match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
             let docker_host = resolve_docker_host(ctx, spec)?;
             if !io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
@@ -202,10 +179,10 @@ pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result
             }
             io::k3d::cluster_stop(&cluster_name, docker_host.as_deref())?;
         }
-        ProvisionerKind::External | ProvisionerKind::Crossplane => {
+        ProvisionerKind::External => {
             println!(
                 "  {} cluster '{name}', nothing to stop locally",
-                spec.provider
+                spec.provisioning.config.kind().tag()
             );
         }
         ProvisionerKind::Talos => {
@@ -219,7 +196,7 @@ pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result
 pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result<()> {
     let cluster_name = provisioner_cluster_name(spec).to_string();
 
-    match spec.provisioner {
+    match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
             let docker_host = resolve_docker_host(ctx, spec)?;
             if !io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
@@ -235,12 +212,6 @@ pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) ->
                 return Ok(());
             }
             io::talos::cluster_destroy(&cluster_name, docker_host.as_deref())?;
-        }
-        ProvisionerKind::Crossplane => {
-            println!(
-                "{} Crossplane clusters are deprovisioned via CAPI on the management cluster",
-                style(">>>").cyan()
-            );
         }
         ProvisionerKind::External => {
             println!("  External clusters cannot be deleted via cata.");
@@ -274,8 +245,10 @@ fn provision_k3d(
     let auto_deploy = resolve_auto_deploy(ctx, name, spec, lab_package);
     let port_refs: Vec<&str> = k3d.ports.iter().map(String::as_str).collect();
 
-    let lab_name = ctx.resolve_lab_name(None)?;
-    let state_dir = crate::host::state::lab_state_dir(&lab_name);
+    let state_dir = match ctx.resolve_lab_name(None) {
+        Ok(lab_name) => crate::host::state::lab_state_dir(&lab_name),
+        Err(_) => crate::host::state::cluster_state_dir(&spec.claim.instance_name),
+    };
     let extra_volumes: Vec<(String, String)> = k3d
         .extra_volumes
         .iter()
@@ -287,9 +260,6 @@ fn provision_k3d(
         })
         .collect();
     refuse_missing_mounts(name, &extra_volumes)?;
-    // Verbatim, unlike the volumes above: a mount is a path on this machine and
-    // has to be resolved against the lab's state dir, while a k3s flag is
-    // whatever the lab wrote. Nothing here has an opinion on its contents.
     let extra_k3s_args: Vec<(String, String)> = k3d
         .extra_k3s_args
         .iter()
@@ -311,7 +281,7 @@ fn provision_k3d(
 
     io::k3d::cluster_create(io::k3d::ClusterCreate {
         name: cluster_name,
-        workers: spec.kubernetes.workers,
+        workers: spec.claim.kubernetes.workers,
         no_traefik: k3d.no_traefik,
         no_service_lb: k3d.no_service_lb,
         no_flannel: k3d.no_flannel,
@@ -321,8 +291,8 @@ fn provision_k3d(
         registries_yaml: registries_yaml_str.as_deref(),
         certs_d: certs_d_str.as_deref(),
         resolv_conf: resolv_conf_str.as_deref(),
-        service_cidr: Some(spec.network.service_subnet.as_str()),
-        pod_cidr: Some(spec.network.pod_subnet.as_str()),
+        service_cidr: Some(spec.claim.network.service_subnet.as_str()),
+        pod_cidr: Some(spec.claim.network.pod_subnet.as_str()),
         auto_deploy_manifests: &auto_deploy,
         ports: &port_refs,
         network: k3d.network.as_deref(),
@@ -331,17 +301,12 @@ fn provision_k3d(
         extra_volumes: &extra_volumes,
     })?;
 
-    // Explicitly, on this path too. Creation used to write the operator's
-    // default kubeconfig by k3d's own default, so the only merge cata asked
-    // for was on the already-exists path; turning that default off left a
-    // fresh cluster with no entry anywhere and nothing to wait on.
     io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
 
-    wait_until_answering(&spec.kube_context, &spec.host.wait_timeout)?;
+    wait_until_answering(&spec.claim.context, &spec.provisioning.wait)?;
 
     crate::host::state::write_cluster_shape(
-        &spec.lab_name,
-        name,
+        &spec.claim.instance_name,
         &crate::domain::cluster_shape::ClusterShape::of(spec),
     )?;
 
@@ -375,7 +340,7 @@ fn converge_existing_cluster(
     use crate::domain::cluster_shape::{ClusterShape, compare_shapes, describe};
 
     let declared = ClusterShape::of(spec);
-    let recorded = match crate::host::state::read_cluster_shape(&spec.lab_name, name) {
+    let recorded = match crate::host::state::read_cluster_shape(&spec.claim.instance_name) {
         Some(recorded) => recorded,
         None => adopt_existing_cluster(name, spec, &declared)?,
     };
@@ -391,14 +356,12 @@ fn converge_existing_cluster(
         return Ok(Convergence::Unchanged);
     }
 
-    // Growing in place is a k3d capability, not a general one. Talos in Docker
-    // has no equivalent of `k3d node create`, so for anything else a worker
-    // count that moved is handled like every other field: refuse, and say what
-    // would satisfy it.
-    if let Some(to_add) = report
-        .workers_to_add()
-        .filter(|_| matches!(spec.provisioner, crate::domain::ProvisionerKind::K3d))
-    {
+    if let Some(to_add) = report.workers_to_add().filter(|_| {
+        matches!(
+            spec.provisioning.config.kind(),
+            crate::domain::ProvisionerKind::K3d
+        )
+    }) {
         println!(
             "{} Cluster '{name}' is short {to_add} worker(s); adding them",
             style(">>>").cyan()
@@ -406,20 +369,19 @@ fn converge_existing_cluster(
         let k3d_name = &k3d_config(spec)?.cluster_name;
         let existing = io::k3d::node_names(k3d_name, docker_host).len().max(1);
         io::k3d::add_agents(k3d_name, to_add, existing, docker_host)?;
-        crate::host::state::write_cluster_shape(&spec.lab_name, name, &declared)?;
+        crate::host::state::write_cluster_shape(&spec.claim.instance_name, &declared)?;
         return Ok(Convergence::Unchanged);
     }
 
     if report.is_convergeable_in_place()
-        && matches!(spec.provisioner, crate::domain::ProvisionerKind::K3d)
+        && matches!(
+            spec.provisioning.config.kind(),
+            crate::domain::ProvisionerKind::K3d
+        )
     {
         converge_k3d_in_place(name, spec, &report, &recorded, docker_host)?;
-        // Recorded only after the cluster agrees. Writing the declaration
-        // because convergence *ran* is how a node replaced with an unchanged
-        // image produced a record claiming the version had moved, and a drift
-        // check that read clean from then on.
         confirm_converged(name, spec, &declared)?;
-        crate::host::state::write_cluster_shape(&spec.lab_name, name, &declared)?;
+        crate::host::state::write_cluster_shape(&spec.claim.instance_name, &declared)?;
         return Ok(Convergence::Unchanged);
     }
 
@@ -448,14 +410,13 @@ fn confirm_converged(
     let Some(want) = declared.image.as_deref() else {
         return Ok(());
     };
-    let Some(nodes) = io::kubectl::node_summary(&spec.kube_context) else {
+    let Some(nodes) = io::kubectl::node_summary(&spec.claim.context) else {
         return Ok(());
     };
     let Some(running) = nodes.kubelet_version.as_deref() else {
         return Ok(());
     };
 
-    // `rancher/k3s:v1.32.5-k3s1` against a kubelet of `v1.32.5+k3s1`.
     let want_version = want.rsplit(':').next().unwrap_or(want).replace('-', "+");
     if running.trim_start_matches('v') == want_version.trim_start_matches('v') {
         return Ok(());
@@ -524,7 +485,7 @@ fn replace_k3d_nodes(
     docker_host: Option<&str>,
 ) -> Result<()> {
     let cluster = &k3d_config(spec)?.cluster_name;
-    let declared_version = &spec.kubernetes.version;
+    let declared_version = &spec.claim.kubernetes.version;
 
     if !io::k3d_node::upgrade_is_one_step(&recorded.version, declared_version) {
         anyhow::bail!(
@@ -550,8 +511,6 @@ fn replace_k3d_nodes(
     }
 
     for node in &nodes {
-        // The loadbalancer holds no state and k3d rebuilds it from the
-        // cluster; only the k3s nodes carry a datastore worth preserving.
         if node.contains("-serverlb") {
             continue;
         }
@@ -561,11 +520,8 @@ fn replace_k3d_nodes(
         );
         let node_spec = io::k3d_node::inspect(node)?;
         io::k3d_node::replace(&node_spec, &image, docker_host)?;
-        // The API is down while the container restarts, and `kubectl wait`
-        // treats ServiceUnavailable as a hard error rather than retrying, so
-        // the cluster has to be answering before the node can be asked about.
-        wait_until_answering(&spec.kube_context, &spec.host.wait_timeout)?;
-        io::k3d::wait_node_ready(&spec.kube_context, node)?;
+        wait_until_answering(&spec.claim.context, &spec.provisioning.wait)?;
+        io::k3d::wait_node_ready(&spec.claim.context, node)?;
     }
 
     Ok(())
@@ -582,13 +538,14 @@ fn adopt_existing_cluster(
     spec: &ClusterSpec,
     declared: &crate::domain::cluster_shape::ClusterShape,
 ) -> Result<crate::domain::cluster_shape::ClusterShape> {
-    let observed = io::kubectl::node_summary(&spec.kube_context);
+    let observed = io::kubectl::node_summary(&spec.claim.context);
 
     let agrees = match &observed {
         Some(nodes) => describe_cluster_drift(
-            spec.kubernetes.workers,
+            spec.claim.kubernetes.workers,
             nodes.workers,
-            spec.provisioner_config
+            spec.provisioning
+                .config
                 .k3d()
                 .and_then(|c| c.image.as_deref()),
             nodes.kubelet_version.as_deref(),
@@ -621,7 +578,7 @@ fn adopt_existing_cluster(
          them. `lab up --recreate {name}` rebuilds it if you would rather know.",
     );
 
-    crate::host::state::write_cluster_shape(&spec.lab_name, name, declared)?;
+    crate::host::state::write_cluster_shape(&spec.claim.instance_name, declared)?;
     Ok(declared.clone())
 }
 
@@ -660,7 +617,7 @@ pub fn describe_cluster_drift(
 
     if declared_workers != actual_workers {
         drift.push(format!(
-            "cluster.kubernetes.workers is {declared_workers}, the cluster has {actual_workers}"
+            "cluster.claim.kubernetes.workers is {declared_workers}, the cluster has {actual_workers}"
         ));
     }
 
@@ -684,14 +641,15 @@ pub fn describe_cluster_drift(
 /// answers for honestly, and a warning rather than a refusal, because it is
 /// corroboration rather than the check.
 fn report_out_of_band_drift(name: &str, spec: &ClusterSpec) {
-    let Some(nodes) = io::kubectl::node_summary(&spec.kube_context) else {
+    let Some(nodes) = io::kubectl::node_summary(&spec.claim.context) else {
         return;
     };
 
     let drift = describe_cluster_drift(
-        spec.kubernetes.workers,
+        spec.claim.kubernetes.workers,
         nodes.workers,
-        spec.provisioner_config
+        spec.provisioning
+            .config
             .k3d()
             .and_then(|c| c.image.as_deref()),
         nodes.kubelet_version.as_deref(),
@@ -754,7 +712,8 @@ fn resolve_auto_deploy(
     lab_package: Option<&str>,
 ) -> Vec<(String, String)> {
     let mut auto_deploy: Vec<(String, String)> = spec
-        .provisioner_config
+        .provisioning
+        .config
         .auto_deploy_manifests()
         .iter()
         .map(|m| (m.name.clone(), m.path.clone()))

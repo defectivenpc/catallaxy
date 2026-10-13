@@ -4,10 +4,14 @@
 # special case: same `mkFloe`, same `requires.cluster`, a different output
 # kind. `lib/tests/render-infra.nix` covers what the renderer does with these;
 # this covers what the floe declares.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   plain = support.evalFloe {
     name = "provisioned";
@@ -18,10 +22,7 @@ let
     name = "provisioned";
     inputs = {
       stateDir = "/tmp/fixture";
-      publishTo = {
-        store = "runtime";
-        key = "app/identity";
-      };
+      publishKey = "app/identity";
     };
   };
 
@@ -32,7 +33,7 @@ lib.runTests {
 
   # Before any cluster exists is the case a bundle cannot cover at
   # all: no reconciler, no CRD, and nowhere to put a credential. That is the
-  # whole reason RFC 0003 §1 says resources cannot be dissolved into
+  # whole reason resources cannot be dissolved into
   # the first.
   testItProvisionsBeforeAnyClusterExists = {
     expr = lib.mapAttrs (_: r: r.phase) (resources plain);
@@ -42,7 +43,7 @@ lib.runTests {
     };
   };
 
-  # Declared, never inferred (RFC 0003 §3). A typo in a consumer's reference
+  # Declared, never inferred. A typo in a consumer's reference
   # then fails at evaluation naming the resource and the output, rather than
   # part-way through an apply that has already created things.
   testOutputsAreDeclared = {
@@ -64,18 +65,20 @@ lib.runTests {
       in
       {
         deferred = c.__deferred or false;
-        path = c.path or null;
+        retrieval = c.retrieval or null;
+        ref = c.ref or null;
       };
     expected = {
       deferred = true;
-      path = [
-        "identity"
-        "result"
-      ];
+      retrieval = "catallaxy.resourceOutput";
+      ref = {
+        resource = "identity";
+        output = "result";
+      };
     };
   };
 
-  # Nothing here names Terraform, OpenTofu or Pulumi — RFC 0003 §12.10. The
+  # Nothing here names Terraform, OpenTofu or Pulumi. The
   # vocabulary is the registry's, which is a borrowed namespace rather than a
   # borrowed implementation.
   testItNamesNoTool = {
@@ -94,12 +97,13 @@ lib.runTests {
     expected = { };
   };
 
-  testAPublicationNamesAStoreTheLabAlreadyHas = {
+  # The store is the one this resolved, not a name written beside the key.
+  testAPublicationNamesTheStoreItResolved = {
     expr = (publications published).credential;
     expected = {
       resource = "identity";
       output = "result";
-      store = "runtime";
+      store = "stub-labStore";
       key = "app/identity";
     };
   };
@@ -109,10 +113,17 @@ lib.runTests {
   # `componentsTargetTheCluster` would refuse it otherwise, and "resources
   # are different" is exactly the assumption that would make someone drop
   # that edge and find out from a lab rather than from here.
+  #
+  # The store edge is here for the same reason and is the point of it being
+  # resolved: where a credential is published is a dependency the graph can
+  # see, where a `store = "<name>"` string was one nothing could.
   testItIsAnOrdinaryMemberOfItsCluster = {
     expr = map (e: "${e.kind}:${e.from}->${e.to}") (
       lib.filter (e: e.from == "provisioned") plain.link.graph.edges
     );
-    expected = [ "eval:provisioned->stub-cluster" ];
+    expected = [
+      "eval:provisioned->stub-cluster"
+      "eval:provisioned->stub-labStore"
+    ];
   };
 }

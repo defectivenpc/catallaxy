@@ -461,7 +461,7 @@ impl StepParams {
     /// The stack this step acts on, if it acts on one.
     ///
     /// Separate from `cluster_refs` because a stack is not a cluster: it is
-    /// keyed `(scope, unit, phase)` (RFC 0003 §5), so `core-dns-after-clusters`
+    /// keyed `(scope, unit, phase)`, so `core-dns-after-clusters`
     /// is a perfectly good stack and never a cluster name. The two were one
     /// list, and every infra step therefore linted as a reference to a cluster
     /// that does not exist.
@@ -495,11 +495,6 @@ impl StepParams {
             StepParams::ReleaseClusterCloudResources(p) => vec![("target", &p.target)],
             StepParams::BootstrapArgocdKubectlSsa(p) => vec![("target", &p.target)],
 
-            // A stack name is not a cluster name — see `stack_refs`. Nothing
-            // validates it here because it is derived in one Nix expression
-            // that also names the step and the rendered directory, so the
-            // three cannot disagree; and if a package predates the stack,
-            // `Stack::resolve` says so with the path it looked in.
             StepParams::InfraPlan(_)
             | StepParams::InfraApply(_)
             | StepParams::InfraDestroy(_)
@@ -672,9 +667,6 @@ mod tests {
 
     #[test]
     fn the_wire_format_did_not_change_when_the_variants_became_newtypes() {
-        // camelCase on the wire, snake_case in Rust, and defaults for the
-        // fields a plan omits. Any kind with a mix of both would do; this one
-        // is here because it has required and optional fields together.
         let step = idempotent(
             "wait-for-resources",
             serde_json::json!({

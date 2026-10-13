@@ -104,12 +104,6 @@ fn select(inventory: &Inventory, req: &CleanupRequest) -> Result<Vec<RunningLab>
         if let Some(lab) = inventory.labs.iter().find(|l| &l.name == name) {
             return Ok(vec![lab.clone()]);
         }
-        // Naming a lab is a claim on it, which scanning is not. A network
-        // alone never invents a lab in the inventory, deliberately, because
-        // the name might be someone else's. Asked for by name it is not a
-        // guess, and a lab whose containers are gone but whose network is not
-        // is exactly what a half-finished run leaves: the next `lab up`
-        // refuses on a subnet that overlaps a network nothing will remove.
         let leftovers = remnants_of(name);
         if leftovers.network.is_some() || leftovers.has_record {
             return Ok(vec![leftovers]);

@@ -3,10 +3,14 @@
 # The first floe that contributes a plan step, so this is also where the
 # contract for one is pinned: what it declares, and that it declares it only
 # when there is something to clean up.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
 
   evalWith =
     extra:
@@ -18,8 +22,6 @@ let
       }
       // (removeAttrs extra [ "zone" ]);
 
-      # The zone is no longer an input — it arrives through `DNS_ZONE`, from
-      # the lab — so a check that varies it varies the provider.
       stubValues.zone = {
         zone = "lab.test";
       }
@@ -98,7 +100,7 @@ lib.runTests {
   # ---- the step --------------------------------------------------------
 
   # The floe names a moment, not an anchor: it has no name for the cluster it
-  # is on, and `modules/lab/planner/default.nix` — which does — turns this into
+  # is on, and `lib/lower/plan.nix` — which does — turns this into
   # `optional:provides:cluster/<name>/destroyed`.
   testItContributesATeardownStep = {
     expr = {
@@ -111,8 +113,6 @@ lib.runTests {
       direction = "teardown";
       teardown = "before-cluster-destroy";
 
-      # A zone left dirty is bad; a lab that cannot be destroyed is worse.
-      # Everything after this step is what frees the ports and the network.
       onFailure = "continue";
 
       before = [ ];

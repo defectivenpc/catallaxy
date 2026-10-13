@@ -147,11 +147,6 @@ fn references_in(text: &str) -> Vec<(String, String, Option<u32>)> {
             }
         }
 
-        // `svc` by where it is rather than by which label it is: the service
-        // and its namespace are the two labels before it, and what follows is
-        // the cluster domain or nothing. Matching it at a fixed position read
-        // only `<svc>.<ns>.svc.cluster.local` and dropped both `<svc>.<ns>.svc`
-        // and the `<pod>.<svc>.<ns>.svc.cluster.local` a StatefulSet uses.
         let svc_at = labels
             .iter()
             .position(|l| l.as_str() == "svc")
@@ -317,7 +312,6 @@ fn check(ctx: &CheckContext<'_>) -> Vec<Diagnostic> {
 
     out.extend(served_ports_exist(ctx, &services));
 
-    // Without policies there is nothing to be missing from.
     if !meta.enabled {
         return out;
     }
@@ -351,9 +345,6 @@ fn served_ports_exist(ctx: &CheckContext<'_>, services: &Services) -> Vec<Diagno
         }
 
         for (label, served) in &decl.serves {
-            // A named port is the container's name for it, which a Service
-            // spec carries as a target rather than a port, so there is
-            // nothing here to compare it against.
             let Some(port) = json_port(&served.port) else {
                 continue;
             };
@@ -387,14 +378,8 @@ fn flows_match_references(ctx: &CheckContext<'_>, services: &Services) -> Vec<Di
     let lab_ns: HashSet<&str> = ctx.lab_namespaces.iter().map(String::as_str).collect();
     let allowed = permitted(ctx.resources);
 
-    // Every in-cluster reference the manifests carry, attributed to the
-    // namespace of the resource holding it.
     let mut required: BTreeMap<Flow, String> = BTreeMap::new();
 
-    // A reference in a cluster-scoped resource is real but unattributable:
-    // a ClusterSecretStore naming openbao is read by a controller somewhere,
-    // and nothing in the document says where. Enough to stop calling the
-    // matching rule unused, not enough to demand one exists.
     let mut anonymous: BTreeSet<(String, u32)> = BTreeSet::new();
 
     route_references(ctx, &mut required);
@@ -564,8 +549,6 @@ mod tests {
         );
     }
 
-    // A StatefulSet addresses one pod through its headless Service, which puts
-    // the pod's name in front of the form above.
     #[test]
     fn reads_a_pod_reference_through_a_headless_service() {
         assert!(
@@ -577,7 +560,6 @@ mod tests {
         );
     }
 
-    // The cluster domain is optional; kubelet's search path supplies it.
     #[test]
     fn reads_a_reference_that_stops_at_svc() {
         assert!(refs("host: harbor-core.harbor.svc").contains(&(
@@ -670,8 +652,6 @@ mod tests {
         }));
     }
 
-    // An ingress rule describes the same flow from the other end, so it has
-    // to land on the same pair rather than a reversed one.
     #[test]
     fn an_ingress_rule_permits_the_same_flow_read_backwards() {
         let p = policy(
@@ -700,10 +680,6 @@ mod tests {
         }));
     }
 
-    // `text_references` scans the document re-emitted as YAML, and a YAML
-    // emitter is entitled to fold a long scalar across lines. A URL split in
-    // half is a reference this stops seeing, and the missing policy for it
-    // would then report as a pass.
     #[test]
     fn a_long_reference_survives_being_re_emitted() {
         let url = format!(
@@ -724,10 +700,6 @@ mod tests {
         );
     }
 
-    // A named port is the container's name for it, and nothing here can turn
-    // that into a number. A rule whose ports are all named therefore permits
-    // no flow this can see, which can only over-report ("no policy permits
-    // it"), never under-report. Pinned so the trade-off is deliberate.
     #[test]
     fn a_named_port_is_invisible_to_the_analyser() {
         let p = policy(
@@ -738,8 +710,6 @@ mod tests {
         assert!(permitted(&[p]).is_empty());
     }
 
-    // An ipBlock is off-cluster by construction, so it can never be what
-    // satisfies a reference to a Service inside the cluster.
     #[test]
     fn an_ipblock_permits_no_in_cluster_flow() {
         let p = policy(

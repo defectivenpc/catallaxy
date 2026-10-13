@@ -76,8 +76,6 @@ let
             )
           ) { } (attrNames bundles);
 
-      # A bundle declaring the Namespace object itself outranks the aggregate:
-      # it is the thing that actually carries the labels and the finalizers.
       fromResources = indexBy bundles (
         b: filter (n: n != null) (map resName (filter isNamespace (resourcesOf b)))
       );
@@ -103,11 +101,14 @@ let
     let
       resources = resourcesOf bundle;
 
+      filledNamespaces = map (addr: builtins.head (lib.splitString "/" addr)) (bundle.secrets or [ ]);
+
       consumedNamespaces = unique (
         filter (n: n != null) (
           (map resNs resources)
           ++ (map (h: h.namespace or null) (attrValues (bundle.helmCharts or { })))
           ++ (bundle.createNamespaces or [ ])
+          ++ filledNamespaces
         )
       );
 
@@ -159,8 +160,6 @@ let
           (bundle.after or [ ])
           ++ (autoAfter bundle)
 
-          # A bundle that both makes and reads a Secret is self-satisfied:
-          # they apply together, and an edge to itself is a cycle.
           ++ map (s: "optional:secret:${s}") (lib.subtractLists (secretsMadeBy bundle) (secretsReadBy bundle))
         );
         requires = unique ((bundle.requires or [ ]) ++ (autoRequires coreKinds bundle));

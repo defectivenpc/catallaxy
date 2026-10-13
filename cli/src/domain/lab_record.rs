@@ -81,13 +81,14 @@ impl LabRecord {
                     let spec = lab.clusters.get(name)?;
                     Some(ClusterRecord {
                         cluster: name.clone(),
-                        provisioner: format!("{:?}", spec.provisioner).to_lowercase(),
+                        provisioner: spec.provisioning.config.kind().tag().to_string(),
                         k3d_cluster: spec
-                            .provisioner_config
+                            .provisioning
+                            .config
                             .k3d()
                             .map(|c| c.cluster_name.clone())
                             .filter(|n| !n.is_empty()),
-                        kube_context: spec.kube_context.clone(),
+                        kube_context: spec.claim.context.clone(),
                     })
                 })
                 .collect(),
@@ -143,8 +144,6 @@ mod tests {
         assert_eq!(serde_json::from_str::<LabRecord>(&json).unwrap(), record());
     }
 
-    // The k3d name cannot be derived back from the logical one, so it is the
-    // reason this record exists at all.
     #[test]
     fn it_carries_the_k3d_name_that_cannot_be_derived() {
         assert_eq!(record().k3d_cluster_names(), vec!["home-lab-core"]);

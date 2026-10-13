@@ -247,10 +247,6 @@ mod tests {
         assert!(ca.key_pem.contains("PRIVATE KEY"));
     }
 
-    // `cata pki init` used to repeat these parameters inline and had drifted
-    // from this function, so what a CA could do depended on which command
-    // minted it. Both go through `self_signed_ca` now; this states the set so
-    // a third copy cannot appear quietly.
     #[test]
     fn a_ca_may_sign_certificates_and_crls_and_nothing_else() {
         let ca = self_signed_ca("lab", KeyAlgorithm::EcdsaP256, 3650).unwrap();
@@ -316,7 +312,6 @@ mod tests {
         let ca = self_signed_ca("expiry test", KeyAlgorithm::EcdsaP256, 365).unwrap();
         let days = days_until_expiry(&ca.cert_pem).expect("a cert we just minted parses");
 
-        // Not exactly 365: minting rounds to whole days and the clock moves.
         assert!((363..=365).contains(&days), "got {days}");
     }
 
@@ -326,9 +321,6 @@ mod tests {
         assert!(days_until_expiry(&ca.cert_pem).unwrap() <= 2);
     }
 
-    // The old implementation asked GNU `date -d`, which macOS does not have,
-    // so it returned None and the check reported no finding. None must mean
-    // "this is not a certificate", never "I could not tell".
     #[test]
     fn something_that_is_not_a_certificate_is_the_only_none() {
         assert_eq!(days_until_expiry("not a pem at all"), None);

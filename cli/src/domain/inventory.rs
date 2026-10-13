@@ -166,9 +166,6 @@ pub fn correlate(facts: &HostFacts) -> Inventory {
         }
     }
 
-    // A cluster is tied to a lab only through a record. contextPrefix is lossy,
-    // so inverting the name would be a guess, and a wrong guess deletes someone
-    // else's cluster.
     let mut claimed_clusters: BTreeMap<&str, &str> = BTreeMap::new();
     for record in &facts.records {
         for k3d in record.k3d_cluster_names() {
@@ -509,9 +506,6 @@ pub fn plan_cleanup(lab: &RunningLab, record: Option<&LabRecord>, keep_state: bo
         actions.push(CleanupAction::RemoveNetwork(network.clone()));
     }
 
-    // cleanup_kubeconfig keys on the lab-facing cluster name, which only the
-    // record carries. Without one, deleting a context matched by a guess could
-    // take out someone else's.
     match record {
         Some(record) => {
             for cluster in &record.clusters {
@@ -579,7 +573,6 @@ mod cleanup_tests {
             .collect()
     }
 
-    // A k3d node sits on the lab's network, so the network cannot go first.
     #[test]
     fn the_network_is_removed_after_every_container_and_cluster_on_it() {
         let plan = plan_cleanup(&lab(&["c"], &["k"], Some("n")), None, false);
@@ -609,8 +602,6 @@ mod cleanup_tests {
         assert!(reported, "{:?}", plan.actions);
     }
 
-    // Without a record the lab-facing cluster name is unknown, and matching a
-    // context by guess could delete someone else's.
     #[test]
     fn kubeconfig_is_left_alone_when_no_record_names_the_cluster() {
         let plan = plan_cleanup(&lab(&[], &["l-app"], None), None, false);

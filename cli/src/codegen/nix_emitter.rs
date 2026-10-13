@@ -99,64 +99,17 @@ impl<'a> NixEmitter<'a> {
         self.arena.text("{ lib }:")
     }
 
+    /// `mkResource` and `mkTypedSubmodule` are imported rather than emitted.
+    ///
+    /// This file used to carry its own copies, which `index.nix` then shadowed
+    /// with the hand-written ones for the CRD path only — so a change to the
+    /// constructors took effect for CRD kinds and not for built-in ones. They
+    /// are still re-exported because `reservedAttrs` expects to find them here.
     fn emit_let_block(&self, _type_set: &K8sTypeSet) -> DocBuilder<'a, Arena<'a>> {
         self.arena.text(
             r#"let
   inherit (lib) mkOption types;
-
-  mkTypedSubmodule = { options, freeformType ? types.attrs }: types.submodule {
-    inherit options freeformType;
-  };
-
-  mkResource = { apiVersion, kind, specType ? types.attrs }: mkTypedSubmodule {
-    options = {
-      apiVersion = mkOption {
-        type = types.str;
-        default = apiVersion;
-        description = "Kubernetes API version";
-      };
-
-      kind = mkOption {
-        type = types.str;
-        default = kind;
-        description = "Kubernetes resource kind";
-      };
-
-      metadata = mkOption {
-        type = mkTypedSubmodule {
-          options = {
-            name = mkOption {
-              type = types.str;
-              description = "Resource name";
-            };
-            namespace = mkOption {
-              type = types.nullOr types.str;
-              default = null;
-              description = "Resource namespace";
-            };
-            labels = mkOption {
-              type = types.attrsOf types.str;
-              default = {};
-              description = "Resource labels";
-            };
-            annotations = mkOption {
-              type = types.attrsOf types.str;
-              default = {};
-              description = "Resource annotations";
-            };
-          };
-        };
-        description = "Resource metadata";
-      };
-
-      spec = mkOption {
-        type = types.nullOr specType;
-        default = null;
-        description = "Resource specification";
-      };
-    };
-  };
-
+  inherit (import ../../constructors.nix { inherit lib; }) mkTypedSubmodule mkResource;
 in"#,
         )
     }
@@ -250,6 +203,19 @@ in"#,
         parts.push(spec_type);
         parts.push(self.arena.text(";"));
         parts.push(self.arena.hardline());
+
+        if !resource.top_level.is_empty() {
+            parts.push(self.arena.text("        topLevel = {"));
+            parts.push(self.arena.hardline());
+            for (name, option) in &resource.top_level {
+                parts.push(self.arena.text("          "));
+                parts.push(self.emit_option(name, option));
+                parts.push(self.arena.hardline());
+            }
+            parts.push(self.arena.text("        };"));
+            parts.push(self.arena.hardline());
+        }
+
         parts.push(self.arena.text("      };"));
 
         self.arena.concat(parts)
@@ -356,6 +322,18 @@ in"#,
         self.arena.concat(parts)
     }
 
+    /// A required collection drops `emptyValue`.
+    ///
+    /// The generator says a field is required by emitting it with no default,
+    /// which the module system enforces for scalars and not for collections:
+    /// nixpkgs gives `listOf` and `attrsOf` an `emptyValue`, so a required list
+    /// that nobody wrote reads as `[ ]` instead of failing. Required-ness then
+    /// held for `spec.replicas` and not for `spec.sources`, which is harder to
+    /// reason about than either extreme.
+    fn requires_a_value(option: &NixOption) -> bool {
+        option.default.is_none() && matches!(option.ty, NixType::ListOf(_) | NixType::AttrsOf(_))
+    }
+
     fn emit_option(&self, name: &str, option: &NixOption) -> DocBuilder<'a, Arena<'a>> {
         let mut parts = Vec::new();
 
@@ -363,7 +341,13 @@ in"#,
         parts.push(self.arena.text(format!("{safe_name} = mkOption {{")));
         parts.push(self.arena.hardline());
         parts.push(self.arena.text("      type = "));
-        parts.push(self.emit_type(&option.ty));
+        if Self::requires_a_value(option) {
+            parts.push(self.arena.text("("));
+            parts.push(self.emit_type(&option.ty));
+            parts.push(self.arena.text(" // { emptyValue = { }; })"));
+        } else {
+            parts.push(self.emit_type(&option.ty));
+        }
         parts.push(self.arena.text(";"));
 
         if let Some(default) = &option.default {
@@ -430,6 +414,22 @@ in
         self.arena.concat(parts)
     }
 
+    /// The entry point for the generated tree: `forVersion` to pick a
+    /// Kubernetes release, and three ways to look a kind up in it.
+    ///
+    /// `crd_names` are API groups, one per emitted `crds/<group>.nix`, and the
+    /// group is also the attribute name — so the index key, the filename and
+    /// the `apiVersion` a floe writes are one string with no mapping between
+    /// them.
+    ///
+    /// Of the three lookups, `coreKinds` answers "is this kind built in" and
+    /// `typesByKind` takes every CRD group at once. `typesByKindForGroups`
+    /// takes the Kubernetes API plus named groups only: built-in kinds are
+    /// global because every cluster runs an apiserver, but a CRD kind exists
+    /// only where something installed its CRD, so passing the groups one
+    /// cluster establishes is what keeps another cluster's kinds out of scope.
+    /// It skips groups it has no types for and leaves refusing them to the
+    /// caller, which is the only side that can name the bundle at fault.
     pub fn emit_index(&self, k8s_versions: &[String], crd_names: &[String]) -> String {
         let mut output = String::new();
 
@@ -451,7 +451,7 @@ let
         output.push_str(
             r#"  };
 
-  constructors = import ./constructors.nix { inherit lib; };
+  constructors = import ../constructors.nix { inherit lib; };
 
   loadCrds =
     versioned:
@@ -462,15 +462,21 @@ let
 "#,
         );
 
-        for name in crd_names {
-            let safe_name = name.replace(['.', '-'], "_");
+        for group in crd_names {
             output.push_str(&format!(
-                "    {safe_name} = import ./crds/{safe_name}.nix {{ inherit lib k8sTypes; }};\n"
+                "    \"{group}\" = import ./crds/{group}.nix {{ inherit lib k8sTypes; }};\n"
             ));
         }
 
-        output.push_str(
-            r#"  };
+        output.push_str(Self::INDEX_LOOKUPS);
+
+        output
+    }
+
+    /// The part of `index.nix` that does not depend on what was generated:
+    /// picking a release, and the three ways to look a kind up in it. Separate
+    /// from `emit_index` because only the lists above it vary.
+    const INDEX_LOOKUPS: &'static str = r#"  };
 
   reservedAttrs = [ "version" "mkTypedSubmodule" "mkResource" "crds" ];
 
@@ -514,6 +520,22 @@ let
         (attrNames versionedTypes.crds)
     else k8sByKind;
 
+  crdGroups = versionedTypes:
+    if versionedTypes ? crds then builtins.attrNames versionedTypes.crds else [];
+
+  typesByKindForGroups = versionedTypes: groups:
+    let
+      inherit (builtins) isAttrs attrNames foldl' elem filter;
+      inherit (lib) filterAttrs;
+      k8sGroups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
+      addKinds = acc: kinds:
+        foldl' (a: k: a // { ${k} = (a.${k} or []) ++ [ kinds.${k} ]; }) acc (attrNames kinds);
+      addGroup = acc: group: foldl' (a: av: addKinds a group.${av}) acc (attrNames group);
+      k8sByKind = foldl' (acc: gn: addGroup acc k8sGroups.${gn}) {} (attrNames k8sGroups);
+      known = filter (g: (versionedTypes.crds or {}) ? ${g}) groups;
+    in
+    foldl' (acc: g: addKinds acc versionedTypes.crds.${g}) k8sByKind known;
+
   coreKinds = versionedTypes:
     let
       inherit (builtins) isAttrs attrNames foldl' elem;
@@ -538,14 +560,11 @@ let
 in {
   inherit k8sVersions loadCrds forVersion flattenTypes;
   inherit typesByKind apiVersionsForKind resolveResourceType coreKinds;
+  inherit crdGroups typesByKindForGroups;
 
   default = forVersion "1.31";
 }
-"#,
-        );
-
-        output
-    }
+"#;
 }
 
 pub fn emit_k8s_types(type_set: &K8sTypeSet, config: EmitterConfig) -> String {
@@ -632,9 +651,6 @@ mod tests {
         r
     }
 
-    // The repo bans `#` comments in Nix, and a banner in generated output is
-    // the one thing that comes back every time the generator is run. All three
-    // emitters need their own case: they build their headers separately.
     #[test]
     fn generated_k8s_types_carry_no_nix_comment() {
         let mut set = K8sTypeSet::new("1.31");
@@ -659,23 +675,72 @@ mod tests {
         assert!(!out.contains('#'), "{out}");
     }
 
-    // `index.nix` takes its constructors from a separate file, so a
-    // regeneration that dropped the split would silently make every CRD
-    // schema unbuildable.
     #[test]
     fn the_generated_index_loads_crds_through_constructors() {
         let out = emit_index(
             &["1.31".to_string()],
-            &["cnpg".to_string()],
+            &["postgresql.cnpg.io".to_string()],
             EmitterConfig::default(),
         );
         assert!(
-            out.contains("import ./constructors.nix { inherit lib; }"),
+            out.contains("import ../constructors.nix { inherit lib; }"),
             "{out}"
         );
         assert!(out.contains("versioned // constructors"), "{out}");
         assert!(
-            out.contains("cnpg = import ./crds/cnpg.nix { inherit lib k8sTypes; };"),
+            out.contains(
+                "\"postgresql.cnpg.io\" = import ./crds/postgresql.cnpg.io.nix \
+                 { inherit lib k8sTypes; };"
+            ),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_required_collection_is_emitted_without_an_empty_value() {
+        let arena = Arena::new();
+        let e = NixEmitter::new(&arena, EmitterConfig::default());
+
+        let required_list = NixOption::new(NixType::ListOf(Box::new(NixType::Str)));
+        let out = e.emit_option("verbs", &required_list);
+        let mut s = String::new();
+        out.render_fmt(100, &mut s).unwrap();
+        assert!(s.contains("emptyValue = { }"), "{s}");
+
+        let mut optional_list = NixOption::new(NixType::ListOf(Box::new(NixType::Str)));
+        optional_list.default = Some("null".to_string());
+        let out = e.emit_option("verbs", &optional_list);
+        let mut s = String::new();
+        out.render_fmt(100, &mut s).unwrap();
+        assert!(!s.contains("emptyValue"), "{s}");
+
+        let required_scalar = NixOption::new(NixType::Str);
+        let out = e.emit_option("name", &required_scalar);
+        let mut s = String::new();
+        out.render_fmt(100, &mut s).unwrap();
+        assert!(!s.contains("emptyValue"), "{s}");
+    }
+
+    #[test]
+    fn a_crd_group_is_keyed_by_its_api_group_verbatim() {
+        let out = emit_index(
+            &["1.31".to_string()],
+            &["gateway.networking.k8s.io".to_string()],
+            EmitterConfig::default(),
+        );
+        assert!(out.contains("\"gateway.networking.k8s.io\""), "{out}");
+        assert!(!out.contains("gateway_networking_k8s_io"), "{out}");
+    }
+
+    #[test]
+    fn the_index_offers_group_scoped_resolution() {
+        let out = emit_index(&["1.31".to_string()], &[], EmitterConfig::default());
+        assert!(
+            out.contains("typesByKindForGroups = versionedTypes: groups:"),
+            "{out}"
+        );
+        assert!(
+            out.contains("inherit crdGroups typesByKindForGroups;"),
             "{out}"
         );
     }

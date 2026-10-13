@@ -53,11 +53,59 @@ impl FlakeRef {
     }
 }
 
+/// The macOS VM the operator runs docker in.
+///
+/// It describes the operator's machine and not any cluster, so it is `cata`'s
+/// own configuration rather than a field on a cluster document — where it sat
+/// until the document became what a cluster *is*. Environment-driven, because
+/// the one person it concerns is the one running the command.
+#[derive(Clone, Debug)]
+pub struct Colima {
+    pub enable: bool,
+    pub profile: String,
+    pub cpu: u64,
+    pub memory: u64,
+    pub disk: u64,
+}
+
+impl Default for Colima {
+    fn default() -> Self {
+        Self {
+            enable: crate::io::colima::is_macos(),
+            profile: "catallaxy".to_string(),
+            cpu: 4,
+            memory: 8,
+            disk: 60,
+        }
+    }
+}
+
+impl Colima {
+    /// `CATA_COLIMA_{DISABLE,PROFILE,CPU,MEMORY,DISK}`, each falling back to
+    /// the default above.
+    pub fn from_env() -> Self {
+        let d = Self::default();
+        let setting = crate::io::colima::env_setting;
+        let num =
+            |k: &str, fallback: u64| setting(k).and_then(|v| v.parse().ok()).unwrap_or(fallback);
+        Self {
+            enable: d.enable && setting("CATA_COLIMA_DISABLE").is_none(),
+            profile: setting("CATA_COLIMA_PROFILE").unwrap_or(d.profile),
+            cpu: num("CATA_COLIMA_CPU", d.cpu),
+            memory: num("CATA_COLIMA_MEMORY", d.memory),
+            disk: num("CATA_COLIMA_DISK", d.disk),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Context {
     pub flake_ref: FlakeRef,
 
     pub verbose: bool,
+
+    /// The operator's docker VM, if they are on a machine that needs one.
+    pub colima: Colima,
 
     /// Clusters the operator said may be destroyed and rebuilt to match the
     /// declaration. Empty means none: `lab up` reports the drift and stops.
@@ -72,6 +120,7 @@ impl Context {
         Ok(Self {
             flake_ref,
             verbose,
+            colima: Colima::from_env(),
             recreate: Vec::new(),
         })
     }
@@ -173,6 +222,7 @@ mod recreate_tests {
         Context {
             flake_ref: FlakeRef::parse(".").unwrap(),
             verbose: false,
+            colima: Colima::default(),
             recreate: recreate.iter().map(|s| s.to_string()).collect(),
         }
     }

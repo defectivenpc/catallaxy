@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use crate::config::Context as CataContext;
 use crate::domain::SecretsCache;
-use crate::domain::{BootstrapTool, DeployStrategy, LabSpec, StepFailure};
+use crate::domain::{BootstrapTool, LabSpec, StepFailure};
 
 pub struct StepContext<'a> {
     pub ctx: &'a CataContext,
@@ -18,8 +18,6 @@ pub struct StepContext<'a> {
     pub lab_package: &'a str,
 
     pub secrets_cache: Option<SecretsCache>,
-
-    pub strategy: DeployStrategy,
 
     pub bootstrap: BootstrapTool,
 

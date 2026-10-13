@@ -1,8 +1,12 @@
 # custom, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "custom";
     inputs = {
@@ -110,9 +114,6 @@ lib.runTests {
       expr = {
         inherit (c.spec) kanidmRef origin;
 
-        # Not a field the CRD has, and a client carrying one is rejected
-        # whole — so the Secret's name is the operator's convention and this
-        # asserts the spec stays out of it.
         secretName = c.spec.secretName or "absent";
         ns = c.metadata.namespace;
       };

@@ -83,9 +83,17 @@ fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8
         });
 
     if let Some(schema) = schema {
-        if let Some(spec_schema) = schema.get("properties").and_then(|p| p.get("spec")) {
-            resource.spec =
-                Some(super::convert::Converter::standalone(options).convert(spec_schema));
+        if let Some(properties) = schema.get("properties").and_then(|p| p.as_object()) {
+            if let Some(spec_schema) = properties.get("spec") {
+                resource.spec =
+                    Some(super::convert::Converter::standalone(options).convert(spec_schema));
+            }
+
+            resource.top_level = super::schema::convert_top_level(
+                &mut super::convert::Converter::standalone(options),
+                properties,
+                options,
+            );
         }
 
         if options.include_descriptions {

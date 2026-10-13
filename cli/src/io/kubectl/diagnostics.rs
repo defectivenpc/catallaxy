@@ -265,10 +265,6 @@ pub fn get_kapp_app_statuses(context: &str) -> Result<Vec<(String, String, Strin
 
     match output {
         Ok(o) if o.status.success() => {
-            // A parse failure is tolerated here on purpose: every other
-            // failure mode in this function is too, because it is one section
-            // of a wider report. Contrast the functions above that `bail!` —
-            // those must not then swallow the parse.
             let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
             let mut apps = Vec::new();
             if let Some(tables) = json["Tables"].as_array() {
@@ -324,8 +320,6 @@ pub fn get_workload_readiness(context: &str, namespaces: &[String]) -> Result<Ve
         if !o.status.success() {
             continue;
         }
-        // Tolerated on purpose, like the two `continue`s above it: a namespace
-        // this cannot read is skipped rather than failing the whole sweep.
         let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
         let Some(items) = json["items"].as_array() else {
             continue;

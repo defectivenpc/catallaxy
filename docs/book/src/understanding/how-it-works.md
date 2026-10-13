@@ -133,19 +133,25 @@ them needs a cluster.
 
 ## Where to look
 
-- `floes/` — the floes, one directory each, registered in
-  `floes/default.nix`. `floes/cluster/podinfo/` is the smallest complete
-  one.
-- `lib/floe-core/` — the primitive. `floe.nix` is `mkFloe`, `link.nix` is
-  exactly-one-provider resolution and sealing, `types.nix` the type
-  language.
+- `floes/` — the catalogue: one directory each, registered in
+  `floes/default.nix`, every entry a unit a consumer could replace with
+  their own. `floes/components/podinfo/` is the smallest complete one. The
+  group a floe is filed under says where its unit sits, which that file's
+  header spells out.
+- The `floes` flake input — the primitive, in its own repository. `floe.nix`
+  is `mkFloe`, `link.nix` is exactly-one-provider resolution and sealing,
+  `types.nix` the type language.
 - `lib/floe-catallaxy/` — this distribution on top of core: `component.nix`
   is the bundle schema, `elaborate.nix` turns a link result into a cluster
   picture, `render.nix` writes it out.
 - `lib/eval/` — `manifest-graph.nix` and `plan-graph.nix` are the two sorts;
   `manifest-autoedges.nix` derives the structural edges.
 - `lib/render/` — one file per delivery strategy over shared helpers.
-- `modules/lab/` — the option tree. `out.nix` holds both seam artifacts.
+- `modules/lab/` — the other side of that line: the shape of the declaration
+  a deployer writes and the lowering from it. Options, the host's own
+  containers, the document and the plan; nothing here is substitutable,
+  which is the test that keeps it apart from `floes/`. `out.nix` holds both
+  seam artifacts.
 
 ## Next
 

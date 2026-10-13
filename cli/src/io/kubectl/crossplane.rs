@@ -110,10 +110,6 @@ pub fn wait_crossplane_healthy(context: &str) -> Result<()> {
         if let Ok(ref o) = output
             && o.status.success()
         {
-            // Tolerated on purpose: this is a poll loop, so an unreadable reply
-            // means "cannot tell yet" and the surrounding deadline is what
-            // reports failure. Erroring here would abort a wait the next poll
-            // may well satisfy.
             let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
             let installed = json["items"].as_array().map(|i| i.len()).unwrap_or(0);
             waiting_on = unhealthy_provider_names(&json);
@@ -185,10 +181,6 @@ pub fn wait_managed_ready(context: &str, timeout_secs: u64) -> Result<()> {
         if let Ok(ref o) = output
             && o.status.success()
         {
-            // Tolerated on purpose: this is a poll loop, so an unreadable reply
-            // means "cannot tell yet" and the surrounding deadline is what
-            // reports failure. Erroring here would abort a wait the next poll
-            // may well satisfy.
             let json: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap_or_default();
             if let Some(items) = json["items"].as_array() {
                 if items.is_empty() {
@@ -335,9 +327,6 @@ pub fn copy_external_names(bootstrap_ctx: &str, target_ctx: &str) -> Result<()> 
         let stderr = String::from_utf8_lossy(&output.stderr);
         bail!("kubectl get managed on {bootstrap_ctx} failed: {stderr}");
     }
-    // Not unwrap_or_default: an empty document has no items, so a parse
-    // failure would look exactly like "nothing to copy" and this would report
-    // success having copied nothing.
     let json: serde_json::Value = serde_json::from_slice(&output.stdout)
         .context("kubectl get managed returned something that is not JSON")?;
     let (targets, skipped) = external_name_targets(&json);

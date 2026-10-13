@@ -47,6 +47,22 @@ pub struct ClusterShape {
     pub service_subnet: String,
     pub image: Option<String>,
     pub network: Option<String>,
+
+    /// Which host service's containerd config the nodes were built to pull
+    /// through, or `None` for a cluster that does not mirror.
+    ///
+    /// Here because it is a mount fixed at creation: turning the lab's
+    /// registry off, or renaming it, leaves a running cluster whose nodes
+    /// still pull through the old one and nothing reports it. The symptom is
+    /// a lab that is slow, or that works only while a directory nobody meant
+    /// to keep is still on disk.
+    ///
+    /// Defaulted rather than versioned: a record written before this field
+    /// existed describes a cluster that mirrored through whatever
+    /// `service_state_dir(lab, "registry")` held, which `None` is the honest
+    /// reading of — there was nothing declared to compare.
+    #[serde(default)]
+    pub node_config_from: Option<String>,
     pub no_traefik: bool,
     pub no_service_lb: bool,
     pub no_flannel: bool,
@@ -71,33 +87,19 @@ impl ClusterShape {
     pub fn of(spec: &ClusterSpec) -> Self {
         let shape = ClusterShape {
             schema_version: SCHEMA_VERSION,
-            provisioner: format!("{:?}", spec.provisioner).to_lowercase(),
-            control_planes: spec.kubernetes.control_planes,
-            workers: spec.kubernetes.workers,
-            distribution: spec.kubernetes.distribution.clone(),
-            version: spec.kubernetes.version.clone(),
-            pod_subnet: spec.network.pod_subnet.clone(),
-            service_subnet: spec.network.service_subnet.clone(),
+            provisioner: format!("{:?}", spec.provisioning.config.kind()).to_lowercase(),
+            control_planes: spec.claim.kubernetes.control_planes,
+            workers: spec.claim.kubernetes.workers,
+            distribution: spec.claim.kubernetes.distribution.clone(),
+            version: spec.claim.kubernetes.version.clone(),
+            pod_subnet: spec.claim.network.pod_subnet.clone(),
+            service_subnet: spec.claim.network.service_subnet.clone(),
             ..ClusterShape::default()
         };
 
-        // The k3d block describes how k3d builds a cluster. Recording it for a
-        // provisioner that never saw those options wrote nine fields of
-        // fiction into the record: `noTraefik: true` for a distribution that
-        // ships no Traefik, and worse, the apiserver args and volume mounts
-        // k3d would have rendered for OIDC and PKI, asserting that a cluster
-        // was configured in a way it never was.
-        // Matched on the config, so the k3d block is unreachable without the
-        // k3d tag. It used to be reachable with any tag at all, which is what
-        // made the fiction above possible in the first place.
-        match &spec.provisioner_config {
+        match &spec.provisioning.config {
             crate::domain::ProvisionerConfig::K3d(k3d) => shape.with_k3d(k3d),
 
-            // Talos records nothing beyond the common fields, and there is
-            // deliberately no `with_talos` writing its subnet and memory into
-            // the columns above. Those columns are k3d's vocabulary; a record
-            // answering `noTraefik` for a distribution that ships no Traefik
-            // is the same fiction, arriving by a different route.
             _ => shape,
         }
     }
@@ -106,15 +108,13 @@ impl ClusterShape {
         ClusterShape {
             image: k3d.image.clone(),
             network: k3d.network.clone(),
+            node_config_from: k3d.node_config_from.clone(),
             no_traefik: k3d.no_traefik,
             no_service_lb: k3d.no_service_lb,
             no_flannel: k3d.no_flannel,
             no_local_storage: k3d.no_local_storage,
             ports: k3d.ports.clone(),
             extra_api_server_args: k3d.extra_api_server_args.clone(),
-            // Flattened to the string k3d is actually handed, so the record
-            // reads as the instruction that was given rather than as the two
-            // halves it was assembled from.
             extra_k3s_args: k3d
                 .extra_k3s_args
                 .iter()
@@ -165,7 +165,7 @@ pub enum Fix {
     ReplaceNode,
     /// Recreate the loadbalancer, which holds no state at all.
     ReplaceLoadBalancer,
-    /// Nothing about the running cluster changes. `cluster.kubernetes.version`
+    /// Nothing about the running cluster changes. `cluster.claim.kubernetes.version`
     /// selects which generated schemas the manifests are typed against; the
     /// node image is what decides the Kubernetes a cluster actually runs.
     /// Recorded and reported so the change is visible, but there is no node
@@ -316,8 +316,6 @@ fn compare_counts(
     recorded: u32,
     grow: fn(u32) -> Fix,
 ) -> (&'static str, FieldVerdict, Option<Fix>) {
-    // Growing is additive and interrupts nothing. Shrinking is not: k3d
-    // deletes a node without draining it.
     let fix = if declared > recorded {
         grow(declared - recorded)
     } else {
@@ -341,35 +339,31 @@ fn show_list(v: &[String]) -> String {
 /// What changed between the shape a cluster was built from and the one the
 /// lab declares now.
 pub fn compare_shapes(declared: &ClusterShape, recorded: &ClusterShape) -> DriftReport {
-    // Every provisioner builds from these. The k3d block below is compared
-    // only for a k3d cluster, because those options describe how k3d builds a
-    // cluster and mean nothing to Talos or a cloud provider: reporting them
-    // would name an option the operator did not set and cannot act on.
     let mut fields = vec![
         compare(
-            "cluster.provisioner",
+            "cluster.provisioning.config.kind()",
             &declared.provisioner,
             &recorded.provisioner,
         ),
         compare_counts(
-            "cluster.kubernetes.controlPlanes",
+            "cluster.claim.kubernetes.controlPlanes",
             declared.control_planes,
             recorded.control_planes,
             Fix::AddServers,
         ),
         compare_counts(
-            "cluster.kubernetes.workers",
+            "cluster.claim.kubernetes.workers",
             declared.workers,
             recorded.workers,
             Fix::AddWorkers,
         ),
         compare(
-            "cluster.kubernetes.distribution",
+            "cluster.claim.kubernetes.distribution",
             &declared.distribution,
             &recorded.distribution,
         ),
         compare_with(
-            "cluster.kubernetes.version",
+            "cluster.claim.kubernetes.version",
             &declared.version,
             &recorded.version,
             Fix::RebuildOnly,
@@ -407,6 +401,11 @@ fn k3d_fields(
             "provisioner.k3d.network",
             &show_opt(&declared.network),
             &show_opt(&recorded.network),
+        ),
+        compare_node(
+            "provisioner.k3d.nodeConfigFrom",
+            &show_opt(&declared.node_config_from),
+            &show_opt(&recorded.node_config_from),
         ),
         compare_node(
             "provisioner.k3d.noTraefik",
@@ -500,6 +499,7 @@ mod tests {
             service_subnet: "10.43.0.0/16".into(),
             image: Some("rancher/k3s:v1.31.0-k3s1".into()),
             network: Some("platform".into()),
+            node_config_from: Some("registry".into()),
             no_traefik: true,
             no_service_lb: false,
             no_flannel: false,
@@ -519,12 +519,12 @@ mod tests {
         assert_eq!(report.drifted(), vec![]);
     }
 
-    // Every one of these was invisible before: the old check compared worker
-    // count and the k3s image tag, and nothing else.
     #[test]
     fn every_field_the_old_check_ignored_is_now_seen() {
         let cases: Vec<(&str, Mutate)> = vec![
-            ("cluster.kubernetes.controlPlanes", |s| s.control_planes = 3),
+            ("cluster.claim.kubernetes.controlPlanes", |s| {
+                s.control_planes = 3
+            }),
             ("cluster.network.podSubnet", |s| {
                 s.pod_subnet = "10.44.0.0/16".into()
             }),
@@ -533,6 +533,9 @@ mod tests {
             }),
             ("provisioner.k3d.network", |s| {
                 s.network = Some("other".into())
+            }),
+            ("provisioner.k3d.nodeConfigFrom", |s| {
+                s.node_config_from = None
             }),
             ("provisioner.k3d.noTraefik", |s| s.no_traefik = false),
             ("provisioner.k3d.noServiceLB", |s| s.no_service_lb = true),
@@ -568,7 +571,7 @@ mod tests {
     fn the_two_fields_the_old_check_did_see_are_still_seen() {
         for (option, mutate) in [
             (
-                "cluster.kubernetes.workers",
+                "cluster.claim.kubernetes.workers",
                 (|s: &mut ClusterShape| s.workers = 5) as fn(&mut ClusterShape),
             ),
             ("provisioner.k3d.image", |s: &mut ClusterShape| {
@@ -601,7 +604,7 @@ mod tests {
         assert_eq!(
             drifted,
             vec![
-                "cluster.kubernetes.workers",
+                "cluster.claim.kubernetes.workers",
                 "provisioner.k3d.noFlannel",
                 "provisioner.k3d.ports",
             ]
@@ -620,10 +623,6 @@ mod tests {
         assert!(message.contains("--recreate"), "{message}");
     }
 
-    // `cluster.kubernetes.version` selects which generated schemas the
-    // manifests are typed against. The node image is what decides the
-    // Kubernetes a cluster runs, and conflating the two made a replacement run
-    // with an unchanged image and then record that the version had moved.
     #[test]
     fn the_schema_version_is_not_the_running_kubernetes() {
         let mut declared = shape();
@@ -633,9 +632,6 @@ mod tests {
         assert!(report.is_convergeable_in_place());
     }
 
-    // The message used to assert that reshaping any k3d cluster loses
-    // everything on it. That is only true of the two datastore-baked fields,
-    // and believing it of the rest is what kept version bumps out of `up`.
     #[test]
     fn the_message_says_what_the_specific_change_costs() {
         let mut declared = shape();
@@ -664,8 +660,6 @@ mod tests {
         assert_eq!(report.needing_recreate(), Vec::<&str>::new());
     }
 
-    // k3d deletes a node without draining it, so anything scheduled there
-    // goes with it. Shrinking is not something to do behind the operator.
     #[test]
     fn fewer_workers_is_not_reconciled_in_place() {
         let mut declared = shape();
@@ -674,12 +668,10 @@ mod tests {
         assert_eq!(report.workers_to_add(), None);
         assert_eq!(
             report.needing_recreate(),
-            vec!["cluster.kubernetes.workers"]
+            vec!["cluster.claim.kubernetes.workers"]
         );
     }
 
-    // Two changes at once means the cheap one is no longer the whole answer,
-    // so `workers_to_add` stops being the shortcut. Both are still in place.
     #[test]
     fn adding_workers_alongside_a_port_change_is_two_fixes_not_a_recreate() {
         let mut declared = shape();
@@ -716,9 +708,6 @@ mod tests {
         }
     }
 
-    // The CIDRs are written into the datastore at first init and the
-    // distribution is a different thing entirely, so these two are the only
-    // fields a running cluster cannot be talked out of.
     #[test]
     fn only_the_datastore_baked_fields_need_a_new_cluster() {
         for (mutate, option) in [
@@ -732,7 +721,7 @@ mod tests {
             ),
             (
                 |s: &mut ClusterShape| s.distribution = "k8s".into(),
-                "cluster.kubernetes.distribution",
+                "cluster.claim.kubernetes.distribution",
             ),
         ] {
             let mut declared = shape();
@@ -759,9 +748,6 @@ mod tests {
         }
     }
 
-    // Talos had no drift check at all: an existing cluster short-circuited on
-    // "already running", while `cluster_create` reads controlPlanes and
-    // workers. Raising either changed the declaration and nothing else.
     #[test]
     fn a_talos_cluster_still_notices_a_node_count_change() {
         let mut declared = talos_shape();
@@ -771,9 +757,6 @@ mod tests {
         assert_eq!(report.fixes(), vec![Fix::AddServers(2)]);
     }
 
-    // The k3d block describes how k3d builds a cluster. Reporting it for a
-    // Talos cluster would name an option the operator did not set and cannot
-    // act on.
     #[test]
     fn k3d_options_are_not_reported_against_a_cluster_k3d_did_not_build() {
         let mut declared = talos_shape();
@@ -798,28 +781,22 @@ mod tests {
         );
     }
 
-    // Swapping the provisioner is not a change to a cluster, it is a
-    // different cluster, so it can only be satisfied by building one.
     #[test]
     fn changing_the_provisioner_needs_a_new_cluster() {
         let report = compare_shapes(&shape(), &talos_shape());
-        assert!(report.needing_recreate().contains(&"cluster.provisioner"));
+        assert!(
+            report
+                .needing_recreate()
+                .contains(&"cluster.provisioning.config.kind()")
+        );
         assert_eq!(report.workers_to_add(), None);
     }
 
-    // A record is what drift is compared against, so a field it carries that
-    // the cluster never saw is worse than a field it omits.
-    //
-    // This used to hand the fixture a `talos` tag over a k3d block and check
-    // that the tag won. That spec is no longer expressible: the tag *is* the
-    // block's key. So the fixture is a real Talos cluster, and what it proves
-    // is that a shape built from one carries no k3d options — the same claim,
-    // now made against a spec that could exist.
     #[test]
     fn a_non_k3d_shape_records_no_k3d_options() {
         let mut json = crate::domain::cluster::tests::cluster_json();
         json["provisioner"] = serde_json::json!("talos");
-        json["provisionerConfig"] = serde_json::json!({
+        json["provisioning"]["config"] = serde_json::json!({
             "talos": {
                 "clusterName": "minimal-talos-app",
                 "image": null,

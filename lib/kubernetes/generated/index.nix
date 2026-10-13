@@ -2,13 +2,10 @@
 
 let
   k8sVersions = {
-    "1_29" = import ./k8s/1_29.nix { inherit lib; };
-    "1_30" = import ./k8s/1_30.nix { inherit lib; };
     "1_31" = import ./k8s/1_31.nix { inherit lib; };
-    "1_32" = import ./k8s/1_32.nix { inherit lib; };
   };
 
-  constructors = import ./constructors.nix { inherit lib; };
+  constructors = import ../constructors.nix { inherit lib; };
 
   loadCrds =
     versioned:
@@ -16,21 +13,28 @@ let
       k8sTypes = versioned // constructors;
     in
     {
-      argocd = import ./crds/argocd.nix { inherit lib k8sTypes; };
-      capi_operator = import ./crds/capi_operator.nix { inherit lib k8sTypes; };
-      cert_manager = import ./crds/cert_manager.nix { inherit lib k8sTypes; };
-      cilium = import ./crds/cilium.nix { inherit lib k8sTypes; };
-      cnpg = import ./crds/cnpg.nix { inherit lib k8sTypes; };
-      crossplane = import ./crds/crossplane.nix { inherit lib k8sTypes; };
-      external_dns = import ./crds/external_dns.nix { inherit lib k8sTypes; };
-      external_secrets = import ./crds/external_secrets.nix { inherit lib k8sTypes; };
-      gateway_api = import ./crds/gateway_api.nix { inherit lib k8sTypes; };
-      kaniop = import ./crds/kaniop.nix { inherit lib k8sTypes; };
-      netbird_operator = import ./crds/netbird_operator.nix { inherit lib k8sTypes; };
-      prometheus = import ./crds/prometheus.nix { inherit lib k8sTypes; };
-      redis_operator = import ./crds/redis_operator.nix { inherit lib k8sTypes; };
-      trust_manager = import ./crds/trust_manager.nix { inherit lib k8sTypes; };
-      velero = import ./crds/velero.nix { inherit lib k8sTypes; };
+      "acme.cert-manager.io" = import ./crds/acme.cert-manager.io.nix { inherit lib k8sTypes; };
+      "apiextensions.crossplane.io" = import ./crds/apiextensions.crossplane.io.nix {
+        inherit lib k8sTypes;
+      };
+      "cert-manager.io" = import ./crds/cert-manager.io.nix { inherit lib k8sTypes; };
+      "external-secrets.io" = import ./crds/external-secrets.io.nix { inherit lib k8sTypes; };
+      "externaldns.k8s.io" = import ./crds/externaldns.k8s.io.nix { inherit lib k8sTypes; };
+      "gateway.networking.k8s.io" = import ./crds/gateway.networking.k8s.io.nix { inherit lib k8sTypes; };
+      "generators.external-secrets.io" = import ./crds/generators.external-secrets.io.nix {
+        inherit lib k8sTypes;
+      };
+      "kaniop.rs" = import ./crds/kaniop.rs.nix { inherit lib k8sTypes; };
+      "monitoring.coreos.com" = import ./crds/monitoring.coreos.com.nix { inherit lib k8sTypes; };
+      "netbird.io" = import ./crds/netbird.io.nix { inherit lib k8sTypes; };
+      "pkg.crossplane.io" = import ./crds/pkg.crossplane.io.nix { inherit lib k8sTypes; };
+      "postgresql.cnpg.io" = import ./crds/postgresql.cnpg.io.nix { inherit lib k8sTypes; };
+      "redis.redis.opstreelabs.in" = import ./crds/redis.redis.opstreelabs.in.nix {
+        inherit lib k8sTypes;
+      };
+      "secrets.crossplane.io" = import ./crds/secrets.crossplane.io.nix { inherit lib k8sTypes; };
+      "trust.cert-manager.io" = import ./crds/trust.cert-manager.io.nix { inherit lib k8sTypes; };
+      "velero.io" = import ./crds/velero.io.nix { inherit lib k8sTypes; };
     };
 
   reservedAttrs = [
@@ -98,6 +102,29 @@ let
     else
       k8sByKind;
 
+  crdGroups =
+    versionedTypes: if versionedTypes ? crds then builtins.attrNames versionedTypes.crds else [ ];
+
+  typesByKindForGroups =
+    versionedTypes: groups:
+    let
+      inherit (builtins)
+        isAttrs
+        attrNames
+        foldl'
+        elem
+        filter
+        ;
+      inherit (lib) filterAttrs;
+      k8sGroups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
+      addKinds =
+        acc: kinds: foldl' (a: k: a // { ${k} = (a.${k} or [ ]) ++ [ kinds.${k} ]; }) acc (attrNames kinds);
+      addGroup = acc: group: foldl' (a: av: addKinds a group.${av}) acc (attrNames group);
+      k8sByKind = foldl' (acc: gn: addGroup acc k8sGroups.${gn}) { } (attrNames k8sGroups);
+      known = filter (g: (versionedTypes.crds or { }) ? ${g}) groups;
+    in
+    foldl' (acc: g: addKinds acc versionedTypes.crds.${g}) k8sByKind known;
+
   coreKinds =
     versionedTypes:
     let
@@ -140,6 +167,7 @@ in
     resolveResourceType
     coreKinds
     ;
+  inherit crdGroups typesByKindForGroups;
 
   default = forVersion "1.31";
 }

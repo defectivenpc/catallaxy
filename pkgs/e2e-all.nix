@@ -12,7 +12,6 @@ pkgs.writeShellApplication {
     pkgs.jq
     pkgs.coreutils
 
-    # Same undeclared `nix eval` the single-lab runner had.
     pkgs.nix
   ];
 
@@ -38,12 +37,7 @@ pkgs.writeShellApplication {
     fi
 
     labs=$(nix eval --json "$flake#legacyPackages.${pkgs.stdenv.hostPlatform.system}.e2eLabs" \
-      | jq -r 'to_entries[] | select(.value.eligible) | .key')
-
-    if [ -z "$labs" ]; then
-      echo "cata-e2e-all: no lab is eligible" >&2
-      exit 1
-    fi
+      | jq -r '.[]')
 
     outdir=$(mktemp -d)
     trap 'rm -rf "$outdir"' EXIT

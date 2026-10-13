@@ -1,21 +1,11 @@
-# Where a shared secret lives in a runtime store, and what the store is called
-# in a cluster.
+# What a lab's store is called in a cluster.
+#
+# There used to be a `remoteKey` here too — `<lab>/<cluster>/<ns>/<secret>` —
+# derived on the producing side and again on the consuming side, with
+# assertions checking the two derivations agreed. A publication names its key
+# now and provides it, so there is one derivation and nothing to compare.
 { lib }:
 
 {
-  # remoteKey :: { lab; cluster; namespace; secret; } -> str
-  #
-  # Namespaced by the producing cluster, not the consuming one: a value means
-  # "the credential cluster X minted", and two clusters publishing the same
-  # name are two different values.
-  remoteKey =
-    {
-      lab,
-      cluster,
-      namespace,
-      secret,
-    }:
-    "${lab}/${cluster}/${namespace}/${secret}";
-
   storeResourceName = store: "catallaxy-${store}";
 }

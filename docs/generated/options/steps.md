@@ -1,6 +1,8 @@
-# Plan Step Options
+# Plan Step Schema
 
-Steps you declare yourself, at `lab.steps.<name>`. What each `kind` accepts in `params` is in [Plan Step Kinds](../step-kinds.md).
+What a floe writes into each entry of its `LAB_STEPS` contribution. What a given `kind` accepts in `params` is in [Plan Step Kinds](../step-kinds.md).
+
+## Every option
 
 | Option | Type | Default |
 | --- | --- | --- |
@@ -33,9 +35,10 @@ run a DNS server".
 
 **Default:** `[ ]`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `before` {#before}
 
 Anchors this step precedes. Inverted into `after` edges on the
@@ -46,18 +49,20 @@ has never heard of it.
 
 **Default:** `[ ]`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `cluster` {#cluster}
 
 Cluster this acts on, when it acts on one.
 
 **Type:** `null or string`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `description` {#description}
 
 One line, shown by `cata lab plan`.
@@ -66,9 +71,10 @@ One line, shown by `cata lab plan`.
 
 **Default:** `the attribute name`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `direction` {#direction}
 
 Which plan it belongs to. Null takes the kind's, when the kind
@@ -77,9 +83,10 @@ the two to disagree.
 
 **Type:** `null or one of "deploy", "teardown"`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `kind` {#kind}
 
 Which of the 34 step kinds this is. The kind decides what params
@@ -88,9 +95,10 @@ retry class the executor applies.
 
 **Type:** `string`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `origin` {#origin}
 
 Who declared it, for an error message to name.
@@ -103,9 +111,10 @@ without knowing which floe to open.
 
 **Default:** `"lab"`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `params` {#params}
 
 Payload for the step kind, checked against its schema.
@@ -114,9 +123,10 @@ Payload for the step kind, checked against its schema.
 
 **Default:** `{ }`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `provides` {#provides}
 
 Tokens that are true once this step has run.
@@ -125,9 +135,10 @@ Tokens that are true once this step has run.
 
 **Default:** `[ ]`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `teardown` {#teardown}
 
 A moment in the teardown, for a step a floe contributes. The
@@ -138,28 +149,29 @@ the signatures exist to keep it away from.
 
 **Type:** `null or value "before-cluster-destroy" (singular enum)`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ## `policy`
 
 ### `policy.interactive` {#policy-interactive}
 
 The step cannot finish without a human.
 
-Two consequences. It makes the lab ineligible for the e2e runner, via
-`lab.out.selfContained`. And it suppresses the retry its kind's
-idempotency class would otherwise get: re-running a step that opens a
-browser issues a fresh prompt while the first is still waiting, so the
-retry defeats the step it is retrying.
+It suppresses the retry its kind's idempotency class would otherwise
+get: re-running a step that opens a browser issues a fresh prompt
+while the first is still waiting, so the retry defeats the step it is
+retrying.
 
 **Type:** `boolean`
 
 **Default:** `false`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---
+
 ### `policy.onFailure` {#policy-onfailure}
 
 Whether the run stops here.
@@ -172,6 +184,6 @@ prevent removing the network it was on.
 
 **Default:** `"fatal"`
 
-**Declared in:** modules/lab/planner
+**Declared in:** lib/eval/step-type.nix
 
 ---

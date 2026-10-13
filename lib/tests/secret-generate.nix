@@ -4,10 +4,10 @@
 # parked suite. The generated CRDs are free-form to the schema, so eval
 # succeeding proves nothing about the keys: each case reads the field it cares
 # about.
-{ lib }:
+{ lib, floeCore }:
 
 let
-  floe = import ../floe-core { inherit lib; };
+  floe = import ../floe-catallaxy/prelude.nix { inherit lib floeCore; };
   kinds = import ../floe-catallaxy/component.nix { inherit lib floe; };
 
   plain = kinds.mkGeneratedSecret {

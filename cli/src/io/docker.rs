@@ -465,11 +465,6 @@ pub fn container_image(name: &str) -> Option<String> {
 /// Published ports as `host:container`, sorted so the order docker reports
 /// them in is not mistaken for a change.
 pub fn container_ports(name: &str) -> Option<Vec<String>> {
-    // Including the bind address, because the ingress publishes on loopback
-    // and on the lab's own gateway and those are different bindings of the
-    // same container port. Rendering only the port made both read as `80:80`,
-    // which never matched what was declared, so every `lab up` saw drift that
-    // was not there and rebuilt the container.
     let raw = inspect_field(
         name,
         "{{range $p, $bindings := .HostConfig.PortBindings}}\

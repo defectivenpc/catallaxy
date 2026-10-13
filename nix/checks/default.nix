@@ -1,10 +1,11 @@
 # Checks over the RFC-0001 floe implementation.
 #
 # The lab system's checks went with the floe implementation they tested; these
-# are what has been written back against `lib/floe-core`.
+# are what has been written back against the floe library.
 {
   lib,
   pkgs,
+  floeCore,
   cataCharts,
   k8sSpecs,
   self,
@@ -12,14 +13,16 @@
   treefmtEval,
   labDefs,
   exampleLabs,
+  standaloneClusters,
   mkLab,
   mkFloes,
   optionDocs,
   allocations,
-  e2eLabs,
-  cloudE2eLabs,
   cliConfigs,
-  floeInterfaces,
+  referencePages,
+  generatedTypes,
+  catallaxy,
+  floes,
 }:
 
 let
@@ -33,10 +36,8 @@ in
   cli-clippy = packages.cata.passthru.clippy;
   formatting = treefmtEval.config.build.check self;
 }
-// import ./lib-tests.nix { inherit lib pkgs; }
+// import ./lib-tests.nix { inherit lib pkgs floeCore; }
 // import ./lab-manifests.nix { inherit lib pkgs labDefs; }
-// import ./self-contained.nix { inherit lib pkgs e2eLabs; }
-// import ./cloud-e2e.nix { inherit lib pkgs cloudE2eLabs; }
 // import ./step-kinds.nix { inherit lib pkgs; }
 // import ./consumer-template.nix {
   inherit
@@ -44,11 +45,17 @@ in
     pkgs
     mkLab
     mkFloes
+    catallaxy
+    floes
     ;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
+// import ./generated-types.nix { inherit lib pkgs generatedTypes; }
+// import ./crd-coverage.nix { inherit lib pkgs labDefs; }
+// import ./chart-values.nix { inherit lib pkgs labDefs; }
 // import ./allocations.nix { inherit lib pkgs allocations; }
 // import ./teaching.nix { inherit lib pkgs; }
+// import ./prose-writes-no-options.nix { inherit lib pkgs; }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
   inherit
@@ -66,21 +73,28 @@ in
   inherit
     lib
     pkgs
+    floeCore
     labDefs
     cataCharts
     k8sSpecs
     ;
-  floeSet = (import ../../floes).cluster;
+  floeSet = (import ../../floes).components;
   cannotKnowItsImages = [
-    # Handed arbitrary resources and an optional chart by whoever
-    # instantiates it. Enumerating what those pull is not something it can do.
     "custom"
   ];
 }
-// import ./lab-edge.nix { inherit lib pkgs mkLab; }
+// import ./lab-edge.nix {
+  inherit
+    lib
+    pkgs
+    mkLab
+    catallaxy
+    floes
+    ;
+}
 // import ./floe-headers.nix { inherit lib pkgs; }
-// import ./rfc-refs.nix { inherit lib pkgs; }
 // import ./step-kind-producers.nix { inherit lib pkgs; }
+// import ./lab-link-reads.nix { inherit lib pkgs; }
 // import ./plan-tokens.nix { inherit lib pkgs; }
 // import ./counts.nix {
   inherit lib pkgs;
@@ -98,15 +112,28 @@ in
     cataCharts
     k8sSpecs
     ;
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
+  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
   floeSet = allFloes;
 }
 // import ./floe-interface.nix {
-  inherit lib pkgs floeInterfaces;
-  docDir = ../../docs/floes;
-  # Presets are rendered into the same directory and diffed the same way: a
-  # preset's interface is a contract like a floe's.
-  floeSet = allFloes // (import ../../floes/presets);
+  inherit lib pkgs referencePages;
+  docDir = ../../docs/generated/floes;
+  floeSet = allFloes;
+}
+// import ./signature-interface.nix {
+  inherit lib pkgs referencePages;
+  docDir = ../../docs/generated/signatures;
+  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
+}
+// import ./content-cache.nix { inherit lib pkgs labDefs; }
+// import ./cluster-documents.nix {
+  inherit
+    lib
+    pkgs
+    packages
+    labDefs
+    standaloneClusters
+    ;
 }
 // import ./lab-scope.nix {
   inherit
@@ -114,6 +141,8 @@ in
     pkgs
     mkLab
     labDefs
+    catallaxy
+    floes
     ;
 }
 // import ./secret-sharing.nix {
@@ -122,5 +151,7 @@ in
     pkgs
     labDefs
     mkLab
+    catallaxy
+    floes
     ;
 }

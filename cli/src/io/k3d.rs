@@ -63,10 +63,6 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
     let mut cmd = Command::new("k3d");
     cmd.args(["cluster", "create", name, "--agents", &workers.to_string()]);
 
-    // Both default to true, and neither was passed, so creating a cluster
-    // wrote the operator's default kubeconfig and moved their current-context
-    // onto the new cluster. Nothing asked for either. The lab's own file is
-    // populated by `kubeconfig_merge` below.
     cmd.args([
         "--kubeconfig-update-default=false",
         "--kubeconfig-switch-context=false",
@@ -90,9 +86,6 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
     for arg in extra_api_server_args {
         cmd.args(["--k3s-arg", &format!("--kube-apiserver-arg={arg}@server:*")]);
     }
-    // After the disables and the CIDRs, so a lab can override one of the flags
-    // `k3s_server_args` writes: k3s takes the last occurrence of a repeated
-    // flag, and this is the only place a lab gets to say anything about them.
     for (arg, scope) in extra_k3s_args {
         cmd.args(["--k3s-arg", &format!("{arg}@{scope}")]);
     }
@@ -428,10 +421,11 @@ pub fn add_servers(
 /// image means it. Otherwise it is derived from the Kubernetes version the
 /// same way `cluster_create` derives it.
 pub fn node_image_for(spec: &crate::domain::ClusterSpec) -> String {
-    spec.provisioner_config
+    spec.provisioning
+        .config
         .k3d()
         .and_then(|c| c.image.clone())
-        .unwrap_or_else(|| format!("rancher/k3s:v{}-k3s1", spec.kubernetes.version))
+        .unwrap_or_else(|| format!("rancher/k3s:v{}-k3s1", spec.claim.kubernetes.version))
 }
 
 /// Wait for a replaced node to be usable again, and uncordon it.

@@ -1,0 +1,210 @@
+# podinfo behind the gateway — the test service.
+#
+# Two things to notice, and they are the point of the exercise.
+#
+# The HTTPRoute's `parentRefs` and hostname come out of the sealed
+# API_GATEWAY value, so this floe never spells the gateway's name, its
+# namespace, its listener, or the lab's DNS zone.
+#
+# It declares no cross-floe ordering whatsoever — no `needs` reaching outside
+# itself, no token naming anything of the gateway's. The edge that puts it
+# after the gateway is derived by the elaborator from the link graph and the
+# gateway's own `backs`.
+{
+  lib,
+  floe,
+  sigs,
+  kinds,
+  ...
+}:
+
+floe.mkFloe {
+  name = "podinfo";
+  summary = "podinfo, a small routed workload for proving a cluster serves traffic.";
+
+  inputs = {
+    namespace = lib.mkOption {
+      type = lib.types.str;
+      default = "podinfo";
+      description = "Namespace the app installs into. It creates this itself.";
+    };
+
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "ghcr.io/stefanprodan/podinfo:6.7.1";
+      description = ''
+        Container image. Tag-pinned here; the lab renderer's image lock
+        rewrites this to a digest, and that machinery is lab-scope so the
+        staged cluster does not get it.
+      '';
+    };
+
+    replicas = lib.mkOption {
+      type = lib.types.int;
+      default = 2;
+      description = "Replica count.";
+    };
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 9898;
+      description = "Port the container listens on.";
+    };
+
+    servicePort = lib.mkOption {
+      type = lib.types.port;
+      default = 80;
+      description = "Port the Service publishes, and what the route backends name.";
+    };
+  };
+
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
+  requires.gateway = sigs.API_GATEWAY;
+
+  # Claimed, so whatever answers for the zone learns this hostname from the
+  # link rather than by reading what rendered. The gateway collects these.
+  # ADR 0004.
+  provides.route = sigs.ROUTE_CLAIM;
+
+  # What the gateway collects. The old `floes.custom` wrote its hostname into
+  # a hostname list on the gateway's options; providing it instead means the gateway
+  # learns the same fact through an edge the linker checks, and this floe
+  # still names nothing of the gateway's.
+
+  out.component = kinds.component;
+  modules = [
+    (
+      { config, lib, ... }:
+      let
+        inputs = config.floe.inputs;
+        gateway = config.floe.requires.gateway;
+
+        selector."app.kubernetes.io/name" = "podinfo";
+        host = "podinfo.${gateway.baseDomain}";
+
+      in
+      {
+
+        config.floe.provides.route.host = host;
+
+        config.floe.out.component = kinds.mkComponent {
+          imagesComplete = true;
+
+          bundles.podinfo = kinds.mkBundle {
+            createNamespaces = [ inputs.namespace ];
+
+            images.podinfo = kinds.mkImage inputs.image;
+
+            ready = kinds.readyDeployment {
+              name = "podinfo";
+              namespace = inputs.namespace;
+              timeout = "3m";
+            };
+
+            verify.route-answers = {
+              description = "The route through the gateway reaches podinfo";
+              timeout = "2m";
+              expect = {
+                apiVersion = "apps/v1";
+                kind = "Deployment";
+                metadata = {
+                  name = "podinfo";
+                  namespace = inputs.namespace;
+                };
+                status.readyReplicas = inputs.replicas;
+              };
+              reject = [ ];
+            };
+
+            resources = {
+              podinfo-deployment = {
+                apiVersion = "apps/v1";
+                kind = "Deployment";
+                metadata = {
+                  name = "podinfo";
+                  inherit (inputs) namespace;
+                };
+                spec = {
+                  inherit (inputs) replicas;
+                  selector.matchLabels = selector;
+                  template = {
+                    metadata.labels = selector;
+                    spec.securityContext = {
+                      runAsNonRoot = true;
+                      runAsUser = 65534;
+                      seccompProfile.type = "RuntimeDefault";
+                    };
+                    spec.containers = [
+                      {
+                        name = "podinfo";
+                        inherit (inputs) image;
+                        securityContext = {
+                          allowPrivilegeEscalation = false;
+                          capabilities.drop = [ "ALL" ];
+                        };
+                        ports = [
+                          {
+                            name = "http";
+                            containerPort = inputs.port;
+                          }
+                        ];
+                        readinessProbe = {
+                          httpGet = {
+                            path = "/readyz";
+                            inherit (inputs) port;
+                          };
+                          initialDelaySeconds = 2;
+                        };
+                        livenessProbe = {
+                          httpGet = {
+                            path = "/healthz";
+                            inherit (inputs) port;
+                          };
+                          initialDelaySeconds = 5;
+                        };
+                        resources = {
+                          requests = {
+                            cpu = "10m";
+                            memory = "32Mi";
+                          };
+                          limits.memory = "128Mi";
+                        };
+                      }
+                    ];
+                  };
+                };
+              };
+
+              podinfo-service = {
+                apiVersion = "v1";
+                kind = "Service";
+                metadata = {
+                  name = "podinfo";
+                  inherit (inputs) namespace;
+                };
+                spec = {
+                  inherit selector;
+                  ports = [
+                    {
+                      name = "http";
+                      port = inputs.servicePort;
+                      targetPort = inputs.port;
+                    }
+                  ];
+                };
+              };
+
+              podinfo-route = kinds.mkRoute {
+                inherit gateway;
+                name = "podinfo";
+                inherit (inputs) namespace;
+                service = "podinfo";
+                port = inputs.servicePort;
+              };
+            };
+          };
+        };
+      }
+    )
+  ];
+}

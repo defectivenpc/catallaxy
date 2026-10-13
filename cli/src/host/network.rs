@@ -82,8 +82,6 @@ fn open_vm_forwarding(docker_subnet: &str, colima_profile: &str) -> Vec<String> 
         ],
     );
 
-    // The -C above is a probe: it fails when the rule is absent, which is the
-    // normal case and why we are here. The insert is not a probe.
     if !matches!(check_raw, Ok(s) if s.success()) {
         failed.extend(apply(
             colima_profile,

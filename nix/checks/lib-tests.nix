@@ -3,7 +3,11 @@
 # The suites over the lab system went with the implementation they tested, with the
 # hand-written `pure`/`withPkgs` tables and the `unrunTests` assertion that
 # kept them honest. Both come back with the platform.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
   testsDir = ../../lib/tests;
@@ -30,14 +34,11 @@ let
     );
 
   pure = {
-    floe-core = testsDir + "/floe-core.nix";
     floe-cluster = testsDir + "/floe-cluster.nix";
     secret-refs = testsDir + "/secret-refs.nix";
     secret-generate = testsDir + "/secret-generate.nix";
+    helm-values = testsDir + "/helm-values.nix";
 
-    # Suites for code already in the tree that was, until now, untested here:
-    # they were parked alongside the lab system and test none of it.
-    #
     util-network = testsDir + "/util-network.nix";
     util-duration = testsDir + "/util-duration.nix";
     util-hcl = testsDir + "/util-hcl.nix";
@@ -57,13 +58,13 @@ let
   floeSuites = lib.listToAttrs (
     map (file: {
       name = "floe-${lib.removeSuffix ".nix" file}";
-      value = import (floesDir + "/${file}") { inherit lib pkgs; };
+      value = import (floesDir + "/${file}") { inherit lib pkgs floeCore; };
     }) floeSuiteFiles
   );
 
   # Discovery cuts the other way too: a floe added to the set with no suite
   # beside it is silent, because there is no name here for its absence to
-  # fail. `lab-dns` and `k3d-cluster` both sat like that. Flattened across
+  # fail. `coredns-zone` and `k3d-cluster` both sat like that. Flattened across
   # `cluster` and `provisioners`, the way `lib/lab.nix` flattens it.
   shippedFloes = lib.attrNames (lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes)));
 
@@ -72,7 +73,11 @@ let
   floesWithNoSuite = lib.subtractLists suitedFloes shippedFloes;
   suitesWithNoFloe = lib.subtractLists shippedFloes suitedFloes;
 
-  suites = lib.mapAttrs (_: path: import path { inherit lib; }) pure // floeSuites;
+  # `callPackageWith` hands a suite only the arguments it declares, so the ones
+  # that never touch the floe library keep their `{ lib }` head and the two that
+  # do just ask for `floeCore`.
+  suites =
+    lib.mapAttrs (_: path: lib.callPackageWith { inherit lib floeCore; } path { }) pure // floeSuites;
 
   # A new `lib/tests/*.nix` would otherwise sit there running nowhere and
   # looking like coverage.

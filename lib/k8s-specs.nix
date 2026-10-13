@@ -5,25 +5,13 @@
 }:
 
 let
+  # The version every provisioner defaults to, and the only one the generated
+  # types cover. Adding one means generating its types too, or a lab could
+  # select a version nothing can check.
   specDefs = {
-    "1.29" = {
-      url = "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.29.15/api/openapi-spec/swagger.json";
-      hash = "sha256-hmctk06Li0xJSqBuZlNzzRP6Ko05zjar11iLLHfJLKo=";
-    };
-
-    "1.30" = {
-      url = "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.30.11/api/openapi-spec/swagger.json";
-      hash = "sha256-E38iCX8UbKoxUN7aLszO7B7NC2KAVNGIe/Vfk+cVx8s=";
-    };
-
     "1.31" = {
       url = "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.31.7/api/openapi-spec/swagger.json";
       hash = "sha256-3cs9XD2FhJ8frbVjh9Onv0RxLaKR5b0Is0306KQkf40=";
-    };
-
-    "1.32" = {
-      url = "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.32.3/api/openapi-spec/swagger.json";
-      hash = "sha256-IzW05/ed+FsgBmFksU2PAt0Hfe582Me3+0JQCcmDfoU=";
     };
   };
 

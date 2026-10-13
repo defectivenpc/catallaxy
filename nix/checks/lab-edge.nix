@@ -1,104 +1,133 @@
-# Who fronts a cluster, from the lab's side — RFC 0005 §6.4.
+# Who fronts a cluster, from the lab's side.
 #
 # The fixture `examples/labs/tests/self-edge.nix` pins what a lab *with* a
 # self-edge cluster renders. This pins the refusals, which have no fixture
 # because a lab that is refused does not render.
 #
-# The failure these guard against is the one the edge model was written for:
-# before it, a cluster the lab was not the edge for could not be expressed at
-# all, and the way it could not be expressed was an assertion about a backend
-# it was never going to have.
+# Two decisions meet here and they belong to different parties. Where a
+# cluster is reachable is the provisioner's: every backend is built from the
+# container-naming convention of the tool that created the cluster, and a
+# cluster nobody here created answers nothing. Whether this lab fronts it is
+# the deployer's, said by whether the cluster exports its `HOST_EXPOSURE`.
+#
+# So the refusal is about the *combination*, and it has to be: a cluster with
+# no address is the ordinary case for a managed one, and asking a lab to route
+# to it is the mistake.
 {
   lib,
   pkgs,
   mkLab,
+  catallaxy,
+  floes,
 }:
 
 let
   # Two clusters would need two subnets and there is only one arrangement
   # under test, so one cluster and one set of ports throughout.
   mkEdgeLab =
-    { name, cluster }:
-    mkLab {
-      modules = [
-        (
-          {
-            floes,
-            cataCharts,
-            k8sSpecs,
-            ...
-          }:
-          {
-            lab.name = name;
-            lab.network.subnet = "172.41.0.0/16";
-            lab.dns.hostPort = 5371;
-            lab.proxy.enable = true;
-            lab.proxy.httpPort = 8091;
+    {
+      name,
+      claim,
+      fronted ? true,
+    }:
+    mkLab (
+      catallaxy.mkLabFloe
+        {
+          inherit name;
+          summary = "A lab fronting one cluster, or declining to.";
 
-            lab.clusters.app = cluster {
-              floes = {
-                cluster = floes.k3d-cluster {
-                  name = "app";
-                  instanceName = "${name}-app";
+          units = _: {
+            proxy = floes.lab-proxy { httpPort = 8091; };
+
+            declared = floes.lab-secret-store { backend = "env"; };
+          };
+
+          clusters = _: {
+            app = {
+              floe = catallaxy.mkClusterFloe {
+                name = "lab-edge-app";
+                summary = "A routed workload behind a gateway, for pinning who fronts a cluster.";
+
+                requires = {
+                  claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+                  zone = catallaxy.sigs.DNS_ZONE;
                 };
-                gateway-api = floes.gateway-api-crds {
-                  manifest = "${k8sSpecs.standaloneCrds.gateway-api}";
-                  version = "v1.2.1";
+
+                optional = lib.optionalAttrs fronted { edge = catallaxy.sigs.CLUSTER_EDGE; };
+
+                provides = {
+                  delivery = catallaxy.sigs.DELIVERY_POLICY;
+                }
+                // lib.optionalAttrs fronted { exposure = catallaxy.sigs.HOST_EXPOSURE; };
+
+                exports = {
+                  delivery = "kapp/delivery";
+                }
+                // lib.optionalAttrs fronted { exposure = "gateway/exposure"; };
+
+                units = _: {
+                  kapp = floes.kapp { };
+                  gateway-api = floes.gateway-api-crds { };
+                  cert-manager = floes.cert-manager { };
+                  gateway = floes.gateway { };
+                  podinfo = floes.podinfo { };
                 };
-                cert-manager = floes.cert-manager { chart = "${cataCharts.cert-manager.chart}"; };
-                gateway = floes.gateway { chart = "${cataCharts.traefik.chart}"; };
-                podinfo = floes.podinfo { };
-              };
+              } { };
+
+              claim = claim floes;
             };
-          }
-        )
-      ];
+          };
+        }
+        {
+          inherit name;
+          zone = "${name}.test";
+          subnet = "172.41.0.0/16";
+
+          zonePort = 5371;
+
+          defaults.LAB_SECRET_STORE = "declared";
+        }
+    );
+
+  # Created here, so there is a container to name.
+  k3dClaim = floes: floes.k3d-cluster { };
+
+  # Created by someone else, so there is not. Everything about it is declared
+  # because nothing in the lab made it.
+  externalClaim =
+    floes:
+    floes.external-cluster {
+      context = "external-app";
+      podSubnet = "10.244.0.0/16";
+      serviceSubnet = "10.96.0.0/12";
+      kubeconfigKey = "clusters/app/kubeconfig";
     };
 
-  refuses = l: !(builtins.tryEval (builtins.deepSeq l.config.lab.out.cliConfig "evaluated")).success;
+  refuses = l: !(builtins.tryEval (builtins.deepSeq l.cliConfig "evaluated")).success;
 
   results = lib.runTests {
 
-    # The control. Without it every refusal below could pass because the
-    # harness builds a lab that is broken for an unrelated reason — which is
-    # how five refusals in `nix/checks/secret-sharing.nix` once passed while
-    # checking nothing.
     testTheHarnessBuildsALabThatIsAccepted = {
       expr = refuses (mkEdgeLab {
         name = "edge-ok";
-        cluster = c: c;
+        claim = k3dClaim;
       });
       expected = false;
     };
 
-    # A cluster that says the lab is its edge and then names no backend is a
-    # contradiction, not an unsupported provisioner. Before the mode existed
-    # this was the *only* thing a non-k3d cluster could be, so the refusal
-    # read as "this provisioner is not supported" and the fix was to teach the
-    # lab about it. Now there is a way to say "not mine", and this fires only
-    # for a lab that declined to use it.
-    testTheLabIsTheEdgeAndNamesNoBackend = {
+    testFrontingAClusterWithNoAddressIsRefused = {
       expr = refuses (mkEdgeLab {
         name = "edge-none";
-        cluster = c: lib.recursiveUpdate c { edge.backend = lib.mkForce null; };
+        claim = externalClaim;
       });
       expected = true;
     };
 
-    # And the pair that makes the refusal above about the *combination*
-    # rather than about a null backend: the same null is fine the moment the
-    # cluster stops claiming the lab fronts it. This is the arrangement a
-    # managed cloud cluster is in, expressed on a k3d one because no cloud
-    # provisioner floe is built yet.
-    testANullBackendIsFineWhenTheLabIsNotTheEdge = {
+    testTheSameClusterIsFineUnfronted = {
       expr = refuses (mkEdgeLab {
         name = "edge-self";
-        cluster =
-          c:
-          lib.recursiveUpdate c {
-            edge.mode = lib.mkForce "self";
-            edge.backend = lib.mkForce null;
-          };
+        claim = externalClaim;
+        fronted = false;
       });
       expected = false;
     };

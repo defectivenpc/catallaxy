@@ -28,8 +28,6 @@ in
         ) checks
       );
 
-      # `cata lab verify` reads a lab, it does not change one. A check that
-      # could mutate fails eval rather than being caught in review.
       mutating = verifyTypes.mutatingOperations steps;
 
       test = {

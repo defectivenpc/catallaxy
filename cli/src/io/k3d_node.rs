@@ -227,9 +227,6 @@ fn minor_of(version: &str) -> Option<(u32, u32)> {
 pub fn upgrade_is_one_step(recorded: &str, declared: &str) -> bool {
     match (minor_of(recorded), minor_of(declared)) {
         (Some((rmaj, rmin)), Some((dmaj, dmin))) => dmaj == rmaj && dmin.abs_diff(rmin) <= 1,
-        // An unparseable version is not evidence of a safe jump, but it is
-        // also not evidence of an unsafe one, and refusing every unusual
-        // version string would block clusters that are fine.
         _ => true,
     }
 }
@@ -285,8 +282,6 @@ mod tests {
         );
     }
 
-    // k3d decides cluster membership from these. A replacement without them
-    // starts fine and is no longer part of the cluster.
     #[test]
     fn every_k3d_label_is_carried_over() {
         let args = run_args(&spec(), "rancher/k3s:v1.32.5-k3s1");
@@ -323,8 +318,6 @@ mod tests {
         assert!(upgrade_is_one_step("1.31", "1.31"));
     }
 
-    // Kubernetes supports one minor of skew. k3s started against a datastore
-    // written several minors ago cannot migrate it forward.
     #[test]
     fn a_jump_of_several_minors_is_refused() {
         assert!(!upgrade_is_one_step("v1.28.0+k3s1", "v1.32.5+k3s1"));
@@ -336,8 +329,6 @@ mod tests {
         assert!(!upgrade_is_one_step("v1.31.0", "v2.0.0"));
     }
 
-    // Refusing every version string that does not parse would block clusters
-    // that are fine, and an unparseable version is not evidence either way.
     #[test]
     fn an_unparseable_version_is_not_treated_as_a_dangerous_jump() {
         assert!(upgrade_is_one_step("latest", "v1.32.5+k3s1"));

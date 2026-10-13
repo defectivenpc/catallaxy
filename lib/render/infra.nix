@@ -103,21 +103,14 @@ rec {
       resolveToken =
         tok:
         let
-          path = tok.path or [ ];
-          rname = lib.elemAt path 0;
-          attr = lib.elemAt path 1;
+          rname = tok.ref.resource;
+          attr = tok.ref.output;
 
           here = stack.resources.${rname} or null;
 
           owner = lib.findFirst (s: (stacks.${s}.resources or { }) ? ${rname}) null (lib.attrNames stacks);
         in
-        if lib.length path != 2 then
-          throw (
-            "infra: a resource reference names ${toString (lib.length path)} "
-            + "part(s) (${lib.concatStringsSep "." path}); it takes two, a resource and one of "
-            + "its declared outputs"
-          )
-        else if here != null then
+        if here != null then
           localRef here.type rname attr
         else if owner == null then
           throw ("infra: stack '${name}' refers to resource '${rname}', which no floe in this lab declares")
@@ -138,7 +131,7 @@ rec {
             lib.concatMap (
               tok:
               let
-                rname = lib.elemAt (tok.path or [ ]) 0;
+                rname = tok.ref.resource;
                 owner = lib.findFirst (s: (stacks.${s}.resources or { }) ? ${rname}) null (lib.attrNames stacks);
               in
               lib.optional (owner != null && owner != name) owner
@@ -149,7 +142,6 @@ rec {
 
       usedProviders = lib.unique (lib.mapAttrsToList (_: r: r.provider) stack.resources);
 
-      # Grouped `type -> name -> inputs`, which is the tool's own shape.
       byType = lib.mapAttrs (_: rs: lib.listToAttrs rs) (
         lib.groupBy (e: e.type) (
           lib.mapAttrsToList (rname: r: {
@@ -179,8 +171,6 @@ rec {
           s:
           lib.nameValuePair s {
             backend = "local";
-            # Built from where the producer's state actually is, rather than
-            # restated. Two descriptions of one path will disagree.
             config.path = "${stateDir}/${s}/terraform.tfstate";
           }
         ) readsFrom
@@ -229,7 +219,7 @@ rec {
           lib.concatMap (
             tok:
             let
-              rname = lib.elemAt (tok.path or [ ]) 0;
+              rname = tok.ref.resource;
               owner = lib.findFirst (s: (stacks.${s}.resources or { }) ? ${rname}) null (lib.attrNames stacks);
             in
             lib.optional (owner != null && owner != name) owner

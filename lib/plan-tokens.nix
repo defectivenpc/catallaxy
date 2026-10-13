@@ -37,11 +37,9 @@ in
     secrets = "lab/secrets";
     services = "lab/services";
     warmCache = "lab/warm-cache";
-    # Argo applied, before it can apply anything else.
     cdBootstrapped = "lab/cd-bootstrapped";
     gitReady = "lab/git-ready";
     manifestsPushed = "lab/manifests-pushed";
-    # The cluster is Argo's now; `cata` has stopped applying.
     cdHandedOver = "lab/cd-handed-over";
     reachable = "host/lab-reachable";
     servicesRemoved = "lab/services-removed";

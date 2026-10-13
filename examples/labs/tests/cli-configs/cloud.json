@@ -1,8 +1,7 @@
 {
   "cd": {
     "bootstrap": "kubectl-ssa",
-    "git": {},
-    "strategy": "kapp"
+    "git": {}
   },
   "clusterNames": [
     "home",
@@ -10,241 +9,194 @@
   ],
   "clusters": {
     "home": {
-      "deploy": {
-        "strategy": "kapp"
-      },
-      "edge": {
-        "backend": "k3d-cloud-home-server-0",
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "proxy"
-      },
-      "exposedHosts": [],
-      "floes": {
-        "cert-manager": {
-          "enable": true
+      "claim": {
+        "context": "k3d-cloud-home",
+        "instanceName": "cloud-home",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
         },
-        "cluster": {
-          "enable": true
-        },
-        "doks": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
+        "name": "home",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
         }
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "content": {
+        "exposedHosts": [],
+        "namespaces": [
+          "cert-manager"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-home",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "gateway-api/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/cert-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/controller",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/gateway",
+              "resourceCount": 1
+            }
+          ]
+        ]
+      },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [
-        "home-doks-before-clusters"
-      ],
-      "kubeContext": "k3d-cloud-home",
-      "kubernetes": {
-        "controlPlanes": 1,
-        "distribution": "k3s",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "cloud",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "cloud-home",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "cloud",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": null,
+            "ports": []
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 3
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 1
-          }
-        ]
-      ],
-      "name": "home",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.96.0.0/12"
-      },
-      "projections": {},
-      "provider": "docker",
-      "provisioner": "k3d",
-      "provisionerConfig": {
-        "k3d": {
-          "autoDeployManifests": [],
-          "clusterName": "cloud-home",
-          "extraApiServerArgs": [],
-          "extraK3sArgs": [],
-          "extraVolumes": [],
-          "image": "rancher/k3s:v1.31.4-k3s1",
-          "network": "cloud",
-          "noFlannel": false,
-          "noLocalStorage": false,
-          "noServiceLB": false,
-          "noTraefik": true,
-          "ports": []
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     },
     "workload": {
-      "deploy": {
-        "strategy": "kapp"
+      "claim": {
+        "context": "cata-cloud-workload",
+        "instanceName": "workload",
+        "kubernetes": {
+          "controlPlanes": 0,
+          "distribution": "kubernetes",
+          "version": "1.31",
+          "workers": 0
+        },
+        "name": "workload",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.245.0.0/16"
+        }
       },
-      "edge": {
-        "backend": null,
-        "httpPort": 80,
-        "httpsPort": 443,
-        "mode": "self"
-      },
-      "exposedHosts": [
-        {
-          "bundle": "podinfo/podinfo",
-          "host": "podinfo.cloud.test",
-          "namespace": "podinfo",
-          "paths": [
-            "/"
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.cloud.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "cert-manager",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-workload",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "gateway-api/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            }
           ],
-          "tier": "public"
-        }
-      ],
-      "floes": {
-        "cert-manager": {
-          "enable": true
-        },
-        "cluster": {
-          "enable": true
-        },
-        "gateway": {
-          "enable": true
-        },
-        "gateway-api": {
-          "enable": true
-        },
-        "podinfo": {
-          "enable": true
-        }
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/cert-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "cert-manager/issuers",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/controller",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "gateway/gateway",
+              "resourceCount": 1
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ]
+        ]
       },
-      "host": {
-        "colima": {
-          "cpu": 4,
-          "disk": 60,
-          "enable": false,
-          "memory": 8,
-          "profile": "catallaxy"
-        },
+      "delivery": {
+        "strategy": "kapp",
         "waitTimeout": "10m"
       },
-      "infraStacks": [],
-      "kubeContext": "cata-cloud-workload",
-      "kubernetes": {
-        "controlPlanes": 0,
-        "distribution": "kubernetes",
-        "version": "1.31",
-        "workers": 0
-      },
-      "labName": "cloud",
-      "lifecycle": {},
-      "manifestWaves": [
-        [
-          {
-            "hasReadyProbe": false,
-            "name": "gateway-api/crds",
-            "resourceCount": 0
-          },
-          {
-            "hasReadyProbe": false,
-            "name": "namespaces",
-            "resourceCount": 0
+      "provisioning": {
+        "config": {
+          "external": {
+            "madeBy": "opentofu, from the 'doks' floe on 'home'",
+            "provisionedBy": null
           }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/cert-manager",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "cert-manager/issuers",
-            "resourceCount": 3
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/controller",
-            "resourceCount": 0
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "gateway/gateway",
-            "resourceCount": 1
-          }
-        ],
-        [
-          {
-            "hasReadyProbe": true,
-            "name": "podinfo/podinfo",
-            "resourceCount": 3
-          }
-        ]
-      ],
-      "name": "workload",
-      "network": {
-        "podSubnet": "10.244.0.0/16",
-        "serviceSubnet": "10.245.0.0/16"
-      },
-      "projections": {},
-      "provider": "external",
-      "provisioner": "external",
-      "provisionerConfig": {
-        "external": {
-          "madeBy": "opentofu, from the 'doks' floe on 'home'"
-        }
+        },
+        "hooks": [],
+        "wait": "10m"
       }
     }
   },
@@ -259,15 +211,6 @@
     }
   ],
   "labName": "cloud",
-  "labNamespaces": {
-    "home": [
-      "cert-manager"
-    ],
-    "workload": [
-      "cert-manager",
-      "podinfo"
-    ]
-  },
   "labOwnedRegistries": [],
   "network": {
     "dockerSubnet": "172.17.0.0/20",
@@ -276,10 +219,7 @@
   "opsToolPath": "/nix/store/HASH-cloud-ops/bin/cloud-ops",
   "registryPort": null,
   "registryUpstreams": [],
-  "runtimeContexts": {
-    "home": "k3d-cloud-home",
-    "workload": "cata-cloud-workload"
-  },
+  "routedHosts": {},
   "secrets": {
     "envFile": null,
     "hostProjections": [],
@@ -300,9 +240,11 @@
   },
   "services": {
     "egress": {
+      "command": [],
       "container": "catallaxy-cloud-egress",
       "description": "Forward proxy inside the lab network (cloud.test)",
       "dnsContainers": [],
+      "extraMounts": [],
       "image": "ghcr.io/querateam/docker-tinyproxy:latest",
       "networks": [
         "cloud"
@@ -310,6 +252,7 @@
       "ports": [
         "127.0.0.1:3016:8888"
       ],
+      "readyProbe": null,
       "volumes": {
         "/etc/tinyproxy/tinyproxy.conf": {
           "content": "Port 8888\nListen 0.0.0.0\nTimeout 600\nAllow 0.0.0.0/0\nConnectPort 443\nConnectPort 80\nLogLevel Info\n"
@@ -317,8 +260,10 @@
       }
     },
     "proxy": {
+      "command": [],
       "container": "catallaxy-cloud-ingress",
       "description": "HAProxy lab ingress (cloud.test)",
+      "dnsContainers": [],
       "extraMounts": [
         {
           "container": "/etc/haproxy/certs/lab.pem",

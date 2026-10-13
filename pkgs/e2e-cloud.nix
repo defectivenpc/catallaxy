@@ -51,22 +51,17 @@ pkgs.writeShellApplication {
       echo "It creates billable resources. Nothing here runs in \`nix flake check\`." >&2
       echo "" >&2
       echo "labs this can stand up:" >&2
-      printf '%s' "$matrix" | jq -r 'to_entries[] | select(.value.eligible) | "  \(.key)  [\(.value.providers|join(", "))]"' >&2
-      echo "" >&2
-      echo "and the ones it cannot, with the reason:" >&2
-      printf '%s' "$matrix" | jq -r 'to_entries[] | select(.value.eligible|not) | "  \(.key): \(.value.reasons[0])"' >&2
+      printf '%s' "$matrix" | jq -r 'to_entries[] | "  \(.key)  [\(.value|join(", "))]"' >&2
       exit 64
     fi
 
-    # Re-derived here rather than trusted from the caller, the same way the
-    # free runner does it: the matrix is the lab's own answer.
-    if [ "$(printf '%s' "$matrix" | jq -r --arg l "$lab" '.[$l].eligible // "missing"')" != "true" ]; then
-      echo "cata-e2e-cloud: $lab is not eligible." >&2
-      printf '%s' "$matrix" | jq -r --arg l "$lab" '.[$l].reasons[]? | "  " + .' >&2
+    if ! printf '%s' "$matrix" | jq -e --arg l "$lab" 'has($l)' > /dev/null; then
+      echo "cata-e2e-cloud: $lab is not in the cloud e2e list." >&2
+      echo "  The list is \`cloudE2eLabs\` in flake.nix." >&2
       exit 64
     fi
 
-    tag=$(printf '%s' "$matrix" | jq -r --arg l "$lab" '.[$l].tag')
+    tag="catallaxy-lab-$lab"
 
     # Before anything is created. A missing token discovered halfway through
     # an apply leaves whatever the first half made and nothing that knows to
@@ -75,7 +70,7 @@ pkgs.writeShellApplication {
     while read -r var; do
       [ -n "$var" ] || continue
       if [ -z "''${!var:-}" ]; then missing="$missing $var"; fi
-    done < <(printf '%s' "$matrix" | jq -r --arg l "$lab" '.[$l].requiredEnv[]?')
+    done < <(printf '%s' "$matrix" | jq -r --arg l "$lab" '.[$l][]?')
 
     if [ -n "$missing" ]; then
       echo "cata-e2e-cloud: $lab needs these set and they are not:$missing" >&2

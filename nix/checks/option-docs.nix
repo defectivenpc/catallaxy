@@ -27,9 +27,20 @@
   '';
 
   option-docs = pkgs.runCommand "option-docs-check" { } ''
-    # `undescribed.txt` is a report, not a page: `option-descriptions` is
-    # what reads it.
-    if ! diff -ru --exclude=undescribed.txt ${../../docs/generated} ${optionDocs} > $TMPDIR/diff; then
+    # Only what this generator produces. `docs/generated/floes/` is the other
+    # generator's and `floe-interface-<name>` diffs it page by page; a whole-tree
+    # diff would report every floe page as "only in docs/generated".
+    #
+    # `undescribed.txt` is a report, not a page: `option-descriptions` is what
+    # reads it.
+    if ! diff -ru --exclude=undescribed.txt \
+      ${
+        pkgs.runCommand "committed-option-docs" { } ''
+          mkdir -p $out
+          cp -r ${../../docs/generated}/options ${../../docs/generated}/cli $out/
+          cp ${../../docs/generated}/SUMMARY.md $out/
+        ''
+      } ${optionDocs} > $TMPDIR/diff; then
       cat $TMPDIR/diff >&2
       echo "" >&2
       echo "The generated option reference is stale." >&2
@@ -40,7 +51,7 @@
       echo "somebody else's lab changing." >&2
       echo "" >&2
       echo "Refresh it and read the diff:" >&2
-      echo "  nix run .#refresh-option-docs" >&2
+      echo "  nix run .#refresh-docs" >&2
       exit 1
     fi
     touch $out

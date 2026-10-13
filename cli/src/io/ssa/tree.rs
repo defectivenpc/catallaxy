@@ -191,10 +191,6 @@ mod tests {
         assert!(wait_target_in_doc(&doc).is_some());
     }
 
-    // Only Deployments have an Available condition and only Jobs have
-    // complete. Waiting on a condition a kind never reports blocks until the
-    // timeout no matter how healthy the workload is, which is what a
-    // StatefulSet did for ten minutes before failing a deploy.
     #[test]
     fn the_controllers_are_asked_about_their_rollout_not_a_condition() {
         for kind in ["Deployment", "StatefulSet", "DaemonSet"] {
@@ -219,8 +215,6 @@ mod tests {
         assert!(wait_target_in_doc(doc).is_none());
     }
 
-    // A bundle whose only workload is a Job used to be waited on for nothing:
-    // Job was not in the list of kinds, so the next wave started immediately.
     #[test]
     fn a_job_is_a_workload() {
         let doc = "apiVersion: batch/v1\nkind: Job\nmetadata:\n  name: bootstrap-ab12\n  namespace: forgejo\n";

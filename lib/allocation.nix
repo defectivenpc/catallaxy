@@ -1,6 +1,6 @@
 # What a lab is allocated on the host it shares with every other lab.
 #
-# Subnets and host ports are scarce and shared, so RFC 0005 §5 says an address
+# Subnets and host ports are scarce and shared, so an address
 # plan is a decision and must be written down. It is — in
 # `examples/labs/tests/allocations.json`, generated from this and diff-checked.
 # What §5 asked for is that a plan be visible and stable, not that a person

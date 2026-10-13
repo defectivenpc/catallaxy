@@ -104,8 +104,6 @@ let
         };
       };
 
-      # A second category holding a command of the same name, which is the
-      # case the `<category>/<name>` dispatch exists for.
       restore = {
         list = base // {
           description = "List restores";

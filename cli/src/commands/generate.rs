@@ -7,6 +7,7 @@ use clap::Args;
 use console::style;
 use serde::Deserialize;
 
+use crate::codegen::types::K8sResourceType;
 use crate::codegen::{
     EmitterConfig, GeneratorOptions, convert_openapi_to_types, emit_crd_types, emit_index,
     emit_k8s_types, parse_crds_from_yaml, parse_openapi_spec,
@@ -65,6 +66,54 @@ pub fn run(_ctx: &CataContext, args: GenerateArgs) -> Result<()> {
     generate(config)
 }
 
+/// Files CRD types by the API group they belong to rather than by the source
+/// they were read from, because the group is what a resource is resolved under.
+/// One source can define several groups — crossplane defines three — and one
+/// group can be split across sources.
+///
+/// Two sources defining the same `group/Kind` is refused. Merging them would
+/// make the emitted type depend on read order, which is the kind of thing that
+/// holds until someone reorders a config.
+///
+/// ```ignore
+/// let grouped = group_by_api_group(vec![
+///     ("cert-manager".into(), vec![certificate, challenge]),
+/// ])?;
+/// // -> { "cert-manager.io": [certificate], "acme.cert-manager.io": [challenge] }
+/// ```
+fn group_by_api_group(
+    per_source: Vec<(String, Vec<K8sResourceType>)>,
+) -> Result<BTreeMap<String, Vec<K8sResourceType>>> {
+    let mut by_group: BTreeMap<String, Vec<K8sResourceType>> = BTreeMap::new();
+    let mut defined_by: BTreeMap<(String, String), String> = BTreeMap::new();
+
+    for (source, resources) in per_source {
+        for resource in resources {
+            let coordinate = (resource.group.clone(), resource.kind.clone());
+
+            if let Some(first) = defined_by.get(&coordinate) {
+                anyhow::bail!(
+                    "{}/{} is defined by both '{}' and '{}'.\n\
+                     Two sources claiming one kind would make the generated type \
+                     depend on which was read last. Exclude it from one of them.",
+                    resource.group,
+                    resource.kind,
+                    first,
+                    source
+                );
+            }
+
+            defined_by.insert(coordinate, source.clone());
+            by_group
+                .entry(resource.group.clone())
+                .or_default()
+                .push(resource);
+        }
+    }
+
+    Ok(by_group)
+}
+
 fn generate(config: GenerateConfig) -> Result<()> {
     let output_dir = Path::new(&config.output_dir);
 
@@ -108,8 +157,10 @@ fn generate(config: GenerateConfig) -> Result<()> {
         k8s_versions.push(version.clone());
     }
 
+    let mut per_source = Vec::new();
+
     for (name, crd_path) in &config.crds {
-        eprintln!("{} Generating CRD types for {}", style(">>>").cyan(), name);
+        eprintln!("{} Reading CRDs from {}", style(">>>").cyan(), name);
 
         let crd_content = crate::io::fs::read_to_string(crd_path)
             .with_context(|| format!("Failed to read CRD file: {crd_path}"))?;
@@ -118,16 +169,24 @@ fn generate(config: GenerateConfig) -> Result<()> {
             .with_context(|| format!("Failed to parse CRD: {crd_path}"))?;
 
         eprintln!("    Found {} CRD types", resources.len());
+        per_source.push((name.clone(), resources));
+    }
 
-        let nix_code = emit_crd_types(&resources, emitter_config.clone());
+    let by_group = group_by_api_group(per_source)?;
 
-        let file_name = format!("{}.nix", name.replace(['.', '-'], "_"));
-        let file_path = output_dir.join("crds").join(&file_name);
+    for (group, resources) in &by_group {
+        let nix_code = emit_crd_types(resources, emitter_config.clone());
+
+        let file_path = output_dir.join("crds").join(format!("{group}.nix"));
         crate::io::fs::write(&file_path, &nix_code)
             .with_context(|| format!("Failed to write {file_path:?}"))?;
 
-        eprintln!("    Wrote {file_path:?}");
-        crd_names.push(name.clone());
+        eprintln!(
+            "    {} {} kinds -> {file_path:?}",
+            style(group).green(),
+            resources.len()
+        );
+        crd_names.push(group.clone());
     }
 
     eprintln!("{} Generating index.nix", style(">>>").cyan());
@@ -169,5 +228,50 @@ mod tests {
             "/nix/store/abc/swagger.json"
         );
         assert_eq!(config.crds.len(), 1);
+    }
+
+    fn crd(group: &str, kind: &str) -> K8sResourceType {
+        K8sResourceType::new(group.to_string(), "v1".to_string(), kind.to_string())
+    }
+
+    #[test]
+    fn one_source_defining_several_groups_lands_in_a_file_each() {
+        let grouped = group_by_api_group(vec![(
+            "cert-manager".to_string(),
+            vec![
+                crd("cert-manager.io", "Certificate"),
+                crd("acme.cert-manager.io", "Challenge"),
+            ],
+        )])
+        .unwrap();
+
+        assert_eq!(
+            grouped.keys().collect::<Vec<_>>(),
+            vec!["acme.cert-manager.io", "cert-manager.io"]
+        );
+    }
+
+    #[test]
+    fn one_group_split_across_sources_merges() {
+        let grouped = group_by_api_group(vec![
+            ("a".to_string(), vec![crd("example.io", "Alpha")]),
+            ("b".to_string(), vec![crd("example.io", "Beta")]),
+        ])
+        .unwrap();
+
+        assert_eq!(grouped["example.io"].len(), 2);
+    }
+
+    #[test]
+    fn two_sources_claiming_one_kind_is_refused() {
+        let err = group_by_api_group(vec![
+            ("first".to_string(), vec![crd("example.io", "Thing")]),
+            ("second".to_string(), vec![crd("example.io", "Thing")]),
+        ])
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("example.io/Thing"), "{err}");
+        assert!(err.contains("'first'") && err.contains("'second'"), "{err}");
     }
 }

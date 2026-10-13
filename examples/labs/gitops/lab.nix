@@ -1,78 +1,46 @@
-# One cluster that reconciles itself.
-
+# One cluster, handed over to Argo CD.
 #
-# The lab Round 4 exists for, and the first that hands delivery over: `cata`
-# applies Argo CD and the git server, publishes the rendered tree into that
-# server, and then stops applying. Argo takes it from there.
+# The lab `cata` applies least: `argocd` answers `DELIVERY_POLICY`, so the
+# plan bootstraps Argo and points it at the repository the cluster exports,
+# and everything after that is Argo's.
 #
-# Nothing here says any of that. `argocd` provides DELIVERY_POLICY with
-# `strategy = "argocd"`, `forgejo` provides GIT_REPOSITORY, and
-# `modules/lab/cd.nix` derives the four extra steps and their order from those
-# two facts. A lab author picks floes.
+# It declares no inputs of its own, because its one environment varies nothing.
 {
   lib,
   floes,
-  config,
+  catallaxy,
   ...
 }:
 
 let
+  clusters = import ./clusters.nix { inherit catallaxy floes lib; };
 in
-{
-  lab.name = lib.mkDefault "gitops.local";
-  lab.dns.zone = lib.mkDefault "gitops.test";
+catallaxy.mkLabFloe {
+  name = "gitops";
+  summary = "One cluster, handed over to Argo CD.";
 
-  # Its own subnet and ports, so it stands up beside the minimal labs rather
-  # than fighting them for the network.
+  inputs.zone.default = "gitops.test";
 
-  lab.registry.enable = lib.mkDefault true;
+  units = _: {
+    registry = floes.lab-registry { };
 
-  # Argo clones over TLS from a certificate the lab mints, and Forgejo's own
-  # routed URL has to be reachable for a human to look at it.
-  lab.dns.enable = true;
-  lab.proxy.enable = true;
-  lab.verify.endpoints.enable = true;
+    # The whole path: a resolver for the zone and an ingress terminating TLS in
+    # front of forgejo, Argo and podinfo.
+    dns = floes.lab-dns { };
+    proxy = floes.lab-proxy { };
+    egress = floes.lab-egress { };
 
-  lab.clusters.app.floes = {
-    cluster = floes.k3d-cluster { };
+    # One root for the lab: the ingress serves from it, and any cluster that
+    # declares `optional.labCa` signs from it rather than minting a second.
+    # Placing it is the whole decision — it was `lab.proxy.tls.enable`, an
+    # option defaulting to true that no lab ever set.
+    ca = floes.lab-ca { };
+  };
 
-    # ---- the platform underneath ----------------------------------------
-
-    gateway-api = floes.gateway-api-crds { };
-
-    cert-manager = floes.cert-manager {
-      rootFromLab = true;
+  clusters = _: {
+    app = {
+      floe = clusters.app { };
+      claim = floes.k3d-cluster { };
     };
-
-    trust-manager = floes.trust-manager { };
-
-    lab-dns = floes.lab-dns { };
-
-    gateway = floes.gateway {
-      tlsEnable = true;
-    };
-
-    # forgejo and argocd both mint credentials rather than letting their
-    # charts write them into the rendered manifests, so both need a generator.
-    external-secrets = floes.external-secrets { };
-
-    # No openebs. k3s ships a `local-path` StorageClass and openebs installs
-    # one under the same name with a different provisioner — which is an
-    # immutable field, so the apply fails on every attempt and never
-    # converges. A lab that wants openebs has to turn k3s's off, and
-    # `k3d-cluster` has no input for that yet.
-    #
-    # Nothing here needs it: forgejo and argocd take PVCs, and k3s's
-    # provisioner serves them.
-
-    # ---- the two that make it gitops ------------------------------------
-
-    forgejo = floes.forgejo { };
-
-    argocd = floes.argocd { };
-
-    # Something for Argo to have applied, so the lab proves more than that
-    # Argo started.
-    podinfo = floes.podinfo { };
   };
 }

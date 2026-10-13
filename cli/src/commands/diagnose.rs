@@ -3,7 +3,7 @@ use clap::Args;
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::{ClusterSpec, FloeSpec, KappStatus};
+use crate::domain::{ClusterSpec, KappStatus};
 use crate::io;
 
 #[derive(Args)]
@@ -99,7 +99,7 @@ fn diagnose_cluster(
 
     print_kapp_status(kube_context)?;
 
-    print_floe_health(kube_context, cluster);
+    print_namespace_health(kube_context, cluster);
 
     print_unhealthy_pods(kube_context, args.tail)?;
 
@@ -177,22 +177,22 @@ fn print_kapp_status(context: &str) -> Result<()> {
     Ok(())
 }
 
-fn print_floe_health(context: &str, cluster: &ClusterSpec) {
-    let enabled: Vec<(&String, &FloeSpec)> = cluster.enabled_floes().collect();
-
-    if enabled.is_empty() {
+/// Health per namespace the content declares.
+///
+/// It used to be per floe, against `floe.namespace` — a field Nix never
+/// emitted, so the namespace was the unit's own name, guessed, and the
+/// version printed as `?`. The content says which namespaces are this
+/// cluster's, so this asks about those.
+fn print_namespace_health(context: &str, cluster: &ClusterSpec) {
+    if cluster.content.namespaces.is_empty() {
         return;
     }
 
     println!();
-    println!("  {}", style("Floes:").bold());
+    println!("  {}", style("Namespaces:").bold());
 
-    for (name, floe) in &enabled {
-        let namespace = floe.namespace.as_deref().unwrap_or(name);
-        let version = floe.version.as_deref().unwrap_or("?");
-
-        let ns_health = check_namespace_health(context, namespace);
-        let (status, detail) = match ns_health {
+    for namespace in &cluster.content.namespaces {
+        let (status, detail) = match check_namespace_health(context, namespace) {
             NamespaceHealth::AllReady(total) => (style("healthy").green(), format!("{total} pods")),
             NamespaceHealth::SomeNotReady(ready, total) => (
                 style("degraded").yellow(),
@@ -203,20 +203,9 @@ fn print_floe_health(context: &str, cluster: &ClusterSpec) {
         };
 
         if detail.is_empty() {
-            println!(
-                "    {} {} [{}]",
-                style(name).cyan(),
-                style(format!("v{version}")).dim(),
-                status,
-            );
+            println!("    {} [{}]", style(namespace).cyan(), status);
         } else {
-            println!(
-                "    {} {} [{}] ({})",
-                style(name).cyan(),
-                style(format!("v{version}")).dim(),
-                status,
-                detail,
-            );
+            println!("    {} [{}] ({})", style(namespace).cyan(), status, detail);
         }
     }
 }

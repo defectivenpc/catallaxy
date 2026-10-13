@@ -1,6 +1,6 @@
 # What a floe's interface is, written out.
 #
-# RFC 0001 §260-262 says the complete interface of a floe — inputs, requires,
+# The complete interface of a floe — inputs, requires,
 # provides, out kinds — is available from its declaration header without
 # evaluating the body. That was half true. The declaration side is there to be
 # read; the *return* side is one token, `out.component = kinds.component`,
@@ -26,7 +26,6 @@
   lib,
   pkgs,
   floeSet,
-  presetSet ? { },
   labDefs,
   catallaxy,
   cataCharts,
@@ -45,6 +44,7 @@ let
         catallaxy
         cataCharts
         k8sSpecs
+        floes
         ;
       inherit
         floe
@@ -53,97 +53,151 @@ let
         ;
     };
 
-  # ---- the lab that renders every floe ------------------------------------
+  # The set a floe whose units are other floes reaches them through, built the
+  # same way `lib/lab.nix` builds it and lazy for the same reason.
+  floes = lib.mapAttrs (
+    name: _:
+    let
+      def = defOf name;
+    in
+    def // { __functor = _: def.instantiate; }
+  ) floeSet;
+
+  # ---- where each floe is rendered ----------------------------------------
   #
-  # `every-floe` exists so that no floe's declarations go unchecked
-  # (`floe-gates.nix`), which makes it exactly the lab to read an emitted
-  # interface out of. A floe absent from it gets a declaration section and an
-  # honest note instead of a fabricated one.
-  renderingLab = labDefs."every-floe".config.lab;
+  # `<floe name> -> { lab; cluster; unit; }`, or absent. A lab names *units*,
+  # and a unit may be called anything; the link's `floeNames` is what floe each
+  # one actually is.
+  #
+  # Read off the link rather than off the clusters' own attrsets, because a
+  # cluster is an authored floe now and its units are inside its inclusion.
+  # The link flattens them to `<cluster>/<unit>`, nested as deep as the
+  # assembly goes — `core/platform/cert-manager` is a floe inside an inclusion
+  # inside a cluster, and its unit name is the whole of the path below the
+  # cluster, which is also how the elaborator keys its bundles.
+  #
+  # `cluster` is null for a key with no `/`: a unit of the lab itself, which is
+  # a cluster floe, a claim, or a lab-scope floe. Those render nothing into a
+  # cluster and their section says what they do instead.
+  #
+  # Every lab, not just `every-floe`. That lab exists so no floe's
+  # *declarations* go unchecked (`floe-gates.nix`), and it reads well as the
+  # one source until you notice what it cannot hold: a host floe is a unit of
+  # a lab and not of a cluster, and a claim is one per provisioner. So
+  # thirteen pages carried "no lab in this tree renders this floe" about floes
+  # every lab in the tree renders.
+  #
+  # `every-floe` still wins where it has an answer, so the richest rendering
+  # is the one documented; the rest are taken in name order, which is stable.
+  placementsIn =
+    labName: lab:
+    lib.mapAttrsToList (
+      path: floeName:
+      let
+        parts = lib.splitString "/" path;
+        nested = lib.length parts > 1;
+      in
+      lib.nameValuePair floeName {
+        lab = labName;
+        cluster = if nested then lib.head parts else null;
+        unit = if nested then lib.concatStringsSep "/" (lib.tail parts) else path;
+      }
+    ) lab.link.floeNames;
 
-  # `<floe name> -> { cluster; unit; }`. A lab names *units*, and a unit may be
-  # called anything; `def.name` is what floe it actually is.
-  placement = lib.listToAttrs (
-    lib.concatLists (
-      lib.mapAttrsToList (
-        clusterName: cluster:
-        lib.mapAttrsToList (
-          unit: inst:
-          lib.nameValuePair inst.def.name {
-            inherit unit;
-            cluster = clusterName;
-          }
-        ) cluster.floes
-      ) renderingLab.clusters
-    )
-  );
+  candidates =
+    placementsIn "every-floe" labDefs."every-floe"
+    ++ lib.concatLists (lib.mapAttrsToList placementsIn (removeAttrs labDefs [ "every-floe" ]));
 
-  # ---- markdown ------------------------------------------------------------
-
-  esc = s: lib.replaceStrings [ "|" "\n" ] [ "\\|" " " ] (toString s);
-
-  table =
-    headers: rows:
-    if rows == [ ] then
-      [ ]
+  # How much a placement has to show: the entries across every output kind it
+  # emitted. Zero for an in-cluster floe, whose section is read off the
+  # elaborated cluster instead and for which `every-floe` is already the
+  # richest answer.
+  entryCount =
+    at:
+    let
+      kinds = lib.filterAttrs (_: byUnit: byUnit ? ${at.unit}) labDefs.${at.lab}.link.out;
+      size = v: if lib.isAttrs v then lib.length (lib.attrNames v) else 1;
+    in
+    if at.cluster != null then
+      0
     else
-      [
-        "| ${lib.concatStringsSep " | " headers} |"
-        "|${lib.concatMapStrings (_: " --- |") headers}"
-      ]
-      ++ map (r: "| ${lib.concatMapStringsSep " | " esc r} |") rows;
+      lib.foldl' (acc: byUnit: acc + size byUnit.${at.unit}) 0 (lib.attrValues kinds);
 
-  section =
-    title: body:
-    if body == [ ] then
-      [ ]
-    else
-      [
-        "## ${title}"
-        ""
-      ]
-      ++ body
-      ++ [ "" ];
+  # A floe several labs render is documented from the one that shows the most.
+  # `lab-proxy` read from the first lab in name order is read from `cloud`,
+  # whose ingress fronts nothing — so the page's one table came out empty
+  # about the floe whose whole job is that table.
+  #
+  # Strict `>`, and the list is already in preference order, so a tie keeps
+  # `every-floe` and then name order. A fold rather than a sort because
+  # `builtins.sort` is not promised to be stable and this decides the bytes of
+  # a diff-checked file.
+  best =
+    group:
+    (lib.foldl' (
+      acc: c: if entryCount c.value > entryCount acc.value then c else acc
+    ) (lib.head group) (lib.tail group)).value;
 
-  # A signature, as a hole sees it. The description is the signature's own, so
-  # every floe requiring `X509_ISSUANCE` says the same thing about it and none
-  # of them had to write it down.
+  placement = lib.mapAttrs (_: best) (lib.groupBy (c: c.name) candidates);
+
+  # ---- the page, as data ---------------------------------------------------
+  #
+  # What the page *is*. The markdown is `cli/src/docs/page.rs`, so this file
+  # never decides how a table escapes a `|` or what an empty section looks
+  # like — three generators used to answer those three ways, and a `section`
+  # helper here left a stray blank line before every heading that followed a
+  # `###` block.
+
+  table = columns: rows: { inherit columns rows; };
+
+  # A signature, as a hole sees it, linked to its own page. The description is
+  # the signature's own, so every floe requiring `X509_ISSUANCE` says the same
+  # thing about it and none of them had to write it down.
   holeRows =
     holes:
     lib.mapAttrsToList (hole: sig: [
       hole
-      sig.name
+      "[${sig.name}](../signatures/${sig.name}.md)"
       sig.description
     ]) holes;
 
   # ---- declaration ---------------------------------------------------------
 
-  declaration =
-    name: def:
-    section "Inputs" (
-      table [ "input" "type" "default" "description" ] (
+  declaration = name: def: [
+    {
+      heading = "Inputs";
+      table = table [ "input" "type" "default" "description" ] (
         lib.mapAttrsToList (n: d: [
           n
           d.type
           (if d.default == null then "*(required)*" else "`${d.default}`")
           d.description
         ]) (floe.renderInputs def.inputs)
-      )
-    )
-    ++ section "Requires" (table [ "hole" "signature" "what it is" ] (holeRows def.requires))
-    ++ section "Requires, optionally" (
-      table [ "hole" "signature" "what it is" ] (holeRows def.requiresOptional)
-    )
-    ++ section "Provides" (table [ "provision" "signature" "what it is" ] (holeRows def.provides))
-    ++ section "Emits" (
-      table [ "alias" "kind" "what it carries" ] (
+      );
+    }
+    {
+      heading = "Requires";
+      table = table [ "hole" "signature" "what it is" ] (holeRows def.requires);
+    }
+    {
+      heading = "Requires, optionally";
+      table = table [ "hole" "signature" "what it is" ] (holeRows def.optional);
+    }
+    {
+      heading = "Provides";
+      table = table [ "provision" "signature" "what it is" ] (holeRows def.provides);
+    }
+    {
+      heading = "Emits";
+      table = table [ "alias" "kind" "what it carries" ] (
         lib.mapAttrsToList (alias: k: [
           alias
           k.name
           k.description
         ]) def.out
-      )
-    );
+      );
+    }
+  ];
 
   # ---- what it emits, once linked -----------------------------------------
 
@@ -154,50 +208,68 @@ let
     in
     if at == null then
       [
-        "## What it emits"
-        ""
-        "*No lab in this tree renders this floe, so there is nothing linked to read.*"
-        "*Its declaration above is the whole of what can be said without one.*"
-        ""
+        {
+          heading = "What it emits";
+          lead = [
+            ''
+              *No lab in this tree renders this floe, so there is nothing linked to read.*
+              *Its declaration above is the whole of what can be said without one.*''
+          ];
+        }
       ]
+
+    else if at.cluster == null then
+      let
+        lab = labDefs.${at.lab};
+        kinds = lib.filterAttrs (_: byUnit: byUnit ? ${at.unit}) lab.link.out;
+      in
+      [
+        {
+          heading = "What it emits";
+          lead = [
+            ''
+              Rendered by `${at.lab}` as the lab unit `${at.unit}`. A unit of the lab
+              installs nothing into a cluster, and its provisions are sealed inside the
+              lab's inclusion — so its declaration above is its interface.''
+          ];
+        }
+        {
+          heading = "Output kinds";
+          table = table [ "kind" "entries" ] (
+            lib.mapAttrsToList (
+              kind: byUnit:
+              let
+                value = byUnit.${at.unit};
+              in
+              [
+                kind
+                (
+                  if lib.isAttrs value then
+                    (if value == { } then "—" else lib.concatStringsSep ", " (lib.attrNames value))
+                  else
+                    "one value"
+                )
+              ]
+            ) kinds
+          );
+        }
+      ]
+
     else
       let
-        cluster = renderingLab.clusters.${at.cluster};
+        cluster = labDefs.${at.lab}.clusters.${at.cluster};
         out = cluster.out;
         unit = at.unit;
 
-        # Everything the elaborator produced is keyed `<unit>/<name>`, because
-        # collection is a disjoint union over units. Ours is the prefix.
         mine = lib.filterAttrs (k: _: lib.hasPrefix "${unit}/" k);
         short = k: lib.removePrefix "${unit}/" k;
 
         bundles = mine out.bundles;
 
-        provided = cluster.link.provides.${unit} or { };
-
-        # Which fields of a provision travel and which mean something only here.
-        # `T.local` is per field, so a signature is usually a mix and "this
-        # one crosses" is not a property of the promise as a whole.
-        localFields = sig: lib.attrNames (lib.filterAttrs (_: t: catallaxy.floe.T.isLocal t) sig.fields);
-
-        provideBlock =
-          promise: sig:
-          let
-            locals = localFields sig;
-            value = provided.${promise} or { };
-          in
-          [
-            "### `${promise}` — ${sig.name}"
-            ""
-          ]
-          ++ table [ "field" "value" "" ] (
-            lib.mapAttrsToList (f: v: [
-              f
-              "`${builtins.toJSON v}`"
-              (if lib.elem f locals then "link-local" else "travels")
-            ]) value
-          )
-          ++ [ "" ];
+        provideBlock = promise: sig: {
+          heading = "`${promise}` — [${sig.name}](../signatures/${sig.name}.md)";
+          table = table [ "field" ] (lib.mapAttrsToList (f: _: [ f ]) sig.fields);
+        };
 
         opsRows = lib.concatLists (
           lib.mapAttrsToList (
@@ -209,139 +281,83 @@ let
           ) out.ops
         );
       in
-      section "Bundles" (
-        table [ "bundle" "waits for" "ready when" "images" ] (
-          lib.mapAttrsToList (
-            k: b:
-            let
-              probe = if b.ready == null then "—" else b.ready.kind;
-            in
-            [
+      [
+        {
+          heading = "Bundles";
+          table = table [ "bundle" "waits for" "ready when" "images" ] (
+            lib.mapAttrsToList (
+              k: b:
+              let
+                probe = if b.ready == null then "—" else b.ready.kind;
+              in
+              [
+                (short k)
+                (if b.needs == [ ] then "—" else lib.concatMapStringsSep ", " short b.needs)
+                probe
+                (if b.images == { } then "—" else lib.concatStringsSep ", " (lib.attrNames b.images))
+              ]
+            ) bundles
+          );
+        }
+        {
+          heading = "Provides, as linked";
+          blocks = lib.mapAttrsToList provideBlock (defOf name).provides;
+        }
+
+        {
+          heading = "Operator commands";
+          table = table [ "command" "what it does" ] opsRows;
+        }
+        {
+          heading = "Plan steps";
+          table = table [ "step" "kind" "direction" ] (
+            lib.mapAttrsToList (n: s: [
+              n
+              s.kind
+              (toString (s.direction or "deploy"))
+            ]) (out.steps.${unit} or { })
+          );
+        }
+        {
+          heading = "Lint checks";
+          table = table [ "check" "scope" "what it asserts" ] (
+            lib.mapAttrsToList (k: c: [
               (short k)
-              (if b.needs == [ ] then "—" else lib.concatMapStringsSep ", " short b.needs)
-              probe
-              (if b.images == { } then "—" else lib.concatStringsSep ", " (lib.attrNames b.images))
-            ]
-          ) bundles
-        )
-      )
-      ++ section "Provides, as linked" (
-        lib.concatLists (lib.mapAttrsToList provideBlock (defOf name).provides)
-      )
-      # The three that change something outside this floe, and are invisible
-      # from any header: a plan step reorders the deploy, an ops command adds
-      # a subcommand an operator types, and a per-cluster lint judges every
-      # other floe's rendered output.
-      ++ section "Operator commands" (table [ "command" "what it does" ] opsRows)
-      ++ section "Plan steps" (
-        table [ "step" "kind" "direction" ] (
-          lib.mapAttrsToList (n: s: [
-            n
-            s.kind
-            (toString (s.direction or "deploy"))
-          ]) (out.steps.${unit} or { })
-        )
-      )
-      ++ section "Lint checks" (
-        table [ "check" "scope" "what it asserts" ] (
-          lib.mapAttrsToList (k: c: [
-            (short k)
-            c.scope
-            c.description
-          ]) (mine out.lint)
-        )
-      )
-      ++ section "Verify checks" (
-        table [ "check" ] (map (k: [ (short k) ]) (lib.attrNames (mine out.verify)))
-      );
+              c.scope
+              c.description
+            ]) (mine out.lint)
+          );
+        }
+        {
+          heading = "Verify checks";
+          table = table [ "check" ] (map (k: [ (short k) ]) (lib.attrNames (mine out.verify)));
+        }
+      ];
 
   document =
     name:
     let
       def = defOf name;
     in
-    lib.concatStringsSep "\n" (
-      [
-        "# ${name}"
-        ""
+    {
+      path = "floes/${name}.md";
+      title = name;
+
+      lead = [
         def.summary
-        ""
-        "<!-- Generated by nix/floe-docs.nix. Refresh: nix run .#refresh-floe-docs -->"
-        ""
-      ]
-      ++ declaration name def
-      ++ emitted name
-    );
+        "<!-- Generated by nix/floe-docs.nix. Refresh: nix run .#refresh-docs -->"
+      ];
 
-  one = name: pkgs.writeText "floe-${name}.md" (document name);
-
-  # ---- presets -------------------------------------------------------------
-  #
-  # A preset is not a floe, so it has no bundles, no ops and no emitted half.
-  # What it has that a floe does not is its members, and those are the reason
-  # to generate a page at all: the assembly is the thing another lab is
-  # deciding whether to use.
-  #
-  # Instantiated with a stand-in provisioner. Every preset takes one and none
-  # defaults it, so there is no other way to reach the member list — and the
-  # stand-in is what the page should show anyway, since which cluster it makes
-  # is the caller's decision.
-  stubProvisioner = {
-    __floeInstance = true;
-    supplied = { };
-    def = {
-      name = "«your provisioner»";
-      inputs = { };
-      provides.cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
+      sections = declaration name def ++ emitted name;
     };
-  };
 
-  presetDocument =
-    name:
-    let
-      def = presetSet.${name};
-      inst = def.instantiate { provisioner = stubProvisioner; };
-    in
-    lib.concatStringsSep "\n" (
-      [
-        "# ${name}"
-        ""
-        def.summary
-        ""
-        "<!-- Generated by nix/floe-docs.nix. Refresh: nix run .#refresh-floe-docs -->"
-        ""
-        "A **preset**: a floe that includes floes. It is expanded into the"
-        "members below where it is placed, so they link exactly as if the lab"
-        "had written them itself."
-        ""
-      ]
-      ++ section "Inputs" (
-        table [ "input" "type" "default" "description" ] (
-          lib.mapAttrsToList (n: d: [
-            n
-            d.type
-            (if d.default == null then "*(required)*" else "`${d.default}`")
-            d.description
-          ]) (floe.renderInputs def.inputs)
-        )
-      )
-      ++ section "Provides" (table [ "provision" "signature" "what it is" ] (holeRows def.provides))
-      ++ section "Members" (
-        table [ "name" "floe" ] (
-          lib.mapAttrsToList (k: v: [
-            k
-            (v.def.name or "?")
-          ]) inst.members
-        )
-      )
-    );
-
-  onePreset = name: pkgs.writeText "preset-${name}.md" (presetDocument name);
+  pages = map document (lib.attrNames floeSet);
 in
-pkgs.runCommand "floe-interfaces" { } ''
+pkgs.runCommand "floe-pages" { } ''
   mkdir -p $out
-  ${lib.concatStringsSep "\n" (map (name: "cp ${one name} $out/${name}.md") (lib.attrNames floeSet))}
   ${lib.concatStringsSep "\n" (
-    map (name: "cp ${onePreset name} $out/${name}.md") (lib.attrNames presetSet)
+    lib.imap0 (
+      i: p: "cp ${pkgs.writeText "page-${toString i}.json" (builtins.toJSON p)} $out/${toString i}.json"
+    ) pages
   )}
 ''

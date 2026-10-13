@@ -18,11 +18,6 @@ pub fn stage(rendered: &Path, work_dir: &Path) -> Result<()> {
     crate::io::fs::create_dir_all(work_dir)
         .with_context(|| format!("creating {}", work_dir.display()))?;
 
-    // Read and write rather than copy. The source is in the nix store and so
-    // is read-only, and `fs::copy` carries the mode across: the first run
-    // would leave a 0444 file that the second run cannot write, failing as a
-    // permission error naming a path the operator never chose. Removing first
-    // because writing over a read-only file fails the same way.
     let target = work_dir.join("main.tf.json");
     if target.exists() {
         std::fs::remove_file(&target).with_context(|| format!("replacing {}", target.display()))?;

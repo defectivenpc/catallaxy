@@ -46,7 +46,12 @@ pub fn run(
             Ok(lab) => {
                 let cluster_names: Vec<&str> =
                     lab.cluster_names.iter().map(String::as_str).collect();
-                let strategy = lab.cd.strategy.tag();
+                let strategy = lab
+                    .delivery_strategies()
+                    .iter()
+                    .map(|s| s.tag())
+                    .collect::<Vec<_>>()
+                    .join(", ");
 
                 println!("  {} lab: {}", style("✓").green(), lab_name);
                 println!("  {} strategy: {}", style("✓").green(), strategy);
@@ -59,13 +64,13 @@ pub fn run(
                 for cluster in &cluster_names {
                     match lab.cluster(cluster) {
                         Ok(spec) => {
-                            let floe_count = spec.enabled_floes().count();
+                            let bundles: usize = spec.content.waves.iter().map(Vec::len).sum();
                             println!(
-                                "    {} {} ({}, {} floes)",
+                                "    {} {} ({}, {} bundles)",
                                 style("✓").green(),
                                 cluster,
-                                format!("{:?}", spec.provisioner).to_lowercase(),
-                                floe_count,
+                                spec.provisioning.config.kind().tag(),
+                                bundles,
                             );
                         }
                         Err(e) => {

@@ -20,18 +20,12 @@ pub struct ImageRef {
 
 impl ImageRef {
     pub fn parse(image: &str) -> Self {
-        // Digest, then tag, then whatever is left is the repository.
-        // Splitting on `@` alone leaves the tag stuck to the repository, which
-        // is how a digest-pinned reference once asked a registry for
-        // `library/nginx:1.27`.
         let (before_digest, digest) = match image.split_once('@') {
             Some((before, d)) => (before, Some(d.to_string())),
             None => (image, None),
         };
 
         let (repo_part, tag) = match before_digest.rfind(':') {
-            // A colon after the last slash is a tag; one before it is a
-            // registry port.
             Some(idx) if !before_digest[idx + 1..].contains('/') => (
                 &before_digest[..idx],
                 Some(before_digest[idx + 1..].to_string()),
@@ -39,8 +33,6 @@ impl ImageRef {
             _ => (before_digest, None),
         };
 
-        // A first segment with a dot or a colon is a hostname. Anything else
-        // is part of the repository and the registry is implicit.
         let (registry, repository) = match repo_part.split_once('/') {
             Some((first, rest)) if first.contains('.') || first.contains(':') => {
                 (first.to_string(), rest.to_string())
@@ -107,8 +99,6 @@ mod tests {
         assert_eq!(r.tag.as_deref(), Some("1.27"));
     }
 
-    // The lint asks whether a tag is missing, so this must stay None rather
-    // than being filled in with `latest`.
     #[test]
     fn an_untagged_name_carries_no_tag_but_asks_for_latest() {
         let r = ImageRef::parse("nginx");
@@ -141,8 +131,6 @@ mod tests {
         assert_eq!(r.api_repository(), "grafana/grafana");
     }
 
-    // crane resolves a bare Docker Hub name itself, so retargeting must not
-    // hand it a `library/` the source reference never had.
     #[test]
     fn retargeting_keeps_the_repository_as_written() {
         assert_eq!(

@@ -16,16 +16,17 @@ pub fn extract_static(lab: &LabSpec) -> LabTopology {
     let services = extract_services(lab);
     let endpoints = extract_endpoints(lab, &services);
     let clusters = extract_clusters(lab);
-    let mut edges = extract_edges_from_plan(lab);
-
-    if services.contains_key("proxy") {
-        extract_proxy_route_edges(&clusters, &mut edges);
-    }
+    let edges = extract_edges_from_plan(lab);
 
     LabTopology {
         name: lab.lab_name.clone(),
         zone: lab.dns_info.as_ref().map(|d| d.zone.clone()),
-        cd_strategy: lab.cd.strategy.tag().to_string(),
+        cd_strategy: lab
+            .delivery_strategies()
+            .iter()
+            .map(|s| s.tag())
+            .collect::<Vec<_>>()
+            .join(", "),
         network,
         services,
         clusters,
@@ -62,24 +63,26 @@ fn extract_endpoints(
         .clusters
         .iter()
         .flat_map(|(cluster, spec)| {
-            let mode = spec.edge.mode;
-            spec.exposed_hosts.iter().map(move |h| {
+            let routed = lab.routed_hosts.get(cluster);
+            spec.content.exposed_hosts.iter().map(move |h| {
+                let answered = routed.is_some_and(|hosts| hosts.contains(&h.host));
                 let scheme = ingress.map_or("https", |(s, _)| s);
                 crate::topology::Endpoint {
                     host: h.host.clone(),
                     cluster: cluster.clone(),
                     tier: h.tier.clone(),
                     url: format!("{scheme}://{}", h.host),
-                    // Reaches it without the host resolving the zone, which
-                    // is what `dig`/`curl` need before `lab dns --setup`.
                     direct: ingress.map(|(s, port)| {
                         format!(
                             "curl -k --resolve {}:{port}:127.0.0.1 {s}://{}:{port}",
                             h.host, h.host
                         )
                     }),
-                    unreachable: (mode != crate::domain::EdgeMode::Proxy).then(|| {
-                        format!("cluster '{cluster}' is its own edge; the lab's ingress does not route to it")
+                    unreachable: (!answered).then(|| {
+                        format!(
+                            "the lab's ingress does not answer for this host; cluster \
+                             '{cluster}' is reached at its own edge"
+                        )
                     }),
                 }
             })
@@ -125,13 +128,19 @@ fn extract_clusters(lab: &LabSpec) -> BTreeMap<String, ClusterTopology> {
             cluster_name.clone(),
             ClusterTopology {
                 name: cluster_name.clone(),
-                provider: cluster.provider.clone(),
+                provider: cluster.provisioning.config.kind().tag().to_string(),
                 kube_context,
-                control_planes: u64::from(cluster.kubernetes.control_planes),
-                workers: u64::from(cluster.kubernetes.workers),
-                pod_subnet: cluster.network.pod_subnet.clone(),
-                service_subnet: cluster.network.service_subnet.clone(),
+                control_planes: u64::from(cluster.claim.kubernetes.control_planes),
+                workers: u64::from(cluster.claim.kubernetes.workers),
+                pod_subnet: cluster.claim.network.pod_subnet.clone(),
+                service_subnet: cluster.claim.network.service_subnet.clone(),
                 components,
+                namespaces: cluster
+                    .content
+                    .namespaces
+                    .iter()
+                    .map(|ns| (ns.clone(), None))
+                    .collect(),
                 live: None,
             },
         );
@@ -139,22 +148,27 @@ fn extract_clusters(lab: &LabSpec) -> BTreeMap<String, ClusterTopology> {
     clusters
 }
 
+/// One entry per unit that installs something, read off the content.
+///
+/// It used to read a `floes` map whose `version` and `namespace` Nix never
+/// filled: the version printed as `?` and the namespace was the unit's own
+/// name, guessed. The content says what actually installs, so a unit is named
+/// here when a bundle of it is in a wave, and a bundle name is
+/// `<unit>/<bundle>` at whatever depth the unit sits.
 fn extract_components(cluster: &ClusterSpec) -> BTreeMap<String, ComponentSummary> {
-    cluster
-        .enabled_floes()
-        .map(|(name, floe)| {
-            (
-                name.clone(),
-                ComponentSummary {
-                    enabled: true,
-                    version: floe.version.clone(),
-                    namespace: floe.namespace.clone().unwrap_or_else(|| name.clone()),
-                    domain: floe.domain.clone().filter(|d| !d.is_empty()),
-                    health: None,
-                },
-            )
-        })
-        .collect()
+    let mut out: BTreeMap<String, ComponentSummary> = BTreeMap::new();
+
+    for bundle in cluster.content.waves.iter().flatten() {
+        let (unit, _) = match bundle.name.rsplit_once('/') {
+            Some(split) => split,
+            None => continue,
+        };
+        out.entry(unit.to_string())
+            .or_insert_with(|| ComponentSummary { bundles: 0 })
+            .bundles += 1;
+    }
+
+    out
 }
 
 fn extract_edges_from_plan(lab: &LabSpec) -> Vec<TopologyEdge> {
@@ -182,24 +196,6 @@ fn extract_edges_from_plan(lab: &LabSpec) -> Vec<TopologyEdge> {
         }
     }
     edges
-}
-
-fn extract_proxy_route_edges(
-    clusters: &BTreeMap<String, ClusterTopology>,
-    edges: &mut Vec<TopologyEdge>,
-) {
-    for (cluster_name, cluster) in clusters {
-        for (comp_name, comp) in &cluster.components {
-            if let Some(domain) = &comp.domain {
-                edges.push(TopologyEdge {
-                    kind: EdgeKind::ProxyRoute,
-                    source: "proxy".to_string(),
-                    target: format!("{cluster_name}/{comp_name}"),
-                    label: Some(domain.clone()),
-                });
-            }
-        }
-    }
 }
 
 fn extract_plan_steps(lab: &LabSpec) -> Vec<PlanStep> {
@@ -273,8 +269,8 @@ pub fn enrich_live(_ctx: &CataContext, topo: &mut LabTopology) -> Result<()> {
             kapp_apps,
         });
 
-        for comp in cluster.components.values_mut() {
-            comp.health = Some(check_namespace_health(&context, &comp.namespace));
+        for (namespace, health) in cluster.namespaces.iter_mut() {
+            *health = Some(check_namespace_health(&context, namespace));
         }
     }
 

@@ -176,9 +176,6 @@ fn image_credentials(
             let json_bytes = base64::engine::general_purpose::STANDARD
                 .decode(b64.as_bytes())
                 .context("base64-decoding dockerconfigjson")?;
-            // A registry credential on disk. `secure_tempdir` is 0700 and, more
-            // to the point, registers the path so the Ctrl-C handler erases it
-            // — `std::process::exit` never runs `TempDir::drop`.
             let tmp = crate::io::fs::secure_tempdir().context("creating temp DOCKER_CONFIG dir")?;
             crate::io::fs::write(tmp.path().join("config.json"), &json_bytes)
                 .context("writing temp config.json")?;
@@ -316,9 +313,6 @@ async fn warm_one_image(
         WarmRoute::Fetch(r) => r,
     };
 
-    // A tag list never contains a digest, so a digest-pinned reference would
-    // report uncached every run and re-sync every run. Ask about the tag it
-    // also carries; a mirror holding the tag holds the content.
     let cache_key = r.tag.clone().unwrap_or_else(|| r.reference());
 
     let cached = {

@@ -3,10 +3,14 @@
 # A floe is checked alone, against stub providers, so a failure names the floe
 # rather than whatever lab happened to render it. This is how the shipped set
 # stayed honest against five labs — most floes were never in most of them.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs; };
+  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
   inherit (catallaxy) floe sigs kinds;
 
   # Flattened across `cluster` and `provisioners`, the same way `lib/lab.nix`
@@ -29,9 +33,6 @@ let
         podSubnet = "10.244.0.0/16";
         serviceSubnet = "10.96.0.0/12";
 
-        # The k3d answer, because that is what the stub's context says it is.
-        # A floe whose rendering turns on this — the gateway is the one — has
-        # its own suite covering both sides rather than relying on the stub.
         assignsLoadBalancers = true;
       };
     };
@@ -62,6 +63,24 @@ let
       value = {
         namespace = "cert-manager";
         crdKinds = [ "cert-manager.io/Certificate" ];
+      };
+    };
+
+    provisioning = {
+      sig = sigs.CLUSTER_PROVISIONING;
+      value = {
+        resourceKind = "clusters.example.com";
+        resourceName = "stub-workload";
+      };
+    };
+
+    secretStore = {
+      sig = sigs.SECRET_STORE;
+      value = {
+        storeName = "catallaxy-runtime";
+        storeKind = "ClusterSecretStore";
+
+        writable = true;
       };
     };
 
@@ -146,8 +165,15 @@ let
       };
     };
 
-    # Provided by the lab rather than by anything in a cluster, which is why
-    # the isolation harness has to stand in for it like any other peer.
+    publication = {
+      sig = sigs.PUBLISHED_SECRET;
+      value = {
+        storeName = "catallaxy-runtime";
+        key = "stub/published/value";
+        keys = [ ];
+      };
+    };
+
     zone = {
       sig = sigs.DNS_ZONE;
       value = {
@@ -157,10 +183,6 @@ let
       };
     };
 
-    # The control plane, as a peer sees it. `managementInternalUrl` is here
-    # and `T.local`, so a floe reading it in isolation succeeds and the same
-    # floe reading it across a lab scope throws — which is why a check that
-    # cares has to assert on which one was used, not merely that one was.
     mesh = {
       sig = sigs.MESH_NETWORK;
       value = {
@@ -230,16 +252,145 @@ let
         remoteWriteUrl = "http://stub-prometheus:9090/api/v1/write";
       };
     };
+
+    labStore = {
+      sig = sigs.LAB_SECRET_STORE;
+      value = {
+        name = "stub-labStore";
+
+        writable = false;
+        backend = "sops";
+        writerCommand = null;
+        removerCommand = null;
+        vault = {
+          server = null;
+          path = "secret";
+          version = "v2";
+        };
+      };
+    };
+
+    labSecret = {
+      sig = sigs.LAB_SECRET;
+      value = {
+        name = "stub-labSecret";
+        store = "stub-labStore";
+        kind = "value";
+
+        readableKeys = [ "token" ];
+        keys.token = {
+          generator = null;
+          length = null;
+        };
+        hostPaths = { };
+      };
+    };
+
+    labCa = {
+      sig = sigs.LAB_CA;
+      value = {
+        pem = "{{STATE_DIR}}/proxy/lab.pem";
+        caCert = "{{STATE_DIR}}/proxy/ca.crt";
+        secret = {
+          namespace = "cert-manager";
+          name = "lab-ca-ca-secret";
+        };
+      };
+    };
+
+    resolver = {
+      sig = sigs.HOST_RESOLVER;
+      value = {
+        container = "catallaxy-example-dns";
+      };
+    };
+
+    network = {
+      sig = sigs.LAB_NETWORK;
+      value = {
+        name = "example";
+        subnet = "172.20.0.0/16";
+        gateway = "172.20.0.1";
+      };
+    };
+
+    ociMirror = {
+      sig = sigs.OCI_MIRROR;
+      value = {
+        name = "stub-ociMirror";
+        port = 5050;
+      };
+    };
+
+    edge = {
+      sig = sigs.CLUSTER_EDGE;
+      value = {
+        backend = "k3d-stub-server-0";
+        httpPort = 80;
+        httpsPort = 443;
+      };
+    };
+
+    exposure = {
+      sig = sigs.HOST_EXPOSURE;
+      value = {
+        hosts = [ "app.stub.test" ];
+        edge = {
+          backend = "k3d-stub-server-0";
+          httpPort = 80;
+          httpsPort = 443;
+        };
+      };
+    };
+
+    step = {
+      sig = sigs.LAB_STEPS;
+      value.steps.stub-step = {
+        kind = "run-script";
+        description = "Stub contributed step";
+        beforeClusters = "created";
+      };
+    };
+
+    service = {
+      sig = sigs.HOST_SERVICE;
+      value = {
+        description = "Stub host service";
+        container = "catallaxy-stub-thing";
+        image = "stub:1";
+        command = [ ];
+        ports = [ "127.0.0.1:9999:80" ];
+        networks = [ "stub" ];
+        dnsContainers = [ ];
+        volumes = { };
+        extraMounts = [ ];
+        readyProbe = null;
+      };
+    };
+
+    delivery = {
+      sig = sigs.DELIVERY_POLICY;
+      value = {
+        strategy = "kapp";
+        bootstrapTool = "kubectl-ssa";
+        waitTimeout = "5m";
+        context = "k3d-stub";
+      };
+    };
   };
 
+  # Named by the signature's `canonicalName` rather than `it`. Every stub
+  # calling its provide `it` made one name mean eighteen signatures, which
+  # `link` refuses — and rightly: the rule exists so that a reader seeing
+  # `provides.<name>` can tell what it is.
   mkStub =
     name:
     { sig, value }:
     floe.mkFloe {
       name = "stub-${name}";
       summary = "Fixture floe for a test suite.";
-      provides.it = sig;
-      modules = [ { config.floe.provides.it = value; } ];
+      provides.${sig.canonicalName} = sig;
+      modules = [ { config.floe.provides.${sig.canonicalName} = value; } ];
     };
 
   stubUnits = lib.mapAttrs' (
@@ -273,10 +424,6 @@ in
     }:
     let
       def = import floeSet.${name} {
-        # Null, not the real set: a suite passes the chart it wants and the
-        # unit tests stay free of the chart pins and of `kubelib`. A floe's
-        # `defaultText` is what documents the default, so nothing here forces
-        # it.
         cataCharts = null;
         k8sSpecs = null;
         inherit
@@ -289,33 +436,42 @@ in
           ;
       };
 
-      # A stub providing what the floe under test provides would be a second
-      # provider, and the linker is right to refuse that — so the stub for a
-      # signature this floe answers is dropped rather than the check being
-      # written to expect a failure.
       provided = map (p: p.name) (lib.attrValues def.provides);
 
-      theseStubs = lib.mapAttrs' (
-        n: s:
-        lib.nameValuePair "stub-${n}" (
-          (mkStub n (s // { value = s.value // (stubValues.${n} or { }); })).instantiate { }
-        )
-      ) stubs;
+      unknown = lib.subtractLists (lib.attrNames stubs) (without ++ lib.attrNames stubValues);
+
+      refuse = lib.throwIf (unknown != [ ]) (
+        "evalFloe '${name}': no stub named ${lib.concatMapStringsSep ", " (s: "'${s}'") unknown}. "
+        + "`without` and `stubValues` name stubs by signature canonical name; "
+        + "the set is ${lib.concatStringsSep ", " (lib.attrNames stubs)}."
+      );
+
+      theseStubs = refuse (
+        lib.mapAttrs' (
+          n: s:
+          lib.nameValuePair "stub-${n}" (
+            (mkStub n (s // { value = s.value // (stubValues.${n} or { }); })).instantiate { }
+          )
+        ) stubs
+      );
 
       usable = lib.filterAttrs (
-        n: u: !(lib.elem u.def.provides.it.name provided) && !(lib.elem n (map (w: "stub-${w}") without))
+        n: u:
+        !(lib.elem (lib.head (lib.attrValues u.def.provides)).name provided)
+        && !(lib.elem n (map (w: "stub-${w}") without))
       ) theseStubs;
 
       link = floe.link {
         units = usable // {
           ${name} = def.instantiate inputs;
         };
+        defaults = lib.mapAttrs' (
+          n: u: lib.nameValuePair (lib.head (lib.attrValues u.def.provides)).name n
+        ) usable;
       };
 
       cluster = catallaxy.elaborateCluster {
         linkResult = link;
-        # Enough of the table to keep a derived `kind:` edge from resolving
-        # against nothing; a floe's own CRDs come from its own declarations.
         coreKinds = lib.genAttrs [
           "Deployment"
           "StatefulSet"
@@ -330,7 +486,7 @@ in
       };
     in
     {
-      inherit link cluster;
+      inherit link cluster def;
       component = link.out."catallaxy.component".${name};
       bundles = link.out."catallaxy.component".${name}.bundles;
       provides = link.provides.${name};

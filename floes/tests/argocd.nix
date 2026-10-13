@@ -1,8 +1,12 @@
 # argocd, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "argocd";
     inputs.chart = "/dev/null";
@@ -66,21 +70,27 @@ lib.runTests {
     expected = {
       strategy = "argocd";
       bootstrapTool = "kubectl-ssa";
+
+      context = "k3d-stub";
+
+      waitTimeout = "10m";
     };
   };
 
   # The chart's defaults are an HA topology with a Redis cluster — three more
   # workloads than a lab reconciling one repository needs.
+  # `appsets` was asserted here too, against an `applicationSet.enabled` the
+  # chart stopped reading — so this test was green while the ApplicationSet
+  # controller ran in every lab. A test over a floe's *values* can only say
+  # what was asked for, never that the chart honours it.
   testItRunsOneOfEach = {
     expr = {
       ha = values.redis-ha.enabled;
       ctrl = values.controller.replicas;
-      appsets = values.applicationSet.enabled;
     };
     expected = {
       ha = false;
       ctrl = 1;
-      appsets = false;
     };
   };
 

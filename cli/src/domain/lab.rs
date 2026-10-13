@@ -22,15 +22,23 @@ pub struct InfraPublication {
 pub struct LabSpec {
     pub lab_name: String,
 
-    // `lab.environment` is deliberately not read here. Nix carries it to
-    // floes as `lab.environment`, which is where the option's documented
-    // effects belong; the CLI parsed it and never looked at it, so having
-    // the field made it look consumed. serde ignores the key either way.
     pub cluster_names: Vec<String>,
 
     pub clusters: BTreeMap<String, ClusterSpec>,
 
-    pub lab_namespaces: BTreeMap<String, Vec<String>>,
+    /// The ingress's host map: every hostname this lab answers for, keyed by
+    /// the cluster that serves it.
+    ///
+    /// A cluster the lab does not front has no entry. That is the whole of
+    /// how the difference is said — there was an `edges` block here carrying
+    /// a three-valued mode, and the mode had to agree with whether the
+    /// cluster exported its exposure to Nix at all.
+    ///
+    /// `verify` is what needs it: a hostname served by a cluster the lab does
+    /// not front cannot be reached through the lab's ingress, and resolving
+    /// it to loopback probes the wrong thing and reports the wrong failure.
+    #[serde(default)]
+    pub routed_hosts: BTreeMap<String, Vec<String>>,
 
     /// What each stack puts into a store once it has applied.
     ///
@@ -59,8 +67,6 @@ pub struct LabSpec {
 
     pub teardown_plan: Vec<PlannedStep>,
 
-    pub runtime_contexts: BTreeMap<String, String>,
-
     pub services: BTreeMap<String, HostService>,
 
     pub destroy: DestroyConfig,
@@ -82,15 +88,11 @@ pub struct DnsInfo {
     pub host: String,
     pub port: u16,
     pub zone: String,
-
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CdConfig {
-    pub strategy: DeployStrategy,
     pub bootstrap: BootstrapTool,
     pub git: GitConfig,
 }
@@ -211,22 +213,42 @@ impl LabSpec {
         })
     }
 
+    /// Off the cluster's own claim. It used to come from a `runtimeContexts`
+    /// map beside the clusters, which said the same thing a second time.
     pub fn kube_context(&self, cluster: &str) -> anyhow::Result<&str> {
         resolve_context(
-            self.runtime_contexts.get(cluster).map(String::as_str),
+            self.clusters.get(cluster).map(|c| c.claim.context.as_str()),
             cluster,
-            &self
-                .runtime_contexts
-                .keys()
-                .map(String::as_str)
-                .collect::<Vec<_>>(),
+            &self.clusters.keys().map(String::as_str).collect::<Vec<_>>(),
         )
     }
 
+    /// Every answer this lab's clusters gave, once each, in order. One entry
+    /// for the ordinary lab; two when a CD tool took one cluster over.
+    pub fn delivery_strategies(&self) -> Vec<DeployStrategy> {
+        let mut out: Vec<DeployStrategy> = Vec::new();
+        for cluster in self.clusters.values() {
+            if !out.contains(&cluster.delivery.strategy) {
+                out.push(cluster.delivery.strategy);
+            }
+        }
+        out
+    }
+
+    /// How this cluster's content reaches it, as its own delivery floe
+    /// answered. It was one value for the whole lab, which is why two
+    /// clusters delivering differently was an assertion rather than a thing
+    /// to want.
+    pub fn delivery_for(&self, cluster: &str) -> Option<DeployStrategy> {
+        self.clusters.get(cluster).map(|c| c.delivery.strategy)
+    }
+
+    /// Off the cluster's own content, which is where the namespaces its
+    /// bundles create are already recorded.
     pub fn namespaces_for(&self, cluster: &str) -> &[String] {
-        self.lab_namespaces
+        self.clusters
             .get(cluster)
-            .map(Vec::as_slice)
+            .map(|c| c.content.namespaces.as_slice())
             .unwrap_or(&[])
     }
 }
@@ -240,15 +262,15 @@ mod tests {
             "labName": "minimal.local",
             "environment": "development",
             "clusterNames": ["app"],
-            "clusters": {},
-            "labNamespaces": { "app": ["podinfo"] },
+            "clusters": { "app": super::super::cluster::tests::cluster_json() },
+            "routedHosts": {},
             "network": { "name": "minimal.local", "dockerSubnet": "172.20.0.0/16" },
             "dnsInfo": { "host": "127.0.0.1", "port": 5354, "zone": "minimal.test" },
             "registryPort": 5050,
             "registryUpstreams": ["docker.io"],
             "labOwnedRegistries": [],
             "opsToolPath": null,
-            "cd": { "strategy": "kapp", "bootstrap": "kubectl-ssa", "git": {} },
+            "cd": { "bootstrap": "kubectl-ssa", "git": {} },
             "secrets": {
                 "envFile": null,
                 "stores": {},
@@ -257,9 +279,7 @@ mod tests {
             },
             "deploymentPlan": [],
             "teardownPlan": [],
-            "runtimeContexts": { "app": "k3d-minimal-local-app" },
             "services": {},
-            "selfContained": { "eligible": true, "envFile": null, "reasons": [] },
             "destroy": { "rescueHints": {} },
             "verify": {},
         })
@@ -269,7 +289,7 @@ mod tests {
     fn a_lab_parses_from_the_config_nix_emits() {
         let lab = LabSpec::from_value(lab_json()).expect("lab spec parses");
         assert_eq!(lab.lab_name, "minimal.local");
-        assert_eq!(lab.cd.strategy, DeployStrategy::Kapp);
+        assert_eq!(lab.delivery_strategies(), vec![DeployStrategy::Kapp]);
         assert_eq!(lab.cd.bootstrap, BootstrapTool::KubectlSsa);
         assert_eq!(lab.dns_info.as_ref().unwrap().port, 5354);
         assert_eq!(lab.registry_port, Some(5050));
@@ -298,7 +318,7 @@ mod tests {
     #[test]
     fn the_context_comes_from_runtime_contexts_which_a_pivot_rewrites() {
         let mut json = lab_json();
-        json["runtimeContexts"] = serde_json::json!({ "app": "pivoted-app" });
+        json["clusters"]["app"]["claim"]["context"] = serde_json::json!("pivoted-app");
         let lab = LabSpec::from_value(json).unwrap();
         assert_eq!(lab.kube_context("app").unwrap(), "pivoted-app");
     }
@@ -306,7 +326,7 @@ mod tests {
     #[test]
     fn an_empty_runtime_context_is_reported_rather_than_guessed_at() {
         let mut json = lab_json();
-        json["runtimeContexts"] = serde_json::json!({ "app": "" });
+        json["clusters"]["app"]["claim"]["context"] = serde_json::json!("");
         let lab = LabSpec::from_value(json).unwrap();
         let err = lab
             .kube_context("app")
@@ -352,9 +372,6 @@ pub struct HostService {
     pub network_config: Value,
     #[serde(default)]
     pub dns_containers: Value,
-
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,13 +1,13 @@
 # Prose under floes/ and docs/ that names something removed from the tree.
 #
 # Exempt: docs/rfcs/ and docs/prior-implementations.md (dated records),
-# docs/floes/ (generated), and the pages in `namesTheOld`.
+# docs/generated/ (generated), and the pages in `namesTheOld`.
 { lib, pkgs }:
 
 let
   # dead :: { Pattern -> Why }
   dead = {
-    "requiresMany" = "replaced by `requiresOptional` in lib/floe-core/floe.nix";
+    "requiresMany" = "replaced by `optional` in the floe library's floe.nix";
     "lines against" = "a line count against a deleted tree, wrong within one commit";
     "parked floe" = "the parked tree was deleted; see CHANGELOG.md";
     "parked tree" = "the parked tree was deleted; see CHANGELOG.md";
@@ -31,7 +31,7 @@ let
     cp -r ${../../floes} $out/floes
     cp -r ${../../docs} $out/docs
     chmod -R u+w $out
-    rm -rf $out/docs/rfcs $out/docs/floes $out/docs/prior-implementations.md
+    rm -rf $out/docs/rfcs $out/docs/generated $out/docs/prior-implementations.md
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList (path: _: "rm -f $out/${path}") namesTheOld)}
   '';
 in

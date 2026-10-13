@@ -3,10 +3,14 @@
 # Mostly about the six secrets. Left to itself the chart mints them with
 # `randAlphaNum` while rendering, so all six land in the manifest, in the
 # digest that pins it, and in the store — and all six change on any re-render.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   evalWith =
     {
       inputs ? { },
@@ -69,10 +73,6 @@ lib.runTests {
       jobservice = values.jobservice.existingSecret;
       registry = values.registry.existingSecret;
 
-      # These two were missed, and the chart minted both on every render: a
-      # token-signing keypair via `genSelfSignedCert`, and an htpasswd whose
-      # bcrypt salt is fresh each time. Both landed in the manifest and in the
-      # digest, and both rotated on every apply.
       token = values.core.secretName;
       registryCred = values.registry.credentials.existingSecret;
     };

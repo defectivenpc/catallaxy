@@ -145,7 +145,6 @@ impl VaultSink {
             .await
             .with_context(|| format!("removing '{key}' from {}", self.describe()))?;
 
-        // A key that is already gone is the state we wanted.
         if response.status().is_success() || response.status() == reqwest::StatusCode::NOT_FOUND {
             return Ok(Removal::Gone);
         }
@@ -158,10 +157,6 @@ impl VaultSink {
     }
 
     async fn write(&self, key: &str, value: &str) -> Result<()> {
-        // KV v2 nests the payload under `data` and puts `data` in the path as
-        // well. Writing a v2 mount as though it were v1 succeeds and stores
-        // the wrong shape, which nothing notices until a reader gets an
-        // envelope where it expected a value.
         let (path, body) = if self.v2 {
             (
                 format!("{}/v1/{}/data/{key}", self.server, self.mount),
@@ -228,9 +223,6 @@ impl CommandSink {
     }
 
     fn write(&self, key: &str, value: &str) -> Result<()> {
-        // The value goes on stdin and the key in the environment. Neither is
-        // an argument, so neither shows up in a process listing on a shared
-        // machine.
         let mut child = Command::new(&self.argv[0])
             .args(&self.argv[1..])
             .env("CATA_SECRET_KEY", key)

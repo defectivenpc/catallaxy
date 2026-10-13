@@ -1,24 +1,27 @@
 # secret-store, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "secret-store";
-    inputs = {
-      labStore = "runtime";
-      server = "https://vault.test";
-    };
+    inputs.server = "https://vault.test";
   };
 
   store = r.bundles.store.resources.store;
 in
 lib.runTests {
-  # Derived from the lab store, not configured, so the lab wiring that
-  # references it and this floe cannot name different things.
+  # Derived from the lab store this resolved, not configured — so there is no
+  # second place the store's name is written. It was a `labStore = "<name>"`
+  # input naming an attribute under `lab.secrets.stores` with nothing checking
+  # it.
   testTheObjectNameIsDerivedFromTheLabStore = {
     expr = store.metadata.name;
-    expected = "catallaxy-runtime";
+    expected = "catallaxy-stub-labStore";
   };
 
   testTheProvideNamesTheSameObject = {
@@ -47,8 +50,16 @@ lib.runTests {
     expected = false;
   };
 
-  testWritableByDefault = {
+  # Whether a cluster may push into it comes off the store, which derives it
+  # from its backend. It was an input beside the `labStore` string, so a lab
+  # could call a vault-backed store read-only or a sops-backed one writable
+  # and nothing would notice until a PushSecret never reconciled.
+  #
+  # The stub answers the authored case, which is what every floe reading a
+  # projected value is in. `floes/tests/lab-secret-store.nix` covers both
+  # sides of the derivation.
+  testWritableComesFromTheStore = {
     expr = r.provides.secretStore.writable;
-    expected = true;
+    expected = false;
   };
 }

@@ -14,8 +14,8 @@
 # eventually notices.
 #
 # Over the *flattened* set, which `floe-gates.nix` is not — it takes
-# `(import ../../floes).cluster` and so has never looked at `floes/lab/` or
-# `floes/provisioners/` at all.
+# `(import ../../floes).components` and so has never looked at `floes/lab/`,
+# `floes/clusters/` or `floes/provisioners/` at all.
 {
   lib,
   pkgs,
@@ -37,6 +37,7 @@ let
         catallaxy
         cataCharts
         k8sSpecs
+        floes
         ;
       inherit
         floe
@@ -45,7 +46,17 @@ let
         ;
     };
 
-  # A floe may bind one signature twice under different names — RFC 0001
+  # A floe whose units are other floes reaches them through this, built the
+  # way `lib/lab.nix` builds it and lazy for the same reason.
+  floes = lib.mapAttrs (
+    name: _:
+    let
+      def = defOf name;
+    in
+    def // { __functor = _: def.instantiate; }
+  ) floeSet;
+
+  # A floe may bind one signature twice under different names
   # §175-180 contemplates exactly that for two instances of one thing. No
   # shipped floe does, so this starts empty; its existence is what documents
   # the escape hatch, and adding an entry is a deliberate act rather than a
@@ -64,20 +75,18 @@ let
             kind
             hole
             ;
-          inherit (sig) as;
+          inherit (sig) canonicalName;
           sigName = sig.name;
         }) holes;
     in
-    each "requires" def.requires
-    ++ each "requiresOptional" def.requiresOptional
-    ++ each "provides" def.provides;
+    each "requires" def.requires ++ each "optional" def.optional ++ each "provides" def.provides;
 
   all = lib.concatMap holesOf (lib.attrNames floeSet);
 
-  wrong = lib.filter (h: h.hole != h.as && !(renamed.${h.name} or { }) ? ${h.hole}) all;
+  wrong = lib.filter (h: h.hole != h.canonicalName && !(renamed.${h.name} or { }) ? ${h.hole}) all;
 
   findings = map (
-    h: "${h.name}: ${h.kind}.${h.hole} binds ${h.sigName}, whose canonical name is '${h.as}'"
+    h: "${h.name}: ${h.kind}.${h.hole} binds ${h.sigName}, whose canonical name is '${h.canonicalName}'"
   ) wrong;
 in
 {

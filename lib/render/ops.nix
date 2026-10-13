@@ -24,14 +24,8 @@ in
     let
       nonEmpty = lib.filterAttrs (_: cmds: cmds != { }) ops;
 
-      # ---- per-command shell ----------------------------------------------
-
       optNames = cmd: lib.attrNames cmd.options;
 
-      # Every option gets its variable set before parsing, so a command that
-      # reads one the user did not pass sees the default rather than tripping
-      # `set -u`. A bool with no default is "", which is falsy in the `[ -n ]`
-      # test a script would use.
       initOptions =
         cmd:
         lib.concatMapStrings (
@@ -70,9 +64,6 @@ in
               done
         '';
 
-      # Required-ness and enum membership, both before anything runs. An
-      # unchecked `--cluster` reaches the underlying tool as an unknown
-      # kubecontext, and what that reports is the tool's problem, not ours.
       validateOptions =
         cmd:
         lib.concatMapStrings (
@@ -97,10 +88,6 @@ in
           ''
         ) (optNames cmd);
 
-      # Positionals are counted, not named: what is left on `$@` is passed
-      # through, so a `package` script reads them as `$1`, `$2` in the order
-      # declared. A variadic last arg means "and the rest", so it sets no
-      # minimum of its own.
       validateArgs =
         cmd:
         let
@@ -123,9 +110,6 @@ in
         else
           ''exec ${lib.escapeShellArgs cmd.command} "$@"'';
 
-      # `<category>/<name>` matched as one word: two categories may each hold
-      # a command of the same name, and a case over the name alone would run
-      # whichever branch was written first.
       branch = category: name: cmd: ''
         ${category}/${name})
             shift 2
@@ -138,8 +122,6 @@ in
           category: cmds: lib.concatStrings (lib.mapAttrsToList (branch category) cmds)
         ) nonEmpty
       );
-
-      # ---- listing ---------------------------------------------------------
 
       signature =
         cmd:

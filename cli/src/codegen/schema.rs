@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use super::convert::Converter;
-use super::types::{GeneratorOptions, K8sResourceType, K8sTypeSet};
+use super::types::{GeneratorOptions, K8sResourceType, K8sTypeSet, NixOption};
 
 #[derive(Debug, Deserialize)]
 pub struct OpenApiSpec {
@@ -100,15 +100,52 @@ fn convert_resource(
             .map(String::from);
     }
 
-    if let Some(properties) = schema.get("properties")
-        && let Some(spec_schema) = properties.get("spec")
-    {
-        resource.spec = Some(converter.convert(spec_schema));
+    if let Some(properties) = schema.get("properties").and_then(|v| v.as_object()) {
+        if let Some(spec_schema) = properties.get("spec") {
+            resource.spec = Some(converter.convert(spec_schema));
+        }
+
+        if !gvk.kind.ends_with("List") {
+            resource.top_level = convert_top_level(converter, properties, options);
+        }
     }
 
     resource.namespaced = true;
 
     resource
+}
+
+/// The authorable top-level fields, as options.
+///
+/// Shared with the CRD path, which sees the same shape one level down inside
+/// `openAPIV3Schema`. `required` is read here for the same reason `convert`
+/// reads it: a required field is emitted non-nullable with no default, so
+/// omitting it fails rather than defaulting to null.
+pub(super) fn convert_top_level(
+    converter: &mut Converter<'_>,
+    properties: &serde_json::Map<String, Value>,
+    options: &GeneratorOptions,
+) -> BTreeMap<String, NixOption> {
+    let mut out = BTreeMap::new();
+
+    for (name, prop_schema) in properties {
+        if crate::codegen::types::NOT_TOP_LEVEL.contains(&name.as_str()) {
+            continue;
+        }
+
+        let mut option = NixOption::new(converter.convert(prop_schema).nullable());
+        option.default = Some("null".to_string());
+
+        if options.include_descriptions
+            && let Some(desc) = prop_schema.get("description").and_then(|v| v.as_str())
+        {
+            option.description = Some(desc.to_string());
+        }
+
+        out.insert(name.clone(), option);
+    }
+
+    out
 }
 
 #[cfg(test)]

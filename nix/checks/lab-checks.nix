@@ -32,7 +32,7 @@ let
     name: lab:
     pkgs.runCommand "${name}-eval" { } ''
       cat > /dev/null <<'EOF'
-      ${toString (lib.mapAttrsToList (_: c: c.manifests) lab.config.lab.clusters)}
+      ${toString (lib.mapAttrsToList (_: c: c.manifests) lab.clusters)}
       EOF
       touch $out
     '';
@@ -55,7 +55,7 @@ let
         ];
       }
       ''
-        cd ${lab.config.lab.out.package}
+        cd ${lab.package}
         find -L . -type f | sed 's|^\./||' | LC_ALL=C sort | while read -r f; do
           hash=$(sed 's|/nix/store/[a-z0-9]\{32\}-|/nix/store/HASH-|g' "$f" \
             | sha256sum | cut -d' ' -f1)
@@ -93,7 +93,7 @@ let
         ];
       }
       ''
-        tree=${lab.config.lab.out.package}/manifests
+        tree=${lab.package}/manifests
         status=0
 
         for dir in "$tree"/*/; do
@@ -138,7 +138,7 @@ let
   secretMaterialCheck =
     name: lab:
     pkgs.runCommand "${name}-renders-no-secret-material" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-      python3 ${./secret-material.py} ${lab.config.lab.out.package}
+      python3 ${./secret-material.py} ${lab.package}
       touch $out
     '';
 
@@ -146,18 +146,14 @@ let
   lintCheck =
     name: lab:
     pkgs.runCommand "${name}-lint" { nativeBuildInputs = [ cata ]; } ''
-      cata lab lint --path ${lab.config.lab.out.package}
+      cata lab lint --path ${lab.package}
       touch $out
     '';
 
   planSnapshotCheck =
     name: lab: direction:
     let
-      plan =
-        if direction == "deploy" then
-          lab.config.lab.out.deploymentPlan
-        else
-          lab.config.lab.out.teardownPlan;
+      plan = if direction == "deploy" then lab.deploymentPlan else lab.teardownPlan;
 
       planJson = pkgs.writeText "${name}-${direction}-plan.json" (builtins.toJSON plan);
       expected = "${snapshotDir}/${name}.${direction}.expected.txt";
@@ -226,17 +222,24 @@ let
   # as an answer rather than a reason to ask elsewhere. The pull fails on a
   # name that resolves perfectly well from the host.
   #
-  # `lab.registry.upstreams` says "add one when a floe pulls from an upstream
-  # not listed here" and nothing enforced it. Every lab passes today; this
-  # exists for the floe that adds a registry and not the entry.
+  # `lab-registry`'s `upstreams` says "add one when a floe pulls from an
+  # upstream not listed here" and nothing enforced it. Every lab passes today;
+  # this exists for the floe that adds a registry and not the entry.
   #
   # Reads `images.txt` from the built package rather than the component
   # channel, because that file is what `warm-cache` iterates and it includes
   # the images scraped out of charts that no floe declared.
+  #
+  # And the mirror list off `registry-setup`'s own params rather than off the
+  # floe's input, because that step is what writes `registries.yaml`: a lab
+  # whose cache mirrors a registry the step was never told about would pass a
+  # check reading the input and still fail the pull.
+  registrySetupOf = lab: lib.findFirst (step: step.kind == "registry-setup") null lab.deploymentPlan;
+
   imageUpstreamCheck =
     name: lab:
     let
-      hosts = map (u: u.host) lab.config.lab.registry.upstreams;
+      hosts = (registrySetupOf lab).params.upstreams;
     in
     pkgs.runCommand "${name}-images-are-cacheable" { nativeBuildInputs = [ pkgs.gawk ]; } ''
       # A first path component is a registry only where it looks like a host —
@@ -244,7 +247,7 @@ let
       # namespace and the image is implicitly `docker.io/...`, which is how
       # `chrislusf/seaweedfs` and `velero/velero` reach the mirror.
       awk -F/ '{ if (NF > 1 && ($1 ~ /[.:]/ || $1 == "localhost")) print $1; else print "docker.io" }' \
-        ${lab.config.lab.out.package}/images.txt | LC_ALL=C sort -u > $TMPDIR/used
+        ${lab.package}/images.txt | LC_ALL=C sort -u > $TMPDIR/used
 
       printf '%s\n' ${lib.escapeShellArgs hosts} | LC_ALL=C sort -u > $TMPDIR/mirrored
 
@@ -255,7 +258,7 @@ let
         echo "Each becomes a direct pull, and a node that resolves through the" >&2
         echo "lab's own DNS cannot resolve the name — that server is authoritative" >&2
         echo "for the zone and answers REFUSED for everything else. Add an entry to" >&2
-        echo "lab.registry.upstreams for each." >&2
+        echo "the lab-registry floe's \`upstreams\` for each." >&2
         exit 1
       fi
       touch $out
@@ -265,7 +268,7 @@ let
     lib.concatLists (
       lib.mapAttrsToList (
         name: lab:
-        lib.optional lab.config.lab.registry.enable {
+        lib.optional (registrySetupOf lab != null) {
           "${name}-images-are-cacheable" = imageUpstreamCheck name lab;
         }
       ) labDefs
@@ -290,7 +293,7 @@ let
   # purpose, and two labs that cannot be up at once is a fact nobody
   # discovers until the second one fails to start.
 
-  subnetOf = lab: lab.config.lab.network.subnet;
+  subnetOf = lab: lab.subnet;
 
   subnetClashes = lib.concatLists (
     lib.mapAttrsToList (
@@ -306,32 +309,46 @@ let
     ) labDefs
   );
 
-  # Each port is claimed only when the feature that binds it is on.
+  # Every host port a lab binds, read off the services it runs.
+  #
+  # The claim is about what two labs on one host do to each other, so the
+  # evidence is what they publish rather than which options were set. It was
+  # five `lib.optional <feature>.enable` branches naming the option each port
+  # comes from — one per host floe, restating the placement condition, and one
+  # of them restating it wrong: the https port is bound exactly when the lab
+  # holds a root to terminate with, which was spelled `link.provides ? ca`.
+  # That tested for a *unit named* `ca`, so a lab placing its root under any
+  # other name published 443 and claimed nothing.
+  #
+  # A publication is `[<address>:]<host>:<container>[/<proto>]`, and it claims
+  # the host port unless its address is on the lab's own bridge — that network
+  # is the lab's and two labs have different ones. Both other forms claim it:
+  # `127.0.0.1:8088:80` binds loopback, and a bare `5353:53` binds every
+  # interface, which is the wider claim rather than no claim. The old list
+  # could not tell those apart; it had one entry per option, and the option
+  # said nothing about which addresses the container would answer on.
   portsOf =
     lab:
-    let
-      c = lab.config.lab;
-    in
-    lib.optional c.proxy.enable {
-      what = "proxy.httpPort";
-      port = c.proxy.httpPort;
-    }
-    ++ lib.optional (c.proxy.enable && c.proxy.tls.enable) {
-      what = "proxy.httpsPort";
-      port = c.proxy.httpsPort;
-    }
-    ++ lib.optional c.registry.enable {
-      what = "registry.port";
-      port = c.registry.port;
-    }
-    ++ lib.optional c.dns.enable {
-      what = "dns.hostPort";
-      port = c.dns.hostPort;
-    }
-    ++ lib.optional c.egress.enable {
-      what = "egress.port";
-      port = c.egress.port;
-    };
+    lib.concatLists (
+      lib.mapAttrsToList (
+        service: svc:
+        lib.concatMap (
+          spec:
+          let
+            parts = lib.splitString ":" spec;
+            addressed = lib.length parts == 3;
+            hostPort = lib.elemAt parts (if addressed then 1 else 0);
+            protoParts = lib.splitString "/" spec;
+          in
+          lib.optional (!addressed || lib.head parts == "127.0.0.1") {
+            what = "${service} (${spec})";
+            port = lib.toInt hostPort;
+
+            proto = if lib.length protoParts == 2 then lib.elemAt protoParts 1 else "tcp";
+          }
+        ) svc.ports
+      ) lab.services
+    );
 
   claims = lib.concatLists (
     lib.mapAttrsToList (name: lab: map (p: p // { lab = name; }) (portsOf lab)) labDefs
@@ -339,12 +356,13 @@ let
 
   portClashes = lib.concatLists (
     map (
-      port:
+      claim:
       let
-        holders = lib.filter (c: c.port == port) claims;
+        port = claim.port;
+        holders = lib.filter (c: c.port == port && c.proto == claim.proto) claims;
       in
       lib.optional (lib.length holders > 1) (
-        "host port ${toString port} is claimed by "
+        "host port ${toString port}/${claim.proto} is claimed by "
         + lib.concatMapStringsSep ", " (h: "${h.lab}'s ${h.what}") holders
         + ".\n    Every allocation is derived from the lab's name "
         + "(lib/allocation.nix), so two labs collided on slot "
@@ -355,42 +373,52 @@ let
           )
         }."
       )
-    ) (lib.unique (map (c: c.port) claims))
+    ) (lib.unique (map (c: { inherit (c) port proto; }) claims))
   );
 
-  # A hostname with a public route inside a cluster and no backend on the lab
-  # proxy reaches the proxy's default backend and gets a 503, with nothing
-  # saying why.
-  unproxiedHosts = lib.concatLists (
+  # A hostname with a public route rendered in a cluster, that no floe in that
+  # cluster claimed.
+  #
+  # The two facts are the routes a cluster's bundles render and the
+  # `ROUTE_CLAIM`s its gateway collected, and `routedHosts` is the second
+  # one — the ingress's host map is built from the claims, keyed by cluster.
+  # So this compares what a cluster renders against what the lab will answer
+  # for it, which is the comparison the failure is about.
+  #
+  # It read the cluster's exported `HOST_EXPOSURE` off the lab's link. Same
+  # set, one step earlier, and reading it through the document means the check
+  # cannot pass on an export the ingress then dropped.
+  #
+  # Only clusters the lab fronts, which is what being in the map means. A
+  # cluster that is its own edge routes its hostnames itself and its rendered
+  # routes are nothing the lab answers for; a lab with no ingress answers for
+  # none of its clusters, and an unclaimed route there is no worse off than a
+  # claimed one, because nothing on the host reaches either.
+  unclaimedHosts = lib.concatLists (
     lib.mapAttrsToList (
-      name: lab:
-      lib.optionals lab.config.lab.proxy.enable (
-        let
-          # Only the clusters the lab is the edge for. One that is its own
-          # edge (RFC 0005 §6.4) routes its hostnames itself, so the lab's
-          # proxy having no backend for them is the arrangement rather than
-          # the fault.
-          routed = lib.unique (
-            lib.concatLists (
-              lib.mapAttrsToList (
-                _: c:
-                lib.optionals (c.edge.mode == "proxy") (
-                  map (h: h.host) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
-                )
-              ) lab.config.lab.clusters
-            )
-          );
-        in
-        map (h: "${name} routes '${h}' publicly and its proxy has no backend for it") (
-          lib.subtractLists lab.config.lab.proxy.out.hosts routed
-        )
+      labName: lab:
+      lib.concatLists (
+        lib.mapAttrsToList (
+          name: claimed:
+          let
+            rendered = map (h: h.host) (
+              lib.filter (h: h.tier == "public") lab.clusters.${name}.out.exposedHosts
+            );
+          in
+          map (
+            h:
+            "${labName}'s cluster '${name}' renders a public route for '${h}' "
+            + "and no floe in it claimed that hostname, so the lab answers for nothing "
+            + "and the ingress has no backend for it"
+          ) (lib.subtractLists claimed rendered)
+        ) lab.cliConfig.routedHosts
       )
     ) labDefs
   );
 
   # ---- between clusters, inside one lab ----------------------------------
   #
-  # RFC 0005 §5 names both of these as lab-level checks and neither existed
+  # Both of these are lab-level checks and neither existed
   # while every runnable lab had one cluster. `homelab` has two, and both
   # failures are silent: the first at runtime with routing that half works,
   # the second with a 503 from a backend nobody meant to reach.
@@ -408,9 +436,9 @@ let
   # provider's defaults and both are right to.
   #
   # `provider` is the descriptor's own answer, the same fact
-  # `modules/lab/plan.nix` uses to decide whether a cluster needs the network
+  # `lib/lower/plan.nix` uses to decide whether a cluster needs the network
   # at all.
-  onLabNetwork = cluster: cluster.spec.provider == "docker";
+  onLabNetwork = cluster: !(cluster.spec.provisioning.config ? external);
 
   rangesOf =
     labName: clusterName: cluster:
@@ -437,7 +465,7 @@ let
     lib.mapAttrsToList (
       labName: lab:
       let
-        byCluster = lib.mapAttrs (rangesOf labName) lab.config.lab.clusters;
+        byCluster = lib.mapAttrs (rangesOf labName) lab.clusters;
 
         pairs = lib.concatLists (
           lib.mapAttrsToList (
@@ -455,9 +483,6 @@ let
           ) byCluster
         );
 
-        # The lab's own docker network is the third party every cluster shares,
-        # and a cluster whose range covers the bridge cannot reach its own
-        # gateway.
         vsDocker = lib.concatLists (
           lib.mapAttrsToList (
             _: ranges:
@@ -476,27 +501,24 @@ let
   # line per exposed host and the first match wins, so the second cluster's
   # route is unreachable and nothing anywhere says so.
   #
-  # Only clusters the lab is the edge for, because that is the whole of the
-  # fault: it is HAProxy's ordering, and a cluster HAProxy has no row for
-  # cannot lose to another. A lab that serves a name locally while something
-  # else serves it for a self-edge cluster (RFC 0005 §6.4) is the arrangement
-  # rather than the collision — one name, two edges, and only one of them
-  # here. Counting those as a clash would refuse exactly the setup the mode
-  # exists to allow.
+  # Read off `routedHosts`, which is the ingress's own account of the rows it
+  # wrote — so this sees the rows HAProxy sees and no others. It read each
+  # cluster's exported exposure, which is the same set only while the fold
+  # between them is right.
+  #
+  # Only clusters the lab fronts, and only when it fronts any, because that is
+  # the whole of the fault: it is HAProxy's ordering, and a cluster HAProxy has
+  # no row for cannot lose to another. A lab that serves a name locally while
+  # something else serves it for a self-edge cluster is the arrangement rather
+  # than the collision — one name, two edges, and only one of them here.
   hostClashes = lib.concatLists (
     lib.mapAttrsToList (
       labName: lab:
       let
         claimsHere = lib.concatLists (
           lib.mapAttrsToList (
-            clusterName: c:
-            lib.optionals (c.edge.mode == "proxy") (
-              map (h: {
-                inherit clusterName;
-                inherit (h) host;
-              }) (lib.filter (h: h.tier == "public") c.out.exposedHosts)
-            )
-          ) lab.config.lab.clusters
+            clusterName: hosts: map (host: { inherit clusterName host; }) hosts
+          ) lab.cliConfig.routedHosts
         );
       in
       lib.concatMap (
@@ -527,25 +549,20 @@ let
     lib.mapAttrsToList (
       labName: lab:
       let
-        c = lab.config.lab;
+        c = lab;
 
-        # Only labs that route the key into a cluster. One with no such
-        # projection holds the key in a single place and has nothing to
-        # disagree with.
         projected = lib.concatLists (
           lib.mapAttrsToList (
             clusterName: cluster:
             lib.mapAttrsToList (_name: p: { inherit clusterName; }) (
-              lib.filterAttrs (_: p: p.source == "externaldns-tsig") cluster.secrets.project
+              lib.filterAttrs (_: p: p.source == "externaldns-tsig") cluster.out.projections
             )
           ) c.clusters
         );
 
-        envFile = if c.secrets.envFile == null then null else ../../. + "/${c.secrets.envFile}";
+        envFile =
+          if c.cliConfig.secrets.envFile == null then null else ../../. + "/${c.cliConfig.secrets.envFile}";
 
-        # `NAME='value'` or `NAME=value`, last assignment wins, comments and
-        # blank lines skipped — which is as much of a shell env file as `cata`
-        # itself reads.
         valueIn =
           path: varName:
           let
@@ -558,10 +575,6 @@ let
           else
             lib.removeSuffix "'" (lib.removePrefix "'" (lib.removePrefix "${varName}=" (lib.last lines)));
 
-        # The variable name is derived from the store the secret sits in, and
-        # the two labs that hold this key put it in different stores. Both
-        # names are tried rather than the store being restated here, where it
-        # would be a third copy of the same fact.
         varNames = [
           "CATA_SECRET_AUTHORED__EXTERNALDNS_TSIG__TSIG_SECRET"
           "CATA_SECRET_KNOT__EXTERNALDNS_TSIG__TSIG_SECRET"
@@ -572,6 +585,8 @@ let
             null
           else
             lib.findFirst (v: v != null) null (map (valueIn envFile) varNames);
+
+        knotKey = if c.cliConfig.dnsInfo == null then null else c.cliConfig.dnsInfo.tsigSecret;
       in
       lib.optionals (projected != [ ]) (
         lib.optional (
@@ -582,10 +597,10 @@ let
           + "under any name derived from a store it could be in, so the projected Secret is "
           + "empty and every RFC2136 update is refused"
         )
-        ++ lib.optional (found != null && found != c.dns.tsigSecret) (
-          "${labName}: the TSIG key in ${c.secrets.envFile} is not the one Knot is configured with "
-          + "at lab.dns.tsigSecret — external-dns will authenticate against a key the server "
-          + "does not have"
+        ++ lib.optional (knotKey != null && found != null && found != knotKey) (
+          "${labName}: the TSIG key in ${c.cliConfig.secrets.envFile} is not the one Knot is configured with "
+          + "— external-dns will authenticate against a key the server does not have. The server's "
+          + "is the `tsigSecret` input on the `lab-dns` floe the lab places."
         )
       )
     ) labDefs
@@ -615,14 +630,14 @@ lib.foldl' lib.mergeAttrs { } perLab
       "Two containers cannot bind one host port. Everything else about a lab is named after it and does not clash; the ports are the one thing a lab has to be given on purpose."
       portClashes;
 
-  lab-routed-hosts-are-proxied =
-    refuse "lab-routed-hosts-are-proxied"
-      "A public route the proxy has no backend for reaches its default backend and returns 503. The proxy builds its host map from what the clusters expose, so a hostname named anywhere else is invisible to it."
-      unproxiedHosts;
+  lab-routed-hosts-are-claimed =
+    refuse "lab-routed-hosts-are-claimed"
+      "A public route nothing claimed reaches the ingress's default backend and returns 503. The resolver and the ingress are both built from the ROUTE_CLAIMs a cluster's gateway collected, so a hostname that appears only in a rendered manifest is invisible to both."
+      unclaimedHosts;
 
   lab-cluster-ranges =
     refuse "lab-cluster-ranges"
-      "Two clusters on one docker network need ranges that do not overlap, and neither one can overlap the network itself. An address plan is a decision written down (RFC 0005 §5); nothing derives these, so nothing catches them but this."
+      "Two clusters on one docker network need ranges that do not overlap, and neither one can overlap the network itself. An address plan is a decision written down; nothing derives these, so nothing catches them but this."
       rangeClashes;
 
   lab-tsig-key-agrees =

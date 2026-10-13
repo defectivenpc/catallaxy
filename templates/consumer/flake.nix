@@ -21,9 +21,19 @@
 
         myFloes = cata.mkFloes (import ./floes);
 
-        lab = cata.mkLab {
-          modules = [ (import ./lab.nix { inherit myFloes; }) ];
-        };
+        # `lab.nix` is a floe definition and this instantiates it: the name is
+        # what every host port and the subnet are allocated from, so a second
+        # environment of the same lab is a second call with a different one.
+        lab = cata.mkLab (
+          (import ./lab.nix {
+            inherit myFloes;
+            inherit (cata) catallaxy floes;
+            inherit (nixpkgs) lib;
+          })
+            {
+              name = "my-platform";
+            }
+        );
       in
       {
         # One lab, so this shell can point at it without guessing. `kubectl`
@@ -42,14 +52,14 @@
         };
 
         legacyPackages = {
-          labs."my-platform" = lab.config.lab.out.cliConfig;
-          labPackages."my-platform" = lab.config.lab.out.package;
+          labs."my-platform" = lab.cliConfig;
+          labPackages."my-platform" = lab.package;
         };
 
         # Rendering the lab touches every option, so an unmet `requires`, a
         # bad `exports` read, or a broken anchor fails in CI rather than at
         # `lab up`.
-        checks.lab-renders = lab.config.lab.out.package;
+        checks.lab-renders = lab.package;
       }
     );
 }

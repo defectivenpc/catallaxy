@@ -85,7 +85,6 @@ in
       name,
       cluster,
       owner ? name,
-      waitTimeout ? "10m",
       namespaceLabels ? { },
       namespaceResources ? [ ],
     }:
@@ -109,8 +108,6 @@ in
         awaitRollout = true;
       };
 
-      # A projection renders nothing: `cata` applies it from the decrypted
-      # store. It is in the graph only so a bundle can order against it.
       isProjection = lib.hasPrefix "projection/";
 
       emptyBundle = {
@@ -139,7 +136,6 @@ in
           drv = render.renderBundle key {
             ownership = {
               lab = owner;
-              # Sanitized: a label value may not contain a slash.
               bundle = sanitize key;
             };
             helmCharts = lib.mapAttrs (_: toHelmSpec) (b.helmCharts or { });
@@ -162,16 +158,9 @@ in
         ) cluster.waves
       );
 
-      # The index the applier walks; its absence is a hard error.
-      #
-      # `key` must be sanitized to match the `catallaxy.io/bundle` label that
-      # pruning compares it against. The raw form makes every resource read as
-      # undeclared, and prune deletes the cluster it just built.
       waveMeta.waves = lib.imap0 (i: wave: {
         index = i;
         bundles = map (entry: {
-          # Raw for a projection: the applier finds injectable Secrets by the
-          # literal `projection/` prefix. Sanitizing it silently applies none.
           key = if isProjection entry.name then entry.name else sanitize entry.name;
           dir = "${pad i}-wave/${sanitize entry.name}";
           hasContent = hasContent entry.name;
@@ -181,11 +170,8 @@ in
         }) wave;
       }) cluster.waves;
 
-      # Every declared bundle, not only those with content. Sanitized to
-      # match the label; anything missing here is pruned as undeclared.
       declaredBundles = lib.concatMap (w: map (e: sanitize e.name) w) cluster.waves;
 
-      # `renderResources` writes JSON — legal YAML, but unreadable in a diff.
       assembled =
         pkgs.runCommand "floe-cluster-${name}-raw"
           {
@@ -206,12 +192,6 @@ in
             cat > $out/.declared-bundles <<'DECLARED'
             ${lib.concatStringsSep "\n" (lib.sort (a: b: a < b) declaredBundles)}
             DECLARED
-
-            # Only kapp reads this. Emitted anyway so flipping `cd.bootstrap`
-            # later fails here rather than at apply.
-            cat > $out/.deploy-config <<'EOF'
-            waitTimeout: ${waitTimeout}
-            EOF
 
             # A CRD is applyable before it is established. Scanned rather
             # than declared: a chart's CRDs are invisible to eval.

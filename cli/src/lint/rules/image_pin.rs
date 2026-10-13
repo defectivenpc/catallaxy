@@ -42,10 +42,6 @@ fn extract_images(resource: &K8sResource) -> Vec<String> {
             "spec",
             "containers",
         ],
-        // A CronJob's init containers. Missing here while the scrape that
-        // feeds `cata images lock` had it, so those images were lockable and
-        // unlintable: the lock rewrote a digest into something requireDigest
-        // could not have flagged.
         &[
             "spec",
             "jobTemplate",
@@ -84,9 +80,6 @@ fn check(resources: &[K8sResource], cluster: &str, policy: &super::ImagePolicy) 
         for image in &images {
             let parsed = ImageRef::parse(image);
 
-            // An untagged image resolves to `latest` and is mutable in
-            // exactly the same way, so it is the same finding. It used to be
-            // silent because the tag was simply absent.
             if parsed.tag.as_deref() == Some("latest") || parsed.tag.is_none() {
                 diags.push(Diagnostic {
                     severity: Severity::Warning,
@@ -149,9 +142,6 @@ mod tests {
         }
     }
 
-    // Only `spec.template.spec.containers` had a test, so the other five
-    // paths were carried by nothing. One is what let a CronJob's init
-    // containers go unlinted while the lock rewrote them.
     #[test]
     fn every_container_path_is_read() {
         let cases: &[(&str, &str)] = &[
@@ -193,9 +183,6 @@ mod tests {
         assert!(diags.iter().any(|d| d.message.contains("':latest'")));
     }
 
-    // An untagged image resolves to `latest`, so it is the same mutable
-    // reference. It used to pass silently because the tag was absent rather
-    // than being the string "latest".
     #[test]
     fn an_untagged_image_warns_like_latest() {
         let r = dep_with_image("nginx");

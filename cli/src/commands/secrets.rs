@@ -243,15 +243,12 @@ fn get_lab_secrets(ctx: &CataContext, name: Option<&str>) -> Result<LabSecrets> 
     let lab_name = ctx.resolve_lab_name(name)?;
     let lab = nix::get_lab_spec(ctx, &lab_name)?;
 
-    // Was a `lab.pointer("/clusters")` walk that decoded each cluster's
-    // projections with `if let Ok(..)`, so a cluster whose projections did not
-    // decode was skipped without a word. `LabSpec` parses them at the seam, so
-    // there is nothing left to drop.
     let projections = lab
         .clusters
         .iter()
         .flat_map(|(cluster, spec)| {
-            spec.projections
+            spec.content
+                .projections
                 .iter()
                 .map(move |(name, config)| ClusterProjection {
                     cluster: cluster.clone(),

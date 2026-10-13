@@ -6,17 +6,113 @@
 # KUBERNETES_CLUSTER, and no member changes.
 {
   lib,
+  pkgs,
   floe,
   sigs,
   kinds,
   ...
 }:
 
+let
+  # Reads are the bulk of the traffic and the least of the interest.
+  # Dropping them first is what keeps the log readable at `Metadata`.
+  auditPolicyFor =
+    level:
+    pkgs.writeText "audit-policy.yaml" (
+      builtins.toJSON {
+        apiVersion = "audit.k8s.io/v1";
+        kind = "Policy";
+        rules = [
+          {
+            level = "None";
+            verbs = [
+              "get"
+              "list"
+              "watch"
+            ];
+          }
+          { inherit level; }
+        ];
+      }
+    );
+in
 floe.mkFloe {
   name = "k3d-cluster";
   summary = "A k3d cluster on the operator's docker host.";
 
   inputs = {
+    auditLogging = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = ''
+              Record what the API server was asked to do.
+
+              Off by default: it is the one control here that costs something at
+              runtime, and on a laptop lab the log is usually read never. Turned
+              on, it is the only way to answer what changed a resource after the
+              fact.
+
+              Here rather than on the cluster, because every field of it is a
+              flag and a mount for an API server *this floe* creates — a managed
+              control plane logs through its provider, and a cluster this lab did
+              not make has no server to pass flags to. The cluster module used to
+              hold it and reach into this variant through a per-provisioner hook
+              to inject it.
+            '';
+          };
+
+          level = lib.mkOption {
+            type = lib.types.enum [
+              "Metadata"
+              "Request"
+              "RequestResponse"
+            ];
+            default = "Metadata";
+            description = ''
+              How much of each request is recorded.
+
+              `Metadata` is who, what and when. `Request` adds the submitted
+              object and `RequestResponse` the returned one — both of which write
+              Secret contents to the log, which is why neither is the default.
+            '';
+          };
+
+          maxAgeDays = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 7;
+            description = "How long a rotated audit log is kept.";
+          };
+        };
+      };
+      default = { };
+      description = ''
+        Recording what the API server was asked to do.
+
+        Here rather than on the cluster, because every field of it is a flag
+        and a mount for an API server *this floe* creates — a managed control
+        plane logs through its provider, and a cluster this lab did not make
+        has no server to pass flags to. The cluster module used to hold it
+        and reach into this variant through a per-provisioner hook to inject
+        it.
+      '';
+    };
+
+    wait = lib.mkOption {
+      type = lib.types.str;
+      default = "10m";
+      description = ''
+        How long to wait for the API server to answer once the cluster has
+        been created.
+
+        Here rather than on the cluster, because how long a cluster takes to
+        come up is a property of what makes it. The wait for an *apply* to
+        settle belongs to whatever applies, and is `DELIVERY_POLICY`'s.
+      '';
+    };
+
     name = lib.mkOption {
       type = lib.types.str;
       description = "Cluster name, as members and the kubeconfig see it. Required.";
@@ -43,6 +139,24 @@ floe.mkFloe {
       description = "k3s node image. Pinned, not floating: a lab is reproducible or it is not.";
     };
 
+    network = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Docker network the cluster's containers join.
+
+        Filled in by placement, like `instanceName`: which network a cluster
+        shares is a fact about what else is on the host, and a floe is
+        instantiated before it is placed. Null for a cluster created outside
+        a lab, where k3d makes its own.
+
+        It was patched into the descriptor by the lab after the fact, through
+        a per-provisioner hook keyed on `k3d` — which is the placement rule
+        broken in code: the lab reached into one variant of a tagged union to
+        set a field the floe had declared null.
+      '';
+    };
+
     podSubnet = lib.mkOption {
       type = lib.types.str;
       default = "10.244.0.0/16";
@@ -50,22 +164,6 @@ floe.mkFloe {
         Pod CIDR. A decision, written down, not derived from the cluster's
         name: renaming a cluster would then silently move a running one's
         subnet.
-      '';
-    };
-
-    disableFlannel = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = ''
-        Start the cluster with no CNI at all.
-
-        The nodes then stay NotReady until something provides one, which is
-        the point: a cluster carrying both flannel and a replacement is a
-        manifest set that could never work, and the two would each write their
-        own datapath rules over the other's.
-
-        Set this alongside an `autoDeployManifests` entry that installs the
-        replacement. Setting it alone produces a cluster that never comes up.
       '';
     };
 
@@ -142,25 +240,71 @@ floe.mkFloe {
   };
 
   provides.cluster = sigs.KUBERNETES_CLUSTER;
-  out.cluster = kinds.cluster;
+
+  # Where this cluster is dialled. k3d's container naming is the only place
+  # the answer exists, which is what makes it this floe's to give rather than
+  # something the lab works out from a provisioner's name.
+  provides.edge = sigs.CLUSTER_EDGE;
+
+  # The CNI to start without flannel and apply instead, when the cluster this
+  # establishes has one. Optional, and so wired only when a deployer names it:
+  # a cluster that happens to contain cilium is not thereby a cluster whose
+  # provisioner starts with no network, which is a third decision and is made
+  # with `lab.defaults.CNI_BOOTSTRAP` or a `.bind`.
+  #
+  # Resolving it is what replaces a `disableFlannel` input and a hand-written
+  # `autoDeployManifests` entry that had to agree with it. Both halves now come
+  # from one place, so a cluster with no CNI at all and a cluster carrying two
+  # are states nobody can write.
+  optional.cniBootstrap = sigs.CNI_BOOTSTRAP;
+
+  # The pull-through cache a node pulls images from, when the lab runs one.
+  #
+  # Declared here because k3d can mount a containerd config at creation —
+  # which is the only reason a cluster can mirror at all. `talos-cluster`
+  # declares no such hole: talosctl takes machine config rather than bind
+  # mounts, so the file has no way to arrive. That was a lab turning the
+  # registry off with `mkForce false` under a paragraph explaining why.
+  #
+  # Resolving it is what puts the state directory in the descriptor.
+  # `create_cluster` used to join `service_state_dir(lab, "registry")` from a
+  # literal and probe the filesystem for the files, so whether a cluster
+  # mirrored was discovered at deploy rather than declared — a stale directory
+  # mounted a mirror nobody asked for, and a skipped `registry-setup` silently
+  # mounted none.
+  optional.ociMirror = sigs.OCI_MIRROR;
+
+  out.clusterDescriptor = kinds.cluster;
 
   modules = [
     (
       { config, lib, ... }:
       let
         inputs = config.floe.inputs;
+        cni = config.floe.requires.cniBootstrap;
+        mirror = config.floe.requires.ociMirror;
       in
       {
-        # The assembly point. Both the signature and the output kind are
-        # projections of this one node, so a changed input moves what
-        # deploys and what members read together. Computing the context
-        # twice is exactly what the projection rule forbids.
         options.kubeContext = lib.mkOption {
           type = lib.types.str;
           description = "kubectl context name k3d writes for this cluster.";
         };
 
+        options.edge = lib.mkOption {
+          type = lib.types.attrs;
+          description = "Where the lab's ingress dials this cluster's gateway.";
+        };
+
         config.kubeContext = "k3d-${inputs.instanceName}";
+
+        config.edge = {
+          backend = "k3d-${inputs.instanceName}-server-0";
+
+          httpPort = 80;
+          httpsPort = 443;
+        };
+
+        config.floe.provides.edge = config.edge;
 
         config.floe.provides.cluster = {
           inherit (inputs)
@@ -171,16 +315,13 @@ floe.mkFloe {
             ;
           context = config.kubeContext;
 
-          # k3s ships ServiceLB, so a LoadBalancer Service gets the node's own
-          # address and the gateway is reached on 80 and 443. That is the same
-          # fact `edge` projects outward, read from the other side.
           assignsLoadBalancers = true;
         };
 
-        config.floe.out.cluster = {
-          inherit (inputs) name;
-          provider = "docker";
+        config.floe.out.clusterDescriptor = {
+          inherit (inputs) name instanceName;
           kubeContext = config.kubeContext;
+          inherit (inputs) wait;
 
           kubernetes = {
             distribution = "k3s";
@@ -193,50 +334,47 @@ floe.mkFloe {
             inherit (inputs) podSubnet serviceSubnet;
           };
 
-          # The lab is this cluster's edge: it runs on the lab's own docker
-          # network, so the proxy reaches it by container name. RFC 0005 §6.4.
-          #
-          # The server node rather than a published port, because the proxy
-          # and the cluster share a network and the port a k3d cluster
-          # publishes to the *host* is a different thing entirely.
           edge = {
             mode = "proxy";
-            backend = "k3d-${inputs.instanceName}-server-0";
-
-            # k3s's ServiceLB binds these on the node itself, so the gateway's
-            # LoadBalancer Service is reachable at the node's name on the
-            # ordinary ports. A provisioner without it answers a NodePort.
-            httpPort = 80;
-            httpsPort = 443;
-          };
+          }
+          // config.edge;
 
           config.k3d = {
             clusterName = inputs.instanceName;
             inherit (inputs) image;
 
-            # Which docker network the cluster joins is a lab fact — the
-            # cluster does not know what else shares it. The lab fills it in.
-            network = null;
+            inherit (inputs) network;
 
-            # Traefik comes from the gateway floe, at a version this lab
-            # pins, so the one k3s bundles would be a second ingress nobody
-            # declared. The rest of k3s's batteries stay in: a floe that
-            # needs Cilium or OpenEBS turns the conflicting one off itself.
+            nodeConfigFrom = if mirror == null then null else mirror.name;
+
             noTraefik = true;
             noServiceLB = false;
             noLocalStorage = false;
 
-            # The lab's call, not this floe's. It used to be hardcoded false
-            # with a comment saying a floe that needs Cilium turns it off
-            # itself — which described a writeback from floe to cluster that
-            # the link graph has no direction for, and which is what kept
-            # cilium unmigrated.
-            noFlannel = inputs.disableFlannel;
+            noFlannel = cni != null;
 
             ports = [ ];
-            extraApiServerArgs = [ ];
-            extraVolumes = [ ];
-            inherit (inputs) extraK3sArgs autoDeployManifests;
+
+            extraApiServerArgs = lib.optionals inputs.auditLogging.enable [
+              "--audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"
+              "--audit-log-path=/var/log/kubernetes/audit.log"
+              "--audit-log-maxage=${toString inputs.auditLogging.maxAgeDays}"
+            ];
+
+            extraVolumes = lib.optionals inputs.auditLogging.enable [
+              {
+                hostPath = "${auditPolicyFor inputs.auditLogging.level}";
+                containerPath = "/etc/rancher/k3s/audit-policy.yaml";
+              }
+            ];
+            autoDeployManifests =
+              lib.optional (cni != null) {
+                inherit (cni) name;
+                path = cni.manifest;
+              }
+              ++ inputs.autoDeployManifests;
+
+            inherit (inputs) extraK3sArgs;
           };
         };
       }

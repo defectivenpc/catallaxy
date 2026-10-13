@@ -1,8 +1,12 @@
 # velero, alone.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  floeCore,
+}:
 
 let
-  support = import ./support.nix { inherit lib pkgs; };
+  support = import ./support.nix { inherit lib pkgs floeCore; };
   r = support.evalFloe {
     name = "velero";
     inputs = {
@@ -30,17 +34,16 @@ lib.runTests {
     expected = "true";
   };
 
-  # The bundle owns them, so the chart's hook must not also apply them — it
-  # re-applies on every upgrade.
-  testTheChartDoesNotInstallTheCrds = {
-    expr = [
-      values.installCRDs
-      values.upgradeCRDs
-    ];
-    expected = [
-      false
-      false
-    ];
+  # The bundle owns them, so the chart's upgrade hook must not also apply
+  # them — it re-applies on every upgrade.
+  #
+  # `installCRDs` was asserted here as well, against a value this chart does
+  # not have. The arrangement was never wrong — `helm template` does not render
+  # `crds/`, so the bundle is the only thing applying them — but the assertion
+  # was checking that a floe asks for something, not that it takes effect.
+  testTheChartDoesNotUpgradeTheCrds = {
+    expr = values.upgradeCRDs;
+    expected = false;
   };
 
   # Snapshots need a CSI driver that supports them and a filesystem backup

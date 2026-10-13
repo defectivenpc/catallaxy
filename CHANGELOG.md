@@ -7,6 +7,723 @@ The format is based on
 
 ## [Unreleased]
 
+### Changed
+
+- **A lab is a floe, and an environment instantiates it.** ADR 0010, which
+  supersedes ADR 0009. `modules/lab/` is deleted — 2,239 lines of option
+  tree to none. A lab is a `catallaxy.mkLabFloe` call declaring the inputs
+  its environments may vary; each `envs/*.nix` is one instantiation of it,
+  so what differs between `minimal.local` and `minimal.tls` is readable from
+  the definition's header rather than by merging five files.
+
+  `mkLab` takes that instance and is the four phases outside it: link, lower
+  each cluster, plan, lower the lab. They are outside because a body cannot
+  read its own units' link — ADR 0007 — and each is a read of it.
+  `lib/lower/link.nix` returns the link with the six folds every reader
+  shares, where four modules each computed their own.
+
+  Withdrawing a unit is `units.<n> = null` where the lab is instantiated,
+  where it was `lib.mkForce null`. `lab.clusters.<n>` is a plain
+  `{ floe; claim; }` record, where it was a 189-line submodule holding two
+  authored options and ten computed ones. `mkCluster` is a function, where
+  it drove one instance of that submodule by synthesising a whole `lab`
+  record.
+
+- **Two constructors over one frame.** A frame is the inputs every floe of a
+  kind has and the policies it is held to: a cluster's namespace controls, a
+  lab's nine identity inputs. `mkClusterFloe` is `mkFloe` over framed
+  arguments and nothing else; `mkLabFloe` is that plus a body.
+
+  This needed two fixes to the `floes` library, because the asymmetry
+  between the two was the library's rather than the domain's. An inclusion's
+  `defaults` may now be a function of `{ inputs, requires, collects, floe }`
+  like its `units` is, so a container whose units arrive as an input is
+  defined once rather than rebuilt per instantiation. And a `singleton`
+  provider needs no `defaults` entry when it is the only one, since the
+  linker already refuses a second — which deleted the fold every lab paid
+  for.
+
+- **`lab-secret` is `lab-authored-secret`.** It was one letter from
+  `lab-secrets`, which is the collector that folds every one of them, and
+  the two are a thing and a fold over all of them. The word it gained is the
+  distinction the code drew and the name did not: a floe wanting a random
+  credential mints one in its own bundle instead.
+
+- **The option reference is the plan step schema and nothing else.**
+  `options/lab.md` is deleted: a lab is a floe, so its inputs render through
+  `nix/floe-docs.nix` from the same declarations every other module's page
+  comes from. The step schema is `nixosOptionsDoc` over exactly the module
+  `lib/eval/step-type.nix` exports and the merge uses, so a schema page
+  cannot describe a field the merge would reject.
+
+- **Comments inside a body are gone** — 2,835 lines across Nix and Rust.
+  CLAUDE.md asks for none, and the history they carried is in this file and
+  in the ADRs. The rule applied was positional rather than editorial, and
+  verified per file by AST: `nix-instantiate --parse` strips comments, so an
+  unchanged AST proves every deleted line was one.
+
+- **The lab's behaviour is floes.** ADR 0006. Eleven lab-scope floes where
+  there were five. `modules/lab/` was left holding the deployer scalars, the
+  per-cluster lifecycle steps and the lowering; it is gone now too, see **A
+  lab is a floe** above.
+
+  `catallaxy.labSteps` is the one channel a floe contributes a plan step
+  through. It was a `steps` field on `catallaxy.hostService`, which made
+  running a container and contributing a step one declaration. A floe says
+  _when_ with `beforeClusters` / `afterClusters` — it has no name for a
+  cluster it is not in — and the lab expands each into one anchor per
+  cluster.
+
+  `floes.lab-network` provides `LAB_NETWORK`; `lab-proxy`, `lab-dns`,
+  `lab-egress` and `lab-zone` resolve it instead of being handed the
+  address. `floes.lab-ca` provides `LAB_CA` and mints the root.
+  `floes.lab-secrets` and `floes.lab-delivery` are collectors — they answer
+  nothing and exist to do the fan-in — and `modules/lab/cd.nix` deletes with
+  the second.
+
+  `lab-delivery`'s handover steps name a cluster, which a lab-scope floe
+  normally cannot. They may here because the name is the _collection's key_:
+  it is the cluster that said it runs Argo, not one the floe went looking
+  for. `DELIVERY_POLICY` gained `context` for the same reason — the applier
+  projects it from the cluster it resolved, where `cd.nix` read it off a
+  lowered spec a unit of the link cannot see.
+
+### Added
+
+- **`prose-writes-no-options`**, a check refusing an assignment to
+  `lab.<path>` in `docs/book/`, `README.md` or `CONTEXT.md`. A lab is a
+  floe, so those name a surface that does not exist, and a reader copying
+  one gets "The option `lab.name' does not exist". It found thirteen, five
+  of which predated the option tree's removal.
+
+- **A lab answers to the name it was discovered under.** `allocations.json`
+  is keyed by the discovered name while every host port and the subnet come
+  from the written one, so a mismatch moved a lab's whole allocation without
+  moving the row recording it.
+
+### Fixed
+
+- **`docs/book/src/reference/images.md` promised four features that do not
+  exist.** `lab.images.{requireDigest,allowedRegistries}` are fields
+  `lib/lower/lab.nix` emits empty with nothing able to set them;
+  `lab.images.pins`, `lab.images.publish` and its `publish-images` step kind
+  never existed at all. The page says which is which now.
+
+- **`lint.md` documented custom checks as a lab option.** A check is
+  declared on the bundle it is a claim about, which is why
+  `floes/components/gateway/` has two. `step-kinds.md` inlined a step schema
+  with four fields the type does not have.
+
+- **A lab with a proxy minted two certificate roots.** `minimal.talos`,
+  `self-edge` and `cloud` each ran an ingress — so the lab minted a root and
+  HAProxy served from it — while `cert-manager`'s `rootFromLab` defaulted
+  false, so the cluster minted a second over the Secret `cata lab up` had
+  already seeded. Two chains, a client trusting one rejecting the other, and
+  nothing failing loudly enough to say why, which is what that option's own
+  description warned about. Its instruction was "set it exactly when
+  `lab.proxy.tls.enable` is on" — prose, unchecked, and unfollowed.
+
+  Resolving `LAB_CA` is what says it now, so the combination is
+  unrepresentable. Four fixtures drop from three issuer resources to one.
+
+### Removed
+
+- `lab.proxy.tls.enable`, set by no lab: it defaulted true and every proxy
+  lab took the default, so the TLS-off branch was untested at lab level. A
+  lab terminates TLS when it holds a `lab-ca`.
+- `lab.dns.server`, an option defaulting to `lab.network.gateway` that
+  nothing overrode. `LAB_NETWORK` answers it.
+- `rootFromLab` on `cert-manager` and the two cluster floes that threaded
+  it, with the assertion that compared a computed Secret name against a Rust
+  literal — the address travels on `LAB_CA`, so there is nothing to compare.
+
+- **The plain `mkLab` and the flat `lab.units` are retired, not built.** ADR
+  0003's last two predictions, with the measurement that refutes them
+  recorded beside them.
+
+  Its argument was that every environment override is already a whole-unit
+  swap. Five of the ten `envs/*.nix` override a deployer scalar their
+  `lab.nix` set with `mkDefault`, which is affordable — what is not is the
+  dozen scalars that derive from another (`dns.port` from `hostPort`,
+  `network.gateway` from `subnet`, four host ports from allocation, every
+  container name from `lab.name`). The ADR's plan for those was
+  `LAB_NETWORK`, which is itself retired, so there is nothing left to
+  resolve them against: a plain function reimplements option defaults by
+  hand, with no types and nothing for `nixosOptionsDoc` to read — which
+  would delete `docs/generated/options/` and two checks with it.
+
+  Flattening `lab.clusters.<c>.{floe,claim}` costs the pairing. Writing a
+  claim under its cluster is the whole of saying which answers which; flat,
+  that is a `<cluster>-claim` convention a deployer spells — the string
+  pairing ADRs 0004 and 0005 were spent removing.
+
+  The one thing the asymmetry did cost is already fixed: a name in both
+  `lab.units` and `lab.clusters` replaced rather than merged, and that is a
+  throw at the link naming both sides.
+
+- **A cluster declares the mirror it pulls through.** `lab-registry`
+  provides `OCI_MIRROR`; `k3d-cluster` takes it as an optional hole, because
+  k3d can mount a containerd config at creation. `talos-cluster` declares
+  none, which is the whole of why a Talos lab does not mirror.
+
+  `create_cluster` used to join `service_state_dir(lab, "registry")` from a
+  literal and probe the filesystem with `.exists()`, so whether a cluster
+  mirrored was decided at deploy by what happened to be on disk: a stale
+  directory mounted a mirror nobody asked for, and a cluster whose
+  `registry-setup` had not run mounted none and said nothing. The descriptor
+  carries `nodeConfigFrom` — the providing floe's unit name, which is its
+  state directory — and a declared mirror whose file is missing is now an
+  error naming the step that writes it.
+
+  It is in `ClusterShape` too: the mount is fixed at creation, so turning
+  the registry off or renaming it leaves a running cluster whose nodes still
+  pull through the old one. `cluster_drift_sees_every_declared_field` is
+  what insisted on that, and it was right.
+
+  A lab running a registry no cluster can pull through is refused, naming
+  the provisioner that declares no hole. A provider nobody reads is not a
+  link error — only an unfilled hole is — so ADR 0003's claim that the
+  linker would catch this was wrong, and the lab catches it instead.
+
+- **A cluster's namespace controls are its floe's inputs.**
+  `modules/lab/cluster/security.nix` is deleted and `mkClusterFloe` gives
+  every cluster floe `podSecurity` and `defaultDenyNamespaces`. Pod Security
+  Admission and a default-deny NetworkPolicy are the two controls about
+  _every_ namespace in a cluster, so they belong to the thing that owns all
+  of them — and a component floe declaring either would be declaring it
+  about its neighbours' namespaces.
+
+  `minimal.local` re-instantiates its cluster floe rather than setting
+  options beside it, which is the same shape the claim override below it
+  already has. Nothing it renders moved: the digests are byte-identical.
+
+- **The docker network reaches k3d through placement.** It was patched into
+  the descriptor afterwards by a per-provisioner hook keyed on `k3d` — the
+  lab reaching into one variant of a tagged union to set a field the floe
+  had declared null. `k3d-cluster` declares a `network` input and placement
+  fills it, beside `name` and `instanceName`, because which network a
+  cluster shares is exactly the kind of fact only placement knows.
+
+  No `LAB_NETWORK` signature. ADR 0003's table proposed one, and the thing
+  that was actually wrong is fixed without it: the host floes take the
+  network as an input from the module that owns `lab.name` and instantiates
+  them, which is the merge surface meeting the floe surface rather than a
+  fact travelling without an edge.
+
+- **A lab store is a floe, and a reader resolves it.** ADR 0005.
+  `floes.lab-secret-store` provides `LAB_SECRET_STORE`; `floes.lab-secret`
+  requires one and provides `LAB_SECRET`. Both are units of the lab's link.
+
+  Six places named a store or a secret by string and none was checked: a
+  projection's `source`, the in-cluster `secret-store`'s `labStore`, the
+  publication coordinates on `doks`, `provisioned` and `external-cluster`,
+  and `lab.secrets.managed.<s>.store`. The last had an assertion comparing
+  the string against the declared stores — resolution, written out by hand.
+  A typo in `source` applied a Secret `cata` had no values for and whatever
+  mounted it waited forever.
+
+  `LAB_SECRET` carries its key list, so a projection reading a key the
+  secret does not hold is refused where the projection is written.
+  `writable` stops being a flag: it follows from the backend, where
+  `secret-store` took it as an input beside the store's name and could
+  disagree with it.
+
+  `lab.secrets` is down to `envFile`. A lab with one store and one secret
+  writes no bindings; `every-floe` has three and two and binds all five.
+
+- **`.bind` was not chainable, and a cluster's claim dropped bindings.** Two
+  shapes of one bug. In the floes library `bind` closed over the instance it
+  was read off, so every call folded onto `{ }` and a second `.bind`
+  discarded the first — and since the lab binds a cluster's claim as it
+  places the cluster, every deployer-written `.bind` on a cluster floe was
+  being thrown away. `withPlacement` re-instantiated a claim to fill in its
+  placement, which dropped bindings the same way. Both fixed; the floes side
+  has a test for the accumulation.
+
+- **A lab unit may not share a name with a cluster or its claim.** All three
+  are units of one link joined with `//`, so a collision replaced rather
+  than failed and whatever the loser provided was simply absent — surfacing
+  as `attribute 'delivery' missing` from `cd.nix`, naming neither. A throw
+  at the link, because that lowering runs before anything reads assertions.
+
+- **The ingress is a floe, and the provisioner says where to dial.** The
+  second half of ADR 0004. `floes.lab-proxy` collects `HOST_EXPOSURE` and
+  builds its host map from it; `modules/lab/host/proxy.nix` is the merge
+  surface in front of it and nothing more.
+
+  The address it dials is a `CLUSTER_EDGE` the provisioner provides —
+  `k3d-<instance>-server-0` on 80 and 443, `<instance>-controlplane-1` on
+  the gateway NodePorts, nothing from `external-cluster`. Every one of those
+  is the container naming of the tool that made the cluster, so there is
+  nowhere else it can live. It travels inside the exposure rather than as a
+  second collection, because a route needs the hostnames and the address
+  together.
+
+  `edge.mode` is gone: whether the lab fronts a cluster is said by whether
+  that cluster exports its exposure, and a lab exporting an exposure its
+  provisioner gave no address for is refused by name.
+  `lib/eval/exposure.nix` and `lab.edges` delete, and so do `EdgeSpec` and
+  `EdgeMode` in the CLI.
+
+  The document carries `routedHosts` instead — every hostname the lab
+  answers for, keyed by the cluster that serves it, read off the same
+  exports the ingress builds its `use_backend` lines from. `cata lab verify`
+  was the last reader of the mode and now filters per hostname rather than
+  per cluster, which is a case the mode could not express: a fronted cluster
+  rendering a route nothing claimed. That is the kanidm failure below, and
+  `verify` would have probed it through an ingress with no backend and
+  blamed the workload.
+
+  Two fixtures were asking to be fronted while their claims could not answer
+  — `cloud`'s and `provisions`' external workload clusters, each kept out of
+  the routing by a `mode = "self"` that had to agree with the export. One
+  statement now.
+
+  `kanidm` was routed by HAProxy and answered by no DNS record, because its
+  route is rendered by kaniop rather than by the manifests and a
+  `routedHosts` escape hatch told only the scan. It claims its hostname now,
+  and `checks.lab-routed-hosts-are-claimed` refuses the next one.
+
+- **A cluster floe is written, not assembled.** The first half of ADR 0003.
+  `lab.clusters.<c>.floes` is gone; a cluster is an authored floe placed at
+  `.floe`, with the provisioner that establishes it beside it at `.claim`.
+
+  What this buys is one property: a floe's interface has to be readable from
+  its header before anything evaluates, and a synthesized one is readable
+  only after. `openOf` scanned a bag of instances for unanswered holes,
+  `provides` came from a `labReads` list plus the `crossable` table, and
+  arity was recovered afterwards by `policies.oneCluster` counting link
+  output. All four are deleted; the claim's arity comes from resolution
+  instead, naming the hole.
+
+  Two labs turned out to be reassembling `standard-cluster` one floe at a
+  time — `minimal` and `gitops` wrote out its CRDs, issuer, trust and
+  gateway by hand, where `homelab` had composed it all along. `minimal.tls`
+  is two input values rather than two added floes and two `mkForce`s.
+
+  Cilium is one floe again. It owned a `mkBootstrapManifest` a lab called
+  and handed to `k3d-cluster` alongside `disableFlannel = true`, with three
+  of its inputs documented "must match what `mkBootstrapManifest` was given"
+  and nothing checking that they did. `k3d-cluster`'s own comment named the
+  blocker as a writeback the link graph had no direction for — and a claim
+  beside its cluster is that direction. `CNI_BOOTSTRAP` carries the
+  manifest, `noFlannel` is derived from the resolved hole, and a cluster
+  with no network or with two is a state nobody can write.
+
+  `catallaxy.crossable` is replaced rather than ported. It answered a real
+  question — which fields of a provision still mean anything elsewhere — in
+  the wrong place: keyed by signature while claiming crossing is a property
+  of the boundary, joining each signature to a hand-written twin so one fact
+  lived in three files, and encoding its refusal as a missing key. It was
+  never the sharing mechanism either; resolution was. `MESH_NETWORK_SHARED`
+  is a `floe.project` of `MESH_NETWORK`, `X509_ISSUANCE_SHARED` is deleted
+  as dead surface, and `MESH_OPERATOR` and `MESH_ADMIN` say
+  `mayExport = false`. Floe's ADRs 0011 and 0012.
+
+  `nix/checks/lab-scope.nix` is rewritten rather than ported: 324 lines down
+  to six cases, because most of what it pinned was the shape of an offer,
+  which the library now refuses by name. Two of the six were never checked
+  before — that each cluster resolves _its own_ claim, and that the claim's
+  descriptor reaches elaboration at all.
+
+  And it found an ordering defect older than the migration. A consumer
+  beside an inclusion resolved against the inclusion, which declares no
+  bundles of its own, so the edge had no target and vanished: `homelab`'s
+  kanidm, forgejo and harbor were applied before the issuer and gateway they
+  read. Nothing failed, because a Certificate against a missing issuer
+  reconciles when one lands — correct by luck, which is not an ordering
+  constraint. Floe's ADR 0013 carries the backing unit through, and
+  `homelab` gains three waves.
+
+- **Decided: a lab is a link, and the host is a unit of it.** ADR 0003,
+  whose second half — the host services as floes — is not built yet.
+
+  The question was whether wrapping floes in a NixOS submodule was the right
+  design, with `types.raw` as the evidence. Measured, that evidence pointed
+  elsewhere: of 178 `mkOption` calls in `modules/lab/`, 25 are `readOnly`
+  lowering outputs on their way to `cli/src/domain/`, ~82 are plan-step
+  parameter schemas in plain attrsets nothing ever `evalModules`, and ~60
+  are genuine deployer scalars the module system is uniquely good at.
+  Exactly one authoring-surface option was untyped.
+
+  The real defect was that a cluster's signature is _synthesized_ — `openOf`
+  scanning the bag for holes, `provides` from a `labReads` list and the
+  `crossable` table, arity recovered afterwards by `policies.oneCluster` and
+  `policies.oneDelivery` counting link output. `floes/lib/refusals.nix` says
+  why that cannot stand: a floe's interface has to be readable from its
+  header before anything evaluates, and `units` is a function of `inputs`,
+  so holes cannot be inferred. A synthesized signature is one nobody can
+  read.
+
+  The host becomes a unit for a reason already visible as a defect:
+  `modules/lab/host/proxy.nix` and `modules/lab/network/dns.nix` fan in over
+  every cluster's `exposedHosts` with the same filter written twice, and the
+  second one says so in a comment. That is `collects` done by hand.
+
+  What it costs: the deliberate stratification in `modules/lab/types.nix` is
+  traded for `T.derivedFrom`, per field rather than per layer. What it does
+  not reach: the subnet and host-port allocator stays outside the link,
+  because a link cannot see another lab.
+
+- **A cluster document is a claim and its content.** `ClusterSpec` was a
+  product of seven faces, three of which described something other than the
+  cluster: the operator's machine, the lab's routing, a lab name. It is four
+  blocks now — `claim` and `content`, which are what a cluster _denotes_,
+  plus `provisioning` and `delivery`, the two functions either side of that
+  pair, carried because `cata` is what applies them.
+
+  One rule placed everything that moved: a field lives where the thing it
+  describes lives. `colima` is `cata` configuration from the environment.
+  The single `waitTimeout` was two waits sharing a name — an API server
+  answering, and an apply settling — and each sits with the process that
+  waits. `edge` is on the lab, keyed by cluster. Host state keys on
+  `instanceName`, unique on the host by construction.
+
+  Deleting the four `serde(flatten)` catch-alls made
+  `cli_parses_nothing_it_ignores` mean something, and it found five fields
+  that were parsed and never fed or emitted and never read: `FloeSpec`
+  entirely (Nix emitted `{enable = true;}`, so a floe's namespace was its
+  own name guessed and its version printed as `?`), `provider` (a string
+  beside a union whose key says it), `ProvisionerKind::Crossplane` (a
+  variant no producer could emit, with two unreachable match arms),
+  `ClusterTrust` (a writer nothing in Nix could feed), and
+  `ComponentSummary.domain`, which made the topology's proxy-route pass
+  produce zero edges in every lab since it was written. `runtimeContexts`
+  and `labNamespaces` said twice what a cluster already says once.
+
+  Every manifest digest and every plan snapshot is byte-identical: what a
+  cluster _is_ changed, not what it renders or what it runs. See
+  `docs/cluster-spec.md` and ADRs 0001 and 0002.
+
+- **One cluster bringing another into existence is a hole, not a
+  declaration.** `lab.clusters.<mgmt>.provisions.<provisioned>` is gone.
+  `floes.provisions-cluster` sits in the management cluster and provides
+  `CLUSTER_PROVISIONING` — the coordinates of the object that reconciles
+  into a cluster — and `external-cluster` reads them through an optional
+  hole, so the CR's name is written once and the cluster that results reads
+  it rather than restating it.
+
+  The direction is what makes it a signature: the management cluster holds
+  it, because a cluster naming what creates it would be a container's
+  provisions depending on its contents. Which cluster fills the hole is
+  `lab.defaults.CLUSTER_PROVISIONING`, the lab's half of
+  `lab.clusters.<c>.defaults` and new with this, since an optional hole is
+  never wired by a provider merely being present.
+
+  Three assertions went with the declaration, because a link says them by
+  construction: a hole resolves only against a unit of the lab's link, so a
+  management cluster cannot name a cluster the lab does not have; the hole
+  is on `external-cluster`, so nothing else can be the thing created; and a
+  hole has one provider, so two clusters claiming one cluster is the
+  ambiguity error rather than a count. Both plan snapshots are
+  byte-identical — the planner derives the same steps from the edge that it
+  derived from the declaration.
+
+- **A projection is a floe, so a lab hands a cluster nothing.**
+  `lab.clusters.<c>.secrets.project` is `floes.secret-projection`, which
+  emits a `catallaxy.projections` kind the elaborator folds with every other
+  floe's output. It was the last lab-supplied _content_: `elaborateCluster`
+  took the map as a parameter and synthesised a bundle per entry on the
+  cluster's behalf, which is what `labBundle` used to do for the secret
+  sharing that is now floes too. The elaborator takes no lab content at all.
+
+  One derivation got more complete on the way: a bundle that _fills_ a
+  Secret now waits for the namespace holding it, derived from the address
+  the way a bundle rendering an object into a namespace already was. The
+  hand-built projection bundle set that edge explicitly, so a floe-declared
+  one would have had none.
+
+- **A cluster can be written with no lab around it.** `mkCluster` evaluates
+  the same option surface a lab writes under `lab.clusters.<name>`, and
+  `examples/clusters/minimal.nix` is the first cluster in the tree that is
+  not inside one. The lab reads of the cluster module turned out to be three
+  — its name, the proxy a cluster may be reached through, and the link — and
+  a standalone cluster answers each: its own name, no proxy, and a link of
+  exactly one unit.
+
+  That last one is the definition doing the work. A link of one unit refuses
+  an unfilled hole, so a cluster that does not answer everything it needs is
+  a _component_ and the thing that fills the hole is what a lab is. The
+  fixture holds its own `DNS_ZONE` for exactly that reason: a gateway needs
+  one, a lab usually hands it down, and holding its own is what closing the
+  cluster means.
+
+- **Cross-cluster secrets are a link, not a pair of lab options.**
+  `lab.clusters.<c>.secrets.publish` and `.subscribe` are gone, with the
+  address scheme behind them and the five assertion families that stood in
+  for what the mechanism could not say. Both sides derived
+  `<lab>/<cluster>/<namespace>/<secret>` independently, and a name that did
+  not match on both left an ExternalSecret waiting forever on a key nothing
+  wrote — indistinguishable from a store that is merely slow.
+
+  `floes.secret-publication` pushes a Secret the cluster holds and
+  _provides_ `PUBLISHED_SECRET`: the store it went into, the key it was
+  written under, and which keys travelled. `floes.secret-subscription`
+  requires that and reads the key off it. The producer names the key once;
+  nothing is derived twice, so there is nothing for an assertion to compare.
+
+  Every refusal is now a mechanism. "No store in this cluster" is an
+  unfilled `SECRET_STORE` hole — a ClusterSecretStore is not shared between
+  clusters, only the backend behind it is. "The store is read-only" is a
+  field of what the store provides. "Nobody publishes that" is a hole with
+  no provider. And both sides being pointed at one backend is the
+  subscription comparing two store names that are each derived from the lab
+  store behind them.
+
+- **`promisedHostsAreRouted` derives which units carry a value from
+  elsewhere** instead of being handed the list. A unit that provides
+  something and installs nothing is not installing whatever answers for the
+  hostname, which is the whole of what the parameter meant — and the list it
+  was given held only the crossing units, so a floe like `kapp` that answers
+  a signature and renders nothing sat outside it and was asked to route what
+  it does not run. The policy also had no test; it has both directions now,
+  since the half that must _not_ fire is the interesting one.
+
+- **`lab.clusters.<c>.edge` is `lab.edges.<c>`.** An edge describes whatever
+  routes to a cluster, which is the lab's proxy or nothing, and a cluster
+  that does not know it is in a lab cannot answer for it. Every field still
+  defaults to what that cluster's provisioner said, since where a cluster is
+  reached from follows from how it was made; the option exists so a lab can
+  override one, which `self-edge` does.
+
+- **The wave summary is checked against the tree it summarises.**
+  `content.waves` is carried so that reading the install order needs no
+  build, which makes it a cache — a second place one fact lives, and
+  therefore something that needs a law rather than a comment.
+  `content-cache-<lab>-<cluster>` walks the rendered wave directories and
+  compares. A bundle that moved wave, a rename that reached the renderer and
+  not the summary, or a projection landing elsewhere leaves both sides
+  internally consistent and passes every digest; this is what notices.
+
+- **A cluster stands up from its own document.**
+  `cata cluster up --from-file <document>` provisions the claim and
+  converges the content with no lab in the path: no flake to resolve, no lab
+  name, no lab package to look inside. `.#clusters.<lab>.<cluster>` builds
+  the artifact it reads — `cluster.json` beside a `manifests` symlink — and
+  `content.tree` is the field that makes it possible, since a document that
+  named no tree needed a lab package to find one.
+
+  It is the operational test of round 2's question, and it found a leak on
+  its first run: k3d provisioning resolved a lab name in order to expand
+  `{{STATE_DIR}}` in a node mount. A cluster on its own resolves that
+  against its own state directory now, keyed by `instanceName`.
+
+  `cata cluster parse <document>` is the same read without the side effects,
+  and one check per cluster runs it over every cluster in the tree — the
+  sandbox-safe half of the same question, since a sandbox has no docker.
+
+- **A cluster says how its content reaches it.** `DELIVERY_POLICY` is
+  resolved per cluster now, against the cluster's own providers, and
+  `policies.oneDelivery` refuses a cluster that answers nothing or answers
+  twice. Absence used to mean kapp — decided by `modules/lab/cd.nix` finding
+  no provider anywhere in the lab — so a lab that meant to run Argo and
+  forgot to add it was applied by hand, quietly, and every cluster document
+  asserted a strategy nothing had chosen. Two clusters delivering
+  differently was an assertion refusing it; it is now a thing to want.
+
+  `floes.kapp` is the floe for the ordinary case, in a `delivery` group
+  beside the components, and holding it next to a CD tool is two providers
+  of one signature — which is the question being asked. `DELIVERY_POLICY`
+  gained `waitTimeout`, so the apply's wait sits on whatever applies rather
+  than on the cluster beside a provisioning wait of the same name.
+
+- **Presets are floes whose units are floes.** Inclusion lives in the floe
+  interface, so `mkPreset` and `floes/presets/` are gone and
+  `standard-cluster` is an ordinary floe in `floes/clusters/` with `units`
+  and `exports`. It leaves its claim open — the cluster sits beside the
+  assembly rather than inside it — which is what replaces the `provisioner`
+  input that smuggled a floe instance through a surface that deep-forces its
+  arguments. `floes/cluster/` is `floes/components/`, which is what those
+  thirty-six floes are.
+
+### Added
+
+- **A resource a floe renders is checked against Kubernetes' own schema.**
+  Nothing checked them before. `bundleSchema.resources` was
+  `T.attrsOf T.any`, so `spec.replicas = "three"` evaluated, built, and was
+  refused by the apiserver — and a misspelled field was worse than refused,
+  because a structural schema prunes it silently and the floe looks like it
+  worked. The generated types describing every one of those fields were
+  already in the tree, and nothing consulted them.
+
+  `mkBundle` now checks each resource against the schema its own
+  `apiVersion` and `kind` name. It **validates rather than substitutes**,
+  and the difference is not cosmetic: typing the option would replace the
+  resource with every field its schema declares, so a field nobody set
+  arrives as `null`, `r ? field` starts answering true for fields that are
+  not there, and a resource stops comparing equal to the constructor that
+  built it. All three are load-bearing — `secret-refs.nix` reads
+  `imagePullSecrets or [ ]`, a floe suite filters on `m ? subPath`, another
+  compares a whole route against `mkRoute`. Checking and discarding keeps
+  every catch and costs none of it.
+
+  Three classes closed, in order of how quietly they used to fail. A
+  **misspelled field** now fails evaluation naming the option path:
+  `freeform_type` defaulted to true in the generator, which made every
+  object schema accept undescribed fields regardless of what the schema
+  said. It follows `x-kubernetes-preserve-unknown-fields` now, which three
+  schemas in the core API declare. The **top level** is closed too — only
+  `properties.spec` was converted, so `Role.rules`, `RoleBinding.roleRef`
+  and `Secret.type` had to pass through a freeform escape that also let
+  `metadataa` through; all authorable top-level fields are generated now.
+  And a **required collection** is required: nixpkgs' `emptyValue` meant a
+  required `listOf` read as `[ ]` while a required scalar failed, so the
+  guarantee held for `spec.replicas` and not `spec.sources`.
+
+  `status` is refused with a message. It belongs to whatever controller
+  reconciles the object; the apiserver discards one sent with an apply, so
+  writing it reads as configuration and does nothing.
+
+- **CRD types are filed by API group, generated from the chart that installs
+  them.** The generated CRD types were one flat namespace of fifteen files
+  named after whichever source they were read from, so installing cilium put
+  cilium's kinds in scope for a lab running no cilium, and the file a group
+  lived in was a filing decision rather than a fact — `cert-manager.io` and
+  `acme.cert-manager.io` shared one file while `trust.cert-manager.io` sat
+  in another, installed by a different floe. Sixteen groups, one file each,
+  keyed verbatim so the index key, the filename and the `apiVersion` a floe
+  writes are one string with nothing mapping between them.
+
+  They are also generated from the artifact that gets applied.
+  `lib/charts.nix` already extracted every chart's CRDs from the same pinned
+  chart the floe installs, and `cata-build generate` already consumed CRD
+  YAML; nothing joined them, so the types came from a separately pinned
+  fetch and could describe a different release than the cluster would get.
+  `nix/crd-types.nix` is that join, and the declaration of which kinds are
+  checkable at all.
+
+- **A chart value is checked for having any effect at all.**
+  `helmCharts.*.values` is untyped and Helm ignores a value it has no
+  setting for, so the largest hand-authored surface here — 1449 value paths
+  across 116 instantiations — failed in silence. Four values were doing
+  nothing, and `argocd`'s was running an extra ApplicationSet controller in
+  every lab that runs argocd, in a block whose comment is about not running
+  workloads a lab does not need. Two floe suites asserted on two of them and
+  were green throughout: a test over a floe's values can say what was asked
+  for, never that the chart honours it.
+
+  `chart-values` renders each chart with and without each written value and
+  compares. Static detection was tried four ways and each leaked —
+  `values.yaml` omits settings charts honour, free-form sections pass
+  arbitrary keys through, Helm reads `Chart.yaml` dependency conditions
+  itself, and `index .Values "grafana.ini"` defeats any search for
+  `.Values.<path>`. A render settles all of it, and at ~60ms each with
+  instantiations deduped it is 15 seconds. A value _equal to the chart's
+  default_ is reported as nothing: it pins behaviour against upstream
+  changing that default, which is the opposite of the mistake. The check
+  also states that 12 of 21 charts ship no `values.schema.json`, so a wrong
+  type on a real setting still renders.
+
+- **Two checks over the generated tree.** `generated-types` diffs the
+  committed tree against what its sources produce now — joining the
+  generator to `lib/charts.nix` makes drift visible rather than impossible,
+  since bumping a chart leaves the committed types describing the release
+  before. `crd-coverage` refuses a rendered kind with no generated schema,
+  because `conform.nix` checks such a kind against nothing and used to say
+  nothing, making an `apiVersion` typo indistinguishable from a kind nobody
+  has generated types for. Its exemption is derived — a bundle that declares
+  `crds` while carrying no `yamls` or `helmCharts` installs no CRD content,
+  so its kinds arrive at runtime — which means it cannot go stale the way a
+  list of names would.
+
+### Changed
+
+- **The floe library lives in its own repository** and arrives as the
+  `floes` flake input. `lib/floe-core/` is gone; what remains here is the
+  distribution: the signature catalogue, the component monoid, the
+  elaborator and the renderer.
+
+### Removed
+
+- **What belongs in `floes/` and what belongs in `modules/lab/`**, which was
+  decided 45 times and written down nowhere. One test: could someone drop
+  theirs in its place? `floes/` is a catalogue of units a consumer can
+  `removeAttrs` and replace; `modules/lab/` is the shape of the declaration
+  they write and the lowering from it. Emitting Kubernetes resources does
+  not make something a floe and emitting none does not disqualify it —
+  `floes/lab/zone.nix` installs nothing and is one,
+  `modules/lab/host/proxy.nix` runs a container and is not.
+
+  `modules/lab/cluster/security.nix` is the one exception and stays: its Pod
+  Security Admission labels and default-deny policy are about _every_
+  namespace in the cluster, including ones other floes create.
+
+  A group in `floes/default.nix` says where the unit sits — `provisioners`
+  is the claim, `components` are in a cluster, `clusters` are assemblies of
+  them, `delivery` is how content arrives, `lab` is lab scope. Which is why
+  `lab` has one member and that is not a smell.
+
+  Written, not checked: the mechanical form would need
+  `modules/lab/cluster.nix` exempted by name, since it builds the cluster's
+  own floe.
+
+- **`floes.lab-dns` is `floes.coredns-zone`.** It is a ConfigMap teaching a
+  cluster's CoreDNS about the lab's zone; `lab.dns` is a Knot container on
+  the host. Two unrelated things sharing a name, one in each of the two
+  trees above, which is most of why the trees looked interchangeable.
+
+- **`mkComponentFloe`.** It was `mkFloe` with `requires.cluster` and
+  `out.component` merged in, which read as a second species of floe — 38
+  floes called it, two in the same directory did not, and the rule telling
+  them apart ("does it emit the component kind") was nowhere at the call
+  site. There is one constructor, spelled `floe.mkFloe` everywhere, and
+  every floe writes the two lines out.
+
+  A floe's header is supposed to be the whole of what it promises. The sugar
+  made 38 of them quieter about their primary requirement and their primary
+  output than about anything else they declared. The generated interface
+  pages are byte-identical, which is the point: nothing about the interfaces
+  changed, only whether you could read them.
+
+- **Derived e2e eligibility, and the whitelists that replace it.**
+  `lab.out.selfContained` answered "can CI stand this lab up unattended"
+  from eight derived reasons, `lab.out.cloudE2e` answered the billable
+  version from its own, `lab.unstable` was a string one lab set to stay out
+  of the matrix, and two checks pinned the tables the predicates produced.
+  Three runners then re-derived the answer before acting on it.
+
+  The question has a handful of possible answers and changes a few times a
+  year, so it is written down: `e2eLabs` is a list of names in `flake.nix`
+  and `cloudE2eLabs` maps a name to what it needs in the environment. A
+  runner checks membership and acts; adding or removing a lab is one line,
+  and the diff says which.
+
+  The CLI's half of it was already dead: `LabSummary` carried `eligible` and
+  `reasons` read from `lab.selfContained`, which the document never emitted,
+  so the "needs ..." lines under `cata lab list` could not print.
+
+- **The RFCs.** Five design documents maintained by hand against a tree that
+  had moved past them — RFC 0002 described constructors that were never
+  built, RFC 0001 carried a status table of five abandoned deliverables, and
+  each had grown a header block translating its own vocabulary into the
+  tree's. A document whose first section explains how to read the rest
+  against the code is no longer describing the code. The 166 citations
+  pointing into them are rewritten to state their claims directly, and
+  `rfc-refs` goes too — it checked that every `§N` resolved to a section
+  that existed, which is a check with nothing left to check.
+
+- **~620 lines of hand-written Kubernetes types.** `kubernetesResourceType`,
+  `bundleType`, `helmChartType`, `readyProbeType` and `specTypeFor`
+  described the same objects the generator describes and listed their
+  top-level fields by hand. Nothing imported any of it. `conform.nix`
+  resolves the generated type directly now, which is less code and strictly
+  more complete — the generated type knows `Secret.immutable` and
+  `ClusterRole.aggregationRule`, and the hand-written one did not.
+
+- **24 MB of generated types nothing could reach**: three Kubernetes API
+  versions no provisioner selects, and the `capi_operator`, `argocd` and
+  `cilium` CRD groups, none established by any bundle. 42 MB to 18 MB.
+
+### Fixed
+
+- `lib/kubernetes/types.nix` blamed null defaults for not catching a missing
+  required field. The generator does emit a required field without a
+  default; what defeated it was `emptyValue`.
+
+- Two test fixtures were rendering invalid resources — a container with no
+  `name`, a `secretKeyRef` with no `key`. Both were already invalid and
+  nothing was in a position to say so.
+
 ## [0.10.0] - 2026-09-15
 
 ### Added
