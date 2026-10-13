@@ -161,10 +161,16 @@ in
 
       descriptor = lib.head (lib.attrValues out.cluster);
 
+      # Whether anything in this cluster enforces a policy, as whatever
+      # implements the network said. It was `k3d.noFlannel`, with every other
+      # provisioner assumed to enforce — so a Talos cluster asking for
+      # default-deny got objects that applied, reported healthy and denied
+      # nothing, which is the failure this exists to catch.
+      policyEngines = lib.attrValues (link.out."catallaxy.networkPolicy" or { });
+
       policyAssertions =
         let
-          k3d = descriptor.config.k3d or null;
-          enforces = k3d == null || k3d.noFlannel;
+          enforces = policyEngines != [ ];
           asked = security.defaultDenyNamespaces;
         in
         lib.optional (asked != [ ] && !enforces) {
@@ -173,8 +179,10 @@ in
             "defaultDenyNamespaces names ${toString (lib.length asked)} "
             + "namespace(s) (${lib.concatStringsSep ", " asked}), but this cluster runs k3d's default "
             + "Flannel, which has no policy engine. The policies would apply, report healthy, "
-            + "and deny nothing. Put a CNI that enforces them in the cluster — the `cilium` "
-            + "floe — and export its `CNI_BOOTSTRAP` so the claim starts without Flannel.";
+            + "and deny nothing. Nothing in this cluster emits "
+            + "`catallaxy.networkPolicy`, which is how a network implementation says it has an "
+            + "engine. Put one in — the `cilium` floe — and export its `CNI_BOOTSTRAP` so the "
+            + "provisioner starts without its own.";
         };
 
       manifests = catallaxy.renderCluster {
@@ -204,6 +212,19 @@ in
         out
         manifests
         ;
+
+      # What `metadata.json` carries for the network-policy lint rule, which
+      # returned early on a field nothing could set.
+      #
+      # Both halves, because the rule asks "every flow needs a policy
+      # permitting it" and that is only true under a default-deny: with no
+      # policies at all nothing is denied, so a flow without one is fine. A
+      # policy engine and no default-deny is a cluster that *could* enforce
+      # and does not.
+      networkPolicy = {
+        enabled = policyEngines != [ ] && security.defaultDenyNamespaces != [ ];
+        implementations = map (p: p.implementation) policyEngines;
+      };
 
       stacks = infraLib.collectStacks {
         scope = clusterName;

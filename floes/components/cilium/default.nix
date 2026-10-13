@@ -109,6 +109,13 @@ let
     requires.cluster = sigs.KUBERNETES_CLUSTER;
     provides.cniBootstrap = sigs.CNI_BOOTSTRAP;
     out.component = kinds.component;
+
+    # Cilium has a policy engine, which is the half of "replace flannel" that
+    # matters to anything asking for a default-deny. Emitted rather than
+    # inferred from the provisioner's config: the lowering used to read
+    # `k3d.noFlannel` and assume every other provisioner enforced, so a Talos
+    # cluster asking for policies got objects that denied nothing.
+    out.networkPolicy = kinds.networkPolicy;
     modules = [
       (
         { config, ... }:
@@ -128,6 +135,8 @@ let
                 ;
             }}";
           };
+
+          config.floe.out.networkPolicy.implementation = "cilium";
 
           config.floe.out.component = kinds.mkComponent {
             imagesComplete = true;

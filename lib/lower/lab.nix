@@ -152,8 +152,13 @@
 
           inherit (c) assertions warnings;
 
+          # `enabled` is whatever implements the cluster's network saying it
+          # has a policy engine. `floes` stays empty: it is keyed by a floe's
+          # declaration of the ports it serves, and no floe declares one — the
+          # rule reading it is a check waiting on a surface that does not
+          # exist, not a wiring gap.
           networkPolicies = {
-            enabled = false;
+            inherit (c.networkPolicy) enabled;
             floes = { };
           };
         }) clusters;

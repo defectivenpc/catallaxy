@@ -30,6 +30,7 @@ Cilium as the cluster's CNI, replacing the provisioner's default.
 | alias | kind | what it carries |
 | --- | --- | --- |
 | component | catallaxy.component | What a floe installs into a cluster: bundles, and the operator surface around them. |
+| networkPolicy | catallaxy.networkPolicy | That something in this cluster enforces a NetworkPolicy, and what implements it. |
 
 ## Bundles
 

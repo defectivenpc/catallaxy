@@ -109,6 +109,30 @@ let
         // units;
     };
 
+  # A cluster asking for default-deny, with and without something to enforce
+  # it. The provisioner is k3d either way: what decides is whether anything in
+  # the cluster emits `catallaxy.networkPolicy`, which is the whole point —
+  # the old check read `k3d.noFlannel` and assumed every other provisioner
+  # enforced, so Talos got objects that denied nothing.
+  denyLab =
+    {
+      name,
+      subnet,
+      dnsPort,
+      enforcing,
+    }:
+    mkScopeLab {
+      inherit name subnet dnsPort;
+      clusters.core = {
+        floe = mkTestCluster {
+          name = "deny";
+          units = lib.optionalAttrs enforcing { cilium = floes.cilium { }; };
+        } { defaultDenyNamespaces = [ "kapp" ]; };
+
+        claim = floes.k3d-cluster { };
+      };
+    };
+
   refuses = l: !(builtins.tryEval (builtins.deepSeq l.cliConfig "evaluated")).success;
 
   # ---- downward: a fact the lab holds reaches a cluster -------------------
@@ -246,6 +270,32 @@ let
       expected = {
         labStore = "somewhere";
       };
+    };
+
+    # A default-deny on a cluster with no policy engine. The objects apply,
+    # report healthy and deny nothing, which has no runtime symptom beyond
+    # traffic that was supposed to be blocked arriving.
+    testDefaultDenyWithNothingToEnforceItIsRefused = {
+      expr = refuses (denyLab {
+        name = "scope-deny-none";
+        subnet = "172.26.0.0/16";
+        dnsPort = 5377;
+        enforcing = false;
+      });
+      expected = true;
+    };
+
+    # And accepted the moment something says it has an engine. The pair is
+    # what makes the refusal about the combination rather than about asking
+    # for policies at all.
+    testDefaultDenyWithAnEngineIsAccepted = {
+      expr = refuses (denyLab {
+        name = "scope-deny-cilium";
+        subnet = "172.25.0.0/16";
+        dnsPort = 5378;
+        enforcing = true;
+      });
+      expected = false;
     };
 
     testAClusterResolvesTheLabsZone = {

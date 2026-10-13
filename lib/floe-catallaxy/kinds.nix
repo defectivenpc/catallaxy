@@ -237,6 +237,25 @@ componentLib
   # the lab ran no server — a case the option had to carry in its value
   # because a read-only option counts its default as a definition. A floe
   # that is not placed emits nothing, so the absent case needs no encoding.
+  # Whether anything in this cluster enforces a NetworkPolicy, said by the
+  # thing that implements the network.
+  #
+  # An output kind and not a signature, because no floe resolves it: the
+  # *lowering* is the reader, and a lab seals its units' provides, so the
+  # channel that crosses is an emission. ADR 0007, ADR 0008.
+  #
+  # Presence is the statement. A cluster emitting none has no policy engine,
+  # which is what makes a default-deny there a set of objects that apply,
+  # report healthy, and deny nothing.
+  networkPolicy = floe.mkSig {
+    name = "catallaxy.networkPolicy";
+    canonicalName = "networkPolicy";
+    description = "That something in this cluster enforces a NetworkPolicy, and what implements it.";
+    fields = {
+      implementation = T.str;
+    };
+  };
+
   dnsInfo = floe.mkSig {
     name = "catallaxy.dnsInfo";
     canonicalName = "dnsInfo";
