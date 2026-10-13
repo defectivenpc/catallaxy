@@ -188,6 +188,45 @@ let
       '';
     };
 
+    images = mkOption {
+      type = types.submodule {
+        options = {
+          requireDigest = mkOption {
+            type = types.bool;
+            default = false;
+            description = ''
+              Refuse any image this lab renders without a `sha256:` digest.
+
+              Off by default, and enforced by the `image-pin` lint rule rather
+              than at apply time: you find out in CI and not during a rollout.
+              A tag is a mutable pointer, so a lab that passed yesterday can
+              apply something else today and nothing in the rendered output
+              changes to say so.
+            '';
+          };
+
+          allowedRegistries = mkOption {
+            type = types.listOf types.str;
+            default = [ ];
+            example = [
+              "ghcr.io"
+              "registry.k8s.io"
+            ];
+            description = ''
+              Registries this lab's images may come from. Empty permits any.
+
+              A warning rather than an error, because a chart's default image
+              is somebody else's decision and finding out is the first step.
+              What it catches is a floe quietly adding a dependency on a
+              registry an airgap has no mirror for.
+            '';
+          };
+        };
+      };
+      default = { };
+      description = "What the `image-pin` lint rule holds this lab's images to.";
+    };
+
     secretsEnvFile = mkOption {
       type = types.nullOr types.str;
       default = null;
@@ -352,7 +391,12 @@ let
     {
       name = labName;
       inherit subnet placements;
-      inherit (given) zone verifyEndpoints secretsEnvFile;
+      inherit (given)
+        zone
+        verifyEndpoints
+        secretsEnvFile
+        images
+        ;
 
       units = clusterUnits // refuseCollisions labName (lib.attrNames placements) ownUnits;
     };

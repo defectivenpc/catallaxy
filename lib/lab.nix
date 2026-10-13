@@ -106,6 +106,7 @@ let
         placements
         verifyEndpoints
         secretsEnvFile
+        images
         ;
 
       folds = linkLab {
@@ -146,6 +147,7 @@ let
 
         network.subnet = subnet;
         verify.endpoints = verifyEndpoints;
+        inherit images;
 
         secrets = {
           envFile = secretsEnvFile;

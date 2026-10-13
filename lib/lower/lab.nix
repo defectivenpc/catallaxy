@@ -36,6 +36,7 @@
       secrets,
       verify,
       network,
+      images,
       assertions,
       warnings,
     }:
@@ -124,10 +125,7 @@
         clusterNames = lib.attrNames clusters;
         labNamespaces = lib.mapAttrs (_: c: c.out.namespaces) clusters;
 
-        images = {
-          requireDigest = false;
-          allowedRegistries = [ ];
-        };
+        inherit images;
 
         assertions = assertions;
         warnings = warnings;
