@@ -52,6 +52,11 @@ let
       requires = {
         claim = sigs.KUBERNETES_CLUSTER;
         zone = sigs.DNS_ZONE;
+
+        # Somewhere for the stateful floes in here to bind a PVC. Answered by
+        # the claim, because whether a provisioner ships a default storage
+        # class is the provisioner's to say.
+        storageClass = sigs.STORAGE_CLASS;
       }
       // requires;
 

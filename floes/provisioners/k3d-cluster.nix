@@ -246,6 +246,13 @@ floe.mkFloe {
   # something the lab works out from a provisioner's name.
   provides.edge = sigs.CLUSTER_EDGE;
 
+  # k3s ships local-path and this floe never turns it off, so a cluster k3d
+  # established has somewhere for a PVC to bind. Said rather than assumed: a
+  # stateful floe requires a `STORAGE_CLASS`, and a provisioner that ships none
+  # — talos — provides none, so the same floe on that cluster is refused at the
+  # hole rather than leaving a PVC Pending with nothing to say why.
+  provides.storageClass = sigs.STORAGE_CLASS;
+
   # The CNI to start without flannel and apply instead, when the cluster this
   # establishes has one. Optional, and so wired only when a deployer names it:
   # a cluster that happens to contain cilium is not thereby a cluster whose
@@ -305,6 +312,11 @@ floe.mkFloe {
         };
 
         config.floe.provides.edge = config.edge;
+
+        config.floe.provides.storageClass = {
+          className = "local-path";
+          isDefault = true;
+        };
 
         config.floe.provides.cluster = {
           inherit (inputs)

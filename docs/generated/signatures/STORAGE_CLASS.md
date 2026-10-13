@@ -19,4 +19,16 @@ anything.
 
 | floe | as |
 | --- | --- |
+| [`k3d-cluster`](../floes/k3d-cluster.md) | `provides.storageClass` |
 | [`openebs`](../floes/openebs.md) | `provides.storageClass` |
+
+## Required by
+
+| floe | as |
+| --- | --- |
+| [`forgejo`](../floes/forgejo.md) | `requires.storageClass` |
+| [`grafana`](../floes/grafana.md) | `requires.storageClass` |
+| [`harbor`](../floes/harbor.md) | `requires.storageClass` |
+| [`kanidm`](../floes/kanidm.md) | `requires.storageClass` |
+| [`prometheus`](../floes/prometheus.md) | `requires.storageClass` |
+| [`zot`](../floes/zot.md) | `requires.storageClass` |

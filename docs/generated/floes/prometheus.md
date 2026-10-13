@@ -24,6 +24,7 @@ Prometheus and its CRDs, as the cluster's metrics store.
 | --- | --- | --- |
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
 | issuance | [X509_ISSUANCE](../signatures/X509_ISSUANCE.md) | Something that signs certificates, and whether a browser will trust what it signs. |
+| storageClass | [STORAGE_CLASS](../signatures/STORAGE_CLASS.md) | A StorageClass a PVC can name, and whether it is the cluster's default. |
 | webhook | [X509_WEBHOOK](../signatures/X509_WEBHOOK.md) | The certificate controller's admission webhook is serving, so its CRs are accepted. |
 
 ## Provides

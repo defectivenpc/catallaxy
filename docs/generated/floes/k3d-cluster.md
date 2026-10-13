@@ -33,6 +33,7 @@ A k3d cluster on the operator's docker host.
 | --- | --- | --- |
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
 | edge | [CLUSTER_EDGE](../signatures/CLUSTER_EDGE.md) | Where a cluster's gateway is dialled from the host running the lab. |
+| storageClass | [STORAGE_CLASS](../signatures/STORAGE_CLASS.md) | A StorageClass a PVC can name, and whether it is the cluster's default. |
 
 ## Emits
 

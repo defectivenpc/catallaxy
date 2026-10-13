@@ -22,6 +22,7 @@ Forgejo, a git server, with an admin account and repositories bootstrapped.
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
 | gateway | [API_GATEWAY](../signatures/API_GATEWAY.md) | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 | generation | [SECRET_GENERATION](../signatures/SECRET_GENERATION.md) | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
+| storageClass | [STORAGE_CLASS](../signatures/STORAGE_CLASS.md) | A StorageClass a PVC can name, and whether it is the cluster's default. |
 
 ## Requires, optionally
 

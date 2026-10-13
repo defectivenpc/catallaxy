@@ -282,11 +282,6 @@
               "hasReadyProbe": false,
               "name": "vault-token/projection",
               "resourceCount": 0
-            },
-            {
-              "hasReadyProbe": true,
-              "name": "zot/zot",
-              "resourceCount": 0
             }
           ],
           [
@@ -318,6 +313,11 @@
             {
               "hasReadyProbe": false,
               "name": "velero/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "zot/zot",
               "resourceCount": 0
             }
           ],

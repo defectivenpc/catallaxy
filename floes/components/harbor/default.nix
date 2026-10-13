@@ -58,6 +58,13 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
+
+  # Somewhere for this floe's PersistentVolumeClaim to bind. Declared rather
+  # than assumed: a PVC naming no class takes the cluster's default, and a
+  # cluster with no default leaves it Pending forever with nothing in the
+  # rendered output to say why. The claim answers it when the provisioner ships
+  # one, and a storage floe in the cluster answers it otherwise.
+  requires.storageClass = sigs.STORAGE_CLASS;
   requires.gateway = sigs.API_GATEWAY;
 
   # Claimed, so whatever answers for the zone learns this hostname from the

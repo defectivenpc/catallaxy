@@ -24,6 +24,7 @@ Kanidm as the lab's OIDC provider, reconciled by kaniop.
 | gateway | [API_GATEWAY](../signatures/API_GATEWAY.md) | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 | identityOperator | [IDENTITY_OPERATOR](../signatures/IDENTITY_OPERATOR.md) | The identity operator's CRDs are established, so its CRs can be applied. |
 | issuance | [X509_ISSUANCE](../signatures/X509_ISSUANCE.md) | Something that signs certificates, and whether a browser will trust what it signs. |
+| storageClass | [STORAGE_CLASS](../signatures/STORAGE_CLASS.md) | A StorageClass a PVC can name, and whether it is the cluster's default. |
 | trust | [TRUST_BUNDLE](../signatures/TRUST_BUNDLE.md) | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |
 
 ## Provides

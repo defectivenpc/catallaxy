@@ -21,6 +21,7 @@ Harbor, an OCI registry with its own database and cache.
 | gateway | [API_GATEWAY](../signatures/API_GATEWAY.md) | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 | generation | [SECRET_GENERATION](../signatures/SECRET_GENERATION.md) | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
 | issuance | [X509_ISSUANCE](../signatures/X509_ISSUANCE.md) | Something that signs certificates, and whether a browser will trust what it signs. |
+| storageClass | [STORAGE_CLASS](../signatures/STORAGE_CLASS.md) | A StorageClass a PVC can name, and whether it is the cluster's default. |
 
 ## Requires, optionally
 

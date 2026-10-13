@@ -26,6 +26,10 @@ in
     requires = {
       claim = sigs.KUBERNETES_CLUSTER;
       zone = sigs.DNS_ZONE;
+
+      # Somewhere for forgejo to bind a PVC. Answered by the claim, because
+      # whether a provisioner ships a default storage class is its to say.
+      storageClass = sigs.STORAGE_CLASS;
     };
 
     # Where the cluster is dialled, answered by its claim.

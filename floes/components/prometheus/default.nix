@@ -92,6 +92,13 @@ floe.mkFloe {
   # self-signed CA of its own and writes it back into the webhook config — an
   # imperative step in the middle of a declarative apply.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
+
+  # Somewhere for this floe's PersistentVolumeClaim to bind. Declared rather
+  # than assumed: a PVC naming no class takes the cluster's default, and a
+  # cluster with no default leaves it Pending forever with nothing in the
+  # rendered output to say why. The claim answers it when the provisioner ships
+  # one, and a storage floe in the cluster answers it otherwise.
+  requires.storageClass = sigs.STORAGE_CLASS;
   requires.webhook = sigs.X509_WEBHOOK;
   requires.issuance = sigs.X509_ISSUANCE;
 

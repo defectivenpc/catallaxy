@@ -78,6 +78,21 @@ in
 
       edgeHoles = lib.attrNames (lib.filterAttrs (_: sig: sig.name == "CLUSTER_EDGE") floe.def.optional);
 
+      # Every hole the claim answers rather than the cluster, by signature. The
+      # provisioner is what knows whether a PVC has anywhere to bind, so a
+      # cluster holding a stateful floe declares the hole and this fills it
+      # from the claim — the same move the edge is.
+      #
+      # A cluster that places its own storage provisioner resolves the hole
+      # inside and declares none; one that places a provisioner *and* declares
+      # the hole has two storage classes, which is a real choice and the
+      # linker asks for it.
+      claimProvided =
+        sigName: surface: lib.attrNames (lib.filterAttrs (_: sig: sig.name == sigName) surface);
+
+      storageHoles =
+        claimProvided "STORAGE_CLASS" floe.def.requires ++ claimProvided "STORAGE_CLASS" floe.def.optional;
+
       clusterFloe =
         if claimHoles == [ ] then
           throw (
@@ -88,7 +103,7 @@ in
             + "inside resolve against that."
           )
         else
-          floe.bind (lib.genAttrs (claimHoles ++ edgeHoles) (_: claimUnit));
+          floe.bind (lib.genAttrs (claimHoles ++ edgeHoles ++ storageHoles) (_: claimUnit));
 
     in
     {

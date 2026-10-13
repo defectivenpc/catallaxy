@@ -19,6 +19,7 @@ Zot, a small OCI registry used as the lab's pull-through cache.
 | hole | signature | what it is |
 | --- | --- | --- |
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
+| storageClass | [STORAGE_CLASS](../signatures/STORAGE_CLASS.md) | A StorageClass a PVC can name, and whether it is the cluster's default. |
 
 ## Provides
 

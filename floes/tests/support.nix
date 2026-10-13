@@ -37,6 +37,14 @@ let
       };
     };
 
+    storageClass = {
+      sig = sigs.STORAGE_CLASS;
+      value = {
+        className = "stub";
+        isDefault = true;
+      };
+    };
+
     gatewayApi = {
       sig = sigs.GATEWAY_API;
       value = {
