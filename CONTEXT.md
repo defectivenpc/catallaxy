@@ -37,6 +37,12 @@ bootstraps whatever applies it. _Avoid_: deploy strategy, CD, apply method
 the resources a state-based tool applies on its behalf. _Avoid_: chart floe,
 member, app, addon
 
+**Upstream**: The third-party artifact a component vendors, pinned in the
+component's own `upstream.nix` — a Helm chart, a release file, a path in a
+git tree. One upstream has one owner: the component that installs it, which
+is also the only thing that may pin it. _Avoid_: chart, registry entry,
+dependency, vendored chart
+
 **Lab-scope floe**: A floe that is a unit of the lab's link rather than a
 cluster's. It installs nothing into any cluster. What it does varies —
 answer a signature, run a container on the host, fold its peers — so the
