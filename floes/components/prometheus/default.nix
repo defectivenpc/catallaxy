@@ -13,7 +13,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -26,15 +26,15 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.prometheus.chart}";
-      defaultText = lib.literalExpression "cataCharts.prometheus.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the kube-prometheus-stack Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.prometheus.crds}";
-      defaultText = lib.literalExpression "cataCharts.prometheus.crds";
+      default = "${upstream.crds}";
+      defaultText = lib.literalExpression "upstream.crds";
       description = ''
         Store path of the stripped-down CRD manifest. Required.
 

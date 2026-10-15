@@ -8,7 +8,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -21,8 +21,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.trust-manager.chart}";
-      defaultText = lib.literalExpression "cataCharts.trust-manager.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the trust-manager Helm chart. Required.";
     };
 

@@ -8,8 +8,8 @@ External Secrets, which mints secret values in the cluster.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.external-secrets.chart` | Store path of the external-secrets Helm chart. Required. |
-| crds | string | `cataCharts.external-secrets.crds` | Store path of the chart's CRD manifests. Separate from the chart because they install as their own bundle: the kinds have to be established before anything applies one.  |
+| chart | string | `upstream.chart` | Store path of the external-secrets Helm chart. Required. |
+| crds | string | `upstream.crds` | Store path of the chart's CRD manifests. Separate from the chart because they install as their own bundle: the kinds have to be established before anything applies one.  |
 | namespace | string | `"external-secrets"` | Namespace the controller runs in. |
 
 ## Requires

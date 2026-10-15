@@ -2,7 +2,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -15,8 +15,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.seaweedfs.chart}";
-      defaultText = lib.literalExpression "cataCharts.seaweedfs.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the SeaweedFS Helm chart. Required.";
     };
 

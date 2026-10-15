@@ -8,7 +8,7 @@ Tempo, the trace store.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.tempo.chart` | Store path of the Tempo Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the Tempo Helm chart. Required. |
 | namespace | string | `"tempo"` | Namespace Tempo runs in. |
 
 ## Requires

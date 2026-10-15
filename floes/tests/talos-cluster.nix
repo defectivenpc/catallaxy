@@ -23,10 +23,12 @@ let
 
   descriptor = r.link.out."catallaxy.cluster".talos-cluster;
 
+  floeSet' = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../.));
+
   kinds =
     (import ../../lib/floe-catallaxy {
       inherit lib pkgs floeCore;
-      crdTypes = (import ../crds.nix { inherit lib; }).types;
+      crdTypes = (import ../../lib/floe-crds.nix { inherit lib; } { floeSet = floeSet'; }).types;
     }).kinds;
 in
 lib.runTests {

@@ -9,8 +9,8 @@ Prometheus and its CRDs, as the cluster's metrics store.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | alertmanager | boolean | `false` | Run Alertmanager beside Prometheus. |
-| chart | string | `cataCharts.prometheus.chart` | Store path of the kube-prometheus-stack Helm chart. Required. |
-| crds | string | `cataCharts.prometheus.crds` | Store path of the stripped-down CRD manifest. Required.  Separate from the chart because the operator's own release pins a different CRD version than the chart bundles, and because a chart that installs CRDs re-applies them on every upgrade.  |
+| chart | string | `upstream.chart` | Store path of the kube-prometheus-stack Helm chart. Required. |
+| crds | string | `upstream.crds` | Store path of the stripped-down CRD manifest. Required.  Separate from the chart because the operator's own release pins a different CRD version than the chart bundles, and because a chart that installs CRDs re-applies them on every upgrade.  |
 | kubeStateMetrics | boolean | `false` | Run kube-state-metrics. |
 | namespace | string | `"monitoring"` | Namespace the operator and the Prometheus run in. |
 | nodeExporter | boolean | `false` | Run node-exporter as a DaemonSet. |

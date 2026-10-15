@@ -26,7 +26,7 @@ let
 
   # crdTypes :: { "<api group>" -> path }
   #
-  # `floes/crds.nix` builds it by walking the floe tree, so a group's key, its
+  # `lib/floe-crds.nix` builds it by walking a floe set, so a group's key, its
   # filename and the `apiVersion` prefix a floe writes are one string with no
   # mapping between them. It arrives as an argument because the types live
   # beside the floes that install the CRDs, and `lib/` is what the floes depend

@@ -10,9 +10,11 @@
 }:
 
 let
+  floeSet' = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../.));
+
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
-    crdTypes = (import ../crds.nix { inherit lib; }).types;
+    crdTypes = (import ../../lib/floe-crds.nix { inherit lib; } { floeSet = floeSet'; }).types;
   };
   inherit (catallaxy) floe sigs kinds;
 
@@ -435,8 +437,7 @@ in
     }:
     let
       def = import floeSet.${name} {
-        cataCharts = null;
-        k8sSpecs = null;
+        upstream = null;
         inherit
           lib
           pkgs

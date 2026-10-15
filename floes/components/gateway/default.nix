@@ -11,7 +11,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -24,8 +24,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.traefik.chart}";
-      defaultText = lib.literalExpression "cataCharts.traefik.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = ''
         Store path of the Traefik Helm chart, defaulted from the pin in
         `lib/charts.nix`. Override to run a fork or a mirror.

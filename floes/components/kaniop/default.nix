@@ -5,7 +5,7 @@
 # the first while a consumer waiting for reconciliation needs the second.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   pkgs,
   sigs,
@@ -20,8 +20,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.kaniop.chart}";
-      defaultText = lib.literalExpression "cataCharts.kaniop.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the kaniop Helm chart. Required.";
     };
 

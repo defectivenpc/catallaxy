@@ -8,7 +8,7 @@ Reloader, which restarts a workload when a Secret or ConfigMap it mounts changes
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.reloader.chart` | Store path of the Reloader Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the Reloader Helm chart. Required. |
 | namespace | string | `"reloader"` | Namespace the controller runs in. |
 
 ## Requires

@@ -8,7 +8,7 @@ The kaniop operator, which reconciles Kanidm and its clients.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.kaniop.chart` | Store path of the kaniop Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the kaniop Helm chart. Required. |
 | namespace | string | `"kanidm"` | Namespace the controller runs in. |
 
 ## Requires

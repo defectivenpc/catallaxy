@@ -6,7 +6,7 @@
   pkgs,
   floeCore,
 
-  # API group -> generated type file, from `floes/crds.nix`. Handed in because
+  # API group -> generated type file, from `lib/floe-crds.nix`. Handed in because
   # the types live beside the floes that install the CRDs, and a floe depends
   # on this distribution rather than the reverse — so the one thing that would
   # be a cycle arrives as an argument instead.

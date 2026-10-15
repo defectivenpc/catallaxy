@@ -8,7 +8,7 @@ SeaweedFS, an S3-compatible object store.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.seaweedfs.chart` | Store path of the SeaweedFS Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the SeaweedFS Helm chart. Required. |
 | namespace | string | `"seaweedfs"` | Namespace it runs in. |
 | version | string | `"3.80"` | SeaweedFS image tag. The chart's own default lags the one this pins. |
 

@@ -3,15 +3,28 @@
   lib,
   pkgs,
   floeCore,
-  cataCharts,
-  k8sSpecs,
+  kubelib,
 }:
 
 let
   # The CRD types the floes carry, which this hands to the distribution. It
   # cannot import them itself: a floe depends on the distribution, so the
   # distribution importing the floe tree would be the cycle.
-  inherit (import ../floes/crds.nix { inherit lib; }) types;
+  upstreamLib = import ./upstream.nix { inherit lib pkgs kubelib; };
+
+  allFloePaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../floes));
+
+  # What this floe vendors, or null. A component floe is a directory and a lab
+  # floe is a file, so only the first can carry a pin beside it.
+  pinOf =
+    path:
+    let
+      dir = if builtins.pathExists (path + "/default.nix") then path else dirOf path;
+      pin = dir + "/upstream.nix";
+    in
+    if builtins.pathExists pin then import pin { upstream = upstreamLib; } else null;
+
+  inherit (import ./floe-crds.nix { inherit lib; } { floeSet = allFloePaths; }) types;
 
   catallaxy = import ./floe-catallaxy {
     inherit lib pkgs floeCore;
@@ -20,10 +33,10 @@ let
 
   # applyFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
   #
-  # `pkgs`, `cataCharts` and `k8sSpecs` are definition-time arguments rather
-  # than floe inputs: `instantiate` deep-forces inputs, so a derivation could
-  # not travel that way. A floe reads them to default its own `chart`, which
-  # is why a lab no longer threads one.
+  # `pkgs` and `upstream` are definition-time arguments rather than floe
+  # inputs: `instantiate` deep-forces inputs, so a derivation could not travel
+  # that way. `upstream` is this floe's own pin and no other's — a floe cannot
+  # reach a sibling's chart, which is what a central registry allowed.
   #
   # `floes` is in that list too, and is the set being defined. A floe whose
   # units are other floes reaches them through it, and laziness is what makes
@@ -41,17 +54,16 @@ let
             lib
             pkgs
             catallaxy
-            cataCharts
-            k8sSpecs
             floes
             ;
+          upstream = pinOf path;
           inherit (catallaxy) floe sigs kinds;
         };
       in
       def // { __functor = _: def.instantiate; }
     ) set;
 
-  floes = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: applyFloes) (import ../floes));
+  floes = applyFloes allFloePaths;
 
   # `mkLabFloe`, finished: the helper needs the floe set above and the placer,
   # and `lib/floe-catallaxy` can see neither — the set is built out of its own

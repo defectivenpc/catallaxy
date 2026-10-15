@@ -26,7 +26,7 @@
 # a unit beside its cluster now, so there is one.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   pkgs,
   sigs,
@@ -69,8 +69,8 @@ let
     inputs = {
       chart = lib.mkOption {
         type = lib.types.str;
-        default = "${cataCharts.cilium.chart}";
-        defaultText = lib.literalExpression "cataCharts.cilium.chart";
+        default = "${upstream.chart}";
+        defaultText = lib.literalExpression "upstream.chart";
         description = ''
           Store path of the Cilium Helm chart, defaulted from the pin.
 

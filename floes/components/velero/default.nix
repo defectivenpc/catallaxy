@@ -19,7 +19,7 @@
 # legal value.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   pkgs,
   sigs,
@@ -34,15 +34,15 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.velero.chart}";
-      defaultText = lib.literalExpression "cataCharts.velero.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the Velero Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.velero.crds}";
-      defaultText = lib.literalExpression "cataCharts.velero.crds";
+      default = "${upstream.crds}";
+      defaultText = lib.literalExpression "upstream.crds";
       description = ''
         Store path of the CRD manifest extracted from the chart. Required.
 

@@ -9,7 +9,7 @@ Forgejo, a git server, with an admin account and repositories bootstrapped.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | adminUser | string | `"forgejo-admin"` | Name of the initial admin account.  Not `admin`: Forgejo reserves that name and refuses to create it, failing the chart's init job with a message about a reserved username rather than about the value you set.  |
-| chart | string | `cataCharts.forgejo.chart` | Store path of the Forgejo Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the Forgejo Helm chart. Required. |
 | namespace | string | `"forgejo"` | Namespace Forgejo runs in. |
 | oidc | boolean | `false` | Add the lab's issuer as a login source. |
 | repository | string | `"lab"` | Repository the bootstrap Job creates for a CD tool to clone.  `cata`'s `bootstrap-forgejo-repos` step waits for that Job by label, so a lab publishing manifests here needs it to exist and to finish.  |

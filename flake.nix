@@ -51,12 +51,14 @@
 
         kubelib = nix-kube-generators.lib { inherit pkgs; };
         cataCharts = import ./lib/charts.nix { inherit lib pkgs kubelib; };
-        k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs cataCharts; };
+        k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs; };
 
         floePaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
 
-        floeCrds = import ./floes/crds.nix { inherit lib; };
-        crdSources = lib.mapAttrs (_: f: f { inherit cataCharts k8sSpecs; }) floeCrds.sources;
+        upstream = import ./lib/upstream.nix { inherit lib pkgs kubelib; };
+
+        floeCrds = import ./lib/floe-crds.nix { inherit lib; } { floeSet = floePaths; };
+        crdSources = lib.mapAttrs (_: f: f upstream) floeCrds.sources;
 
         generatedTypes = import ./nix/generated-types.nix {
           inherit
@@ -86,8 +88,7 @@
             lib
             pkgs
             floeCore
-            cataCharts
-            k8sSpecs
+            kubelib
             ;
         };
 

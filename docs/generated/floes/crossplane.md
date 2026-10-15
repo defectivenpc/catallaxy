@@ -8,8 +8,8 @@ The Crossplane control plane, which installs providers and reconciles managed re
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.crossplane.chart` | Store path of the Crossplane Helm chart. Required. |
-| crds | string | `cataCharts.crossplane.crds` | Store path of the chart's CRDs. Required. |
+| chart | string | `upstream.chart` | Store path of the Crossplane Helm chart. Required. |
+| crds | string | `upstream.crds` | Store path of the chart's CRDs. Required. |
 | namespace | string | `"crossplane-system"` | Namespace the control plane runs in. |
 
 ## Requires

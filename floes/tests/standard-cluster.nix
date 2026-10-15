@@ -8,9 +8,9 @@
 # cluster.
 #
 # Its units are stood in for rather than real. A member defaults its own chart
-# from `cataCharts`, which a suite deliberately has no access to — the harness
-# passes `null` so that unit tests stay free of the chart pins — and forcing a
-# real member would force that default. The assembly against the real members
+# from its own `upstream.nix`, which a suite deliberately has no access to —
+# the harness passes `null` so that unit tests stay free of the pins — and
+# forcing a real member would force that default. The assembly against the real members
 # is what `homelab` renders; the contract is what this file holds.
 {
   lib,

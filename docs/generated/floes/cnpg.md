@@ -8,7 +8,7 @@ CloudNativePG, the PostgreSQL operator.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.cnpg.chart` | Store path of the CloudNativePG Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the CloudNativePG Helm chart. Required. |
 | namespace | string | `"cnpg-system"` | Namespace the operator runs in. |
 
 ## Requires

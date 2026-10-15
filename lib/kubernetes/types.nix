@@ -24,7 +24,7 @@
   lib,
   k8sVersion ? "1.31",
 
-  # API group -> generated type file, from `floes/crds.nix`.
+  # API group -> generated type file, from `lib/floe-crds.nix`.
   #
   # Required, with no default. `{ }` is a legal and useful answer — it means
   # "the Kubernetes API only", which is all `coreKinds` needs — but a *default*

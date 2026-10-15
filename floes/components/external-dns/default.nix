@@ -21,7 +21,7 @@
 #     whoever brings the credentials.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   pkgs,
   sigs,
@@ -40,8 +40,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.external-dns.chart}";
-      defaultText = lib.literalExpression "cataCharts.external-dns.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the external-dns Helm chart. Required.";
     };
 

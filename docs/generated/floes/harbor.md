@@ -8,7 +8,7 @@ Harbor, an OCI registry with its own database and cache.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.harbor.chart` | Store path of the Harbor Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the Harbor Helm chart. Required. |
 | namespace | string | `"harbor"` | Namespace Harbor runs in. |
 | oidc | boolean | `false` | Register an OAuth2 client so Harbor can authenticate against the lab's issuer.  Harbor's own OIDC settings are applied through its API rather than its chart, so this renders the client and lands the credentials; wiring them into Harbor's auth mode is a `cata lab ops` step, not a value.  |
 | storage | string | `"10Gi"` | Size of the volume the registry's blobs live on. |

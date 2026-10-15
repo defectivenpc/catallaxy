@@ -32,7 +32,7 @@
 # routed name in *both* cases — see `managementUrl` below.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   sigs,
   kinds,
@@ -46,8 +46,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.netbird-operator.chart}";
-      defaultText = lib.literalExpression "cataCharts.netbird-operator.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = ''
         Store path of the netbird-operator chart. Required.
 

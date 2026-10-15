@@ -8,7 +8,7 @@ Cilium as the cluster's CNI, replacing the provisioner's default.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.cilium.chart` | Store path of the Cilium Helm chart, defaulted from the pin.  One pin for both halves. Two versions is the failure this floe is most exposed to: the release would re-render a DaemonSet differing from the running one, the agents would restart, and the cluster would lose its network mid-apply.  |
+| chart | string | `upstream.chart` | Store path of the Cilium Helm chart, defaulted from the pin.  One pin for both halves. Two versions is the failure this floe is most exposed to: the release would re-render a DaemonSet differing from the running one, the agents would restart, and the cluster would lose its network mid-apply.  |
 | hubble | boolean | `false` | Run Hubble's relay for flow visibility. |
 | k8sServiceHost | string | `"localhost"` | Where the agents reach the API server before there is a network to reach a Service over.  `localhost` is right for k3d, where the agent runs on the same node as the apiserver. A managed control plane needs its real address.  |
 | k8sServicePort | string | `"6443"` | Port the API server answers on, for the same reason. |

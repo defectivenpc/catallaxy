@@ -9,7 +9,7 @@ cert-manager, and an issuer for the lab's own certificates.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | caCommonName | string | `"catallaxy lab CA"` | Subject common name on the root certificate. |
-| chart | string | `cataCharts.cert-manager.chart` | Store path of the cert-manager Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the cert-manager Helm chart. Required. |
 | issuerName | string | `"lab-ca"` | Name of the ClusterIssuer signing from the lab's own CA. |
 | namespace | string | `"cert-manager"` | Namespace the controller and webhook run in. |
 

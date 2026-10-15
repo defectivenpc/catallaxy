@@ -8,7 +8,7 @@
 # repository outside the lab — argocd clones from here.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   pkgs,
   sigs,
@@ -23,8 +23,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.forgejo.chart}";
-      defaultText = lib.literalExpression "cataCharts.forgejo.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the Forgejo Helm chart. Required.";
     };
 

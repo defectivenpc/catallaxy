@@ -8,7 +8,7 @@ OpenBao, a Vault-compatible server, with its KV mount initialised.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| chart | string | `cataCharts.openbao.chart` | Store path of the OpenBao Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the OpenBao Helm chart. Required. |
 | kvPath | string | `"secret"` | Mount path of the KV engine this lab writes under. |
 | kvVersion | one of "v1", "v2" | `"v2"` | KV engine version.  An enum though the API takes a string, because mounting a v2 engine and addressing it as v1 succeeds and stores the wrong shape — nothing notices until a reader gets an envelope where it expected a value.  |
 | namespace | string | `"openbao"` | Namespace the server runs in. |

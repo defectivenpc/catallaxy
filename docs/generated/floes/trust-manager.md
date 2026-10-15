@@ -9,7 +9,7 @@ trust-manager, distributing the lab's CA into every namespace that needs it.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | bundleName | string | `"lab-ca-bundle"` | Name of the ConfigMap the CA lands in, in every namespace. |
-| chart | string | `cataCharts.trust-manager.chart` | Store path of the trust-manager Helm chart. Required. |
+| chart | string | `upstream.chart` | Store path of the trust-manager Helm chart. Required. |
 | namespace | string | `"cert-manager"` | Namespace the controller runs in, and the one it reads Bundle sources from. Defaults to cert-manager's, because the CA Secret it reads is there and the controller only looks in one.  |
 
 ## Requires

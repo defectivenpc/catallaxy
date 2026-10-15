@@ -13,7 +13,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -26,8 +26,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.otel-collector.chart}";
-      defaultText = lib.literalExpression "cataCharts.otel-collector.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the opentelemetry-collector Helm chart. Required.";
     };
 

@@ -13,7 +13,7 @@
 # provider's CRDs when the provider goes healthy.
 #
 # Derived, so it cannot go stale. The day those CRDs become extractable and a
-# floe names them in its `crds.nix`, the kind gets a schema and stops being
+# floe's `upstream.nix` yields them, the kind gets a schema and stops being
 # reported whatever this check believes. A name in a list would have had to be
 # noticed and removed.
 {
@@ -89,7 +89,7 @@ in
       echo "said so. An \`apiVersion\` typo looks exactly like this." >&2
       echo "" >&2
       echo "Generate its types: give the floe that installs the CRD a" >&2
-      echo "\`crds.nix\` naming the artifact they come from, then copy" >&2
+      echo "\`upstream.nix\` yielding the artifact they come from, then copy" >&2
       echo "\`nix build .#generatedTypes\` into place." >&2
       echo "" >&2
       echo "If the CRDs genuinely arrive at runtime — a controller installs" >&2

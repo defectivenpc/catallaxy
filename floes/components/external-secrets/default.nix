@@ -10,7 +10,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -23,15 +23,15 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.external-secrets.chart}";
-      defaultText = lib.literalExpression "cataCharts.external-secrets.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the external-secrets Helm chart. Required.";
     };
 
     crds = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.external-secrets.crds}";
-      defaultText = lib.literalExpression "cataCharts.external-secrets.crds";
+      default = "${upstream.crds}";
+      defaultText = lib.literalExpression "upstream.crds";
       description = ''
         Store path of the chart's CRD manifests. Separate from the chart
         because they install as their own bundle: the kinds have to be

@@ -20,7 +20,7 @@
 # again. Auto-unseal needs a KMS, which a lab on one docker host does not have.
 {
   floe,
-  cataCharts ? null,
+  upstream ? null,
   lib,
   pkgs,
   sigs,
@@ -40,8 +40,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.openbao.chart}";
-      defaultText = lib.literalExpression "cataCharts.openbao.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the OpenBao Helm chart. Required.";
     };
 

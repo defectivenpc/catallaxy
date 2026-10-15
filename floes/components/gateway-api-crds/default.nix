@@ -8,7 +8,7 @@
 {
   lib,
   floe,
-  k8sSpecs ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -21,8 +21,8 @@ floe.mkFloe {
   inputs = {
     manifest = lib.mkOption {
       type = lib.types.str;
-      default = "${k8sSpecs.standaloneCrds.gateway-api}";
-      defaultText = lib.literalExpression "k8sSpecs.standaloneCrds.gateway-api";
+      default = "${upstream.crds}";
+      defaultText = lib.literalExpression "upstream.crds";
       description = ''
         Store path of the upstream CRD bundle. Required — the caller pins the
         URL and hash in `lib/k8s-specs.nix`.
@@ -31,8 +31,8 @@ floe.mkFloe {
 
     version = lib.mkOption {
       type = lib.types.str;
-      default = k8sSpecs.standaloneCrdVersions.gateway-api;
-      defaultText = lib.literalExpression "k8sSpecs.standaloneCrdVersions.gateway-api";
+      default = upstream.version;
+      defaultText = lib.literalExpression "upstream.version";
       description = ''
         Gateway API release the manifest came from, defaulted from the same
         pin the manifest is fetched with, so the two cannot disagree.

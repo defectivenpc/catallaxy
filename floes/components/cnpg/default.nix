@@ -6,7 +6,7 @@
 {
   lib,
   floe,
-  cataCharts ? null,
+  upstream ? null,
   sigs,
   kinds,
   ...
@@ -19,8 +19,8 @@ floe.mkFloe {
   inputs = {
     chart = lib.mkOption {
       type = lib.types.str;
-      default = "${cataCharts.cnpg.chart}";
-      defaultText = lib.literalExpression "cataCharts.cnpg.chart";
+      default = "${upstream.chart}";
+      defaultText = lib.literalExpression "upstream.chart";
       description = "Store path of the CloudNativePG Helm chart. Required.";
     };
 
