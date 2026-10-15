@@ -5,9 +5,6 @@
 }:
 
 let
-  # The version every provisioner defaults to, and the only one the generated
-  # types cover. Adding one means generating its types too, or a lab could
-  # select a version nothing can check.
   specDefs = {
     "1.31" = {
       url = "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.31.7/api/openapi-spec/swagger.json";

@@ -224,8 +224,6 @@ async fn dispatch(sctx: &StepContext<'_>, step: &PlannedStep) -> Result<()> {
         StepParams::DeployManifests(p) => steps::deploy_manifests::run(sctx, p),
         StepParams::WaitForResources(p) => steps::wait_for_resources::run(sctx, p).await,
         StepParams::SyncKubeconfig(p) => steps::sync_kubeconfig::run(sctx, p),
-        StepParams::Pivot(p) => steps::pivot::run(sctx, p),
-        StepParams::PublishImages(p) => steps::publish_images::run(sctx, p),
         StepParams::PublishManifests(_) => steps::publish_manifests::run(sctx).await,
         StepParams::ApplyRootApplication(p) => steps::apply_root_application::run(sctx, p),
         StepParams::BootstrapForgejoRepos(p) => steps::bootstrap_forgejo_repos::run(sctx, p).await,
@@ -386,7 +384,6 @@ mod tests {
             "remove-network",
             "deploy-manifests",
             "publish-manifests",
-            "pivot",
         ] {
             assert!(
                 !kind(tag).dry_run_safe(),

@@ -364,7 +364,6 @@ fn untyped_json_baseline() -> BTreeSet<&'static str> {
         // --- decodes a reply at the point of use rather than at the edge.
         "domain/crossplane.rs: of",
         "images/actual.rs: images_in_pods",
-        "images/mod.rs: publish_one",
         "images/mod.rs: tags_from_body",
         "topology/extract.rs: health_of",
     ]

@@ -311,48 +311,6 @@
       }
     }
   },
-  "pivot": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": false,
-    "idempotency": "oneShot",
-    "params": {
-      "bootstrapContext": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "cluster": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "provisioner": {
-        "required": true,
-        "sample": "conformance-sample"
-      },
-      "targetContext": {
-        "required": true,
-        "sample": "conformance-sample"
-      }
-    }
-  },
-  "publish-images": {
-    "directions": [
-      "deploy"
-    ],
-    "dryRunSafe": false,
-    "idempotency": "idempotent",
-    "params": {
-      "images": {
-        "required": false,
-        "sample": []
-      },
-      "sourceCluster": {
-        "required": true,
-        "sample": "conformance-sample"
-      }
-    }
-  },
   "publish-manifests": {
     "directions": [
       "deploy"

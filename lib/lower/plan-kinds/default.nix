@@ -16,8 +16,6 @@
   "infra-apply" = import ./infra-apply.nix { inherit lib; };
   "infra-destroy" = import ./infra-destroy.nix { inherit lib; };
   "infra-plan" = import ./infra-plan.nix { inherit lib; };
-  "pivot" = import ./pivot.nix { inherit lib; };
-  "publish-images" = import ./publish-images.nix { inherit lib; };
   "publish-manifests" = import ./publish-manifests.nix { inherit lib; };
   "reconcile-managed-resource" = import ./reconcile-managed-resource.nix { inherit lib; };
   "registry-setup" = import ./registry-setup.nix { inherit lib; };

@@ -14,8 +14,6 @@ pub enum StepKind {
     DeployManifests,
     WaitForResources,
     SyncKubeconfig,
-    Pivot,
-    PublishImages,
     PublishManifests,
     ApplyRootApplication,
     BootstrapForgejoRepos,
@@ -34,7 +32,7 @@ pub enum StepKind {
 }
 
 impl StepKind {
-    pub const ALL: [StepKind; 29] = [
+    pub const ALL: [StepKind; 27] = [
         StepKind::SetupServices,
         StepKind::DockerNetworkCreate,
         StepKind::CertGenerate,
@@ -47,8 +45,6 @@ impl StepKind {
         StepKind::DeployManifests,
         StepKind::WaitForResources,
         StepKind::SyncKubeconfig,
-        StepKind::Pivot,
-        StepKind::PublishImages,
         StepKind::PublishManifests,
         StepKind::ApplyRootApplication,
         StepKind::BootstrapForgejoRepos,
@@ -84,8 +80,6 @@ impl StepKind {
             StepKind::DeployManifests => "deploy-manifests",
             StepKind::WaitForResources => "wait-for-resources",
             StepKind::SyncKubeconfig => "sync-kubeconfig",
-            StepKind::Pivot => "pivot",
-            StepKind::PublishImages => "publish-images",
             StepKind::PublishManifests => "publish-manifests",
             StepKind::ApplyRootApplication => "apply-root-application",
             StepKind::BootstrapForgejoRepos => "bootstrap-forgejo-repos",
@@ -106,7 +100,7 @@ impl StepKind {
 
     pub fn retry(self) -> Idempotency {
         match self {
-            StepKind::CreateCluster | StepKind::Pivot => Idempotency::OneShot,
+            StepKind::CreateCluster => Idempotency::OneShot,
             StepKind::DestroyCluster
             | StepKind::DeleteManagedResource
             | StepKind::InfraDestroy
@@ -124,7 +118,6 @@ impl StepKind {
             | StepKind::DeployManifests
             | StepKind::WaitForResources
             | StepKind::SyncKubeconfig
-            | StepKind::PublishImages
             | StepKind::PublishManifests
             | StepKind::ApplyRootApplication
             | StepKind::BootstrapForgejoRepos
@@ -159,8 +152,6 @@ impl StepKind {
             | StepKind::DeployManifests
             | StepKind::WaitForResources
             | StepKind::SyncKubeconfig
-            | StepKind::Pivot
-            | StepKind::PublishImages
             | StepKind::PublishManifests
             | StepKind::ApplyRootApplication
             | StepKind::BootstrapForgejoRepos
@@ -189,8 +180,6 @@ impl StepKind {
             | StepKind::EnsureSecrets
             | StepKind::DeployManifests
             | StepKind::SyncKubeconfig
-            | StepKind::Pivot
-            | StepKind::PublishImages
             | StepKind::PublishManifests
             | StepKind::ApplyRootApplication
             | StepKind::BootstrapForgejoRepos

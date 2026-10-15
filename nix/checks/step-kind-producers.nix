@@ -19,10 +19,13 @@ let
   );
 
   # orphans :: { KindName -> Why }
-  orphans = {
-    pivot = "moving a cloud cluster's control off the bootstrap cluster; needs a provider that makes a real cluster, which `examples/labs/crossplane` does not";
-    publish-images = "pushing a lab's images to its registry; `warm-cache` covers the read path only";
-  };
+  #
+  # Empty, and worth keeping as a surface. `pivot` and `publish-images` lived
+  # here and are deleted: an executor whose params nothing has ever
+  # constructed has never run and cannot, so it is not a head start. Both are
+  # better re-added with the producer that needs them, where the params can be
+  # shaped by something that actually fills them.
+  orphans = { };
 in
 {
   step-kind-producers =
@@ -55,9 +58,15 @@ in
           fi
         done < "$declaredPath"
 
-        sorted=$(printf '%s' "$unproduced" | sort -u | grep -v '^$')
-        surprises=$(comm -23 <(printf '%s\n' "$sorted") "$knownPath" || true)
-        resolved=$(comm -13 <(printf '%s\n' "$sorted") "$knownPath" || true)
+        # Through files rather than process substitution, and with blank lines
+        # stripped on both sides: `printf '%s\n' ""` on an empty list hands
+        # `comm` one blank line, which it duly reports as a difference. With no
+        # orphans left that was the whole of the output.
+        printf '%s' "$unproduced" | sort -u | sed '/^$/d' > "$TMPDIR/unproduced"
+        sed '/^$/d' "$knownPath" | sort -u > "$TMPDIR/known"
+
+        surprises=$(comm -23 "$TMPDIR/unproduced" "$TMPDIR/known" || true)
+        resolved=$(comm -13 "$TMPDIR/unproduced" "$TMPDIR/known" || true)
 
         status=0
 

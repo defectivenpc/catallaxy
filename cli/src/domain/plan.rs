@@ -184,8 +184,6 @@ pub enum StepParams {
     DeployManifests(DeployManifestsParams),
     WaitForResources(WaitForResourcesParams),
     SyncKubeconfig(SyncKubeconfigParams),
-    Pivot(PivotParams),
-    PublishImages(PublishImagesParams),
     PublishManifests(PublishManifestsParams),
     ApplyRootApplication(ApplyRootApplicationParams),
     BootstrapForgejoRepos(BootstrapForgejoReposParams),
@@ -305,23 +303,6 @@ pub struct SyncKubeconfigParams {
 pub struct SecretRef {
     pub store: String,
     pub key: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PivotParams {
-    pub cluster: String,
-    pub bootstrap_context: String,
-    pub target_context: String,
-    pub provisioner: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PublishImagesParams {
-    pub source_cluster: String,
-    #[serde(default)]
-    pub images: Vec<Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -480,8 +461,6 @@ impl StepParams {
             StepParams::DeployManifests(p) => vec![("target", &p.target)],
             StepParams::WaitForResources(p) => vec![("target", &p.target)],
             StepParams::SyncKubeconfig(p) => vec![("target", &p.target)],
-            StepParams::Pivot(p) => vec![("cluster", &p.cluster)],
-            StepParams::PublishImages(p) => vec![("sourceCluster", &p.source_cluster)],
             StepParams::ApplyRootApplication(p) => vec![("target", &p.target)],
             StepParams::BootstrapForgejoRepos(p) => vec![("target", &p.target)],
             StepParams::DestroyCluster(p) => vec![("name", &p.name)],
@@ -527,8 +506,6 @@ impl StepParams {
             StepParams::DeployManifests(_) => StepKind::DeployManifests,
             StepParams::WaitForResources(_) => StepKind::WaitForResources,
             StepParams::SyncKubeconfig(_) => StepKind::SyncKubeconfig,
-            StepParams::Pivot(_) => StepKind::Pivot,
-            StepParams::PublishImages(_) => StepKind::PublishImages,
             StepParams::PublishManifests(_) => StepKind::PublishManifests,
             StepParams::ApplyRootApplication(_) => StepKind::ApplyRootApplication,
             StepParams::BootstrapForgejoRepos(_) => StepKind::BootstrapForgejoRepos,

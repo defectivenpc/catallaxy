@@ -237,8 +237,7 @@ fn icon(kind: &str) -> &'static str {
         "ensure-secrets" => "🔑",
         "wait-for-resources" | "wait-for-cluster-gone" => "⏳",
         "sync-kubeconfig" => "🔗",
-        "publish-images" | "publish-manifests" => "📤",
-        "pivot" => "🔄",
+        "publish-manifests" => "📤",
         "destroy-cluster" | "delete-managed-resource" => "💥",
         "run-script" => "⚡",
         "remove-network" | "docker-network-create" => "🌐",
@@ -270,7 +269,6 @@ fn detail(params: &StepParams) -> Option<String> {
             p.target,
             p.clusters.join(", ")
         )),
-        StepParams::Pivot(p) => Some(format!("{} → {}", p.bootstrap_context, p.target_context)),
         StepParams::RunScript(p) => Some(format!("bin={}", p.bin)),
         StepParams::DestroyCluster(p) => Some(format!("cluster={}", p.name)),
         _ => None,

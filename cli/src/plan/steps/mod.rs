@@ -11,8 +11,6 @@ pub mod dns_teardown;
 pub mod docker_network_create;
 pub mod ensure_secrets;
 pub mod infra;
-pub mod pivot;
-pub mod publish_images;
 pub mod publish_manifests;
 pub mod reconcile_managed_resource;
 pub mod registry_setup;

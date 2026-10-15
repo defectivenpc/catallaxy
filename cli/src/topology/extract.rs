@@ -175,24 +175,15 @@ fn extract_edges_from_plan(lab: &LabSpec) -> Vec<TopologyEdge> {
     let mut edges = Vec::new();
 
     for step in &lab.deployment_plan {
-        match &step.params {
-            StepParams::SyncKubeconfig(p) => {
-                for provisioned in &p.clusters {
-                    edges.push(TopologyEdge {
-                        kind: EdgeKind::Provisions,
-                        source: p.target.clone(),
-                        target: provisioned.clone(),
-                        label: None,
-                    });
-                }
+        if let StepParams::SyncKubeconfig(p) = &step.params {
+            for provisioned in &p.clusters {
+                edges.push(TopologyEdge {
+                    kind: EdgeKind::Provisions,
+                    source: p.target.clone(),
+                    target: provisioned.clone(),
+                    label: None,
+                });
             }
-            StepParams::Pivot(p) => edges.push(TopologyEdge {
-                kind: EdgeKind::DeployDependency,
-                source: format!("{} (bootstrap)", p.cluster),
-                target: p.cluster.clone(),
-                label: Some("pivot".to_string()),
-            }),
-            _ => {}
         }
     }
     edges
