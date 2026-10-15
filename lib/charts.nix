@@ -5,95 +5,30 @@
 }:
 
 let
-  inherit (kubelib) downloadHelmChart;
+  upstream = import ./upstream.nix { inherit lib pkgs kubelib; };
 
-  extractChartCrds =
-    name: chart:
-    pkgs.runCommand "${name}-crds.yaml" { } ''
-      if [ -d "${chart}/crds" ] && ls "${chart}"/crds/*.yaml 1>/dev/null 2>&1; then
-        for f in "${chart}"/crds/*.yaml; do
-          printf '\n---\n' >> $out
-          cat "$f" >> $out
-        done
-      else
-        touch $out
-      fi
-    '';
-
-  extractGitHubCrds =
-    name: def:
-    let
-      src = pkgs.fetchFromGitHub {
+  # How a pin says where its CRDs are. One arm per way an upstream publishes
+  # them; `lib/upstream.nix` is where each is implemented.
+  crdsOf =
+    name: chart: def:
+    {
+      chart = upstream.crdsInChart name chart;
+      templated = upstream.crdsInTemplate name chart;
+      url = upstream.release {
+        inherit name;
+        inherit (def) url hash;
+      };
+      github = upstream.crdsInTree name {
         inherit (def)
           owner
           repo
           rev
           hash
           ;
+        path = def.crdPath;
       };
-      globPatterns = def.crdGlob or [ "*.yaml" ];
-      findArgs = lib.concatStringsSep " -o " (map (g: "-name '${g}'") globPatterns);
-    in
-    pkgs.runCommand "${name}-crds.yaml" { } ''
-      find "${src}/${def.crdPath}" \( ${findArgs} \) -type f | sort | while read -r f; do
-        printf '\n---\n' >> $out
-        cat "$f" >> $out
-      done
-      if [ ! -s "$out" ]; then touch $out; fi
-    '';
-
-  extractComponentsCrds =
-    name: def:
-    let
-      src = pkgs.fetchurl {
-        inherit (def) url hash;
-        name = "${name}-components.yaml";
-      };
-    in
-    pkgs.runCommand "${name}-crds.yaml" { nativeBuildInputs = [ pkgs.yq-go ]; } ''
-      yq 'select(.kind == "CustomResourceDefinition")' ${src} > $out
-      if [ ! -s "$out" ]; then touch $out; fi
-    '';
-
-  extractTemplatedCrds =
-    name: chart:
-    pkgs.runCommand "${name}-crds.yaml"
-      {
-        nativeBuildInputs = [
-          pkgs.kubernetes-helm
-          pkgs.yq-go
-        ];
-      }
-      ''
-        export HELM_CACHE_HOME=$PWD/.helm HELM_CONFIG_HOME=$PWD/.helm HELM_DATA_HOME=$PWD/.helm
-        helm template ${name} ${chart} \
-          | yq 'select(.kind == "CustomResourceDefinition")' - > $out
-        if [ ! -s "$out" ]; then
-          echo "${name} declares its CRDs as templates but rendering produced none," >&2
-          echo "so either the chart moved them or the values now gate them off." >&2
-          exit 1
-        fi
-      '';
-
-  buildCrds =
-    name: chartDrv: crdDef:
-    if crdDef == null then
-      null
-    else if crdDef.type == "templated" then
-      extractTemplatedCrds name chartDrv
-    else if crdDef.type == "url" then
-      pkgs.fetchurl {
-        inherit (crdDef) url hash;
-        name = "${name}-crds.yaml";
-      }
-    else if crdDef.type == "chart" then
-      extractChartCrds name chartDrv
-    else if crdDef.type == "github" then
-      extractGitHubCrds name crdDef
-    else if crdDef.type == "components" then
-      extractComponentsCrds name crdDef
-    else
-      throw "Unknown CRD type: ${crdDef.type}";
+    }
+    .${def.type};
 
   chartDefs = {
     cilium = {
@@ -341,22 +276,16 @@ let
   charts = lib.mapAttrs (
     name: def:
     let
-      chartDrv = downloadHelmChart {
-        inherit (def)
-          repo
-          chart
-          version
-          chartHash
-          ;
+      chart = upstream.helm {
+        inherit (def) repo chart version;
+        hash = def.chartHash;
       };
-      crdDef = def.crd or null;
     in
     {
-      chart = chartDrv;
-      crds = buildCrds name chartDrv crdDef;
+      inherit chart;
+      crds = if def ? crd then crdsOf name chart def.crd else null;
       inherit (def) version;
     }
   ) chartDefs;
-
 in
 charts
