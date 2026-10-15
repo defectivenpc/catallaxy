@@ -148,7 +148,16 @@
             ;
           inherit (packages') cata;
         };
-        legacyPackages' = {
+        labOutputs = import ./nix/lab-outputs.nix {
+          inherit
+            lib
+            pkgs
+            labDefs
+            exampleLabs
+            ;
+        };
+
+        legacyPackages' = labOutputs // {
           inherit
             allocations
             standaloneClusters
@@ -167,41 +176,21 @@
 
           charts = cataCharts;
           labCliConfigs = cliConfigs;
-          digestLabs = lib.attrNames labDefs;
-
-          labs = lib.mapAttrs (_: l: l.cliConfig) exampleLabs;
-          labPackages = lib.mapAttrs (_: l: l.package) labDefs;
-
-          clusters = lib.mapAttrs (
-            _: l:
-            lib.mapAttrs (
-              name: c:
-              pkgs.runCommand "cluster-${name}" { } ''
-                mkdir -p $out
-                cp ${pkgs.writeText "cluster.json" (builtins.toJSON c.spec)} $out/cluster.json
-                ln -s ${c.manifests} $out/manifests
-              ''
-            ) l.clusters
-          ) labDefs;
-
-          clusterPictures = lib.mapAttrs (_: l: lib.mapAttrs (_: c: c.out) l.clusters) labDefs;
-
-          labPlans = lib.mapAttrs (_: l: {
-            inherit (l) deploymentPlan teardownPlan;
-          }) labDefs;
         };
 
-      in
-      {
-        legacyPackages = legacyPackages';
-
-        packages = e2e.packages // {
+        flakePackages = e2e.packages // {
           default = packages'.cataWrapped;
           cata = packages'.cataWrapped;
           cata-unwrapped = packages'.cata;
 
           inherit (packages') talks docs;
         };
+
+      in
+      {
+        legacyPackages = legacyPackages';
+
+        packages = flakePackages;
 
         apps = e2e.apps // {
           default = {
@@ -219,6 +208,7 @@
 
         checks = import ./nix/checks {
           legacyPackages = legacyPackages';
+          inherit flakePackages;
           inherit
             self
             lib

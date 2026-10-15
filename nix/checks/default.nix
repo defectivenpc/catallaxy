@@ -25,6 +25,7 @@
   catallaxy,
   floes,
   legacyPackages,
+  flakePackages,
 }:
 
 let
@@ -93,6 +94,14 @@ in
   };
 }
 // import ./prose-writes-no-options.nix { inherit lib pkgs; }
+// import ./documented-outputs.nix {
+  inherit
+    lib
+    pkgs
+    legacyPackages
+    flakePackages
+    ;
+}
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {
   inherit

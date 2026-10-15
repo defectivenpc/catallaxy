@@ -49,8 +49,10 @@ A working lab plus a worked `mkFloe` example. See
 legacyPackages.<system>.mkLab              evaluate a lab
 legacyPackages.<system>.labs.<name>        the evaluated config  (cliConfig)
 legacyPackages.<system>.labPackages.<name> the rendered manifests
+legacyPackages.<system>.labPlans.<name>    the deployment and teardown plans
 legacyPackages.<system>.charts             the pinned chart set
-legacyPackages.<system>.k8sTypegenConfig   input for `cata generate`
+legacyPackages.<system>.optionDocs         generated option markdown
+legacyPackages.<system>.generatedTypes     the Kubernetes types, regenerated
 ```
 
 **`labs` and `labPackages` are the two the CLI resolves.** Your consumer
@@ -95,7 +97,9 @@ evaluation whose `options` a reference generator read.
 packages.<system>.default          the wrapped CLI
 packages.<system>.cata             same
 packages.<system>.cata-unwrapped   the bare binary, no tools on PATH
-packages.<system>.option-docs      generated option markdown
+packages.<system>.e2e              stand one lab up and tear it down
+packages.<system>.e2e-all          the same for every eligible lab
+packages.<system>.talks            the slide decks
 packages.<system>.docs             the mdBook site
 ```
 
@@ -106,10 +110,13 @@ what happens to be installed.
 ### `apps`
 
 ```
-nix run github:defectivenpc/catallaxy               # cata
-nix run github:defectivenpc/catallaxy#generate-k8s-types
-nix run .#<lab>-ops                                 # per lab with ops commands
+nix run github:defectivenpc/catallaxy    # cata
+nix run .#e2e                            # one lab, up and down again
+nix run .#e2e-all                        # every lab e2e can stand up
 ```
+
+`nix run .#e2e` with no argument prints the labs it can stand up. The list
+is in `nix/e2e.nix`, beside the two runners that read it.
 
 ### `devShells.default`
 
