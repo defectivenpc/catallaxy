@@ -20,6 +20,7 @@
   referencePages,
   generatedTypes,
   floeCrds,
+  upstream,
   catallaxy,
   floes,
   legacyPackages,
@@ -144,6 +145,15 @@ in
     catallaxy
     floes
     ;
+}
+// import ./floe-upstream.nix {
+  inherit
+    lib
+    pkgs
+    upstream
+    floeCrds
+    ;
+  floeSet = allFloes;
 }
 // import ./floe-headers.nix { inherit lib pkgs; }
 // import ./step-kind-producers.nix { inherit lib pkgs; }

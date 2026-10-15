@@ -183,6 +183,7 @@
             referencePages
             generatedTypes
             floeCrds
+            upstream
             ;
 
           inherit (labs)
