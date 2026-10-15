@@ -5,15 +5,14 @@
 # cluster's own composition is in `clusters.nix`, where its header states its
 # interface.
 #
-# Three sets of floes reach it as ordinary arguments, because a floe is a
-# function rather than a module to import. `floes` is catallaxy's set and
-# `catallaxy` the distribution — both handed in by the flake from
-# `cata.floes` and `cata.catallaxy` — and `myFloes` is yours.
+# Both reach it as ordinary arguments, because a floe is a function rather
+# than a module to import. `floes` is every floe there is — catallaxy's and
+# yours in one namespace — and `catallaxy` is the distribution. The flake
+# hands in both from `cata`, which it built with `withFloes`.
 {
   lib,
   floes,
   catallaxy,
-  myFloes,
 }:
 
 let
@@ -21,7 +20,6 @@ let
     inherit
       catallaxy
       floes
-      myFloes
       lib
       ;
   };

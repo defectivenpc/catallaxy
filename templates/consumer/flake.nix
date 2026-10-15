@@ -17,16 +17,21 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        cata = catallaxy.legacyPackages.${system};
-
-        myFloes = cata.mkFloes (import ./floes);
+        # The distribution, with your floes in it. `withFloes` rather than
+        # `mkFloes` because your floes' CRD types have to be in the record your
+        # floes are *defined against*: a custom resource whose API group is
+        # missing resolves to no schema and is checked for nothing. Everything
+        # below comes from `cata`, so there is one record and not two.
+        #
+        # `floes` holds the built-in set and yours together, under one
+        # namespace — taking a built-in name is refused rather than merged.
+        cata = catallaxy.legacyPackages.${system}.withFloes (import ./floes);
 
         # `lab.nix` is a floe definition and this instantiates it: the name is
         # what every host port and the subnet are allocated from, so a second
         # environment of the same lab is a second call with a different one.
         lab = cata.mkLab (
           (import ./lab.nix {
-            inherit myFloes;
             inherit (cata) catallaxy floes;
             inherit (nixpkgs) lib;
           })

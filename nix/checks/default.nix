@@ -14,6 +14,7 @@
   exampleLabs,
   mkLab,
   mkFloes,
+  withFloes,
   optionDocs,
   allocations,
   cliConfigs,
@@ -42,14 +43,7 @@ in
 // import ./lab-manifests.nix { inherit lib pkgs labDefs; }
 // import ./step-kinds.nix { inherit lib pkgs; }
 // import ./consumer-template.nix {
-  inherit
-    lib
-    pkgs
-    mkLab
-    mkFloes
-    catallaxy
-    floes
-    ;
+  inherit lib pkgs withFloes;
   exposed = legacyPackages;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }

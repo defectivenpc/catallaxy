@@ -4,6 +4,13 @@
   pkgs,
   floeCore,
   kubelib,
+
+  # Floes from outside this repository, by name. They are collected for their
+  # CRD types exactly as the built-in ones are, which is the whole point: a
+  # floe's custom resources are checked against a schema only if its groups
+  # reached the record the floe was defined against, and that record is built
+  # below. `legacyPackages.withFloes` is how a consumer gets one.
+  extraFloes ? { },
 }:
 
 let
@@ -12,7 +19,18 @@ let
   # distribution importing the floe tree would be the cycle.
   upstreamLib = import ./upstream.nix { inherit lib pkgs kubelib; };
 
-  allFloePaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../floes));
+  builtInPaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../floes));
+
+  # A floe outside this repository cannot take a built-in name. Both halves
+  # are one namespace — a link resolves `floes.<name>` against the merged set
+  # — so a silent override would mean a lab linking the floe it did not mean.
+  shadowed = lib.attrNames (lib.intersectAttrs builtInPaths extraFloes);
+
+  allFloePaths = lib.throwIf (shadowed != [ ]) (
+    "these floe names are already in the built-in set: ${lib.concatStringsSep ", " shadowed}. "
+    + "A floe set is one namespace, so a lab naming one of these would get whichever "
+    + "the merge happened to keep. Rename yours."
+  ) (builtInPaths // extraFloes);
 
   # What this floe vendors, or null. A component floe is a directory and a lab
   # floe is a file, so only the first can carry a pin beside it.

@@ -23,7 +23,6 @@
 {
   catallaxy,
   floes,
-  myFloes,
   lib,
 }:
 
@@ -62,7 +61,8 @@ in
 
       gateway = floes.gateway { };
 
-      hello = myFloes.hello-world { };
+      # Yours, reached exactly as a built-in one is.
+      hello = floes.hello-world { };
     };
   };
 }

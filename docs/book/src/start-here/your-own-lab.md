@@ -32,13 +32,13 @@ floes/hello-world/default.nix      a worked example floe
   outputs = { nixpkgs, flake-utils, catallaxy, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        cata = catallaxy.legacyPackages.${system};
-
-        myFloes = cata.mkFloes (import ./floes);
+        # `withFloes` puts your floes in the distribution, so their CRD types
+        # are in the record they are defined against. `floes` below then holds
+        # catallaxy's set and yours together.
+        cata = catallaxy.legacyPackages.${system}.withFloes (import ./floes);
 
         lab = cata.mkLab (
           (import ./lab.nix {
-            inherit myFloes;
             inherit (cata) catallaxy floes;
             inherit (nixpkgs) lib;
           })
@@ -70,7 +70,7 @@ lab as an ordinary argument. See [Write a Floe](../using/writing-a-floe.md).
 ## The lab
 
 ```nix
-{ lib, floes, catallaxy, myFloes }:
+{ lib, floes, catallaxy }:
 
 catallaxy.mkLabFloe {
   name = "my-platform";
@@ -94,7 +94,7 @@ catallaxy.mkLabFloe {
             cert-manager = floes.cert-manager { };
             gateway = floes.gateway { };
 
-            hello = myFloes.hello-world { replicas = 2; };
+            hello = floes.hello-world { replicas = 2; };
           };
         }
         { };

@@ -2,9 +2,9 @@
 #
 # `templates/consumer` is what `nix flake init -t .#consumer` copies, and
 # `docs/book/src/start-here/your-own-lab.md` walks through it line by line. It
-# is the only code in the tree that exercises the consumer surface — `mkFloes`
-# on a floe directory outside `floes/`, and `mkLab` on a lab that mixes those
-# floes with the built-in set.
+# is the only code in the tree that exercises the consumer surface —
+# `withFloes` on a floe directory outside `floes/`, and `mkLab` on a lab that
+# mixes those floes with the built-in set.
 #
 # Its own flake cannot be evaluated here: it names `github:defectivenpc/catallaxy`
 # as an input, which a check has no network to fetch. So the check does what
@@ -14,10 +14,7 @@
 {
   lib,
   pkgs,
-  mkLab,
-  mkFloes,
-  catallaxy,
-  floes,
+  withFloes,
 
   # What a consumer actually reaches through, so that a name the template
   # reads off it and nothing exposes fails here instead of at their first
@@ -28,16 +25,15 @@
 }:
 
 let
-  myFloes = mkFloes (import ../../templates/consumer/floes);
+  # Exactly what the template's flake does, including the rebuild: its floes'
+  # CRD types have to reach the record its floes are defined against, and
+  # taking `catallaxy` from anywhere else would be two records.
+  cata = withFloes (import ../../templates/consumer/floes);
 
-  lab = mkLab (
+  lab = cata.mkLab (
     (import ../../templates/consumer/lab.nix {
-      inherit
-        lib
-        catallaxy
-        floes
-        myFloes
-        ;
+      inherit lib;
+      inherit (cata) catallaxy floes;
     })
       {
         name = "my-platform";

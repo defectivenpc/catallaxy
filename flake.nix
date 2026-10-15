@@ -82,7 +82,7 @@
 
         allocations = import ./nix/allocations.nix { inherit lib pkgs labDefs; };
 
-        labs = import ./lib/lab.nix {
+        labArgs = {
           inherit
             lib
             pkgs
@@ -90,6 +90,8 @@
             kubelib
             ;
         };
+
+        labs = import ./lib/lab.nix labArgs;
 
         # The example corpus is this flake's test input, not its output.
         # `examples/flake.nix` is what exposes it, as a consumer would.
@@ -137,6 +139,13 @@
             catallaxy
             floes
             ;
+
+          # The distribution, rebuilt so that your floes' CRD types are in the
+          # record your floes are defined against. `mkLab` and `catallaxy` from
+          # here, not from the attributes above: those were built from the
+          # built-in groups alone, and a custom resource whose group is missing
+          # resolves to no schema and is checked for nothing.
+          withFloes = extraFloes: import ./lib/lab.nix (labArgs // { inherit extraFloes; });
           inherit (packages') optionDocs;
         };
 
@@ -192,6 +201,7 @@
             catallaxy
             floes
             ;
+          inherit (legacyPackages') withFloes;
           inherit (packages') optionDocs;
 
           packages = packages';
