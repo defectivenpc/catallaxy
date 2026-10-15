@@ -1,10 +1,9 @@
 /*
   The generated Kubernetes and CRD types, as a derivation.
 
-  One binding, two readers: `generated-types` diffs the committed tree against
-  this, and `refresh-generated-types` copies out of it. Producing the fixture
-  and the check from two pipelines would let them disagree about the very thing
-  one exists to check.
+  One binding, so the check and whatever refreshes the committed tree read the
+  same store path. Producing the fixture and the check from two pipelines would
+  let them disagree about the very thing one exists to check.
 
   `cata-build generate` writes `k8s/<version>.nix` and `<floe>/crds/<group>.nix`:
   the Kubernetes API in one place, and each floe's CRD types under the floe that

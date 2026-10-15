@@ -57,13 +57,6 @@ let
 
   e2e = import ./e2e.nix { inherit lib pkgs cataWrapped; };
   e2e-all = import ./e2e-all.nix { inherit lib pkgs e2e; };
-  cloud-reap = import ./cloud-reap.nix { inherit lib pkgs; };
-  e2e-cloud = import ./e2e-cloud.nix { inherit lib pkgs cataWrapped; };
-  refresh-digests = import ./refresh-digests.nix { inherit lib pkgs; };
-  refresh-cli-configs = import ./refresh-cli-configs.nix { inherit lib pkgs; };
-  refresh-docs = import ./refresh-docs.nix { inherit lib pkgs; };
-  refresh-allocations = import ./refresh-allocations.nix { inherit lib pkgs; };
-  refresh-generated-types = import ./refresh-generated-types.nix { inherit lib pkgs; };
   optionDocs = import ./option-docs.nix {
     inherit
       lib
@@ -74,11 +67,6 @@ let
   };
   talks = import ./talks.nix { inherit lib pkgs; };
   docs = import ./docs.nix { inherit lib pkgs talks; };
-  refresh-plans = import ./refresh-plans.nix {
-    inherit lib pkgs;
-    cata = cataWrapped;
-  };
-
 in
 {
   inherit
@@ -87,15 +75,7 @@ in
     cataWrapped
     e2e
     e2e-all
-    e2e-cloud
-    cloud-reap
-    refresh-digests
-    refresh-cli-configs
-    refresh-docs
-    refresh-allocations
-    refresh-generated-types
     optionDocs
-    refresh-plans
     talks
     docs
     ;

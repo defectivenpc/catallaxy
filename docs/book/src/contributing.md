@@ -117,8 +117,12 @@ gate on them being established.
 runs the real linker and elaborator, so a suite exercises what the lab will
 do rather than an approximation of it.
 
-**Regenerate the floe's interface page** with `nix run .#refresh-docs` and
-commit it, or its diff check fails.
+**Regenerate the floe's interface page** from `nix build .#referencePages`,
+copy it over `docs/generated`, and commit it, or its diff check fails.
+
+There is no app wrapping that copy at the moment: the `refresh-*` apps were
+deleted to be reconsidered, so the check tells you which derivation holds
+the fresh output and the copy is yours.
 
 ## Docs
 

@@ -254,7 +254,7 @@ diff-checked, so changing a floe's interface without regenerating is a
 failing build:
 
 ```bash
-nix run .#refresh-docs
+nix build .#referencePages   # and copy it over docs/generated
 ```
 
 Check the result. `openbao`'s page immediately showed a header documenting

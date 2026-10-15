@@ -20,7 +20,7 @@
       echo "diff is a lab being renamed, added, or removed. Read it: a lab that" >&2
       echo "moved has moved for whoever had its port in a bookmark." >&2
       echo "" >&2
-      echo "  nix run .#refresh-allocations" >&2
+      echo "  nix build .#allocations   # then copy allocations.json over the committed one" >&2
       exit 1
     fi
     touch $out

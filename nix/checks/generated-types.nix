@@ -74,7 +74,7 @@ in
       echo "CRD that is no longer what gets applied." >&2
       echo "" >&2
       echo "Refresh it and read the diff:" >&2
-      echo "  nix run .#refresh-generated-types" >&2
+      echo "  nix build .#generatedTypes   # k8s/ and <floe>/crds/, to copy into place" >&2
       exit 1
     fi
     touch $out

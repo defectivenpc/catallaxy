@@ -42,7 +42,7 @@ let
   # nixpkgs reading as a change to what the lab declares — a fixture that
   # moved on every input bump would be refreshed without being read.
   #
-  # This pipeline and `pkgs/refresh-digests.nix` must stay byte-identical.
+  # Whatever refreshes the committed digest must use this same pipeline.
   digestCheck =
     name: lab:
     pkgs.runCommand "manifest-digest-${name}"
@@ -70,7 +70,7 @@ let
           echo "A refactor that meant to change nothing should show no diff here." >&2
           echo "If the diff is intentional, refresh it:" >&2
           echo "" >&2
-          echo "  nix run .#refresh-digests" >&2
+          echo "  nix build .#labPackages.<lab>   # the tree this digest is taken over" >&2
           exit 1
         fi
         touch $out
@@ -175,7 +175,7 @@ let
           echo "a derived plan changing is exactly what nobody notices." >&2
           echo "" >&2
           echo "If intended, refresh every snapshot and read the diff:" >&2
-          echo "  nix run .#refresh-plans" >&2
+          echo "  nix eval .#labPlans.<lab>   # the plans this snapshot is taken from" >&2
           exit 1
         fi
         touch $out
@@ -191,7 +191,7 @@ let
   # of them and no check would move.
   #
   # Diffed against `nix/cli-configs.nix` rather than recomputed, so this and
-  # `refresh-cli-configs` read one store path instead of two pipelines.
+  # the refresher reads one store path instead of a second pipeline.
   cliConfigCheck =
     name: _lab:
     pkgs.runCommand "cliConfig-${name}" { nativeBuildInputs = [ pkgs.diffutils ]; } ''
@@ -205,7 +205,7 @@ let
         echo "" >&2
         echo "If intended, refresh it and read the diff:" >&2
         echo "" >&2
-        echo "  nix run .#refresh-cli-configs" >&2
+        echo "  nix build .#labCliConfigs   # then copy over examples/labs/tests/cli-configs" >&2
         exit 1
       fi
       touch $out

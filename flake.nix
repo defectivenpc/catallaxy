@@ -108,13 +108,6 @@
           "minimal.tls"
         ];
 
-        cloudE2eLabs = {
-          "cloud" = [ "DIGITALOCEAN_TOKEN" ];
-          "every-floe" = [ "DIGITALOCEAN_TOKEN" ];
-
-          "provisions" = [ ];
-        };
-
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
         floePages = import ./nix/floe-docs.nix {
@@ -167,7 +160,6 @@
             allocations
             standaloneClusters
             e2eLabs
-            cloudE2eLabs
             referencePages
             generatedTypes
             ;
@@ -219,14 +211,6 @@
           inherit (packages')
             e2e
             e2e-all
-            e2e-cloud
-            cloud-reap
-            refresh-digests
-            refresh-cli-configs
-            refresh-docs
-            refresh-allocations
-            refresh-generated-types
-            refresh-plans
             talks
             docs
             ;
@@ -247,47 +231,6 @@
         apps.e2e-all = {
           type = "app";
           program = "${packages'.e2e-all}/bin/cata-e2e-all";
-        };
-
-        # Spends money. Never in `nix flake check`, never on a PR.
-        apps.e2e-cloud = {
-          type = "app";
-          program = "${packages'.e2e-cloud}/bin/cata-e2e-cloud";
-        };
-
-        apps.cloud-reap = {
-          type = "app";
-          program = "${packages'.cloud-reap}/bin/cata-cloud-reap";
-        };
-
-        apps.refresh-digests = {
-          type = "app";
-          program = "${packages'.refresh-digests}/bin/refresh-digests";
-        };
-
-        apps.refresh-cli-configs = {
-          type = "app";
-          program = "${packages'.refresh-cli-configs}/bin/refresh-cli-configs";
-        };
-
-        apps.refresh-docs = {
-          type = "app";
-          program = "${packages'.refresh-docs}/bin/refresh-docs";
-        };
-
-        apps.refresh-allocations = {
-          type = "app";
-          program = "${packages'.refresh-allocations}/bin/refresh-allocations";
-        };
-
-        apps.refresh-generated-types = {
-          type = "app";
-          program = "${packages'.refresh-generated-types}/bin/refresh-generated-types";
-        };
-
-        apps.refresh-plans = {
-          type = "app";
-          program = "${packages'.refresh-plans}/bin/refresh-plans";
         };
 
         devShells.default = import ./nix/devshell.nix {

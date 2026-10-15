@@ -33,7 +33,7 @@ lib.foldl' lib.mergeAttrs { } (
             echo "" >&2
             echo "If intended, refresh it and read the diff:" >&2
             echo "" >&2
-            echo "  nix run .#refresh-docs" >&2
+            echo "  nix build .#referencePages   # then copy over docs/generated" >&2
             exit 1
           fi
           touch $out
@@ -45,7 +45,7 @@ lib.foldl' lib.mergeAttrs { } (
         if ! diff -u ${docDir}/index.md ${referencePages}/signatures/index.md; then
           echo "" >&2
           echo "The signature index is stale — a signature was added or removed." >&2
-          echo "  nix run .#refresh-docs" >&2
+          echo "  nix build .#referencePages   # then copy over docs/generated" >&2
           exit 1
         fi
         touch $out

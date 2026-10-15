@@ -58,5 +58,5 @@ kinds live in the CLI.
 Regenerate with:
 
 ```bash
-nix run .#refresh-docs
+nix build .#referencePages   # and copy it over docs/generated
 ```

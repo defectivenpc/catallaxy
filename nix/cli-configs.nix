@@ -7,11 +7,9 @@
 # `kubeContext` reached the CLI through a document no check had ever read.
 # A change to any of them moved nothing anybody would notice.
 #
-# One derivation rather than a pipeline written twice: the check diffs
-# against this and `refresh-cli-configs` copies out of it, so the two consume
-# the identical store path and cannot drift. `manifest-digest` and
-# `refresh-digests` hold two copies of one pipeline and carry a comment
-# saying they must stay byte-identical; this needs no such comment.
+# One derivation rather than a pipeline written twice: the check diffs against
+# this and whatever refreshes the committed copy reads the same store path, so
+# the two cannot drift.
 {
   lib,
   pkgs,

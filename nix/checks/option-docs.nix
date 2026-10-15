@@ -51,7 +51,7 @@
       echo "somebody else's lab changing." >&2
       echo "" >&2
       echo "Refresh it and read the diff:" >&2
-      echo "  nix run .#refresh-docs" >&2
+      echo "  nix build .#optionDocs   # then copy over docs/generated" >&2
       exit 1
     fi
     touch $out

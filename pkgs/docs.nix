@@ -48,7 +48,7 @@ let
     for a floe — from an actual link. Each is diff-checked by its own flake
     check.
 
-    Regenerate with `nix run .#refresh-docs`.
+    Regenerate from `nix build .#referencePages`.
 
     ${lib.concatMapStringsSep "\n" (n: "- [${n}](./${n}.md)") floeNames}
   '';

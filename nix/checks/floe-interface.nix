@@ -13,7 +13,7 @@
 # previously checked by nobody.
 #
 # Diffed against `nix/floe-docs.nix` rather than recomputed, so this and
-# `refresh-docs` read one store path instead of two pipelines that can
+# the refresher reads one store path instead of two pipelines that can
 # disagree — the same construction `cliConfig-<lab>` uses.
 {
   lib,
@@ -75,7 +75,7 @@
             echo "" >&2
             echo "If intended, refresh it and read the diff:" >&2
             echo "" >&2
-            echo "  nix run .#refresh-docs" >&2
+            echo "  nix build .#referencePages   # then copy over docs/generated" >&2
             exit 1
           fi
           touch $out

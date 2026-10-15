@@ -89,8 +89,8 @@ in
       echo "said so. An \`apiVersion\` typo looks exactly like this." >&2
       echo "" >&2
       echo "Generate its types: give the floe that installs the CRD a" >&2
-      echo "\`crds.nix\` naming the artifact they come from, then \`nix run" >&2
-      echo ".#refresh-generated-types\`." >&2
+      echo "\`crds.nix\` naming the artifact they come from, then copy" >&2
+      echo "\`nix build .#generatedTypes\` into place." >&2
       echo "" >&2
       echo "If the CRDs genuinely arrive at runtime — a controller installs" >&2
       echo "them after this manifest applies — then the bundle establishing" >&2
