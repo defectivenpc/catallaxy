@@ -8,14 +8,14 @@
 # The exemption is derived rather than listed. A bundle that declares `crds`
 # but carries neither `yamls` nor `helmCharts` installs no CRD content: its
 # kinds arrive when some controller does, long after the manifest that asked
-# for them was applied, so no extractor in `nix/crd-types.nix` could have read
-# them. `crossplane-provider-nop` is the case — crossplane installs the nop
+# for them was applied, so no artifact a floe could name would have held them.
+# `crossplane-provider-nop` is the case — crossplane installs the nop
 # provider's CRDs when the provider goes healthy.
 #
-# Derived, so it cannot go stale. The day those CRDs become extractable and
-# land in `nix/crd-types.nix`, the kind gets a schema and stops being reported
-# whatever this check believes. A name in a list would have had to be noticed
-# and removed.
+# Derived, so it cannot go stale. The day those CRDs become extractable and a
+# floe names them in its `crds.nix`, the kind gets a schema and stops being
+# reported whatever this check believes. A name in a list would have had to be
+# noticed and removed.
 {
   lib,
   pkgs,
@@ -88,8 +88,8 @@ in
       echo "A resource of this kind is checked against nothing, and nothing" >&2
       echo "said so. An \`apiVersion\` typo looks exactly like this." >&2
       echo "" >&2
-      echo "Generate its types: add the chart or release YAML that defines" >&2
-      echo "the CRD to \`nix/crd-types.nix\`, then \`nix run" >&2
+      echo "Generate its types: give the floe that installs the CRD a" >&2
+      echo "\`crds.nix\` naming the artifact they come from, then \`nix run" >&2
       echo ".#refresh-generated-types\`." >&2
       echo "" >&2
       echo "If the CRDs genuinely arrive at runtime — a controller installs" >&2
