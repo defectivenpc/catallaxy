@@ -6,24 +6,20 @@
   - `labPackages.<name>` — the rendered tree, `nix build` reads this.
   - `labPlans.<name>` — `{ deploymentPlan, teardownPlan }`, which the plan
     snapshots are taken from.
-  - `clusters.<name>.<cluster>` — the cluster's spec beside its manifests.
-  - `clusterPictures.<name>.<cluster>` — what the cluster floe output.
-  - `digestLabs` — the names a digest is committed for, labs and fixtures
-    both.
 
-  Fixtures are in all of these but `labs`, because a fixture has no cliConfig
-  to resolve and `cata lab list` must not offer one.
+  Fixtures are in `labPackages` and `labPlans` but not `labs`: a fixture has
+  no cliConfig to resolve and `cata lab list` must not offer one. They are
+  here at all so that refreshing a fixture's digest or plan is
+  `nix build .#labPackages."<fixture>"`, the same as for a lab.
 */
 {
   lib,
-  pkgs,
   labDefs,
   exampleLabs,
 }:
 
 let
   perLab = f: lib.mapAttrs (_: f) labDefs;
-  perCluster = f: perLab (l: lib.mapAttrs f l.clusters);
 in
 {
   labs = lib.mapAttrs (_: l: l.cliConfig) exampleLabs;
@@ -33,17 +29,4 @@ in
   labPlans = perLab (l: {
     inherit (l) deploymentPlan teardownPlan;
   });
-
-  clusters = perCluster (
-    name: c:
-    pkgs.runCommand "cluster-${name}" { } ''
-      mkdir -p $out
-      cp ${pkgs.writeText "cluster.json" (builtins.toJSON c.spec)} $out/cluster.json
-      ln -s ${c.manifests} $out/manifests
-    ''
-  );
-
-  clusterPictures = perCluster (_: c: c.out);
-
-  digestLabs = lib.attrNames labDefs;
 }

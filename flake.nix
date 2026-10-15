@@ -136,12 +136,7 @@
           inherit (packages') cata;
         };
         labOutputs = import ./nix/lab-outputs.nix {
-          inherit
-            lib
-            pkgs
-            labDefs
-            exampleLabs
-            ;
+          inherit lib labDefs exampleLabs;
         };
 
         legacyPackages' = labOutputs // {

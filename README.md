@@ -93,10 +93,9 @@ Walkthrough:
   repository. Each has a generated interface page under
   [`docs/generated/floes/`](docs/generated/floes/) that a check keeps
   honest.
-- **Cloud clusters.** `doks` provisions a DigitalOcean cluster through
-  OpenTofu; `talos-cluster` and `external-cluster` cover bare metal and one
-  you already have. A cluster elsewhere is its own edge, so the lab does not
-  assume it can route to it.
+- **Clusters you did not make.** `talos-cluster` covers bare metal and
+  `external-cluster` one you already have. A cluster elsewhere is its own
+  edge, so the lab does not assume it can route to it.
 - **Secrets that stay out of the store.** A credential is minted in the
   cluster that needs it, and moving one between clusters goes through a lab
   secret store rather than through Nix.
