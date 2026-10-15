@@ -53,6 +53,8 @@
         cataCharts = import ./lib/charts.nix { inherit lib pkgs kubelib; };
         k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs cataCharts; };
 
+        floePaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+
         floeCrds = import ./floes/crds.nix { inherit lib; };
         crdSources = lib.mapAttrs (_: f: f { inherit cataCharts k8sSpecs; }) floeCrds.sources;
 
@@ -123,8 +125,8 @@
             cataCharts
             k8sSpecs
             ;
-          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs floeCore; };
-          floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+          inherit (labs) catallaxy;
+          floeSet = floePaths;
         };
 
         signaturePages = import ./nix/signature-docs.nix {
@@ -134,8 +136,8 @@
             cataCharts
             k8sSpecs
             ;
-          catallaxy = import ./lib/floe-catallaxy { inherit lib pkgs floeCore; };
-          floeSet = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
+          inherit (labs) catallaxy;
+          floeSet = floePaths;
         };
 
         standaloneClusters = lib.mapAttrs (
@@ -160,21 +162,31 @@
             ;
           inherit (packages') cata;
         };
-      in
-      {
-        legacyPackages = {
-          charts = cataCharts;
+        legacyPackages' = {
+          inherit
+            allocations
+            standaloneClusters
+            e2eLabs
+            cloudE2eLabs
+            referencePages
+            generatedTypes
+            ;
 
+          inherit (labs)
+            mkLab
+            mkCluster
+            mkFloes
+            catallaxy
+            floes
+            ;
           inherit (packages') optionDocs;
 
-          inherit allocations;
-
-          inherit (labs) mkLab mkCluster mkFloes;
+          charts = cataCharts;
+          labCliConfigs = cliConfigs;
+          digestLabs = lib.attrNames labDefs;
 
           labs = lib.mapAttrs (_: l: l.cliConfig) exampleLabs;
           labPackages = lib.mapAttrs (_: l: l.package) labDefs;
-
-          inherit standaloneClusters;
 
           clusters = lib.mapAttrs (
             _: l:
@@ -190,20 +202,14 @@
 
           clusterPictures = lib.mapAttrs (_: l: lib.mapAttrs (_: c: c.out) l.clusters) labDefs;
 
-          inherit e2eLabs cloudE2eLabs;
-
-          digestLabs = lib.attrNames labDefs;
-
-          labCliConfigs = cliConfigs;
-
-          inherit referencePages;
-
-          inherit generatedTypes;
-
           labPlans = lib.mapAttrs (_: l: {
             inherit (l) deploymentPlan teardownPlan;
           }) labDefs;
         };
+
+      in
+      {
+        legacyPackages = legacyPackages';
 
         packages = {
           default = packages'.cataWrapped;
@@ -292,6 +298,7 @@
         formatter = treefmtEval.config.build.wrapper;
 
         checks = import ./nix/checks {
+          legacyPackages = legacyPackages';
           inherit
             self
             lib
@@ -300,9 +307,15 @@
             cataCharts
             k8sSpecs
             treefmtEval
+            labDefs
+            exampleLabs
+            standaloneClusters
+            allocations
+            cliConfigs
+            referencePages
+            generatedTypes
+            floeCrds
             ;
-          packages = packages';
-          inherit labDefs exampleLabs standaloneClusters;
 
           inherit (labs)
             mkLab
@@ -311,13 +324,8 @@
             floes
             ;
           inherit (packages') optionDocs;
-          inherit
-            allocations
-            cliConfigs
-            referencePages
-            generatedTypes
-            floeCrds
-            ;
+
+          packages = packages';
         };
       }
     )

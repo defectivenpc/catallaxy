@@ -24,6 +24,7 @@
   floeCrds,
   catallaxy,
   floes,
+  legacyPackages,
 }:
 
 let
@@ -49,6 +50,7 @@ in
     catallaxy
     floes
     ;
+  exposed = legacyPackages;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
 // import ./generated-types.nix {

@@ -18,6 +18,13 @@
   mkFloes,
   catallaxy,
   floes,
+
+  # What a consumer actually reaches through, so that a name the template
+  # reads off it and nothing exposes fails here instead of at their first
+  # `nix flake init`. The template's own flake cannot be evaluated in a check
+  # — it names `github:defectivenpc/catallaxy` as an input — so until now the
+  # only thing proving those names existed was that somebody tried it.
+  exposed,
 }:
 
 let
@@ -42,10 +49,37 @@ let
   named = {
     inherit (lab) cliConfig package;
   };
+
+  # Every `cata.<name>` and `inherit (cata) <name>` the template's flake
+  # reads, against what `legacyPackages` actually has.
+  flakeSrc = builtins.readFile ../../templates/consumer/flake.nix;
+
+  wanted = lib.unique (
+    map (m: lib.head m) (
+      lib.filter (m: m != null) (
+        map (l: builtins.match ".*cata\\.([a-zA-Z][A-Za-z0-9_]*).*" l) (lib.splitString "\n" flakeSrc)
+      )
+    )
+    ++ lib.concatMap (
+      l:
+      let
+        m = builtins.match ".*inherit \\(cata\\) ([^;]*);.*" l;
+      in
+      if m == null then [ ] else lib.filter (w: w != "") (lib.splitString " " (lib.head m))
+    ) (lib.splitString "\n" flakeSrc)
+  );
+
+  missing = lib.filter (n: !(exposed ? ${n})) wanted;
 in
-{
-  consumer-template = pkgs.runCommand "consumer-template" { } ''
-    ln -s ${named.package} rendered
-    echo "${lab.name}: ${toString (lib.length (lib.attrNames lab.clusters))} cluster, cliConfig ${named.cliConfig.labName}" > $out
-  '';
-}
+lib.throwIf (missing != [ ])
+  (
+    "templates/consumer/flake.nix reads ${lib.concatMapStringsSep ", " (n: "`cata.${n}`") missing}, "
+    + "which `legacyPackages` does not expose. A consumer following the template gets "
+    + "\"attribute missing\" on their first build."
+  )
+  {
+    consumer-template = pkgs.runCommand "consumer-template" { } ''
+      ln -s ${named.package} rendered
+      echo "${lab.name}: ${toString (lib.length (lib.attrNames lab.clusters))} cluster, cliConfig ${named.cliConfig.labName}" > $out
+    '';
+  }
