@@ -149,8 +149,6 @@
             floes
             ;
           inherit (packages') optionDocs;
-
-          charts = cataCharts;
         };
 
         flakePackages = {

@@ -17,6 +17,7 @@
   cataCharts,
   k8sSpecs,
   labDefs,
+  floeCrds,
   floeSet,
 
   # Floes that cannot answer for their own images, and say so.
@@ -43,7 +44,10 @@ let
   # Exempted by what it emits rather than by name, so the exemption cannot go
   # stale: a resources floe that later grows bundles rejoins the gate on its
   # own, and a name in a list would have had to be noticed and removed.
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
+  catallaxy = import ../../lib/floe-catallaxy {
+    inherit lib pkgs floeCore;
+    crdTypes = floeCrds.types;
+  };
 
   defOf =
     name:

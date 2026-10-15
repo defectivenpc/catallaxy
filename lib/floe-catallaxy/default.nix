@@ -10,7 +10,7 @@
   # the types live beside the floes that install the CRDs, and a floe depends
   # on this distribution rather than the reverse — so the one thing that would
   # be a cycle arrives as an argument instead.
-  crdTypes ? { },
+  crdTypes,
 }:
 
 let

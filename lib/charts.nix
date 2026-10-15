@@ -274,13 +274,6 @@ let
       };
     };
 
-    local-path-provisioner = {
-      repo = "https://charts.containeroo.ch";
-      chart = "local-path-provisioner";
-      version = "0.0.30";
-      chartHash = "sha256-oJrU/MWNYKA3/OhBjX7Py/hDKio4Zs7Ta1qfa+Eo7r4=";
-    };
-
     seaweedfs = {
       repo = "https://seaweedfs.github.io/seaweedfs/helm";
       chart = "seaweedfs";
@@ -303,13 +296,6 @@ let
       crd = {
         type = "chart";
       };
-    };
-
-    kanidm = {
-      repo = "https://datosh.github.io/kanidm";
-      chart = "kanidm";
-      version = "0.2.1";
-      chartHash = "sha256-toHedI3JT/A3ff2E7O2BYtoA2twEr0XlYig7DmEacFY=";
     };
 
     forgejo = {
@@ -372,14 +358,5 @@ let
     }
   ) chartDefs;
 
-  # For the Crossplane floe, which is not built. Kept: re-deriving the hashes
-  # later costs more than the pin does.
-  crossplaneProviderCrdDefs = {
-  };
-
-  crossplaneProviderCrds = lib.mapAttrs (
-    name: def: buildCrds name null def
-  ) crossplaneProviderCrdDefs;
-
 in
-charts // { inherit crossplaneProviderCrds; }
+charts

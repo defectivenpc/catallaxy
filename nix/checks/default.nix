@@ -129,6 +129,7 @@ in
     pkgs
     floeCore
     labDefs
+    floeCrds
     cataCharts
     k8sSpecs
     ;
@@ -166,7 +167,10 @@ in
     cataCharts
     k8sSpecs
     ;
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
+  catallaxy = import ../../lib/floe-catallaxy {
+    inherit lib pkgs floeCore;
+    crdTypes = floeCrds.types;
+  };
   floeSet = allFloes;
 }
 // import ./floe-interface.nix {
@@ -177,7 +181,10 @@ in
 // import ./signature-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/signatures;
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
+  catallaxy = import ../../lib/floe-catallaxy {
+    inherit lib pkgs floeCore;
+    crdTypes = floeCrds.types;
+  };
 }
 // import ./content-cache.nix { inherit lib pkgs labDefs; }
 // import ./cluster-documents.nix {

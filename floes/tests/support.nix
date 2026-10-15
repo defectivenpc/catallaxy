@@ -10,7 +10,10 @@
 }:
 
 let
-  catallaxy = import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; };
+  catallaxy = import ../../lib/floe-catallaxy {
+    inherit lib pkgs floeCore;
+    crdTypes = (import ../crds.nix { inherit lib; }).types;
+  };
   inherit (catallaxy) floe sigs kinds;
 
   # Flattened across `cluster` and `provisioners`, the same way `lib/lab.nix`

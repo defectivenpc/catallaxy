@@ -23,7 +23,11 @@ let
 
   descriptor = r.link.out."catallaxy.cluster".talos-cluster;
 
-  kinds = (import ../../lib/floe-catallaxy { inherit lib pkgs floeCore; }).kinds;
+  kinds =
+    (import ../../lib/floe-catallaxy {
+      inherit lib pkgs floeCore;
+      crdTypes = (import ../crds.nix { inherit lib; }).types;
+    }).kinds;
 in
 lib.runTests {
 
