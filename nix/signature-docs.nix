@@ -15,38 +15,18 @@
   pkgs,
   floeSet,
   catallaxy,
-  cataCharts,
-  k8sSpecs,
+  mkFloes,
 }:
 
 let
   inherit (catallaxy) floe sigs kinds;
 
-  defOf =
-    name:
-    import floeSet.${name} {
-      inherit
-        lib
-        pkgs
-        catallaxy
-        cataCharts
-        k8sSpecs
-        floes
-        ;
-      inherit
-        floe
-        sigs
-        kinds
-        ;
-    };
+  # Applied by the distribution rather than here. This file used to build
+  # the set itself, which meant a fourth copy of `applyFloes` that had to
+  # be kept in step with what a floe is handed.
+  floes = mkFloes floeSet;
 
-  floes = lib.mapAttrs (
-    name: _:
-    let
-      def = defOf name;
-    in
-    def // { __functor = _: def.instantiate; }
-  ) floeSet;
+  defOf = name: floes.${name};
 
   defs = lib.mapAttrs (name: _: defOf name) floeSet;
 

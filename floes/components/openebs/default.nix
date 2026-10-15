@@ -2,7 +2,7 @@
 #
 # Named `openebs` because that is what the shipped set called it; what it
 # actually installs is Rancher's local-path provisioner, which is the chart
-# `lib/charts.nix` pins.
+# this floe's `upstream.nix` pins.
 {
   lib,
   floe,

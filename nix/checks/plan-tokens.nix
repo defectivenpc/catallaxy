@@ -33,7 +33,7 @@ let
         );
   };
 
-  # A token is `<scope>/…/<state>`. `cluster/crds` in `lib/charts.nix` is a
+  # A token is `<scope>/…/<state>`. `cluster/crds` in a rendered bundle is a
   # chart path and not one of these, which is part of why the scan is scoped.
   pattern = "\"(cluster|stack)/[^\"]+/[a-z-]+\"|\"(lab|host)/[a-z-]+(/[a-z-]+)?\"";
 in

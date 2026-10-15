@@ -16,7 +16,7 @@
 let
   # taught :: { Pattern -> WhatToSayInstead }
   taught = {
-    "cataCharts." = "a floe defaults its own chart; a lab passes none";
+    "cataCharts." = "a floe pins its own upstream in its `upstream.nix`";
     "k8sSpecs." = "a floe defaults its own manifest from the pin";
     "instanceOf = clusterName:" = "the cluster module derives instanceName";
     "instanceName =" = "derived from the lab's name and the attribute path";

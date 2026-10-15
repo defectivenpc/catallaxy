@@ -28,7 +28,7 @@ floe.mkFloe {
       defaultText = lib.literalExpression "upstream.chart";
       description = ''
         Store path of the Traefik Helm chart, defaulted from the pin in
-        `lib/charts.nix`. Override to run a fork or a mirror.
+        this floe's `upstream.nix`. Override to run a fork or a mirror.
 
         A path and not the derivation: `instantiate` deep-forces its inputs
         to check them eagerly, and a derivation is a self-referential

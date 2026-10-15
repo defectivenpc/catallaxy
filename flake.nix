@@ -50,7 +50,6 @@
         );
 
         kubelib = nix-kube-generators.lib { inherit pkgs; };
-        cataCharts = import ./lib/charts.nix { inherit lib pkgs kubelib; };
         k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs; };
 
         floePaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
@@ -105,25 +104,14 @@
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
         floePages = import ./nix/floe-docs.nix {
-          inherit
-            lib
-            pkgs
-            labDefs
-            cataCharts
-            k8sSpecs
-            ;
-          inherit (labs) catallaxy;
+          inherit lib pkgs labDefs;
+          inherit (labs) catallaxy mkFloes;
           floeSet = floePaths;
         };
 
         signaturePages = import ./nix/signature-docs.nix {
-          inherit
-            lib
-            pkgs
-            cataCharts
-            k8sSpecs
-            ;
-          inherit (labs) catallaxy;
+          inherit lib pkgs;
+          inherit (labs) catallaxy mkFloes;
           floeSet = floePaths;
         };
 
@@ -186,7 +174,6 @@
             lib
             pkgs
             floeCore
-            cataCharts
             k8sSpecs
             treefmtEval
             labDefs

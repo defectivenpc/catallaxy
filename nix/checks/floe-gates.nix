@@ -14,8 +14,7 @@
   lib,
   pkgs,
   floeCore,
-  cataCharts,
-  k8sSpecs,
+  mkFloes,
   labDefs,
   floeCrds,
   floeSet,
@@ -49,29 +48,12 @@ let
     crdTypes = floeCrds.types;
   };
 
-  defOf =
-    name:
-    import floeSet.${name} {
-      inherit
-        lib
-        pkgs
-        catallaxy
-        cataCharts
-        k8sSpecs
-        floes
-        ;
-      inherit (catallaxy) floe sigs kinds;
-    };
+  # Applied by the distribution rather than here. This file used to build
+  # the set itself, which meant a fourth copy of `applyFloes` that had to
+  # be kept in step with what a floe is handed.
+  floes = mkFloes floeSet;
 
-  # A floe whose units are other floes reaches them through this, built the
-  # way `lib/lab.nix` builds it and lazy for the same reason.
-  floes = lib.mapAttrs (
-    name: _:
-    let
-      def = defOf name;
-    in
-    def // { __functor = _: def.instantiate; }
-  ) floeSet;
+  defOf = name: floes.${name};
 
   installsIntoACluster =
     name: lib.any (k: k.name == "catallaxy.component") (lib.attrValues (defOf name).out);

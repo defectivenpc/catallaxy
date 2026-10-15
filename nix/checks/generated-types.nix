@@ -3,7 +3,7 @@
 # Same shape as `option-docs` and the floe-interface checks: the tree is
 # generated, so the only way it can be wrong is by being stale. Stale here is
 # worse than elsewhere, because these types are what a rendered resource is
-# checked against — a chart version bumped in `lib/charts.nix` without a
+# checked against — a chart version bumped in a floe's `upstream.nix` without a
 # refresh leaves every floe validated against the CRD of the release before.
 #
 # This check is also what says the tree is generated. The emitter writes no

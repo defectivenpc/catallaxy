@@ -6,7 +6,6 @@
   lib,
   pkgs,
   floeCore,
-  cataCharts,
   k8sSpecs,
   self,
   packages,
@@ -130,8 +129,7 @@ in
     floeCore
     labDefs
     floeCrds
-    cataCharts
-    k8sSpecs
+    mkFloes
     ;
   floeSet = (import ../../floes).components;
   cannotKnowItsImages = [
@@ -161,12 +159,7 @@ in
   inherit (packages) docs;
 }
 // import ./floe-names.nix {
-  inherit
-    lib
-    pkgs
-    cataCharts
-    k8sSpecs
-    ;
+  inherit lib pkgs mkFloes;
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     crdTypes = floeCrds.types;
