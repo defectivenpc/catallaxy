@@ -59,7 +59,7 @@
         floeCrds = import ./lib/floe-crds.nix { inherit lib; } { floeSet = floePaths; };
         crdSources = lib.mapAttrs (_: f: f upstream) floeCrds.sources;
 
-        generatedTypes = import ./nix/generated-types.nix {
+        typeGen = import ./nix/generated-types.nix {
           inherit
             lib
             pkgs
@@ -68,6 +68,8 @@
             ;
           inherit (packages') cata;
         };
+
+        generatedTypes = typeGen.all;
 
         packages' = import ./pkgs {
           inherit
@@ -131,6 +133,8 @@
             referencePages
             generatedTypes
             ;
+
+          inherit (typeGen) floeTypes;
 
           inherit (labs)
             mkLab
