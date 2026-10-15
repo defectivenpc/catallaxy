@@ -21,12 +21,6 @@ let
       map (interpolate resolve) v
     else
       v;
-in
-rec {
-  inherit outputName;
-
-  # stackNameFor :: scope -> unit -> phase -> string
-  #
   # `scope` is the cluster the floe was instantiated in, or `lab` for one the
   # lab holds. Two labs are two instantiations by `lab.name` already, since
   # every stack's state lives under the lab's own directory.
@@ -34,6 +28,24 @@ rec {
     scope: unit: phase:
     "${scope}-${unit}-${phase}";
 
+  # Every deferred token in a value, wherever it sits.
+  tokensIn =
+    v:
+    if isToken v then
+      [ v ]
+    else if builtins.isAttrs v then
+      lib.concatMap tokensIn (lib.attrValues v)
+    else if builtins.isList v then
+      lib.concatMap tokensIn v
+    else
+      [ ];
+
+in
+rec {
+  inherit outputName;
+
+  # stackNameFor :: scope -> unit -> phase -> string
+  #
   # Every stack in a lab, with the resources and publications that belong to
   # it, from the per-unit output collections the linker produced.
   #
@@ -194,18 +206,6 @@ rec {
         )
       );
     };
-
-  # Every deferred token in a value, wherever it sits.
-  tokensIn =
-    v:
-    if isToken v then
-      [ v ]
-    else if builtins.isAttrs v then
-      lib.concatMap tokensIn (lib.attrValues v)
-    else if builtins.isList v then
-      lib.concatMap tokensIn v
-    else
-      [ ];
 
   dependenciesOf =
     stacks: name:

@@ -21,18 +21,11 @@ let
   prefixToMask = prefix: (pow2 32) - (pow2 (32 - prefix));
 
   networkBase = ipInt: prefix: builtins.bitAnd ipInt (prefixToMask prefix);
+
+  formatIPv4 = octets: lib.concatStringsSep "." (map toString octets);
 in
 
 rec {
-  inherit
-    parseIPv4
-    cidrToNetwork
-    cidrToPrefixLen
-    ipv4ToInt
-    ;
-
-  formatIPv4 = octets: lib.concatStringsSep "." (map toString octets);
-
   cidrFirstIP =
     cidr:
     let

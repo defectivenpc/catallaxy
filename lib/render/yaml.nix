@@ -30,7 +30,6 @@ let
   stripEmptyMetadataFields = stripEmptyMetadataFields' true;
 in
 {
-  inherit stripEmptyMetadataFields;
 
   toYamlFile =
     name: attrs:
@@ -42,28 +41,6 @@ in
       }
       ''
         yq -P '.' "$jsonInputPath" > $out
-      '';
-
-  toMultiDocYamlFile =
-    name: docs:
-    pkgs.runCommand "${name}.yaml"
-      {
-        nativeBuildInputs = [ pkgs.yq-go ];
-        passAsFile = [ "jsonInput" ];
-        jsonInput = builtins.toJSON (stripEmptyMetadataFields docs);
-      }
-      ''
-        yq -P '.[]' "$jsonInputPath" | sed 's/^---$/\n---/' > $out
-      '';
-
-  jsonFileToYaml =
-    name: jsonFile:
-    pkgs.runCommand "${name}.yaml"
-      {
-        nativeBuildInputs = [ pkgs.yq-go ];
-      }
-      ''
-        yq -P '.' ${jsonFile} > $out
       '';
 
   convertDir =

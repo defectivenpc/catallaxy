@@ -309,7 +309,6 @@ in
 {
   inherit
     renderProbe
-    caBundleVolumeName
     missingFields
     conditionOnConditionless
     ;

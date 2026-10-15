@@ -227,7 +227,7 @@ let
     };
 in
 {
-  inherit provisionerOf;
+  inherit ;
 
   assertions = assertions ++ unreachable;
 

@@ -37,7 +37,7 @@ let
 
 in
 {
-  inherit parse isDuration unitSeconds;
+  inherit parse;
 
   toSeconds =
     context: s:

@@ -62,6 +62,56 @@ let
           ;
       };
   verifyTypes = import ../verify-types.nix { inherit lib; };
+  mkOpsOption =
+    {
+      type ? "str",
+      values ? [ ],
+      required ? false,
+      default ? null,
+      description ? "",
+    }:
+    {
+      inherit
+        type
+        values
+        required
+        default
+        description
+        ;
+    };
+
+  mkOpsArg =
+    {
+      name,
+      description ? "",
+      required ? true,
+      variadic ? false,
+    }:
+    {
+      inherit
+        name
+        description
+        required
+        variadic
+        ;
+    };
+
+  mkDrift =
+    {
+      reason,
+      group ? "",
+      kinds ? [ ],
+      managedBy ? [ ],
+    }:
+    {
+      inherit
+        reason
+        group
+        kinds
+        managedBy
+        ;
+    };
+
 in
 rec {
   component = floe.mkSig {
@@ -161,40 +211,6 @@ rec {
       inherit description command package;
       options = lib.mapAttrs (_: mkOpsOption) options;
       args = map mkOpsArg args;
-    };
-
-  mkOpsOption =
-    {
-      type ? "str",
-      values ? [ ],
-      required ? false,
-      default ? null,
-      description ? "",
-    }:
-    {
-      inherit
-        type
-        values
-        required
-        default
-        description
-        ;
-    };
-
-  mkOpsArg =
-    {
-      name,
-      description ? "",
-      required ? true,
-      variadic ? false,
-    }:
-    {
-      inherit
-        name
-        description
-        required
-        variadic
-        ;
     };
 
   # ---- constructors a floe ships for its consumers ------------------------
@@ -563,22 +579,6 @@ rec {
         ;
 
       drift = map mkDrift drift;
-    };
-
-  mkDrift =
-    {
-      reason,
-      group ? "",
-      kinds ? [ ],
-      managedBy ? [ ],
-    }:
-    {
-      inherit
-        reason
-        group
-        kinds
-        managedBy
-        ;
     };
 
   # ---- the monoid --------------------------------------------------------

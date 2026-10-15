@@ -350,5 +350,5 @@ let
 
 in
 {
-  inherit renderResources renderBundle;
+  inherit renderBundle;
 }

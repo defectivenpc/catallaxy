@@ -43,7 +43,7 @@ let
   };
 in
 {
-  inherit namespaceAggregate projectionPrefix builtinNamespaces;
+  inherit namespaceAggregate;
 
   # elaborateCluster :: { linkResult; coreKinds; defaultOwner } -> clusterMetadata
   elaborateCluster =

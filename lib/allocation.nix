@@ -23,9 +23,6 @@ let
   # slotOf :: LabName -> 0..255
   slotOf =
     labName: lib.mod (fromHex (builtins.substring 0 6 (builtins.hashString "sha256" labName))) 256;
-in
-rec {
-  inherit slotOf;
 
   # 256 non-overlapping /20s inside 172.16.0.0/12, which is the whole of the
   # RFC 1918 middle block. The hand-picked values had drifted out of it —
@@ -42,6 +39,10 @@ rec {
     proxyHttp = 8000 + slot;
     proxyHttps = 8400 + slot;
   };
+
+in
+rec {
+  inherit slotOf;
 
   # allocationFor :: LabName -> { subnet; egress; registry; dns; proxyHttp; proxyHttps }
   allocationFor =

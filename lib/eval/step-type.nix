@@ -185,5 +185,5 @@ in
       modules = [ stepsModule ] ++ map (steps: { inherit steps; }) producers;
     }).config.steps;
 
-  inherit policyOptions;
+  inherit ;
 }

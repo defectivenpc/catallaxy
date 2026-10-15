@@ -126,7 +126,6 @@ componentLib
 // {
   inherit gatewayNodePorts;
   inherit (resourceLib) resources publications;
-  resourcePhases = resourceLib.phases;
 
   # `clusterDescriptor`, not `cluster`: `KUBERNETES_CLUSTER` is canonically
   # `cluster` — the cluster a member installs into — and a name may not mean

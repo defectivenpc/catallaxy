@@ -12,7 +12,7 @@ let
   ];
 in
 {
-  inherit scrapePaths;
+  inherit ;
 
   scrapeExpr = "(${
     lib.concatMapStringsSep ", " (p: "${p}[]?.image") scrapePaths

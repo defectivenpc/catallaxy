@@ -170,11 +170,6 @@ in
 {
   inherit
     deriveAutoEdges
-    namespaceProviders
-    secretStoreProviders
-    crdProviders
-    autoAfter
-    autoRequires
     secretsMadeBy
     secretsReadBy
     ;
