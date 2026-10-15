@@ -8,7 +8,10 @@
 
 let
   floe = import ../floe-catallaxy/prelude.nix { inherit lib floeCore; };
-  kinds = import ../floe-catallaxy/component.nix { inherit lib floe; };
+  kinds = import ../floe-catallaxy/component.nix {
+    inherit lib floe;
+    crdTypes = { };
+  };
 
   plain = kinds.mkGeneratedSecret {
     namespace = "app";

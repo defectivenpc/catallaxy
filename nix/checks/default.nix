@@ -21,6 +21,7 @@
   cliConfigs,
   referencePages,
   generatedTypes,
+  floeCrds,
   catallaxy,
   floes,
 }:
@@ -50,8 +51,22 @@ in
     ;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
-// import ./generated-types.nix { inherit lib pkgs generatedTypes; }
-// import ./crd-coverage.nix { inherit lib pkgs labDefs; }
+// import ./generated-types.nix {
+  inherit
+    lib
+    pkgs
+    generatedTypes
+    floeCrds
+    ;
+}
+// import ./crd-coverage.nix {
+  inherit
+    lib
+    pkgs
+    labDefs
+    floeCrds
+    ;
+}
 // import ./chart-values.nix { inherit lib pkgs labDefs; }
 // import ./allocations.nix { inherit lib pkgs allocations; }
 // import ./teaching.nix { inherit lib pkgs; }

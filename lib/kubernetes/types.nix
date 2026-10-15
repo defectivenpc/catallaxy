@@ -7,7 +7,7 @@
   - `lib/kubernetes/conform.nix` resolves a resource's own `apiVersion` and
     `kind` to the type its fields are checked against, through
     `generatedTypes.resolveResourceType` over `typesByKind`.
-  - `modules/lab/cluster/default.nix` passes `coreKinds` to the elaborator,
+  - `lib/lower/cluster.nix` passes `coreKinds` to the elaborator,
     which hands it to `lib/eval/manifest-autoedges.nix`. There it is a membership
     test: a resource whose kind is not built in needs an ordering edge to
     whichever bundle establishes its CRD.
@@ -23,12 +23,22 @@
 {
   lib,
   k8sVersion ? "1.31",
+
+  # API group -> generated type file, from `floes/crds.nix`.
+  #
+  # Required, with no default. `{ }` is a legal and useful answer — it means
+  # "the Kubernetes API only", which is all `coreKinds` needs — but a *default*
+  # of it would hand a caller a lookup table silently missing every CRD, and
+  # `conform.nix` resolving a custom resource against that finds no schema and
+  # checks none of its fields. One call site asked for it by accident and the
+  # coverage check reported every CRD in the tree as unschema'd.
+  crdTypes,
 }:
 
 let
   generatedTypes = import ./generated/index.nix { inherit lib; };
 
-  versionedTypes = generatedTypes.forVersion k8sVersion;
+  versionedTypes = generatedTypes.withCrds crdTypes (generatedTypes.forVersion k8sVersion);
 in
 {
   inherit generatedTypes;

@@ -1,6 +1,10 @@
 # The output kinds this distribution registers. Floe core registers none:
 # kinds belong to a distribution.
-{ lib, floe }:
+{
+  lib,
+  floe,
+  crdTypes,
+}:
 
 let
   T = floe.T;
@@ -112,7 +116,7 @@ let
     };
   };
 
-  componentLib = import ./component.nix { inherit lib floe; };
+  componentLib = import ./component.nix { inherit lib floe crdTypes; };
 
   # the resources category, registered here beside the bundle one. Both
   # are kinds a floe emits; nothing in core knows either.

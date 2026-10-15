@@ -1,3 +1,20 @@
+# The generated Kubernetes types, and the lookups over them.
+#
+# Hand-written, unlike what it loads. `cata-build generate` used to emit this
+# file too, for one reason: `loadCrds` was an enumeration of the CRD group
+# files it had just written. Those live beside the floes that install the CRDs
+# now and arrive as an argument, so nothing here depends on what was
+# generated — and a file that needs no regenerating is one fewer thing a
+# refresh can leave stale.
+#
+# Of the three lookups, `coreKinds` answers "is this kind built in" and
+# `typesByKind` takes every CRD group at once. `typesByKindForGroups` takes the
+# Kubernetes API plus named groups only: a built-in kind is global because
+# every cluster runs an apiserver, but a CRD kind exists only where something
+# installed its CRD, so passing the groups one cluster establishes is what
+# keeps another cluster's kinds out of scope. It skips groups it has no types
+# for and leaves refusing them to the caller, which is the only side that can
+# name the bundle at fault.
 { lib }:
 
 let
@@ -7,35 +24,19 @@ let
 
   constructors = import ../constructors.nix { inherit lib; };
 
+  # crdTypes :: { "<api group>" -> path }
+  #
+  # `floes/crds.nix` builds it by walking the floe tree, so a group's key, its
+  # filename and the `apiVersion` prefix a floe writes are one string with no
+  # mapping between them. It arrives as an argument because the types live
+  # beside the floes that install the CRDs, and `lib/` is what the floes depend
+  # on rather than the other way round.
   loadCrds =
-    versioned:
+    crdTypes: versioned:
     let
       k8sTypes = versioned // constructors;
     in
-    {
-      "acme.cert-manager.io" = import ./crds/acme.cert-manager.io.nix { inherit lib k8sTypes; };
-      "apiextensions.crossplane.io" = import ./crds/apiextensions.crossplane.io.nix {
-        inherit lib k8sTypes;
-      };
-      "cert-manager.io" = import ./crds/cert-manager.io.nix { inherit lib k8sTypes; };
-      "external-secrets.io" = import ./crds/external-secrets.io.nix { inherit lib k8sTypes; };
-      "externaldns.k8s.io" = import ./crds/externaldns.k8s.io.nix { inherit lib k8sTypes; };
-      "gateway.networking.k8s.io" = import ./crds/gateway.networking.k8s.io.nix { inherit lib k8sTypes; };
-      "generators.external-secrets.io" = import ./crds/generators.external-secrets.io.nix {
-        inherit lib k8sTypes;
-      };
-      "kaniop.rs" = import ./crds/kaniop.rs.nix { inherit lib k8sTypes; };
-      "monitoring.coreos.com" = import ./crds/monitoring.coreos.com.nix { inherit lib k8sTypes; };
-      "netbird.io" = import ./crds/netbird.io.nix { inherit lib k8sTypes; };
-      "pkg.crossplane.io" = import ./crds/pkg.crossplane.io.nix { inherit lib k8sTypes; };
-      "postgresql.cnpg.io" = import ./crds/postgresql.cnpg.io.nix { inherit lib k8sTypes; };
-      "redis.redis.opstreelabs.in" = import ./crds/redis.redis.opstreelabs.in.nix {
-        inherit lib k8sTypes;
-      };
-      "secrets.crossplane.io" = import ./crds/secrets.crossplane.io.nix { inherit lib k8sTypes; };
-      "trust.cert-manager.io" = import ./crds/trust.cert-manager.io.nix { inherit lib k8sTypes; };
-      "velero.io" = import ./crds/velero.io.nix { inherit lib k8sTypes; };
-    };
+    lib.mapAttrs (_: path: import path { inherit lib k8sTypes; }) crdTypes;
 
   reservedAttrs = [
     "version"
@@ -44,16 +45,20 @@ let
     "crds"
   ];
 
+  # The Kubernetes API at one release, with no CRDs in it. That is the whole
+  # of what `coreKinds` needs, which is why `lib/lower/cluster.nix` can read it
+  # without the floe tree in scope.
   forVersion =
     version:
     let
       safeVersion = builtins.replaceStrings [ "." ] [ "_" ] version;
-      k8sTypes = k8sVersions.${safeVersion} or (throw "Unknown K8s version: ${version}");
     in
-    k8sTypes
-    // {
-      crds = loadCrds k8sTypes;
-    };
+    k8sVersions.${safeVersion} or (throw "Unknown K8s version: ${version}");
+
+  # And with them, for conformance. Separate so that nothing gets CRD types by
+  # accident: a lookup table silently missing a group would resolve a custom
+  # resource to nothing and check none of its fields.
+  withCrds = crdTypes: versionedTypes: versionedTypes // { crds = loadCrds crdTypes versionedTypes; };
 
   flattenTypes =
     versionedTypes:
@@ -159,6 +164,7 @@ in
     k8sVersions
     loadCrds
     forVersion
+    withCrds
     flattenTypes
     ;
   inherit
@@ -169,5 +175,4 @@ in
     ;
   inherit crdGroups typesByKindForGroups;
 
-  default = forVersion "1.31";
 }

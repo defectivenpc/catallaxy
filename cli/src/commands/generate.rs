@@ -9,8 +9,8 @@ use serde::Deserialize;
 
 use crate::codegen::types::K8sResourceType;
 use crate::codegen::{
-    EmitterConfig, GeneratorOptions, convert_openapi_to_types, emit_crd_types, emit_index,
-    emit_k8s_types, parse_crds_from_yaml, parse_openapi_spec,
+    EmitterConfig, GeneratorOptions, convert_openapi_to_types, emit_crd_types, emit_k8s_types,
+    parse_crds_from_yaml, parse_openapi_spec,
 };
 use crate::config::Context as CataContext;
 
@@ -81,10 +81,15 @@ pub fn run(_ctx: &CataContext, args: GenerateArgs) -> Result<()> {
 /// ])?;
 /// // -> { "cert-manager.io": [certificate], "acme.cert-manager.io": [challenge] }
 /// ```
+/// Every API group, the source that defines it, and its kinds.
+///
+/// One source per group, not merely one per kind: the group's types are written
+/// into that source's own directory, so two sources contributing to one group
+/// would be two places claiming one file. A group has exactly one home.
 fn group_by_api_group(
     per_source: Vec<(String, Vec<K8sResourceType>)>,
-) -> Result<BTreeMap<String, Vec<K8sResourceType>>> {
-    let mut by_group: BTreeMap<String, Vec<K8sResourceType>> = BTreeMap::new();
+) -> Result<BTreeMap<String, (String, Vec<K8sResourceType>)>> {
+    let mut by_group: BTreeMap<String, (String, Vec<K8sResourceType>)> = BTreeMap::new();
     let mut defined_by: BTreeMap<(String, String), String> = BTreeMap::new();
 
     for (source, resources) in per_source {
@@ -104,10 +109,22 @@ fn group_by_api_group(
             }
 
             defined_by.insert(coordinate, source.clone());
-            by_group
-                .entry(resource.group.clone())
-                .or_default()
-                .push(resource);
+
+            match by_group.get_mut(&resource.group) {
+                Some((owner, kinds)) if *owner == source => kinds.push(resource),
+                Some((owner, _)) => anyhow::bail!(
+                    "API group '{}' is defined by both '{}' and '{}'.\n\
+                     Its types are written beside the floe that installs them, so two \
+                     sources contributing to one group would be two floes claiming one \
+                     file. Give the group one source.",
+                    resource.group,
+                    owner,
+                    source
+                ),
+                None => {
+                    by_group.insert(resource.group.clone(), (source.clone(), vec![resource]));
+                }
+            }
         }
     }
 
@@ -119,14 +136,11 @@ fn generate(config: GenerateConfig) -> Result<()> {
 
     crate::io::fs::create_dir_all(output_dir.join("k8s"))
         .context("Failed to create k8s directory")?;
-    crate::io::fs::create_dir_all(output_dir.join("crds"))
-        .context("Failed to create crds directory")?;
 
     let options = GeneratorOptions::default();
     let emitter_config = EmitterConfig::default();
 
     let mut k8s_versions = Vec::new();
-    let mut crd_names = Vec::new();
 
     for (version, spec_path) in &config.k8s_versions {
         eprintln!(
@@ -174,10 +188,16 @@ fn generate(config: GenerateConfig) -> Result<()> {
 
     let by_group = group_by_api_group(per_source)?;
 
-    for (group, resources) in &by_group {
+    // `<source>/crds/<group>.nix`, because the types live beside the floe that
+    // installs the CRDs. The caller copies each source's directory into that
+    // floe's, so the layout here is the layout there.
+    for (group, (source, resources)) in &by_group {
         let nix_code = emit_crd_types(resources, emitter_config.clone());
 
-        let file_path = output_dir.join("crds").join(format!("{group}.nix"));
+        let dir = output_dir.join(source).join("crds");
+        crate::io::fs::create_dir_all(&dir).with_context(|| format!("Failed to create {dir:?}"))?;
+
+        let file_path = dir.join(format!("{group}.nix"));
         crate::io::fs::write(&file_path, &nix_code)
             .with_context(|| format!("Failed to write {file_path:?}"))?;
 
@@ -186,14 +206,7 @@ fn generate(config: GenerateConfig) -> Result<()> {
             style(group).green(),
             resources.len()
         );
-        crd_names.push(group.clone());
     }
-
-    eprintln!("{} Generating index.nix", style(">>>").cyan());
-    let index_code = emit_index(&k8s_versions, &crd_names, emitter_config);
-    let index_path = output_dir.join("index.nix");
-    crate::io::fs::write(&index_path, &index_code).context("Failed to write index.nix")?;
-    eprintln!("    Wrote {index_path:?}");
 
     eprintln!(
         "\n{} Done! Generated types in {:?}",
@@ -249,17 +262,20 @@ mod tests {
             grouped.keys().collect::<Vec<_>>(),
             vec!["acme.cert-manager.io", "cert-manager.io"]
         );
+        assert_eq!(grouped["cert-manager.io"].0, "cert-manager");
     }
 
     #[test]
-    fn one_group_split_across_sources_merges() {
-        let grouped = group_by_api_group(vec![
+    fn one_group_split_across_sources_is_refused() {
+        let err = group_by_api_group(vec![
             ("a".to_string(), vec![crd("example.io", "Alpha")]),
             ("b".to_string(), vec![crd("example.io", "Beta")]),
         ])
-        .unwrap();
+        .unwrap_err()
+        .to_string();
 
-        assert_eq!(grouped["example.io"].len(), 2);
+        assert!(err.contains("example.io"), "{err}");
+        assert!(err.contains("'a'") && err.contains("'b'"), "{err}");
     }
 
     #[test]

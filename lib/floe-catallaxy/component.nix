@@ -1,12 +1,16 @@
 # What a cluster-component floe contributes, and the monoid that joins two of
 # them. One kind, so every component floe has the same output type and the
 # cluster picture is a fold rather than a pile.
-{ lib, floe }:
+{
+  lib,
+  floe,
+  crdTypes,
+}:
 
 let
   T = floe.T;
 
-  inherit (import ../kubernetes/conform.nix { inherit lib; }) checked;
+  inherit (import ../kubernetes/conform.nix { inherit lib crdTypes; }) checked;
   inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;
   inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
 

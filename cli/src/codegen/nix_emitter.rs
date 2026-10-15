@@ -413,158 +413,6 @@ in
 
         self.arena.concat(parts)
     }
-
-    /// The entry point for the generated tree: `forVersion` to pick a
-    /// Kubernetes release, and three ways to look a kind up in it.
-    ///
-    /// `crd_names` are API groups, one per emitted `crds/<group>.nix`, and the
-    /// group is also the attribute name — so the index key, the filename and
-    /// the `apiVersion` a floe writes are one string with no mapping between
-    /// them.
-    ///
-    /// Of the three lookups, `coreKinds` answers "is this kind built in" and
-    /// `typesByKind` takes every CRD group at once. `typesByKindForGroups`
-    /// takes the Kubernetes API plus named groups only: built-in kinds are
-    /// global because every cluster runs an apiserver, but a CRD kind exists
-    /// only where something installed its CRD, so passing the groups one
-    /// cluster establishes is what keeps another cluster's kinds out of scope.
-    /// It skips groups it has no types for and leaves refusing them to the
-    /// caller, which is the only side that can name the bundle at fault.
-    pub fn emit_index(&self, k8s_versions: &[String], crd_names: &[String]) -> String {
-        let mut output = String::new();
-
-        output.push_str(
-            r#"{ lib }:
-
-let
-  k8sVersions = {
-"#,
-        );
-
-        for version in k8s_versions {
-            let safe_version = version.replace(['.', '-'], "_");
-            output.push_str(&format!(
-                "    \"{safe_version}\" = import ./k8s/{safe_version}.nix {{ inherit lib; }};\n"
-            ));
-        }
-
-        output.push_str(
-            r#"  };
-
-  constructors = import ../constructors.nix { inherit lib; };
-
-  loadCrds =
-    versioned:
-    let
-      k8sTypes = versioned // constructors;
-    in
-    {
-"#,
-        );
-
-        for group in crd_names {
-            output.push_str(&format!(
-                "    \"{group}\" = import ./crds/{group}.nix {{ inherit lib k8sTypes; }};\n"
-            ));
-        }
-
-        output.push_str(Self::INDEX_LOOKUPS);
-
-        output
-    }
-
-    /// The part of `index.nix` that does not depend on what was generated:
-    /// picking a release, and the three ways to look a kind up in it. Separate
-    /// from `emit_index` because only the lists above it vary.
-    const INDEX_LOOKUPS: &'static str = r#"  };
-
-  reservedAttrs = [ "version" "mkTypedSubmodule" "mkResource" "crds" ];
-
-  forVersion = version:
-    let
-      safeVersion = builtins.replaceStrings ["."] ["_"] version;
-      k8sTypes = k8sVersions.${safeVersion} or (throw "Unknown K8s version: ${version}");
-    in
-    k8sTypes // {
-      crds = loadCrds k8sTypes;
-    };
-
-  flattenTypes = versionedTypes:
-    let
-      inherit (builtins) isAttrs attrNames foldl' elem;
-      inherit (lib) filterAttrs;
-      groups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
-      flattenGroup = group:
-        let apiVersions = builtins.sort (a: b: a < b) (attrNames group);
-        in foldl' (acc: av: acc // group.${av}) {} apiVersions;
-      k8sFlat = foldl' (acc: gn: acc // flattenGroup groups.${gn}) {} (attrNames groups);
-      crdFlat =
-        if versionedTypes ? crds then
-          foldl' (acc: cn: acc // versionedTypes.crds.${cn}) {} (attrNames versionedTypes.crds)
-        else {};
-    in
-    k8sFlat // crdFlat;
-
-  typesByKind = versionedTypes:
-    let
-      inherit (builtins) isAttrs attrNames foldl' elem;
-      inherit (lib) filterAttrs;
-      groups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
-      addKinds = acc: kinds:
-        foldl' (a: k: a // { ${k} = (a.${k} or []) ++ [ kinds.${k} ]; }) acc (attrNames kinds);
-      addGroup = acc: group: foldl' (a: av: addKinds a group.${av}) acc (attrNames group);
-      k8sByKind = foldl' (acc: gn: addGroup acc groups.${gn}) {} (attrNames groups);
-    in
-    if versionedTypes ? crds then
-      foldl' (acc: cn: addKinds acc versionedTypes.crds.${cn}) k8sByKind
-        (attrNames versionedTypes.crds)
-    else k8sByKind;
-
-  crdGroups = versionedTypes:
-    if versionedTypes ? crds then builtins.attrNames versionedTypes.crds else [];
-
-  typesByKindForGroups = versionedTypes: groups:
-    let
-      inherit (builtins) isAttrs attrNames foldl' elem filter;
-      inherit (lib) filterAttrs;
-      k8sGroups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
-      addKinds = acc: kinds:
-        foldl' (a: k: a // { ${k} = (a.${k} or []) ++ [ kinds.${k} ]; }) acc (attrNames kinds);
-      addGroup = acc: group: foldl' (a: av: addKinds a group.${av}) acc (attrNames group);
-      k8sByKind = foldl' (acc: gn: addGroup acc k8sGroups.${gn}) {} (attrNames k8sGroups);
-      known = filter (g: (versionedTypes.crds or {}) ? ${g}) groups;
-    in
-    foldl' (acc: g: addKinds acc versionedTypes.crds.${g}) k8sByKind known;
-
-  coreKinds = versionedTypes:
-    let
-      inherit (builtins) isAttrs attrNames foldl' elem;
-      inherit (lib) filterAttrs;
-      groups = filterAttrs (n: v: isAttrs v && !(elem n reservedAttrs)) versionedTypes;
-      addGroup = acc: group:
-        foldl' (a: av: a // lib.genAttrs (attrNames group.${av}) (_: true)) acc (attrNames group);
-    in
-    foldl' (acc: gn: addGroup acc groups.${gn}) {} (attrNames groups);
-
-  apiVersionOfType = type: (type.getSubOptions [ ]).apiVersion.default or null;
-
-  apiVersionsForKind = byKind: kind:
-    map apiVersionOfType (byKind.${kind} or []);
-
-  resolveResourceType = byKind: apiVersion: kind:
-    let
-      matching = builtins.filter (t: apiVersionOfType t == apiVersion) (byKind.${kind} or []);
-    in
-    if matching == [] then null else builtins.head matching;
-
-in {
-  inherit k8sVersions loadCrds forVersion flattenTypes;
-  inherit typesByKind apiVersionsForKind resolveResourceType coreKinds;
-  inherit crdGroups typesByKindForGroups;
-
-  default = forVersion "1.31";
-}
-"#;
 }
 
 pub fn emit_k8s_types(type_set: &K8sTypeSet, config: EmitterConfig) -> String {
@@ -577,12 +425,6 @@ pub fn emit_crd_types(resources: &[K8sResourceType], config: EmitterConfig) -> S
     let arena = Arena::new();
     let emitter = NixEmitter::new(&arena, config);
     emitter.emit_crd_types(resources)
-}
-
-pub fn emit_index(k8s_versions: &[String], crd_names: &[String], _config: EmitterConfig) -> String {
-    let arena = Arena::new();
-    let emitter = NixEmitter::new(&arena, EmitterConfig::default());
-    emitter.emit_index(k8s_versions, crd_names)
 }
 
 #[cfg(test)]
@@ -666,37 +508,6 @@ mod tests {
     }
 
     #[test]
-    fn the_generated_index_carries_no_nix_comment() {
-        let out = emit_index(
-            &["1.31".to_string()],
-            &["cnpg".to_string()],
-            EmitterConfig::default(),
-        );
-        assert!(!out.contains('#'), "{out}");
-    }
-
-    #[test]
-    fn the_generated_index_loads_crds_through_constructors() {
-        let out = emit_index(
-            &["1.31".to_string()],
-            &["postgresql.cnpg.io".to_string()],
-            EmitterConfig::default(),
-        );
-        assert!(
-            out.contains("import ../constructors.nix { inherit lib; }"),
-            "{out}"
-        );
-        assert!(out.contains("versioned // constructors"), "{out}");
-        assert!(
-            out.contains(
-                "\"postgresql.cnpg.io\" = import ./crds/postgresql.cnpg.io.nix \
-                 { inherit lib k8sTypes; };"
-            ),
-            "{out}"
-        );
-    }
-
-    #[test]
     fn a_required_collection_is_emitted_without_an_empty_value() {
         let arena = Arena::new();
         let e = NixEmitter::new(&arena, EmitterConfig::default());
@@ -719,29 +530,5 @@ mod tests {
         let mut s = String::new();
         out.render_fmt(100, &mut s).unwrap();
         assert!(!s.contains("emptyValue"), "{s}");
-    }
-
-    #[test]
-    fn a_crd_group_is_keyed_by_its_api_group_verbatim() {
-        let out = emit_index(
-            &["1.31".to_string()],
-            &["gateway.networking.k8s.io".to_string()],
-            EmitterConfig::default(),
-        );
-        assert!(out.contains("\"gateway.networking.k8s.io\""), "{out}");
-        assert!(!out.contains("gateway_networking_k8s_io"), "{out}");
-    }
-
-    #[test]
-    fn the_index_offers_group_scoped_resolution() {
-        let out = emit_index(&["1.31".to_string()], &[], EmitterConfig::default());
-        assert!(
-            out.contains("typesByKindForGroups = versionedTypes: groups:"),
-            "{out}"
-        );
-        assert!(
-            out.contains("inherit crdGroups typesByKindForGroups;"),
-            "{out}"
-        );
     }
 }

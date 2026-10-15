@@ -1,8 +1,12 @@
 # bundles + link edges -> cluster metadata.
-{ lib, floe }:
+{
+  lib,
+  floe,
+  crdTypes,
+}:
 
 let
-  componentLib = import ./component.nix { inherit lib floe; };
+  componentLib = import ./component.nix { inherit lib floe crdTypes; };
 
   waitUtil = import ../kubernetes/wait.nix { inherit lib; };
   manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };

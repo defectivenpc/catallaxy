@@ -5,6 +5,12 @@
   lib,
   pkgs,
   floeCore,
+
+  # API group -> generated type file, from `floes/crds.nix`. Handed in because
+  # the types live beside the floes that install the CRDs, and a floe depends
+  # on this distribution rather than the reverse — so the one thing that would
+  # be a cycle arrives as an argument instead.
+  crdTypes ? { },
 }:
 
 let
@@ -13,7 +19,7 @@ let
 
   inherit (import ./frame.nix { inherit lib floe; }) mkFramedFloe;
 
-  kinds = import ./kinds.nix { inherit lib floe; };
+  kinds = import ./kinds.nix { inherit lib floe crdTypes; };
   sigs = import ./sigs.nix { inherit floe; };
   policies = import ./policies.nix { inherit lib sigs; };
 
@@ -312,7 +318,7 @@ rec {
   planTokens = import ../plan-tokens.nix { inherit lib; };
   inherit (import ../eval/anchors.nix { }) needs wants;
 
-  inherit (import ./elaborate.nix { inherit lib floe; }) elaborateCluster;
+  inherit (import ./elaborate.nix { inherit lib floe crdTypes; }) elaborateCluster;
   inherit (import ./slice.nix { inherit lib; }) sliceFor;
   inherit (import ./render.nix { inherit lib pkgs; }) renderCluster;
 }

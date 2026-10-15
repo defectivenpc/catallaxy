@@ -6,9 +6,13 @@
   and the check from two pipelines would let them disagree about the very thing
   one exists to check.
 
-  `cata-build generate` writes `k8s/`, `crds/` and `index.nix` in one pass, because
-  `index.nix` names both halves — so there is no generating one without the
-  other, and no separate refresh per half.
+  `cata-build generate` writes `k8s/<version>.nix` and `<floe>/crds/<group>.nix`:
+  the Kubernetes API in one place, and each floe's CRD types under the floe that
+  installs them. The copy out mirrors that, so the layout here is the layout in
+  the tree.
+
+  It no longer writes `index.nix`. The only generated thing in that file was the
+  list of CRD group files, and the groups arrive as an argument now.
 */
 {
   lib,
@@ -41,5 +45,5 @@ pkgs.runCommand "generated-types"
     # The committed tree is formatted, so the comparison has to be. Without
     # this the check reports a diff on every line the formatter would touch and
     # says nothing about whether the types changed.
-    nixfmt $out/index.nix $out/k8s/*.nix $out/crds/*.nix
+    nixfmt $out/k8s/*.nix $out/*/crds/*.nix
   ''

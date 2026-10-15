@@ -9,7 +9,15 @@
 }:
 
 let
-  catallaxy = import ./floe-catallaxy { inherit lib pkgs floeCore; };
+  # The CRD types the floes carry, which this hands to the distribution. It
+  # cannot import them itself: a floe depends on the distribution, so the
+  # distribution importing the floe tree would be the cycle.
+  inherit (import ../floes/crds.nix { inherit lib; }) types;
+
+  catallaxy = import ./floe-catallaxy {
+    inherit lib pkgs floeCore;
+    crdTypes = types;
+  };
 
   # applyFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
   #

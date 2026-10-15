@@ -20,10 +20,14 @@
   lib,
   pkgs,
   labDefs,
+  floeCrds,
 }:
 
 let
-  k8sTypes = import ../../lib/kubernetes/types.nix { inherit lib; };
+  k8sTypes = import ../../lib/kubernetes/types.nix {
+    inherit lib;
+    crdTypes = floeCrds.types;
+  };
   inherit (k8sTypes) coreKinds typesByKind;
   inherit (k8sTypes.generatedTypes) resolveResourceType;
 

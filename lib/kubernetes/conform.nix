@@ -1,7 +1,7 @@
-{ lib }:
+{ lib, crdTypes }:
 
 let
-  k8sTypes = import ./types.nix { inherit lib; };
+  k8sTypes = import ./types.nix { inherit lib crdTypes; };
 in
 rec {
   /*

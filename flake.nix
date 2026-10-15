@@ -69,8 +69,10 @@
         k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs cataCharts; };
 
         # The CRD artifacts the types are generated from, which are the same
-        # ones the floes install. See `nix/crd-types.nix`.
-        crdSources = import ./nix/crd-types.nix { inherit lib cataCharts k8sSpecs; };
+        # ones the floes install: each floe carrying a `crds.nix` names its
+        # own. See `floes/crds.nix`.
+        floeCrds = import ./floes/crds.nix { inherit lib; };
+        crdSources = lib.mapAttrs (_: f: f { inherit cataCharts k8sSpecs; }) floeCrds.sources;
 
         # One derivation holding the whole generated tree, which the check
         # diffs against and `refresh-generated-types` copies out of — so the
@@ -416,6 +418,7 @@
             cliConfigs
             referencePages
             generatedTypes
+            floeCrds
             ;
         };
       }

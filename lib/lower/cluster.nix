@@ -24,7 +24,14 @@
 }:
 
 let
-  coreKinds = (import ../kubernetes/types.nix { inherit lib; }).coreKinds;
+  # `coreKinds` is the built-in kinds only — the membership test behind "does
+  # this resource need an edge to whatever establishes its CRD" — so this is
+  # the one reader that wants no CRD types at all.
+  coreKinds =
+    (import ../kubernetes/types.nix {
+      inherit lib;
+      crdTypes = { };
+    }).coreKinds;
   infraLib = import ../render/infra.nix { inherit lib; };
 in
 {
