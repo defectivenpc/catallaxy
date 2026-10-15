@@ -25,7 +25,6 @@
     crossplane = ./components/crossplane;
     crossplane-provider-nop = ./components/crossplane-provider-nop;
     custom = ./components/custom;
-    doks = ./components/doks;
     external-dns = ./components/external-dns;
     external-secrets = ./components/external-secrets;
     grafana = ./components/grafana;

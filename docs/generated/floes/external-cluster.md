@@ -41,7 +41,7 @@ A cluster something else brings into existence, which this lab installs into.
 
 ## What it emits
 
-Rendered by `cloud` as the lab unit `workload-claim`. A unit of the lab
+Rendered by `provisions` as the lab unit `workload-claim`. A unit of the lab
 installs nothing into a cluster, and its provisions are sealed inside the
 lab's inclusion — so its declaration above is its interface.
 

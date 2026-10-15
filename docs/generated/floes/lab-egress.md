@@ -32,6 +32,6 @@ A forward proxy on the lab network, so host tools resolve lab hostnames.
 
 ## What it emits
 
-Rendered by `cloud` as the lab unit `egress`. A unit of the lab
+Rendered by `gitops.local` as the lab unit `egress`. A unit of the lab
 installs nothing into a cluster, and its provisions are sealed inside the
 lab's inclusion — so its declaration above is its interface.

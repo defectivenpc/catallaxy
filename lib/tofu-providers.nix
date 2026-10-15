@@ -6,8 +6,6 @@ let
     local = pkgs.opentofu.plugins.hashicorp_local;
     random = pkgs.opentofu.plugins.hashicorp_random;
     null = pkgs.opentofu.plugins.hashicorp_null;
-
-    digitalocean = pkgs.opentofu.plugins.digitalocean_digitalocean;
   };
 
   constraintOf = drv: {

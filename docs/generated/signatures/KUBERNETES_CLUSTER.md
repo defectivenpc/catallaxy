@@ -39,7 +39,6 @@ anything.
 | [`crossplane`](../floes/crossplane.md) | `requires.cluster` |
 | [`crossplane-provider-nop`](../floes/crossplane-provider-nop.md) | `requires.cluster` |
 | [`custom`](../floes/custom.md) | `requires.cluster` |
-| [`doks`](../floes/doks.md) | `requires.cluster` |
 | [`external-dns`](../floes/external-dns.md) | `requires.cluster` |
 | [`external-secrets`](../floes/external-secrets.md) | `requires.cluster` |
 | [`forgejo`](../floes/forgejo.md) | `requires.cluster` |

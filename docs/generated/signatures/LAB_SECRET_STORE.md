@@ -36,7 +36,6 @@ anything.
 
 | floe | as |
 | --- | --- |
-| [`doks`](../floes/doks.md) | `optional.labStore` |
 | [`external-cluster`](../floes/external-cluster.md) | `optional.labStore` |
 | [`provisioned`](../floes/provisioned.md) | `optional.labStore` |
 

@@ -375,28 +375,6 @@ let
   # For the Crossplane floe, which is not built. Kept: re-deriving the hashes
   # later costs more than the pin does.
   crossplaneProviderCrdDefs = {
-    provider-upjet-digitalocean = {
-      type = "github";
-      owner = "crossplane-contrib";
-      repo = "provider-upjet-digitalocean";
-      rev = "v0.3.2";
-      hash = "sha256-cjXzxe/agUa7kN0uhxCg3MGAfmAO7E1B9Q79MCj6fIc=";
-      crdPath = "package/crds";
-    };
-    provider-upjet-cloudflare = {
-      type = "github";
-      owner = "wildbitca";
-      repo = "provider-upjet-cloudflare";
-      rev = "v0.2.5";
-      hash = "sha256-UXaCmII2GuLjMeErqGG5yVoFYFPpSW0gdvb80P9cAHY=";
-      crdPath = "package/crds";
-
-      crdGlob = [
-        "dns.upjet-cloudflare.*.yaml"
-        "tunnel.upjet-cloudflare.*.yaml"
-        "upjet-cloudflare.*.yaml"
-      ];
-    };
   };
 
   crossplaneProviderCrds = lib.mapAttrs (

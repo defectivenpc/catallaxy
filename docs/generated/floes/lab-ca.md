@@ -26,6 +26,6 @@ One root for the lab: what the ingress serves from and every cluster's issuer si
 
 ## What it emits
 
-Rendered by `cloud` as the lab unit `ca`. A unit of the lab
+Rendered by `gitops.local` as the lab unit `ca`. A unit of the lab
 installs nothing into a cluster, and its provisions are sealed inside the
 lab's inclusion — so its declaration above is its interface.
