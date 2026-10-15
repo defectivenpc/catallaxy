@@ -100,6 +100,15 @@ in
     legacyPackages
     flakePackages
     ;
+
+  # Paths the book names that this flake does not expose, because the book is
+  # describing the reader's flake there. `examples/flake.nix` is the worked
+  # instance of all three.
+  consumerOutputs = {
+    labs = "the evaluated config `cata --flake <ref>#<lab>` resolves, which a consumer puts at this path for the CLI to find";
+    labPackages = "the rendered tree beside it, and the other half of what the CLI resolves";
+    labPlans = "the two plans, read back with `nix eval` when a snapshot moves";
+  };
 }
 // import ./ops-tool.nix { inherit lib pkgs; }
 // import ./lab-checks.nix {

@@ -36,7 +36,6 @@
 - [Nix Helpers](./reference/helpers.md)
 - [Images and Registries](./reference/images.md)
 - [Cluster Security](./reference/security.md)
-- [Flake Outputs](./reference/flake-outputs.md)
 - [Glossary](./reference/glossary.md)
 
 # Project

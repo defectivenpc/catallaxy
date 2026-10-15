@@ -27,8 +27,8 @@ pkgs.mkShell {
     echo "  reveal-md docs/talks/<talk>.md -w        # live-reloading slides"
     echo "  nix build .#talks                        # the decks, as published"
     echo ""
-    echo "  nix build .#labPackages.\"minimal.local\"  # a lab's rendered tree"
-    echo "  nix run .#e2e                            # stand a lab up for real"
+    echo "  nix build ./examples#labPackages.\"minimal.local\"  # a lab's rendered tree"
+    echo "  nix run ./examples#e2e                   # stand a lab up for real"
     echo "  nix flake check                          # the gate"
   '';
 }

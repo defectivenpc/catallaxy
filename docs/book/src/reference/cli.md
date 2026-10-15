@@ -41,8 +41,6 @@ legacyPackages.<system>.labs.<lab-name>          the evaluated config
 legacyPackages.<system>.labPackages.<lab-name>   the rendered manifests
 ```
 
-See [Flake Outputs](./flake-outputs.md).
-
 ## Command tree
 
 ```

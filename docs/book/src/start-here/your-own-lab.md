@@ -62,8 +62,7 @@ legacyPackages.<system>.labPackages.<lab-name>   the rendered manifests
 ```
 
 `mkLab` is under `legacyPackages` (not `packages`) because a lab is not a
-derivation and `nix flake check` would complain. The full surface is in
-[Flake Outputs](../reference/flake-outputs.md).
+derivation and `nix flake check` would complain.
 
 A floe is a function, not a module to import, so your own floes reach the
 lab as an ordinary argument. See [Write a Floe](../using/writing-a-floe.md).

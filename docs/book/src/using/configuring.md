@@ -14,7 +14,7 @@ legacyPackages.<system> = {
 ```
 
 `cata --flake .#my-platform` finds them by name. Nothing else in your flake
-matters to it. See [Flake Outputs](../reference/flake-outputs.md).
+matters to it.
 
 ## A lab
 

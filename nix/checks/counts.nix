@@ -25,7 +25,6 @@ let
     "using/writing-a-floe.md"
     "reference/options.md"
     "reference/floe-api.md"
-    "reference/flake-outputs.md"
     "contributing.md"
     "start-here/first-lab.md"
     "start-here/your-own-lab.md"

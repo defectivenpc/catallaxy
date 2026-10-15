@@ -3,10 +3,10 @@
 
 let
   inherit (import ./labels.nix { }) catallaxyManaged;
-in
-rec {
 
   hashContent = inputs: lib.substring 0 10 (builtins.hashString "sha256" (builtins.toJSON inputs));
+in
+{
 
   mkIdempotentJob =
     {

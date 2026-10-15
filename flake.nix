@@ -89,17 +89,17 @@
             cataCharts
             k8sSpecs
             ;
-          examplesPath = ./examples/labs;
         };
 
-        exampleLabs = labs.discoverLabs;
-        fixtureLabs = labs.discoverFixtures;
-        labDefs = exampleLabs // fixtureLabs;
-
-        e2e = import ./nix/e2e.nix {
-          inherit lib pkgs;
-          inherit (packages') cataWrapped;
+        # The example corpus is this flake's test input, not its output.
+        # `examples/flake.nix` is what exposes it, as a consumer would.
+        corpus = import ./examples/labs.nix {
+          inherit lib;
+          cata = labs;
         };
+
+        exampleLabs = corpus.labs;
+        labDefs = corpus.labs // corpus.fixtures;
 
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
@@ -135,13 +135,8 @@
             ;
           inherit (packages') cata;
         };
-        labOutputs = import ./nix/lab-outputs.nix {
-          inherit lib labDefs exampleLabs;
-        };
-
-        legacyPackages' = labOutputs // {
+        legacyPackages' = {
           inherit
-            allocations
             referencePages
             generatedTypes
             ;
@@ -156,10 +151,9 @@
           inherit (packages') optionDocs;
 
           charts = cataCharts;
-          labCliConfigs = cliConfigs;
         };
 
-        flakePackages = e2e.packages // {
+        flakePackages = {
           default = packages'.cataWrapped;
           cata = packages'.cataWrapped;
           cata-unwrapped = packages'.cata;
@@ -173,11 +167,9 @@
 
         packages = flakePackages;
 
-        apps = e2e.apps // {
-          default = {
-            type = "app";
-            program = "${packages'.cataWrapped}/bin/cata";
-          };
+        apps.default = {
+          type = "app";
+          program = "${packages'.cataWrapped}/bin/cata";
         };
 
         devShells.default = import ./nix/devshell.nix {

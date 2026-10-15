@@ -70,7 +70,7 @@ let
           echo "A refactor that meant to change nothing should show no diff here." >&2
           echo "If the diff is intentional, refresh it:" >&2
           echo "" >&2
-          echo "  nix build .#labPackages.<lab>   # the tree this digest is taken over" >&2
+          echo "  nix build ./examples#labPackages.<lab>   # the tree this digest is taken over" >&2
           exit 1
         fi
         touch $out
@@ -175,7 +175,7 @@ let
           echo "a derived plan changing is exactly what nobody notices." >&2
           echo "" >&2
           echo "If intended, refresh every snapshot and read the diff:" >&2
-          echo "  nix eval .#labPlans.<lab>   # the plans this snapshot is taken from" >&2
+          echo "  nix eval ./examples#labPlans.<lab>   # the plans this snapshot is taken from" >&2
           exit 1
         fi
         touch $out
@@ -205,7 +205,7 @@ let
         echo "" >&2
         echo "If intended, refresh it and read the diff:" >&2
         echo "" >&2
-        echo "  nix build .#labCliConfigs   # then copy over examples/labs/tests/cli-configs" >&2
+        echo "  nix build ./examples#labCliConfigs   # then copy over examples/labs/tests/cli-configs" >&2
         exit 1
       fi
       touch $out

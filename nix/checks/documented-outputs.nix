@@ -1,6 +1,7 @@
 /*
   Every `legacyPackages.<system>.<name>` and `packages.<system>.<name>` a
-  document names is an output the flake has.
+  document names resolves — either against this flake, or against the consumer
+  contract it is describing.
 
   The book is where somebody looks up what to build, so a path that no longer
   resolves is worse than an undocumented one: it reads as a thing they got
@@ -9,21 +10,28 @@
   `packages.option-docs` — which is `legacyPackages.optionDocs`. Nothing said
   so, because an output vanishing breaks no evaluation.
 
+  `consumerOutputs` is the second half, and it is what makes the check honest
+  rather than merely strict. `labs` and `labPackages` are paths the reader's
+  own flake exposes, which is why the book names them and this flake does not:
+  the example corpus moved to `examples/flake.nix`. Each is listed with a
+  reason, and one this flake starts exposing fails as a stale entry, so the
+  list cannot rot in either direction.
+
   Only the qualified forms, because `.#foo` cannot be told apart from a lab
-  name or a shell alias, and because this file's own "Common mistakes" table
-  is a list of paths that deliberately do not resolve. That table is the one
-  place a wrong path is the point, so the scan stops at its heading.
+  name or a shell alias. A "Common mistakes" table — a list of paths that
+  deliberately do not resolve — is the one place a wrong path is the point, so
+  the scan stops at that heading.
 
   History documents are exempt by fileset: `CHANGELOG.md` and `docs/adr/` are
   not in it, because they record what was true when written. So is
-  `templates/`, whose `legacyPackages.${system}` is the consumer's own flake
-  rather than this one.
+  `templates/`, which is a consumer flake in its own right.
 */
 {
   lib,
   pkgs,
   legacyPackages,
   flakePackages,
+  consumerOutputs,
 }:
 
 let
@@ -36,9 +44,14 @@ let
     ];
   };
 
-  surface = {
+  ours = {
     legacyPackages = lib.attrNames legacyPackages;
     packages = lib.attrNames flakePackages;
+  };
+
+  consumer = {
+    legacyPackages = lib.attrNames consumerOutputs;
+    packages = [ ];
   };
 in
 {
@@ -52,8 +65,16 @@ in
           pkgs.findutils
           pkgs.jq
         ];
-        surface = builtins.toJSON surface;
-        passAsFile = [ "surface" ];
+        ours = builtins.toJSON ours;
+        consumer = builtins.toJSON consumer;
+        why = lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (n: reason: "  ${n} — ${reason}") consumerOutputs
+        );
+        passAsFile = [
+          "ours"
+          "consumer"
+          "why"
+        ];
       }
       ''
         cd ${prose}
@@ -61,7 +82,9 @@ in
         status=0
 
         for kind in legacyPackages packages; do
-          jq -r --arg k "$kind" '.[$k][]' "$surfacePath" | sort -u > "$TMPDIR/have"
+          jq -r --arg k "$kind" '.[$k][]' "$oursPath" | sort -u > "$TMPDIR/ours"
+          jq -r --arg k "$kind" '.[$k][]' "$consumerPath" | sort -u > "$TMPDIR/consumer"
+          sort -u "$TMPDIR/ours" "$TMPDIR/consumer" > "$TMPDIR/allowed"
 
           find . -type f -name '*.md' | while read -r f; do
             sed '/^## Common mistakes/q' "$f" \
@@ -72,17 +95,28 @@ in
 
           cut -d' ' -f1 < "$TMPDIR/named" | sort -u > "$TMPDIR/names"
 
-          for n in $(comm -23 "$TMPDIR/names" "$TMPDIR/have"); do
-            echo "$kind.<system>.$n is documented, and the flake has no such output:" >&2
+          for n in $(comm -23 "$TMPDIR/names" "$TMPDIR/allowed"); do
+            echo "$kind.<system>.$n is documented, and nothing exposes it:" >&2
             grep "^$n " "$TMPDIR/named" | sed 's/^[^ ]* /    /' >&2
+            status=1
+          done
+
+          for n in $(comm -12 "$TMPDIR/ours" "$TMPDIR/consumer"); do
+            echo "$kind.<system>.$n is listed as the consumer's and this flake exposes it:" >&2
+            echo "    drop the entry from consumerOutputs in nix/checks/default.nix" >&2
             status=1
           done
         done
 
         if [ "$status" != 0 ]; then
           echo "" >&2
-          echo "Either expose it, or correct the document to name what replaced it." >&2
+          echo "Either expose it, correct the document, or — if the document is" >&2
+          echo "describing the reader's own flake rather than this one — add it to" >&2
+          echo "consumerOutputs in nix/checks/default.nix with a reason. Those are:" >&2
+          cat "$whyPath" >&2
+          echo "" >&2
           echo "  nix eval .#legacyPackages.<system> --apply builtins.attrNames" >&2
+          echo "  nix eval ./examples#legacyPackages.<system> --apply builtins.attrNames" >&2
           echo "" >&2
           echo "If the path above is one of a table of paths that are meant not to" >&2
           echo "resolve, it is below a heading this check no longer recognises: the" >&2

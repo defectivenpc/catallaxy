@@ -1,11 +1,10 @@
-# Evaluating a lab, and finding the ones in `examples/labs/`.
+# Evaluating a lab.
 {
   lib,
   pkgs,
   floeCore,
   cataCharts,
   k8sSpecs,
-  examplesPath,
 }:
 
 let
@@ -227,86 +226,17 @@ let
         inherit (lowered) cliConfig package;
       };
 
-  # What a lab's own files are handed, which is what a floe definition is
-  # handed: a lab is a floe, so its `lab.nix` is a definition and its
-  # `envs/*.nix` are instantiations of it. No `config`, because there is no
-  # merge to configure.
-  labFileArgs = {
-    inherit
-      lib
-      pkgs
-      cataCharts
-      k8sSpecs
-      floes
-      ;
-
-    catallaxy = labCatallaxy;
-  };
-
-  # The name a lab answers to has to be the name it was found under.
-  # `allocations.json` is keyed by the discovered one while every host port and
-  # the subnet come from the written one, so a mismatch moves a lab's whole
-  # allocation without moving the row that records it.
-  named =
-    key: lab:
-    lib.throwIf (lab.name != key) (
-      "the lab discovered as '${key}' calls itself '${lab.name}'. The name is what every host "
-      + "port and the subnet are allocated from, and what `cata` is invoked with, so the two "
-      + "cannot differ."
-    ) lab;
-
-  isNixFile = name: kind: kind == "regular" && lib.hasSuffix ".nix" name;
-
-  discoverLabs =
-    let
-      labDirs = lib.filterAttrs (
-        name: kind: kind == "directory" && builtins.pathExists (examplesPath + "/${name}/lab.nix")
-      ) (builtins.readDir examplesPath);
-
-      envsOf =
-        labName: _:
-        let
-          envDir = examplesPath + "/${labName}/envs";
-          def = import (examplesPath + "/${labName}/lab.nix") labFileArgs;
-        in
-        lib.mapAttrs' (
-          filename: _:
-          lib.nameValuePair "${labName}.${lib.removeSuffix ".nix" filename}" (
-            named "${labName}.${lib.removeSuffix ".nix" filename}" (
-              mkLab (import (envDir + "/${filename}") (labFileArgs // { lab = def; }))
-            )
-          )
-        ) (lib.filterAttrs isNixFile (builtins.readDir envDir));
-    in
-    lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList envsOf labDirs);
-
-  # A fixture is a lab with one environment, so it is one file: the whole of it
-  # is the instantiation, and there is no definition to share.
-  discoverFixtures =
-    let
-      dir = examplesPath + "/tests";
-    in
-    lib.optionalAttrs (builtins.pathExists dir) (
-      lib.mapAttrs' (
-        filename: _:
-        lib.nameValuePair (lib.removeSuffix ".nix" filename) (
-          named (lib.removeSuffix ".nix" filename) (mkLab (import (dir + "/${filename}") labFileArgs))
-        )
-      ) (lib.filterAttrs isNixFile (builtins.readDir dir))
-    );
 in
 {
   inherit
     mkLab
     mkLabFloe
-    discoverLabs
-    discoverFixtures
     floes
     ;
 
   # The distribution, as a lab author sees it: `mkClusterFloe`, `mkLabFloe`,
-  # the signatures and the kinds. What a `lab.nix` is handed, and what anything
-  # building a lab outside `examples/` has to be handed too.
+  # the signatures and the kinds. What a `lab.nix` is handed, together with
+  # `floes` and `lib`, whether it lives in this repo or in yours.
   catallaxy = labCatallaxy;
 
   # mkFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }

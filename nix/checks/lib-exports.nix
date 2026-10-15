@@ -10,8 +10,7 @@
 #
 # Greps rather than resolves, so `x.name` and `inherit (m) name` both count,
 # and so does a mention in `docs/` — a documented name is an intended surface
-# even with no caller yet, which is what `flake-outputs.md` says about
-# `lib.hashContent`.
+# even with no caller yet.
 #
 # Loose in one direction only: a name that coincides with a word used
 # elsewhere reads as live. Tightening that would need a Nix parser, and the

@@ -1,8 +1,8 @@
 /*
   The labs a machine with docker can stand up, and the two runners that do it.
 
-  `nix run .#e2e` takes one lab name, or no argument to list them.
-  `nix run .#e2e-all` runs every one, `--jobs N` at a time.
+  `nix run ./examples#e2e` takes one lab name, or no argument to list them.
+  `nix run ./examples#e2e-all` runs every one, `--jobs N` at a time.
 
   The list is here rather than in `flake.nix` because it is the only thing
   outside these two scripts that knows which labs are eligible, and it is
@@ -70,7 +70,7 @@ let
 
       if ! printf '%s\n' "$labs" | grep -qxF "$lab"; then
         echo "cata-e2e: '$lab' is not in the e2e list." >&2
-        echo "  The list is \`labs\` in nix/e2e.nix. Add it there if it belongs." >&2
+        echo "  The list is \`labs\` in examples/e2e.nix. Add it there if it belongs." >&2
         exit 1
       fi
 
