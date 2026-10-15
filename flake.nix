@@ -126,19 +126,6 @@
           floeSet = floePaths;
         };
 
-        standaloneClusters = lib.mapAttrs (
-          name: path:
-          labs.mkCluster (
-            {
-              inherit name;
-            }
-            // import path {
-              inherit lib pkgs;
-              inherit (labs) catallaxy floes;
-            }
-          )
-        ) { minimal = ./examples/clusters/minimal.nix; };
-
         referencePages = import ./pkgs/reference-pages.nix {
           inherit
             lib
@@ -160,7 +147,6 @@
         legacyPackages' = labOutputs // {
           inherit
             allocations
-            standaloneClusters
             referencePages
             generatedTypes
             ;
@@ -219,7 +205,6 @@
             treefmtEval
             labDefs
             exampleLabs
-            standaloneClusters
             allocations
             cliConfigs
             referencePages

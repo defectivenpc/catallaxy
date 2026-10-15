@@ -13,7 +13,6 @@
   treefmtEval,
   labDefs,
   exampleLabs,
-  standaloneClusters,
   mkLab,
   mkFloes,
   optionDocs,
@@ -178,7 +177,6 @@ in
     pkgs
     packages
     labDefs
-    standaloneClusters
     ;
 }
 // import ./lab-scope.nix {

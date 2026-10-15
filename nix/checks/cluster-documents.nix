@@ -21,7 +21,6 @@
   pkgs,
   packages,
   labDefs,
-  standaloneClusters ? { },
 }:
 
 let
@@ -69,14 +68,6 @@ let
       fi
     '';
 
-  # And the clusters written with no lab around them, which is the same
-  # question asked of the authoring surface rather than of the lowering: a
-  # cluster evaluated on its own has to be readable on its own too.
-  standalone = lib.mapAttrsToList (clusterName: cluster: {
-    name = "cluster-artifact-standalone-${clusterName}";
-    value = artifact "standalone" clusterName cluster;
-  }) standaloneClusters;
-
   artifacts = lib.concatMap (
     labName:
     lib.mapAttrsToList (clusterName: cluster: {
@@ -86,4 +77,4 @@ let
   ) (lib.attrNames labDefs);
 in
 lib.mapAttrs' (name: lab: lib.nameValuePair "cluster-document-${name}" (one name lab)) labDefs
-// lib.listToAttrs (artifacts ++ standalone)
+// lib.listToAttrs artifacts

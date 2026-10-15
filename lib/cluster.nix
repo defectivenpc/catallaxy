@@ -38,7 +38,11 @@ in
 {
   # mkCluster :: { name; floe; claim; } -> lowered cluster
   #
-  #   mkCluster ({ name = "standalone"; } // import ./examples/clusters/minimal.nix { … })
+  #   mkCluster {
+  #     name = "standalone";
+  #     floe = floes.k3d { };
+  #     claim = { … };
+  #   }
   #
   # The same two things a lab writes about a cluster — the floe it is and the
   # claim that answers it — and the same two phases over them. It was a
