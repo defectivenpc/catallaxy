@@ -1,4 +1,4 @@
-# The CLI, the tools it shells out to, and the runners that test a whole lab.
+# The CLI, the tools it shells out to, and the documents built from it.
 {
   lib,
   pkgs,
@@ -55,8 +55,6 @@ let
     '';
   };
 
-  e2e = import ./e2e.nix { inherit lib pkgs cataWrapped; };
-  e2e-all = import ./e2e-all.nix { inherit lib pkgs e2e; };
   optionDocs = import ./option-docs.nix {
     inherit
       lib
@@ -73,8 +71,6 @@ in
     tools
     cata
     cataWrapped
-    e2e
-    e2e-all
     optionDocs
     talks
     docs

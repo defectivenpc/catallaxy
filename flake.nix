@@ -96,17 +96,10 @@
         fixtureLabs = labs.discoverFixtures;
         labDefs = exampleLabs // fixtureLabs;
 
-        e2eLabs = [
-          "crossplane.nop"
-          "gitops.local"
-          "homelab.dns"
-          "homelab.local"
-          "minimal.cilium"
-          "minimal.local"
-          "minimal.secrets"
-          "minimal.talos"
-          "minimal.tls"
-        ];
+        e2e = import ./nix/e2e.nix {
+          inherit lib pkgs;
+          inherit (packages') cataWrapped;
+        };
 
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
@@ -159,7 +152,6 @@
           inherit
             allocations
             standaloneClusters
-            e2eLabs
             referencePages
             generatedTypes
             ;
@@ -203,34 +195,19 @@
       {
         legacyPackages = legacyPackages';
 
-        packages = {
+        packages = e2e.packages // {
           default = packages'.cataWrapped;
           cata = packages'.cataWrapped;
           cata-unwrapped = packages'.cata;
 
-          inherit (packages')
-            e2e
-            e2e-all
-            talks
-            docs
-            ;
+          inherit (packages') talks docs;
         };
 
-        apps.default = {
-          type = "app";
-          program = "${packages'.cataWrapped}/bin/cata";
-        };
-
-        # `nix run .#e2e` with no argument prints the eligible set and why the
-        # rest are not, which is the intended way to find out.
-        apps.e2e = {
-          type = "app";
-          program = "${packages'.e2e}/bin/cata-e2e";
-        };
-
-        apps.e2e-all = {
-          type = "app";
-          program = "${packages'.e2e-all}/bin/cata-e2e-all";
+        apps = e2e.apps // {
+          default = {
+            type = "app";
+            program = "${packages'.cataWrapped}/bin/cata";
+          };
         };
 
         devShells.default = import ./nix/devshell.nix {
