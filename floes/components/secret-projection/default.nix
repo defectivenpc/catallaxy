@@ -2,7 +2,7 @@
 #
 # The cluster asks and `cata` fills: the value is decrypted from a store on
 # the operator's machine and applied, so no secret passes through evaluation
-# and none reaches the store path. What the floe contributes is the
+# and none reaches the store path.
 #
 # It was `lab.clusters.<c>.secrets.project`, which made it the last thing a
 # lab handed down: the elaborator took the map as a parameter and synthesised
