@@ -28,7 +28,7 @@ pkgs.mkShell {
     echo "  nix build .#talks                        # the decks, as published"
     echo ""
     echo "  nix build ./examples#labPackages.\"minimal.local\"  # a lab's rendered tree"
-    echo "  nix run ./examples#e2e                   # stand a lab up for real"
+    echo "  nix run ./examples#e2e-all               # stand every lab up for real"
     echo "  nix flake check                          # the gate"
   '';
 }

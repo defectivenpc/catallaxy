@@ -1,15 +1,5 @@
-# One cluster, a platform, and one service behind it.
+# A minimal cluster. Outlining how to define a lab, a cluster, and a service that runs in the cluster
 #
-# The whole of what a lab author writes: which cluster floes are placed, what
-# brings each one into existence, and the host services around them. The
-# cluster's own composition is in `clusters.nix`, where its header states the
-# interface; ordering is nowhere, because nothing declares it — the linker
-# resolves the signatures and the elaborator derives the install order.
-#
-# A floe, so the two things its five environments swap are declared inputs with
-# defaults, and `envs/*.nix` are instantiations. What differs between
-# `minimal.local` and `minimal.tls` is readable here rather than by merging
-# five files.
 {
   lib,
   floes,
@@ -27,11 +17,6 @@ catallaxy.mkLabFloe {
   inputs = {
     zone.default = "minimal.test";
 
-    # The base lab runs no ingress, so podinfo's route is genuinely unreachable
-    # from the host and the endpoint probe is right to say so. `minimal.tls`
-    # stands one up and turns this back on; the probe is off here rather than
-    # worked around, because a lab publishing no ingress port has nothing to
-    # dial.
     verifyEndpoints.default.enable = false;
 
     cluster = lib.mkOption {
