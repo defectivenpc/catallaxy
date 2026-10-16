@@ -26,7 +26,7 @@ in
     summary = "Every floe in the catalogue, in one cluster, for coverage.";
 
     requires = {
-      claim = sigs.KUBERNETES_CLUSTER;
+      cluster = sigs.KUBERNETES_CLUSTER;
       zone = sigs.DNS_ZONE;
 
       # Three stores and two secrets in this lab, so every one of these is a

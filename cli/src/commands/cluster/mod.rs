@@ -198,8 +198,11 @@ fn status(ctx: &CataContext, name: &str) -> Result<()> {
 
     println!("{}", style("Configuration:").bold());
     println!("  Provisioner: {}", spec.provisioning.config.kind().tag());
-    println!("  Control Planes: {}", spec.claim.kubernetes.control_planes);
-    println!("  Workers: {}", spec.claim.kubernetes.workers);
+    println!(
+        "  Control Planes: {}",
+        spec.cluster_handle.kubernetes.control_planes
+    );
+    println!("  Workers: {}", spec.cluster_handle.kubernetes.workers);
     println!();
 
     let cluster_name = crate::provision::provisioner_cluster_name(&spec).to_string();

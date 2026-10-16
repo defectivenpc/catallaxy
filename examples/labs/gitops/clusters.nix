@@ -24,7 +24,7 @@ in
     summary = "A platform behind TLS, a git remote, and Argo CD applying from it.";
 
     requires = {
-      claim = sigs.KUBERNETES_CLUSTER;
+      cluster = sigs.KUBERNETES_CLUSTER;
       zone = sigs.DNS_ZONE;
 
       # Somewhere for forgejo to bind a PVC. Answered by the claim, because

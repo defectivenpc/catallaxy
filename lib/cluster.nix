@@ -1,6 +1,6 @@
 # Evaluating one cluster, with no lab around it.
 #
-# A cluster denotes a claim and its content, and lowering is defined on closed
+# A cluster denotes a handle and its content, and lowering is defined on closed
 # compositions — so a cluster whose holes are all filled is a complete thing
 # and needs nothing else to be one. `cata cluster up --from-file` already
 # acts on one; this is the other half, writing one.
@@ -13,7 +13,7 @@
 #   - whether a lab fronts it, because Talos nodes have to be told what may
 #     reach in. Nothing does.
 #   - the link, because a cluster is a floe and something has to link it.
-#     Here that is a link of the cluster and its claim.
+#     Here that is a link of the cluster and its provisioner.
 #   - the delivery arrangement, folded from what the cluster said about
 #     applying.
 #
@@ -21,7 +21,7 @@
 # hole, which is the definition working rather than a limitation: a cluster
 # with a hole nothing here fills is a *component*, and the thing that fills
 # the rest is what a lab is. Two units and not one, because a cluster leaves
-# its claim open and the claim is what answers it.
+# its cluster hole open and the provisioner is what answers it.
 {
   lib,
   catallaxy,
@@ -36,35 +36,35 @@ let
     ;
 in
 {
-  # mkCluster :: { name; floe; claim; } -> lowered cluster
+  # mkCluster :: { name; floe; provisioner; } -> lowered cluster
   #
   #   mkCluster {
   #     name = "standalone";
   #     floe = floes.k3d { };
-  #     claim = { … };
+  #     provisioner = { … };
   #   }
   #
   # The same two things a lab writes about a cluster — the floe it is and the
-  # claim that answers it — and the same two phases over them. It was a
+  # provisioner that answers it — and the same two phases over them. It was a
   # submodule whose only caller synthesised a whole `lab` record to evaluate
   # exactly one of it.
   mkCluster =
     {
       name,
       floe,
-      claim,
+      provisioner,
     }:
     let
       placed = placeCluster {
         clusterName = name;
         labName = name;
-        inherit floe claim;
+        inherit floe provisioner;
       };
 
       link = catallaxy.floe.link {
         units = {
           ${name} = placed.clusterFloe;
-          ${catallaxy.claimUnitFor name} = placed.claim;
+          ${catallaxy.provisionerUnitFor name} = placed.provisioner;
 
           delivery = floes.lab-delivery { };
         };

@@ -213,11 +213,13 @@ impl LabSpec {
         })
     }
 
-    /// Off the cluster's own claim. It used to come from a `runtimeContexts`
+    /// Off the cluster's own handle. It used to come from a `runtimeContexts`
     /// map beside the clusters, which said the same thing a second time.
     pub fn kube_context(&self, cluster: &str) -> anyhow::Result<&str> {
         resolve_context(
-            self.clusters.get(cluster).map(|c| c.claim.context.as_str()),
+            self.clusters
+                .get(cluster)
+                .map(|c| c.cluster_handle.context.as_str()),
             cluster,
             &self.clusters.keys().map(String::as_str).collect::<Vec<_>>(),
         )
@@ -318,7 +320,7 @@ mod tests {
     #[test]
     fn the_context_comes_from_runtime_contexts_which_a_pivot_rewrites() {
         let mut json = lab_json();
-        json["clusters"]["app"]["claim"]["context"] = serde_json::json!("pivoted-app");
+        json["clusters"]["app"]["clusterHandle"]["context"] = serde_json::json!("pivoted-app");
         let lab = LabSpec::from_value(json).unwrap();
         assert_eq!(lab.kube_context("app").unwrap(), "pivoted-app");
     }
@@ -326,7 +328,7 @@ mod tests {
     #[test]
     fn an_empty_runtime_context_is_reported_rather_than_guessed_at() {
         let mut json = lab_json();
-        json["clusters"]["app"]["claim"]["context"] = serde_json::json!("");
+        json["clusters"]["app"]["clusterHandle"]["context"] = serde_json::json!("");
         let lab = LabSpec::from_value(json).unwrap();
         let err = lab
             .kube_context("app")

@@ -31,7 +31,7 @@ catallaxy.mkLabFloe {
   inputs = {
     zone.default = "example.test";
 
-    claim = lib.mkOption {
+    provisioner = lib.mkOption {
       type = catallaxy.floeInstance;
       default = floes.k3d-cluster { };
       defaultText = lib.literalExpression "floes.k3d-cluster { }";
@@ -48,7 +48,7 @@ catallaxy.mkLabFloe {
     {
       app = {
         floe = clusters.app { };
-        inherit (inputs) claim;
+        inherit (inputs) provisioner;
       };
     };
 }

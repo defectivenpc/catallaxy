@@ -30,7 +30,7 @@ fn node_config(sctx: &StepContext<'_>, spec: &ClusterSpec) -> Result<Option<std:
     if !path.exists() {
         bail!(
             "cluster '{}' pulls through the lab's '{service}' mirror and {} is not there.              `registry-setup` writes it and runs before any cluster is created, so either              that step did not run or its state directory was removed.",
-            spec.claim.name,
+            spec.cluster_handle.name,
             path.display(),
         );
     }

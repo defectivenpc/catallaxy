@@ -40,7 +40,7 @@ catallaxy.mkLabFloe {
   clusters = _: {
     app = {
       floe = clusters.app { };
-      claim = floes.k3d-cluster { };
+      provisioner = floes.k3d-cluster { };
     };
   };
 }

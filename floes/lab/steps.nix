@@ -22,7 +22,7 @@
 }:
 
 let
-  inherit (catallaxy) planTokens wants clusterOfClaimUnit;
+  inherit (catallaxy) planTokens wants clusterOfProvisionerUnit;
 in
 floe.mkFloe {
   name = "lab-steps";
@@ -43,7 +43,7 @@ floe.mkFloe {
   body =
     { collects, ... }:
     let
-      clusterNames = map clusterOfClaimUnit (lib.attrNames collects.cluster);
+      clusterNames = map clusterOfProvisionerUnit (lib.attrNames collects.cluster);
 
       perCluster = token: map (n: wants (planTokens.cluster n).${token}) clusterNames;
 

@@ -33,7 +33,7 @@ fn k3d_config(spec: &ClusterSpec) -> Result<&K3dConfig> {
     spec.provisioning.config.k3d().with_context(|| {
         format!(
             "cluster '{}' reached the k3d path carrying a {:?} configuration",
-            spec.claim.name,
+            spec.cluster_handle.name,
             spec.provisioning.config.kind()
         )
     })
@@ -45,7 +45,7 @@ fn talos_config(spec: &ClusterSpec) -> Result<&TalosConfig> {
         ProvisionerConfig::Talos(c) => Ok(c),
         other => bail!(
             "cluster '{}' reached the Talos path carrying a {:?} configuration",
-            spec.claim.name,
+            spec.cluster_handle.name,
             other.kind()
         ),
     }
@@ -136,15 +136,15 @@ pub fn provision_cluster_with_registry(
 
             io::talos::cluster_create(io::talos::ClusterCreate {
                 name: &cluster_name,
-                workers: spec.claim.kubernetes.workers,
+                workers: spec.cluster_handle.kubernetes.workers,
                 talos: talos_config(spec)?,
                 docker_host: docker_host.as_deref(),
             })?;
 
-            wait_until_answering(&spec.claim.context, &spec.provisioning.wait)?;
+            wait_until_answering(&spec.cluster_handle.context, &spec.provisioning.wait)?;
 
             crate::host::state::write_cluster_shape(
-                &spec.claim.instance_name,
+                &spec.cluster_handle.instance_name,
                 &crate::domain::cluster_shape::ClusterShape::of(spec),
             )?;
         }
@@ -247,7 +247,7 @@ fn provision_k3d(
 
     let state_dir = match ctx.resolve_lab_name(None) {
         Ok(lab_name) => crate::host::state::lab_state_dir(&lab_name),
-        Err(_) => crate::host::state::cluster_state_dir(&spec.claim.instance_name),
+        Err(_) => crate::host::state::cluster_state_dir(&spec.cluster_handle.instance_name),
     };
     let extra_volumes: Vec<(String, String)> = k3d
         .extra_volumes
@@ -281,7 +281,7 @@ fn provision_k3d(
 
     io::k3d::cluster_create(io::k3d::ClusterCreate {
         name: cluster_name,
-        workers: spec.claim.kubernetes.workers,
+        workers: spec.cluster_handle.kubernetes.workers,
         no_traefik: k3d.no_traefik,
         no_service_lb: k3d.no_service_lb,
         no_flannel: k3d.no_flannel,
@@ -291,8 +291,8 @@ fn provision_k3d(
         registries_yaml: registries_yaml_str.as_deref(),
         certs_d: certs_d_str.as_deref(),
         resolv_conf: resolv_conf_str.as_deref(),
-        service_cidr: Some(spec.claim.network.service_subnet.as_str()),
-        pod_cidr: Some(spec.claim.network.pod_subnet.as_str()),
+        service_cidr: Some(spec.cluster_handle.network.service_subnet.as_str()),
+        pod_cidr: Some(spec.cluster_handle.network.pod_subnet.as_str()),
         auto_deploy_manifests: &auto_deploy,
         ports: &port_refs,
         network: k3d.network.as_deref(),
@@ -303,10 +303,10 @@ fn provision_k3d(
 
     io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
 
-    wait_until_answering(&spec.claim.context, &spec.provisioning.wait)?;
+    wait_until_answering(&spec.cluster_handle.context, &spec.provisioning.wait)?;
 
     crate::host::state::write_cluster_shape(
-        &spec.claim.instance_name,
+        &spec.cluster_handle.instance_name,
         &crate::domain::cluster_shape::ClusterShape::of(spec),
     )?;
 
@@ -340,7 +340,8 @@ fn converge_existing_cluster(
     use crate::domain::cluster_shape::{ClusterShape, compare_shapes, describe};
 
     let declared = ClusterShape::of(spec);
-    let recorded = match crate::host::state::read_cluster_shape(&spec.claim.instance_name) {
+    let recorded = match crate::host::state::read_cluster_shape(&spec.cluster_handle.instance_name)
+    {
         Some(recorded) => recorded,
         None => adopt_existing_cluster(name, spec, &declared)?,
     };
@@ -369,7 +370,7 @@ fn converge_existing_cluster(
         let k3d_name = &k3d_config(spec)?.cluster_name;
         let existing = io::k3d::node_names(k3d_name, docker_host).len().max(1);
         io::k3d::add_agents(k3d_name, to_add, existing, docker_host)?;
-        crate::host::state::write_cluster_shape(&spec.claim.instance_name, &declared)?;
+        crate::host::state::write_cluster_shape(&spec.cluster_handle.instance_name, &declared)?;
         return Ok(Convergence::Unchanged);
     }
 
@@ -381,7 +382,7 @@ fn converge_existing_cluster(
     {
         converge_k3d_in_place(name, spec, &report, &recorded, docker_host)?;
         confirm_converged(name, spec, &declared)?;
-        crate::host::state::write_cluster_shape(&spec.claim.instance_name, &declared)?;
+        crate::host::state::write_cluster_shape(&spec.cluster_handle.instance_name, &declared)?;
         return Ok(Convergence::Unchanged);
     }
 
@@ -410,7 +411,7 @@ fn confirm_converged(
     let Some(want) = declared.image.as_deref() else {
         return Ok(());
     };
-    let Some(nodes) = io::kubectl::node_summary(&spec.claim.context) else {
+    let Some(nodes) = io::kubectl::node_summary(&spec.cluster_handle.context) else {
         return Ok(());
     };
     let Some(running) = nodes.kubelet_version.as_deref() else {
@@ -485,7 +486,7 @@ fn replace_k3d_nodes(
     docker_host: Option<&str>,
 ) -> Result<()> {
     let cluster = &k3d_config(spec)?.cluster_name;
-    let declared_version = &spec.claim.kubernetes.version;
+    let declared_version = &spec.cluster_handle.kubernetes.version;
 
     if !io::k3d_node::upgrade_is_one_step(&recorded.version, declared_version) {
         anyhow::bail!(
@@ -520,8 +521,8 @@ fn replace_k3d_nodes(
         );
         let node_spec = io::k3d_node::inspect(node)?;
         io::k3d_node::replace(&node_spec, &image, docker_host)?;
-        wait_until_answering(&spec.claim.context, &spec.provisioning.wait)?;
-        io::k3d::wait_node_ready(&spec.claim.context, node)?;
+        wait_until_answering(&spec.cluster_handle.context, &spec.provisioning.wait)?;
+        io::k3d::wait_node_ready(&spec.cluster_handle.context, node)?;
     }
 
     Ok(())
@@ -538,11 +539,11 @@ fn adopt_existing_cluster(
     spec: &ClusterSpec,
     declared: &crate::domain::cluster_shape::ClusterShape,
 ) -> Result<crate::domain::cluster_shape::ClusterShape> {
-    let observed = io::kubectl::node_summary(&spec.claim.context);
+    let observed = io::kubectl::node_summary(&spec.cluster_handle.context);
 
     let agrees = match &observed {
         Some(nodes) => describe_cluster_drift(
-            spec.claim.kubernetes.workers,
+            spec.cluster_handle.kubernetes.workers,
             nodes.workers,
             spec.provisioning
                 .config
@@ -578,7 +579,7 @@ fn adopt_existing_cluster(
          them. `lab up --recreate {name}` rebuilds it if you would rather know.",
     );
 
-    crate::host::state::write_cluster_shape(&spec.claim.instance_name, declared)?;
+    crate::host::state::write_cluster_shape(&spec.cluster_handle.instance_name, declared)?;
     Ok(declared.clone())
 }
 
@@ -617,7 +618,7 @@ pub fn describe_cluster_drift(
 
     if declared_workers != actual_workers {
         drift.push(format!(
-            "cluster.claim.kubernetes.workers is {declared_workers}, the cluster has {actual_workers}"
+            "cluster.cluster_handle.kubernetes.workers is {declared_workers}, the cluster has {actual_workers}"
         ));
     }
 
@@ -641,12 +642,12 @@ pub fn describe_cluster_drift(
 /// answers for honestly, and a warning rather than a refusal, because it is
 /// corroboration rather than the check.
 fn report_out_of_band_drift(name: &str, spec: &ClusterSpec) {
-    let Some(nodes) = io::kubectl::node_summary(&spec.claim.context) else {
+    let Some(nodes) = io::kubectl::node_summary(&spec.cluster_handle.context) else {
         return;
     };
 
     let drift = describe_cluster_drift(
-        spec.claim.kubernetes.workers,
+        spec.cluster_handle.kubernetes.workers,
         nodes.workers,
         spec.provisioning
             .config

@@ -8,7 +8,7 @@
   ],
   "clusters": {
     "control": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-crossplane-nop-control",
         "instanceName": "crossplane-nop-control",
         "kubernetes": {

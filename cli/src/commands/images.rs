@@ -218,12 +218,12 @@ fn actual(
                     lab.clusters.keys().cloned().collect::<Vec<_>>().join(", ")
                 )
             })?;
-            vec![(name, &spec.claim.context)]
+            vec![(name, &spec.cluster_handle.context)]
         }
         None => lab
             .clusters
             .iter()
-            .map(|(name, spec)| (name, &spec.claim.context))
+            .map(|(name, spec)| (name, &spec.cluster_handle.context))
             .collect(),
     };
 

@@ -65,7 +65,7 @@ catallaxy.mkLabFloe
           vaultCredential = "vault-credential";
           tsigSecret = "externaldns-tsig";
         };
-        claim = floes.k3d-cluster { };
+        provisioner = floes.k3d-cluster { };
       };
     };
   }

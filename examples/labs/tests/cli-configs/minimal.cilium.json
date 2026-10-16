@@ -8,7 +8,7 @@
   ],
   "clusters": {
     "app": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-minimal-cilium-app",
         "instanceName": "minimal-cilium-app",
         "kubernetes": {

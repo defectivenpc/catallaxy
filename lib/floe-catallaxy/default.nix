@@ -48,18 +48,18 @@ rec {
     check = v: builtins.isAttrs v && (v.__floeInstance or false);
   };
 
-  # claimUnitFor :: ClusterName -> UnitName
+  # provisionerUnitFor :: ClusterName -> UnitName
   #
-  # The lab unit a cluster's claim is linked under. A cluster floe leaves
+  # The lab unit a cluster's provisioner is linked under. A cluster floe leaves
   # `KUBERNETES_CLUSTER` open and the provisioner answering it sits beside it,
-  # so the claim is its own unit and needs its own name.
+  # so the provisioner is its own unit and needs its own name.
   #
   # Derived rather than written, because the deployer already said which
-  # cluster a claim is for by writing it under that cluster. Here rather than
+  # cluster a provisioner is for by writing it under that cluster. Here rather than
   # at the three call sites — the submodule that binds the hole, the lab that
   # builds the link, and the planner that reads the wiring off it — because a
   # name three places construct is a name three places can disagree about.
-  claimUnitFor = clusterName: "${clusterName}-claim";
+  provisionerUnitFor = clusterName: "${clusterName}-provisioner";
 
   # hostContainerFor :: LabName -> Role -> ContainerName
   #
@@ -94,25 +94,25 @@ rec {
         sigs
         floes
         placeCluster
-        claimUnitFor
+        provisionerUnitFor
         labPolicies
         allocationFor
         ;
     };
 
-  # clusterOfClaimUnit :: UnitName -> ClusterName
+  # clusterOfProvisionerUnit :: UnitName -> ClusterName
   #
   # The inverse, for a lab-scope floe that needs the cluster names and has only
   # a collection to get them from. `KUBERNETES_CLUSTER` is provided by exactly
   # three floes and all three are claims, so a collection of it is keyed by
-  # `<cluster>-claim` and this is what reads the cluster out.
+  # `<cluster>-provisioner` and this is what reads the cluster out.
   #
   # Here rather than a `removeSuffix` at the call site, because the convention
   # is one decision and a floe inverting it by hand would be a second place it
-  # is written down. A cluster actually named `x-claim` is fine — its claim is
-  # `x-claim-claim` — and a lab unit colliding with a claim's name is refused
+  # is written down. A cluster actually named `x-provisioner` is fine — its unit is
+  # `x-provisioner-provisioner` — and a lab unit colliding with a provisioner's name is refused
   # by `modules/lab/link.nix` before this is read.
-  clusterOfClaimUnit = lib.removeSuffix "-claim";
+  clusterOfProvisionerUnit = lib.removeSuffix "-provisioner";
 
   # cdArrangementOf :: linkResult -> { bootstrap; git; rootApplication; perCluster; }
   #
@@ -122,7 +122,7 @@ rec {
   # reads this, and the empty arrangement is what a link with no clusters
   # yields.
   #
-  # Here rather than at the two call sites for the same reason `claimUnitFor`
+  # Here rather than at the two call sites for the same reason `provisionerUnitFor`
   # is: `modules/lab/link.nix` folds it for a lab and `lib/cluster.nix` for a
   # standalone cluster, and a default two places write is a default two places
   # can disagree about.
@@ -280,12 +280,12 @@ rec {
   # A list rather than a default, because `mkFloe` has no notion of a cluster
   # and should not: these are statements about one cluster's units, and an
   # author writes `policies = catallaxy.clusterPolicies;` the way they write
-  # `requires.claim = sigs.KUBERNETES_CLUSTER`. Adding one here adds it to
+  # `requires.cluster = sigs.KUBERNETES_CLUSTER`. Adding one here adds it to
   # every cluster, which is the point — the alternative was a list copied into
   # thirteen cluster floes.
   #
   # Two are not here. `oneCluster` counted the cluster descriptors a link
-  # produced, and a cluster declaring `requires.claim` gets zero and two
+  # produced, and a cluster declaring `requires.cluster` gets zero and two
   # refused by resolution instead, naming the hole.
   #
   # `componentsTargetTheCluster` moved to `labPolicies`, because a cluster's

@@ -24,7 +24,7 @@ in
       summary = "A gateway and one routed workload, for proving who fronts a cluster.";
 
       requires = {
-        claim = sigs.KUBERNETES_CLUSTER;
+        cluster = sigs.KUBERNETES_CLUSTER;
         zone = sigs.DNS_ZONE;
       };
 

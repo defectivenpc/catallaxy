@@ -180,7 +180,7 @@ in
               params = {
                 target = name;
                 bootstrap = false;
-                kubeContext = c.spec.claim.context;
+                kubeContext = c.spec.clusterHandle.context;
               };
             };
 

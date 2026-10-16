@@ -9,7 +9,7 @@
   ],
   "clusters": {
     "core": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-homelab-local-core",
         "instanceName": "homelab-local-core",
         "kubernetes": {
@@ -217,7 +217,7 @@
       }
     },
     "obs": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-homelab-local-obs",
         "instanceName": "homelab-local-obs",
         "kubernetes": {

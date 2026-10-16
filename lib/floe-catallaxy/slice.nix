@@ -43,36 +43,36 @@ let
     };
 in
 {
-  # sliceFor :: { clusterName; claimFrom; } -> LinkResult -> LinkResult-shaped view
+  # sliceFor :: { clusterName; provisionerFrom; } -> LinkResult -> LinkResult-shaped view
   #
   # Only the fields elaboration reads, deliberately: a view that answered
   # every question a link does would be a second link, and a reader could
   # not tell which one it had.
   #
-  # `claimFrom` is the lab unit that answered this cluster's claim. The
+  # `provisionerFrom` is the lab unit that answered this cluster's hole. The
   # provisioner sits beside the cluster rather than inside it — that is what
   # lets one cluster floe be k3d here and Talos elsewhere — so its descriptor
   # is keyed by its own name and the narrowing above would drop it, leaving
   # elaboration a cluster with no cluster in it. The descriptor cannot travel
-  # through `KUBERNETES_CLUSTER` instead: that carries the claim, and this
+  # through `KUBERNETES_CLUSTER` instead: that carries the handle, and this
   # also carries the provisioning, which ADR 0001 is the reason to keep apart.
   sliceFor =
-    { clusterName, claimFrom }:
+    { clusterName, provisionerFrom }:
     labLink:
     let
       at = narrow clusterName;
 
       claimed =
         kind:
-        lib.optionalAttrs (labLink.out.${kind} or { } ? ${claimFrom}) {
-          ${claimFrom} = labLink.out.${kind}.${claimFrom};
+        lib.optionalAttrs (labLink.out.${kind} or { } ? ${provisionerFrom}) {
+          ${provisionerFrom} = labLink.out.${kind}.${provisionerFrom};
         };
     in
     {
       out = lib.mapAttrs (kind: byUnit: at.keys byUnit // claimed kind) labLink.out;
 
       floeNames = at.keys labLink.floeNames // {
-        ${claimFrom} = labLink.floeNames.${claimFrom};
+        ${provisionerFrom} = labLink.floeNames.${provisionerFrom};
       };
 
       wiring = {

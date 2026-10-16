@@ -31,7 +31,7 @@ in
     summary = "A cluster that brings another into existence through a managed resource.";
 
     requires = {
-      claim = sigs.KUBERNETES_CLUSTER;
+      cluster = sigs.KUBERNETES_CLUSTER;
       zone = sigs.DNS_ZONE;
     };
 
@@ -65,7 +65,7 @@ in
     summary = "The cluster `mgmt` provisions, with a workload behind a gateway.";
 
     requires = {
-      claim = sigs.KUBERNETES_CLUSTER;
+      cluster = sigs.KUBERNETES_CLUSTER;
       zone = sigs.DNS_ZONE;
     };
 

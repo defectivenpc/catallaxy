@@ -16,12 +16,19 @@
 # Over the *flattened* set, which `floe-gates.nix` is not — it takes
 # `(import ../../floes).components` and so has never looked at `floes/lab/`,
 # `floes/clusters/` or `floes/provisioners/` at all.
+#
+# And over every cluster floe a lab authors, which `floeSet` cannot reach:
+# those are written in a lab's own directory and only exist once that lab
+# evaluates. They escaped this rule for as long as it existed, and all of them
+# were breaking it — `requires.claim` for `KUBERNETES_CLUSTER`, whose canonical
+# name is `cluster`, which is what every component and provisioner calls it.
 {
   lib,
   pkgs,
   mkFloes,
   catallaxy,
   floeSet,
+  labDefs,
 }:
 
 let
@@ -39,7 +46,15 @@ let
   # shipped floe does, so this starts empty; its existence is what documents
   # the escape hatch, and adding an entry is a deliberate act rather than a
   # silent drift.
-  renamed = { };
+  renamed = {
+    # Two instances of one signature, which is the case the escape hatch is
+    # for: this fixture places a cluster that needs a vault credential *and*
+    # a TSIG key, both `LAB_SECRET`, and one name cannot say which is which.
+    "every-floe/core" = {
+      vaultCredential = true;
+      tsigSecret = true;
+    };
+  };
 
   holesOf =
     name:
@@ -59,7 +74,35 @@ let
     in
     each "requires" def.requires ++ each "optional" def.optional ++ each "provides" def.provides;
 
-  all = lib.concatMap holesOf (lib.attrNames floeSet);
+  # <lab>/<cluster> -> the floe as authored. `bind` preserves `def`, so the
+  # bound floe still carries the header its author wrote.
+  authored = lib.listToAttrs (
+    lib.concatLists (
+      lib.mapAttrsToList (
+        labName: lab:
+        lib.mapAttrsToList (
+          clusterName: cluster: lib.nameValuePair "${labName}/${clusterName}" cluster.clusterFloe.def
+        ) lab.clusters
+      ) labDefs
+    )
+  );
+
+  holesOfDef =
+    name: def:
+    let
+      each =
+        kind: holes:
+        lib.mapAttrsToList (hole: sig: {
+          inherit name kind hole;
+          inherit (sig) canonicalName;
+          sigName = sig.name;
+        }) holes;
+    in
+    each "requires" def.requires ++ each "optional" def.optional ++ each "provides" def.provides;
+
+  all =
+    lib.concatMap holesOf (lib.attrNames floeSet)
+    ++ lib.concatLists (lib.mapAttrsToList holesOfDef authored);
 
   wrong = lib.filter (h: h.hole != h.canonicalName && !(renamed.${h.name} or { }) ? ${h.hole}) all;
 

@@ -10,7 +10,7 @@
 //! What it deliberately does not do is a plan. A lab's plan orders host
 //! services, cross-cluster secret copies and one cluster waiting on another;
 //! a cluster on its own has none of those, and the honest sequence is the
-//! short one: bring the claim into existence, then converge the content onto
+//! short one: bring the cluster handle into existence, then converge the content onto
 //! it. A cluster that needs more than that is a cluster something else has to
 //! close, which is what a lab is for.
 
@@ -46,7 +46,7 @@ pub fn read(path: &Path) -> Result<ClusterSpec> {
 /// the field that is not.
 pub fn parse(path: &Path) -> Result<()> {
     let spec = read(path)?;
-    let claim = &spec.claim;
+    let cluster_handle = &spec.cluster_handle;
     let variant = spec.provisioning.config.kind().tag();
     let bundles: usize = spec.content.waves.iter().map(Vec::len).sum();
     let strategy = spec.delivery.strategy.tag();
@@ -54,12 +54,17 @@ pub fn parse(path: &Path) -> Result<()> {
     println!(
         "{} {} parses on its own",
         style("✓").green(),
-        style(&claim.name).cyan()
+        style(&cluster_handle.name).cyan()
     );
-    println!("    claim        {} [{variant}]", claim.instance_name);
+    println!(
+        "    cluster_handle        {} [{variant}]",
+        cluster_handle.instance_name
+    );
     println!(
         "    kubernetes   {} ({} control plane(s), {} worker(s))",
-        claim.kubernetes.version, claim.kubernetes.control_planes, claim.kubernetes.workers
+        cluster_handle.kubernetes.version,
+        cluster_handle.kubernetes.control_planes,
+        cluster_handle.kubernetes.workers
     );
     println!(
         "    content      {bundles} bundle(s) in {}",
@@ -70,12 +75,12 @@ pub fn parse(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Provision the claim and apply the content, from the document alone.
+/// Provision the cluster handle and apply the content, from the document alone.
 pub fn up(ctx: &CataContext, path: &Path, dry_run: bool) -> Result<()> {
     io::process::check_required_tools()?;
 
     let spec = read(path)?;
-    let name = spec.claim.name.clone();
+    let name = spec.cluster_handle.name.clone();
 
     println!(
         "{} Standing up '{}' from {}",
@@ -89,7 +94,7 @@ pub fn up(ctx: &CataContext, path: &Path, dry_run: bool) -> Result<()> {
     apply(ctx, &spec, dry_run)
 }
 
-/// Converge the content onto the claim.
+/// Converge the content onto the cluster handle.
 fn apply(ctx: &CataContext, spec: &ClusterSpec, dry_run: bool) -> Result<()> {
     let tree = Path::new(&spec.content.tree);
     let wait = &spec.delivery.wait_timeout;
@@ -107,14 +112,14 @@ fn apply(ctx: &CataContext, spec: &ClusterSpec, dry_run: bool) -> Result<()> {
     io::ssa::apply_manifest_root(
         ctx,
         io::ssa::ApplyManifests {
-            kube_context: &spec.claim.context,
+            kube_context: &spec.cluster_handle.context,
             manifest_root: tree,
             field_manager: "cata",
             wait_timeout_seconds: seconds,
             dry_run,
             cluster: Some(spec),
 
-            lab_name: &spec.claim.instance_name,
+            lab_name: &spec.cluster_handle.instance_name,
             secrets_spec: &SecretsSpec::default(),
             secrets_cache: None,
         },

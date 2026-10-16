@@ -205,7 +205,7 @@ let
 
       unreachableMirror =
         let
-          canMirror = c: lib.any (sig: sig.name == "OCI_MIRROR") (lib.attrValues c.claim.def.optional);
+          canMirror = c: lib.any (sig: sig.name == "OCI_MIRROR") (lib.attrValues c.provisioner.def.optional);
           cannot = lib.attrNames (lib.filterAttrs (_: c: !(canMirror c)) clusters);
         in
         lib.optional (folds.mirrors != [ ] && cannot == lib.attrNames clusters) {
@@ -214,7 +214,7 @@ let
             "the lab places a pull-through cache at `lab.units.${lib.head folds.mirrors}` and no "
             + "cluster can pull through it: "
             + lib.concatMapStringsSep ", " (
-              n: "'${n}' is provisioned by ${clusters.${n}.claim.def.name}"
+              n: "'${n}' is provisioned by ${clusters.${n}.provisioner.def.name}"
             ) cannot
             + ", which declares no OCI_MIRROR hole because it cannot mount a containerd config. "
             + "The cache would run, answer, and be consulted by nothing. Leave the floe out.";

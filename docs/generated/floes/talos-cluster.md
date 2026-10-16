@@ -39,7 +39,7 @@ A Talos cluster in docker, on a network talosctl makes.
 
 ## What it emits
 
-Rendered by `minimal.talos` as the lab unit `app-claim`. A unit of the lab
+Rendered by `minimal.talos` as the lab unit `app-provisioner`. A unit of the lab
 installs nothing into a cluster, and its provisions are sealed inside the
 lab's inclusion — so its declaration above is its interface.
 

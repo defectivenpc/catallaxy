@@ -86,7 +86,7 @@ let
       summary = "A cluster assembled for one case of the lab/cluster boundary.";
 
       requires = {
-        claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+        cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
       }
       // requires;
 
@@ -129,7 +129,7 @@ let
           units = lib.optionalAttrs enforcing { cilium = floes.cilium { }; };
         } { defaultDenyNamespaces = [ "kapp" ]; };
 
-        claim = floes.k3d-cluster { };
+        provisioner = floes.k3d-cluster { };
       };
     };
 
@@ -151,7 +151,7 @@ let
         units.coredns-zone = floes.coredns-zone { };
       } { };
 
-      claim = floes.k3d-cluster { };
+      provisioner = floes.k3d-cluster { };
     };
   };
 
@@ -173,17 +173,17 @@ let
     clusters = {
       core = {
         floe = mkTestCluster { name = "core"; } { };
-        claim = floes.k3d-cluster { podSubnet = "10.244.0.0/16"; };
+        provisioner = floes.k3d-cluster { podSubnet = "10.244.0.0/16"; };
       };
 
       obs = {
         floe = mkTestCluster { name = "obs"; } { };
-        claim = floes.k3d-cluster { podSubnet = "10.245.0.0/16"; };
+        provisioner = floes.k3d-cluster { podSubnet = "10.245.0.0/16"; };
       };
     };
   };
 
-  claimOf = c: lib.head (lib.attrValues twoClusters.clusters.${c}.out.cluster);
+  handleOf = c: lib.head (lib.attrValues twoClusters.clusters.${c}.out.cluster);
 
   # A cluster floe whose claim is not open has nothing for the claim written
   # beside it to answer, and the submodule says so by name rather than letting
@@ -195,7 +195,7 @@ let
     clusters.core = {
       floe = catallaxy.mkClusterFloe {
         name = "lab-scope-sealed";
-        summary = "A cluster that creates its own claim, which a lab cannot place.";
+        summary = "A cluster that creates its own handle, which a lab cannot place.";
         provides.delivery = catallaxy.sigs.DELIVERY_POLICY;
         exports.delivery = "kapp/delivery";
         units = _: {
@@ -204,7 +204,7 @@ let
         };
       } { };
 
-      claim = floes.k3d-cluster { };
+      provisioner = floes.k3d-cluster { };
     };
   };
 
@@ -228,7 +228,7 @@ let
           exports.mesh = "netbird/mesh";
         } { };
 
-        claim = floes.k3d-cluster { podSubnet = "10.244.0.0/16"; };
+        provisioner = floes.k3d-cluster { podSubnet = "10.244.0.0/16"; };
       };
 
       obs = {
@@ -237,7 +237,7 @@ let
           units.netbird-operator = floes.netbird-operator { };
         } { };
 
-        claim = floes.k3d-cluster { podSubnet = "10.245.0.0/16"; };
+        provisioner = floes.k3d-cluster { podSubnet = "10.245.0.0/16"; };
       };
     };
   };
@@ -265,8 +265,8 @@ let
           clusterName = "core";
           labName = "scope-bindings";
           floe = mkTestCluster { name = "bindings"; } { };
-          claim = (floes.external-cluster { context = "x"; }).bind { labStore = "somewhere"; };
-        }).claim.bindings;
+          provisioner = (floes.external-cluster { context = "x"; }).bind { labStore = "somewhere"; };
+        }).provisioner.bindings;
       expected = {
         labStore = "somewhere";
       };
@@ -311,8 +311,8 @@ let
 
     testEachClusterResolvesItsOwnClaim = {
       expr = {
-        core = (claimOf "core").network.podSubnet;
-        obs = (claimOf "obs").network.podSubnet;
+        core = (handleOf "core").network.podSubnet;
+        obs = (handleOf "obs").network.podSubnet;
       };
       expected = {
         core = "10.244.0.0/16";

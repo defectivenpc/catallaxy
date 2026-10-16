@@ -27,15 +27,16 @@ pub struct ProjectionKeyConfig {
 
 /// One cluster, as `cata` is handed it.
 ///
-/// Four blocks, and only the first two are the cluster: it *denotes* a claim
-/// and its content. `provisioning` is the function that establishes the claim
+/// Four blocks, and only the first two are the cluster: it *denotes* a cluster
+/// handle and its content. `provisioning` is the function that establishes the
+/// handle
 /// and `delivery` is the one that converges the content onto it, carried here
 /// because `cata` is what applies them and has to be told which.
 /// `docs/cluster-spec.md` is the derivation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterSpec {
-    pub claim: Claim,
+    pub cluster_handle: ClusterHandle,
     pub provisioning: Provisioning,
     pub content: Content,
     pub delivery: Delivery,
@@ -50,7 +51,7 @@ pub struct ClusterSpec {
 /// printed, and already carried by the provisioning union's own key.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Claim {
+pub struct ClusterHandle {
     pub name: String,
 
     /// Unique on the host that holds it. A composition holding two clusters
@@ -64,7 +65,7 @@ pub struct Claim {
     pub network: ClusterNetwork,
 }
 
-/// What establishes the claim: which tool, with which arguments.
+/// What establishes the handle: which tool, with which arguments.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Provisioning {
@@ -113,7 +114,7 @@ pub struct WaveBundle {
     pub resource_count: usize,
 }
 
-/// How content reaches the claim.
+/// How content reaches the handle.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Delivery {
@@ -438,7 +439,7 @@ pub(crate) mod tests {
     /// approximation.
     pub(crate) fn cluster_json() -> Value {
         serde_json::json!({
-            "claim": {
+            "clusterHandle": {
                 "name": "app",
                 "instanceName": "minimal-local-app",
                 "context": "k3d-minimal-local-app",
@@ -484,8 +485,8 @@ pub(crate) mod tests {
     fn a_cluster_parses_from_the_document_nix_emits() {
         let spec = ClusterSpec::from_value(cluster_json()).expect("cluster document parses");
         assert_eq!(spec.provisioning.config.kind(), ProvisionerKind::K3d);
-        assert_eq!(spec.claim.context, "k3d-minimal-local-app");
-        assert_eq!(spec.claim.kubernetes.workers, 0);
+        assert_eq!(spec.cluster_handle.context, "k3d-minimal-local-app");
+        assert_eq!(spec.cluster_handle.kubernetes.workers, 0);
         assert_eq!(spec.delivery.strategy, DeployStrategy::Kapp);
     }
 
@@ -506,13 +507,13 @@ pub(crate) mod tests {
         assert_eq!(spec.delivery.wait_timeout, "10m");
     }
 
-    /// Only the claim carries what could be observed of a running cluster, so
+    /// Only the handle carries what could be observed of a running cluster, so
     /// a field of it missing is a parse error rather than a default that
     /// reads as a fact.
     #[test]
-    fn a_claim_missing_a_field_is_refused() {
+    fn a_handle_missing_a_field_is_refused() {
         let mut json = cluster_json();
-        json["claim"]
+        json["clusterHandle"]
             .as_object_mut()
             .unwrap()
             .remove("instanceName");
@@ -543,10 +544,13 @@ pub(crate) mod tests {
     #[test]
     fn a_missing_context_is_an_error_rather_than_a_guess() {
         let mut json = cluster_json();
-        json["claim"].as_object_mut().unwrap().remove("context");
+        json["clusterHandle"]
+            .as_object_mut()
+            .unwrap()
+            .remove("context");
         assert!(
             ClusterSpec::from_value(json).is_err(),
-            "the claim's context is always emitted; its absence means the contract broke"
+            "the cluster_handle's context is always emitted; its absence means the contract broke"
         );
     }
 

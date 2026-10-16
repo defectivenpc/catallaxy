@@ -23,12 +23,12 @@ catallaxy.mkLabFloe
     clusters = _: {
       mgmt = {
         floe = clusters.mgmt { };
-        claim = floes.k3d-cluster { };
+        provisioner = floes.k3d-cluster { };
       };
 
       workload = {
         floe = clusters.workload { };
-        claim = floes.external-cluster {
+        provisioner = floes.external-cluster {
           context = "cata-provisions-workload";
           podSubnet = "10.246.0.0/16";
           serviceSubnet = "10.113.0.0/16";

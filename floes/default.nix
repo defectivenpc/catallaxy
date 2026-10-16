@@ -6,7 +6,7 @@
 # A group says *where the unit sits*, which is the only question that cannot be
 # answered by reading the floe's inputs:
 #
-#   provisioners  is the claim — it makes the cluster the others install into
+#   provisioners  establish the handle — they make the cluster the others install into
 #   components    inside a cluster
 #   clusters      an assembly of components, placed as one thing
 #   delivery      how a cluster's content reaches it

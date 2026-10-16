@@ -515,7 +515,7 @@ let
     lib.mapAttrsToList (
       labName: lab:
       let
-        claimsHere = lib.concatLists (
+        handlesHere = lib.concatLists (
           lib.mapAttrsToList (
             clusterName: hosts: map (host: { inherit clusterName host; }) hosts
           ) lab.cliConfig.routedHosts
@@ -524,12 +524,12 @@ let
       lib.concatMap (
         host:
         let
-          holders = lib.unique (map (c: c.clusterName) (lib.filter (c: c.host == host) claimsHere));
+          holders = lib.unique (map (c: c.clusterName) (lib.filter (c: c.host == host) handlesHere));
         in
         lib.optional (lib.length holders > 1) (
           "${labName}: '${host}' is routed by ${lib.concatStringsSep " and " holders}"
         )
-      ) (lib.unique (map (c: c.host) claimsHere))
+      ) (lib.unique (map (c: c.host) handlesHere))
     ) labDefs
   );
 

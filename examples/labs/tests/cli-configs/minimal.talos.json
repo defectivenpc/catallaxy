@@ -8,7 +8,7 @@
   ],
   "clusters": {
     "app": {
-      "claim": {
+      "clusterHandle": {
         "context": "admin@minimal-talos-app",
         "instanceName": "minimal-talos-app",
         "kubernetes": {

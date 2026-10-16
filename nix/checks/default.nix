@@ -163,7 +163,12 @@ in
   inherit (packages) docs;
 }
 // import ./floe-names.nix {
-  inherit lib pkgs mkFloes;
+  inherit
+    lib
+    pkgs
+    mkFloes
+    labDefs
+    ;
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     crdTypes = floeCrds.types;

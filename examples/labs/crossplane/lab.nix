@@ -34,7 +34,7 @@ catallaxy.mkLabFloe {
   clusters = _: {
     control = {
       floe = clusters.control { };
-      claim = floes.k3d-cluster { };
+      provisioner = floes.k3d-cluster { };
     };
   };
 }

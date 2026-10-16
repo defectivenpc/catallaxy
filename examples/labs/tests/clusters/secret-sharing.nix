@@ -40,7 +40,7 @@ let
   # says which the first means.
   sharedRequires = {
     labStore = sigs.LAB_SECRET_STORE;
-    secret = sigs.LAB_SECRET;
+    labSecret = sigs.LAB_SECRET;
   };
 
   base =
@@ -56,7 +56,7 @@ let
       summary = "A Vault-backed secret store and what this cluster does with it.";
 
       requires = {
-        claim = sigs.KUBERNETES_CLUSTER;
+        cluster = sigs.KUBERNETES_CLUSTER;
       }
       // sharedRequires
       // extraRequires;

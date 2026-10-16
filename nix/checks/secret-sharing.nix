@@ -64,10 +64,10 @@ let
       summary = "A cluster bent one way, for the secret-sharing refusals.";
 
       requires = {
-        claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+        cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
 
         labStore = catallaxy.sigs.LAB_SECRET_STORE;
-        secret = catallaxy.sigs.LAB_SECRET;
+        labSecret = catallaxy.sigs.LAB_SECRET;
       }
       // requires;
 
@@ -84,7 +84,7 @@ let
       units = _: units // extraUnits;
     };
 
-  claimFor =
+  provisionerFor =
     clusterName:
     floes.k3d-cluster {
       name = clusterName;
@@ -142,7 +142,7 @@ let
                 } { }).bind
                   { labStore = storeBinding; };
 
-              claim = claimFor "core";
+              provisioner = provisionerFor "core";
             };
 
             obs = {
@@ -156,7 +156,7 @@ let
                 } { }).bind
                   { labStore = "runtime"; };
 
-              claim = claimFor "obs";
+              provisioner = provisionerFor "obs";
             };
           };
         }
@@ -251,7 +251,7 @@ let
                     name = "refuse-nostore-core";
                     summary = "A publication with no store in the cluster to name.";
 
-                    requires.claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+                    requires.cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
                     provides.delivery = catallaxy.sigs.DELIVERY_POLICY;
                     exports.delivery = "kapp/delivery";
 
@@ -266,7 +266,7 @@ let
                     };
                   } { };
 
-                  claim = floes.k3d-cluster {
+                  provisioner = floes.k3d-cluster {
                     name = "core";
                     instanceName = "refuse-nostore-core";
                   };

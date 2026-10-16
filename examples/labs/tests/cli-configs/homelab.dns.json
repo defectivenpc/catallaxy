@@ -9,7 +9,7 @@
   ],
   "clusters": {
     "core": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-homelab-dns-core",
         "instanceName": "homelab-dns-core",
         "kubernetes": {
@@ -245,7 +245,7 @@
       }
     },
     "obs": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-homelab-dns-obs",
         "instanceName": "homelab-dns-obs",
         "kubernetes": {

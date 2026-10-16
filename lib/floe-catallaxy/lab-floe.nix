@@ -19,7 +19,7 @@
   floe,
   sigs,
   floes,
-  claimUnitFor,
+  provisionerUnitFor,
   labPolicies,
   allocationFor,
   placeCluster,
@@ -54,13 +54,13 @@ let
           offer comes from — so its interface is readable from its header
           without evaluating anything.
 
-          Its claim must be open. `requires.claim = sigs.KUBERNETES_CLUSTER`
+          Its cluster hole must be open. `requires.cluster = sigs.KUBERNETES_CLUSTER`
           is what makes one cluster floe serve k3d here and Talos elsewhere,
           and `claim` below is what answers it.
         '';
       };
 
-      claim = mkOption {
+      provisioner = mkOption {
         type = floeInstance;
         example = lib.literalExpression "floes.k3d-cluster { }";
         description = ''
@@ -296,7 +296,7 @@ let
   refuseCollisions =
     labName: clusterNames: units:
     let
-      taken = clusterNames ++ map claimUnitFor clusterNames;
+      taken = clusterNames ++ map provisionerUnitFor clusterNames;
       collisions = lib.filter (n: lib.elem n taken) (lib.attrNames units);
     in
     if collisions == [ ] then
@@ -311,7 +311,7 @@ let
             if lib.elem n clusterNames then
               "the cluster of the same name"
             else
-              "the claim of cluster '${lib.removeSuffix "-claim" n}'"
+              "the claim of cluster '${lib.removeSuffix "-provisioner" n}'"
           )
         ) collisions
         + ". Both are units of the lab's one link, so one replaces the other and whatever it "
@@ -376,13 +376,13 @@ let
         clusterName: entry:
         placeCluster {
           inherit clusterName labName;
-          inherit (entry) floe claim;
+          inherit (entry) floe provisioner;
         }
       ) (apply (args.clusters or { }) // given.clusters);
 
       clusterUnits =
         lib.mapAttrs (_: p: p.clusterFloe) placements
-        // lib.mapAttrs' (n: p: lib.nameValuePair (claimUnitFor n) p.claim) placements;
+        // lib.mapAttrs' (n: p: lib.nameValuePair (provisionerUnitFor n) p.provisioner) placements;
 
       ownUnits = lib.filterAttrs (_: inst: inst != null) (
         frameworkUnits // apply (args.units or { }) // given.units

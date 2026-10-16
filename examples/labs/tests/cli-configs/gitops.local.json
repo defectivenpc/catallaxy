@@ -20,7 +20,7 @@
   ],
   "clusters": {
     "app": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-gitops-local-app",
         "instanceName": "gitops-local-app",
         "kubernetes": {

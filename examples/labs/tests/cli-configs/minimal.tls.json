@@ -8,7 +8,7 @@
   ],
   "clusters": {
     "app": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-minimal-tls-app",
         "instanceName": "minimal-tls-app",
         "kubernetes": {

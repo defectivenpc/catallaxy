@@ -50,7 +50,7 @@ let
       inherit summary defaults;
 
       requires = {
-        claim = sigs.KUBERNETES_CLUSTER;
+        cluster = sigs.KUBERNETES_CLUSTER;
         zone = sigs.DNS_ZONE;
 
         # Somewhere for the stateful floes in here to bind a PVC. Answered by
@@ -176,7 +176,7 @@ rec {
     # The TSIG key the controller updates the zone with: a value a human
     # authored, which is the only kind of material no floe can mint for
     # itself. The projection below resolves it.
-    requires.secret = sigs.LAB_SECRET;
+    requires.labSecret = sigs.LAB_SECRET;
 
     units = coreUnits // {
       # Records point at the address the zone's own server answers on, which
@@ -212,7 +212,7 @@ rec {
   # disagree with the store's backend.
   meshRequires = {
     labStore = sigs.LAB_SECRET_STORE;
-    secret = sigs.LAB_SECRET;
+    labSecret = sigs.LAB_SECRET;
   };
 
   meshStoreClient = {

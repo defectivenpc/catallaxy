@@ -57,7 +57,7 @@ let
     lib.mapAttrsToList (
       provisioned: _:
       let
-        wired = link.wiring.optional.${catallaxy.claimUnitFor provisioned}.provisioning or null;
+        wired = link.wiring.optional.${catallaxy.provisionerUnitFor provisioned}.provisioning or null;
       in
       lib.optional (wired != null) {
         inherit provisioned;
@@ -143,7 +143,7 @@ let
     let
       target = e.provisioned;
 
-      onMgmt = clusters.${e.mgmt}.spec.claim.context;
+      onMgmt = clusters.${e.mgmt}.spec.clusterHandle.context;
 
       resourceParams = {
         target = target;
@@ -192,7 +192,7 @@ let
         provides = [ (t.cluster target).cloudReleased ];
         params = {
           target = target;
-          kubeContext = clusters.${target}.spec.claim.context;
+          kubeContext = clusters.${target}.spec.clusterHandle.context;
         };
       };
 

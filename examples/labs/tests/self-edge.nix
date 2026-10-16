@@ -21,7 +21,7 @@
 let
   clusters = import ./clusters/self-edge.nix { inherit catallaxy floes lib; };
 
-  claimFor = podSubnet: serviceSubnet: floes.k3d-cluster { inherit podSubnet serviceSubnet; };
+  provisionerFor = podSubnet: serviceSubnet: floes.k3d-cluster { inherit podSubnet serviceSubnet; };
 in
 catallaxy.mkLabFloe
   {
@@ -47,7 +47,7 @@ catallaxy.mkLabFloe
           name = "core";
           fronted = true;
         } { };
-        claim = claimFor "10.244.0.0/16" "10.96.0.0/12";
+        provisioner = provisionerFor "10.244.0.0/16" "10.96.0.0/12";
       };
 
       # Its own edge, which it says by exporting no exposure: the lab has
@@ -58,7 +58,7 @@ catallaxy.mkLabFloe
           name = "edge";
           fronted = false;
         } { };
-        claim = claimFor "10.245.0.0/16" "10.112.0.0/12";
+        provisioner = provisionerFor "10.245.0.0/16" "10.112.0.0/12";
       };
     };
   }

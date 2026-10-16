@@ -50,7 +50,7 @@ lab {
     registry = null;
   };
 
-  claim = floes.talos-cluster {
+  provisioner = floes.talos-cluster {
     # Must not overlap the lab's own network, and no check covers it: this
     # network is talosctl's, not one the lab creates, so `lab-subnets` never
     # sees it.

@@ -74,7 +74,7 @@ fn resolve_lab<'a>(
 fn kube_context_for<'a>(args: &ApplyRequest<'a>, spec: &'a ClusterSpec) -> &'a str {
     args.kube_context_override
         .filter(|s| !s.is_empty())
-        .unwrap_or(&spec.claim.context)
+        .unwrap_or(&spec.cluster_handle.context)
 }
 
 fn cluster_manifests(

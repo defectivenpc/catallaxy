@@ -9,7 +9,7 @@
   ],
   "clusters": {
     "mgmt": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-provisions-mgmt",
         "instanceName": "provisions-mgmt",
         "kubernetes": {
@@ -101,7 +101,7 @@
       }
     },
     "workload": {
-      "claim": {
+      "clusterHandle": {
         "context": "cata-provisions-workload",
         "instanceName": "workload",
         "kubernetes": {

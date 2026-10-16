@@ -700,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    fn an_unbound_claim_shows_a_dash_rather_than_an_empty_name() {
+    fn an_unbound_handle_shows_a_dash_rather_than_an_empty_name() {
         let pvc = parse_pvc_line("harbor|data-0||").expect("four fields");
         assert_eq!(
             pvc.describe("(unbound)"),
@@ -709,7 +709,7 @@ mod tests {
     }
 
     #[test]
-    fn a_bound_claim_reports_the_volume_and_its_phase() {
+    fn a_bound_handle_reports_the_volume_and_its_phase() {
         let pvc = parse_pvc_line("harbor|data-0|pvc-abc|kubernetes.io/pvc-protection")
             .expect("four fields");
         assert_eq!(

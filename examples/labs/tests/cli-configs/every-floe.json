@@ -20,7 +20,7 @@
   ],
   "clusters": {
     "core": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-every-floe-core",
         "instanceName": "every-floe-core",
         "kubernetes": {

@@ -243,7 +243,7 @@ mod tests {
 
     fn base_cluster(name: &str) -> Value {
         json!({
-            "claim": {
+            "clusterHandle": {
                 "name": name,
                 "instanceName": format!("l-{name}"),
                 "context": format!("k3d-{name}"),
@@ -485,8 +485,8 @@ mod tests {
         let (lab, config) = with(json!({
             "clusterNames": ["app", "obs"],
             "clusters": {
-                "app": { "claim": { "context": "" } },
-                "obs": { "claim": { "context": "k3d-obs" } },
+                "app": { "clusterHandle": { "context": "" } },
+                "obs": { "clusterHandle": { "context": "k3d-obs" } },
             },
         }));
         let ctx = VerifyContext {

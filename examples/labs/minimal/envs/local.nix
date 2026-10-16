@@ -31,5 +31,5 @@ lab {
     };
   };
 
-  claim = floes.k3d-cluster { auditLogging.enable = true; };
+  provisioner = floes.k3d-cluster { auditLogging.enable = true; };
 }

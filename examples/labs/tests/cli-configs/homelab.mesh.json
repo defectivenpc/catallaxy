@@ -9,7 +9,7 @@
   ],
   "clusters": {
     "core": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-homelab-mesh-core",
         "instanceName": "homelab-mesh-core",
         "kubernetes": {
@@ -303,7 +303,7 @@
       }
     },
     "obs": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-homelab-mesh-obs",
         "instanceName": "homelab-mesh-obs",
         "kubernetes": {

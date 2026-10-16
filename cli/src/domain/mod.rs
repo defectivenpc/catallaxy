@@ -19,7 +19,7 @@ pub mod teardown;
 pub mod verify;
 
 pub use cluster::{
-    Claim, ClusterSpec, Content, Delivery, DeployStrategy, ExposedHost, ProvisionerConfig,
+    ClusterHandle, ClusterSpec, Content, Delivery, DeployStrategy, ExposedHost, ProvisionerConfig,
     ProvisionerKind, WaveBundle,
 };
 pub use diagnostic::{Diagnostic, Severity};

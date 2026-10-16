@@ -9,7 +9,7 @@
   ],
   "clusters": {
     "core": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-self-edge-core",
         "instanceName": "self-edge-core",
         "kubernetes": {
@@ -119,7 +119,7 @@
       }
     },
     "edge": {
-      "claim": {
+      "clusterHandle": {
         "context": "k3d-self-edge-edge",
         "instanceName": "self-edge-edge",
         "kubernetes": {

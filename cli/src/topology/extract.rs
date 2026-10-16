@@ -130,10 +130,10 @@ fn extract_clusters(lab: &LabSpec) -> BTreeMap<String, ClusterTopology> {
                 name: cluster_name.clone(),
                 provider: cluster.provisioning.config.kind().tag().to_string(),
                 kube_context,
-                control_planes: u64::from(cluster.claim.kubernetes.control_planes),
-                workers: u64::from(cluster.claim.kubernetes.workers),
-                pod_subnet: cluster.claim.network.pod_subnet.clone(),
-                service_subnet: cluster.claim.network.service_subnet.clone(),
+                control_planes: u64::from(cluster.cluster_handle.kubernetes.control_planes),
+                workers: u64::from(cluster.cluster_handle.kubernetes.workers),
+                pod_subnet: cluster.cluster_handle.network.pod_subnet.clone(),
+                service_subnet: cluster.cluster_handle.network.service_subnet.clone(),
                 components,
                 namespaces: cluster
                     .content

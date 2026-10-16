@@ -54,17 +54,17 @@ in
   #
   # It was the top of `lowerCluster`, and that it was one function with the
   # lowering was the module system's laziness hiding two phases: the submodule
-  # produced `placedClaim` and `spec` from one call, and the link that `spec`
-  # needs is built out of `placedClaim`.
+  # produced `placedProvisioner` and `spec` from one call, and the link that `spec`
+  # needs is built out of `placedProvisioner`.
   placeCluster =
     {
       clusterName,
       floe,
-      claim,
+      provisioner,
       labName,
     }:
     let
-      claimUnit = catallaxy.claimUnitFor clusterName;
+      provisionerUnit = catallaxy.provisionerUnitFor clusterName;
 
       placementDefaults = {
         name = clusterName;
@@ -73,13 +73,13 @@ in
         network = labName;
       };
 
-      placedClaim =
-        (claim.def.instantiate (
-          (lib.filterAttrs (k: _: claim.def.inputs ? ${k}) placementDefaults) // claim.supplied
+      placedProvisioner =
+        (provisioner.def.instantiate (
+          (lib.filterAttrs (k: _: provisioner.def.inputs ? ${k}) placementDefaults) // provisioner.supplied
         )).bind
-          claim.bindings;
+          provisioner.bindings;
 
-      claimHoles = lib.attrNames (
+      handleHoles = lib.attrNames (
         lib.filterAttrs (_: sig: sig.name == "KUBERNETES_CLUSTER") floe.def.requires
       );
 
@@ -94,27 +94,28 @@ in
       # inside and declares none; one that places a provisioner *and* declares
       # the hole has two storage classes, which is a real choice and the
       # linker asks for it.
-      claimProvided =
+      provisionerProvided =
         sigName: surface: lib.attrNames (lib.filterAttrs (_: sig: sig.name == sigName) surface);
 
       storageHoles =
-        claimProvided "STORAGE_CLASS" floe.def.requires ++ claimProvided "STORAGE_CLASS" floe.def.optional;
+        provisionerProvided "STORAGE_CLASS" floe.def.requires
+        ++ provisionerProvided "STORAGE_CLASS" floe.def.optional;
 
       clusterFloe =
-        if claimHoles == [ ] then
+        if handleHoles == [ ] then
           throw (
             "cluster '${clusterName}': its floe '${floe.def.name}' does not require "
-            + "KUBERNETES_CLUSTER, so there is no claim for `lab.clusters.${clusterName}.claim` "
+            + "KUBERNETES_CLUSTER, so there is no hole for `lab.clusters.${clusterName}.provisioner` "
             + "to answer. A cluster floe leaves its claim open: add "
-            + "`requires.claim = sigs.KUBERNETES_CLUSTER` to it, and let the components "
+            + "`requires.cluster = sigs.KUBERNETES_CLUSTER` to it, and let the components "
             + "inside resolve against that."
           )
         else
-          floe.bind (lib.genAttrs (claimHoles ++ edgeHoles ++ storageHoles) (_: claimUnit));
+          floe.bind (lib.genAttrs (handleHoles ++ edgeHoles ++ storageHoles) (_: provisionerUnit));
 
     in
     {
-      claim = placedClaim;
+      provisioner = placedProvisioner;
       inherit clusterFloe;
 
       security = floe.inputsChecked;
@@ -137,12 +138,12 @@ in
       lab,
     }:
     let
-      claimUnit = catallaxy.claimUnitFor clusterName;
+      provisionerUnit = catallaxy.provisionerUnitFor clusterName;
       inherit (placed) security;
 
       link = catallaxy.sliceFor {
         inherit clusterName;
-        claimFrom = claimUnit;
+        provisionerFrom = provisionerUnit;
       } lab.link;
 
       out = catallaxy.elaborateCluster {
@@ -242,7 +243,7 @@ in
       inherit (out) warnings;
 
       spec = {
-        claim = {
+        clusterHandle = {
           inherit (descriptor)
             name
             instanceName

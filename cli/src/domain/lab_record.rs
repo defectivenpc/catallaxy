@@ -88,7 +88,7 @@ impl LabRecord {
                             .k3d()
                             .map(|c| c.cluster_name.clone())
                             .filter(|n| !n.is_empty()),
-                        kube_context: spec.claim.context.clone(),
+                        kube_context: spec.cluster_handle.context.clone(),
                     })
                 })
                 .collect(),

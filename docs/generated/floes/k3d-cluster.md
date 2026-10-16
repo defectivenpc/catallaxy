@@ -43,7 +43,7 @@ A k3d cluster on the operator's docker host.
 
 ## What it emits
 
-Rendered by `every-floe` as the lab unit `core-claim`. A unit of the lab
+Rendered by `every-floe` as the lab unit `core-provisioner`. A unit of the lab
 installs nothing into a cluster, and its provisions are sealed inside the
 lab's inclusion — so its declaration above is its interface.
 

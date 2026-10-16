@@ -19,7 +19,7 @@ in
     name = "crossplane-control";
     summary = "A Crossplane control plane, one provider, and one resource it reconciles.";
 
-    requires.claim = sigs.KUBERNETES_CLUSTER;
+    requires.cluster = sigs.KUBERNETES_CLUSTER;
 
     provides.delivery = sigs.DELIVERY_POLICY;
     exports.delivery = "kapp/delivery";

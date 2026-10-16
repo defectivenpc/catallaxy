@@ -35,7 +35,7 @@ in
     summary = "A platform behind a gateway, and one workload of my own.";
 
     requires = {
-      claim = sigs.KUBERNETES_CLUSTER;
+      cluster = sigs.KUBERNETES_CLUSTER;
       zone = sigs.DNS_ZONE;
     };
 

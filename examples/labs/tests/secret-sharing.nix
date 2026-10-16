@@ -65,7 +65,7 @@ catallaxy.mkLabFloe
     clusters = _: {
       core = {
         floe = (clusters.core { }).bind { labStore = "runtime"; };
-        claim = floes.k3d-cluster {
+        provisioner = floes.k3d-cluster {
           podSubnet = "10.244.0.0/16";
           serviceSubnet = "10.96.0.0/12";
         };
@@ -73,7 +73,7 @@ catallaxy.mkLabFloe
 
       obs = {
         floe = (clusters.obs { }).bind { labStore = "runtime"; };
-        claim = floes.k3d-cluster {
+        provisioner = floes.k3d-cluster {
           podSubnet = "10.245.0.0/16";
           serviceSubnet = "10.112.0.0/12";
         };

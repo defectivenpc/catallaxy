@@ -19,7 +19,7 @@ use crate::config::Context as CataContext;
 use crate::domain::LabSpec;
 
 /// Parse a lab document, from a file or by evaluating the lab, and report
-/// what the claim of each cluster says.
+/// what the cluster handle of each cluster says.
 pub fn run(ctx: &CataContext, name: Option<&str>, from_file: Option<&Path>) -> Result<()> {
     let lab = match from_file {
         Some(path) => read(path)?,
@@ -38,11 +38,11 @@ pub fn run(ctx: &CataContext, name: Option<&str>, from_file: Option<&Path>) -> R
     );
 
     for (name, cluster) in &lab.clusters {
-        let claim = &cluster.claim;
+        let cluster_handle = &cluster.cluster_handle;
         let variant = cluster.provisioning.config.kind().tag();
         let bundles: usize = cluster.content.waves.iter().map(Vec::len).sum();
-        let version = claim.kubernetes.version.as_str();
-        let context = claim.context.as_str();
+        let version = cluster_handle.kubernetes.version.as_str();
+        let context = cluster_handle.context.as_str();
         println!(
             "    {} {} [{variant}] kubernetes {version}, context {context}, {bundles} bundle(s)",
             style("-").dim(),

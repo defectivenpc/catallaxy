@@ -34,7 +34,7 @@ catallaxy.mkLabFloe {
       '';
     };
 
-    claim = lib.mkOption {
+    provisioner = lib.mkOption {
       type = catallaxy.floeInstance;
       default = floes.k3d-cluster { };
       defaultText = lib.literalExpression "floes.k3d-cluster { }";
@@ -50,8 +50,6 @@ catallaxy.mkLabFloe {
   };
 
   units = _: {
-    # The cache survives `lab destroy`, so standing this lab back up pulls from
-    # disk rather than from the internet. `minimal.talos` withdraws it.
     registry = floes.lab-registry { };
   };
 
@@ -60,7 +58,7 @@ catallaxy.mkLabFloe {
     {
       app = {
         floe = inputs.cluster;
-        inherit (inputs) claim;
+        inherit (inputs) provisioner;
       };
     };
 }

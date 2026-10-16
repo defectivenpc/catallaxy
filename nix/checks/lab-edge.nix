@@ -27,7 +27,7 @@ let
   mkEdgeLab =
     {
       name,
-      claim,
+      provisioner,
       fronted ? true,
     }:
     mkLab (
@@ -49,7 +49,7 @@ let
                 summary = "A routed workload behind a gateway, for pinning who fronts a cluster.";
 
                 requires = {
-                  claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+                  cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
                   zone = catallaxy.sigs.DNS_ZONE;
                 };
 
@@ -74,7 +74,7 @@ let
                 };
               } { };
 
-              claim = claim floes;
+              provisioner = provisioner floes;
             };
           };
         }
@@ -90,11 +90,11 @@ let
     );
 
   # Created here, so there is a container to name.
-  k3dClaim = floes: floes.k3d-cluster { };
+  k3dProvisioner = floes: floes.k3d-cluster { };
 
   # Created by someone else, so there is not. Everything about it is declared
   # because nothing in the lab made it.
-  externalClaim =
+  externalProvisioner =
     floes:
     floes.external-cluster {
       context = "external-app";
@@ -110,7 +110,7 @@ let
     testTheHarnessBuildsALabThatIsAccepted = {
       expr = refuses (mkEdgeLab {
         name = "edge-ok";
-        claim = k3dClaim;
+        provisioner = k3dProvisioner;
       });
       expected = false;
     };
@@ -118,7 +118,7 @@ let
     testFrontingAClusterWithNoAddressIsRefused = {
       expr = refuses (mkEdgeLab {
         name = "edge-none";
-        claim = externalClaim;
+        provisioner = externalProvisioner;
       });
       expected = true;
     };
@@ -126,7 +126,7 @@ let
     testTheSameClusterIsFineUnfronted = {
       expr = refuses (mkEdgeLab {
         name = "edge-self";
-        claim = externalClaim;
+        provisioner = externalProvisioner;
         fronted = false;
       });
       expected = false;

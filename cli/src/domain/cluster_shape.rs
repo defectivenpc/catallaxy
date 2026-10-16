@@ -88,12 +88,12 @@ impl ClusterShape {
         let shape = ClusterShape {
             schema_version: SCHEMA_VERSION,
             provisioner: format!("{:?}", spec.provisioning.config.kind()).to_lowercase(),
-            control_planes: spec.claim.kubernetes.control_planes,
-            workers: spec.claim.kubernetes.workers,
-            distribution: spec.claim.kubernetes.distribution.clone(),
-            version: spec.claim.kubernetes.version.clone(),
-            pod_subnet: spec.claim.network.pod_subnet.clone(),
-            service_subnet: spec.claim.network.service_subnet.clone(),
+            control_planes: spec.cluster_handle.kubernetes.control_planes,
+            workers: spec.cluster_handle.kubernetes.workers,
+            distribution: spec.cluster_handle.kubernetes.distribution.clone(),
+            version: spec.cluster_handle.kubernetes.version.clone(),
+            pod_subnet: spec.cluster_handle.network.pod_subnet.clone(),
+            service_subnet: spec.cluster_handle.network.service_subnet.clone(),
             ..ClusterShape::default()
         };
 
@@ -165,7 +165,7 @@ pub enum Fix {
     ReplaceNode,
     /// Recreate the loadbalancer, which holds no state at all.
     ReplaceLoadBalancer,
-    /// Nothing about the running cluster changes. `cluster.claim.kubernetes.version`
+    /// Nothing about the running cluster changes. `cluster.cluster_handle.kubernetes.version`
     /// selects which generated schemas the manifests are typed against; the
     /// node image is what decides the Kubernetes a cluster actually runs.
     /// Recorded and reported so the change is visible, but there is no node
@@ -346,24 +346,24 @@ pub fn compare_shapes(declared: &ClusterShape, recorded: &ClusterShape) -> Drift
             &recorded.provisioner,
         ),
         compare_counts(
-            "cluster.claim.kubernetes.controlPlanes",
+            "cluster.cluster_handle.kubernetes.controlPlanes",
             declared.control_planes,
             recorded.control_planes,
             Fix::AddServers,
         ),
         compare_counts(
-            "cluster.claim.kubernetes.workers",
+            "cluster.cluster_handle.kubernetes.workers",
             declared.workers,
             recorded.workers,
             Fix::AddWorkers,
         ),
         compare(
-            "cluster.claim.kubernetes.distribution",
+            "cluster.cluster_handle.kubernetes.distribution",
             &declared.distribution,
             &recorded.distribution,
         ),
         compare_with(
-            "cluster.claim.kubernetes.version",
+            "cluster.cluster_handle.kubernetes.version",
             &declared.version,
             &recorded.version,
             Fix::RebuildOnly,
@@ -522,7 +522,7 @@ mod tests {
     #[test]
     fn every_field_the_old_check_ignored_is_now_seen() {
         let cases: Vec<(&str, Mutate)> = vec![
-            ("cluster.claim.kubernetes.controlPlanes", |s| {
+            ("cluster.cluster_handle.kubernetes.controlPlanes", |s| {
                 s.control_planes = 3
             }),
             ("cluster.network.podSubnet", |s| {
@@ -571,7 +571,7 @@ mod tests {
     fn the_two_fields_the_old_check_did_see_are_still_seen() {
         for (option, mutate) in [
             (
-                "cluster.claim.kubernetes.workers",
+                "cluster.cluster_handle.kubernetes.workers",
                 (|s: &mut ClusterShape| s.workers = 5) as fn(&mut ClusterShape),
             ),
             ("provisioner.k3d.image", |s: &mut ClusterShape| {
@@ -604,7 +604,7 @@ mod tests {
         assert_eq!(
             drifted,
             vec![
-                "cluster.claim.kubernetes.workers",
+                "cluster.cluster_handle.kubernetes.workers",
                 "provisioner.k3d.noFlannel",
                 "provisioner.k3d.ports",
             ]
@@ -668,7 +668,7 @@ mod tests {
         assert_eq!(report.workers_to_add(), None);
         assert_eq!(
             report.needing_recreate(),
-            vec!["cluster.claim.kubernetes.workers"]
+            vec!["cluster.cluster_handle.kubernetes.workers"]
         );
     }
 
@@ -721,7 +721,7 @@ mod tests {
             ),
             (
                 |s: &mut ClusterShape| s.distribution = "k8s".into(),
-                "cluster.claim.kubernetes.distribution",
+                "cluster.cluster_handle.kubernetes.distribution",
             ),
         ] {
             let mut declared = shape();

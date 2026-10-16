@@ -11,14 +11,15 @@ because older notes and branches still carry them.
 
 ## A cluster
 
-**Cluster**: A claim and its content, taken together. Neither the thing that
-makes it nor the host it runs on. _Avoid_: target, environment, k8s
+**Cluster**: A handle and its content, taken together. Neither the thing
+that makes it nor the host it runs on. _Avoid_: target, environment, k8s
 
-**Claim**: What can be observed of a cluster that already exists: its
-identity, version, node counts, networks, context. _Avoid_: descriptor,
-status, facts
+**Cluster handle**: What can be observed of a cluster that already exists:
+its identity, version, node counts, networks, context. A field belongs here
+if and only if it could be read off a cluster that exists. _Avoid_: claim,
+descriptor, status, facts
 
-**Provisioning**: What establishes a claim — which tool is driven, with
+**Provisioning**: What establishes a handle — which tool is driven, with
 which arguments, and the hooks around it. For a cluster nobody here creates,
 it is a retrieval: where to fetch the kubeconfig. _Avoid_: descriptor,
 recipe, lifecycle, bootstrap
@@ -70,15 +71,16 @@ all of its namespaces; a lab's is the nine inputs every lab has. An author
 may _refine_ a framed input — write a default and keep the frame's type and
 prose — rather than redeclare it. _Avoid_: base, preset, defaults, mixin
 
-**Claim hole**: The `KUBERNETES_CLUSTER` a cluster floe leaves open. What
-makes one definition serve k3d here and Talos elsewhere, because a component
-resolves against the hole and never against the thing that fills it.
-_Avoid_: provisioner input, cluster unit
+**Cluster hole**: The `KUBERNETES_CLUSTER` a cluster floe leaves open,
+written `requires.cluster` like any other hole on that signature. What makes
+one definition serve k3d here and Talos elsewhere, because a component
+resolves against the hole and never against the provisioner that fills it.
+_Avoid_: claim hole, provisioner input, cluster unit
 
 **Closed**: A cluster floe with no hole a lab would fill. Only a closed one
-has content, so only a closed one is lowered. Its claim is open even so —
-what establishes a cluster is the provisioner beside it, which is not a lab.
-_Avoid_: complete, resolved, concrete
+has content, so only a closed one is lowered. Its cluster hole is open even
+so — what establishes a cluster is the provisioner beside it, which is not a
+lab. _Avoid_: complete, resolved, concrete
 
 **Open**: A cluster floe with a hole something outside it must fill.
 Reusable and documented; never lowered on its own. _Avoid_: partial,
@@ -183,7 +185,7 @@ tree. _Avoid_: compiling, building
 bundles, edges and waves. _Avoid_: expansion, resolution
 
 **Document**: The lowered cluster, as the one thing `cata` parses: the
-claim, the provisioning, the content and the delivery, and nothing no
+handle, the provisioning, the content and the delivery, and nothing no
 command reads. _Avoid_: spec, ClusterSpec, config, metadata
 
 **Bundle**: A group of resources installed as one, and a node of the install
@@ -193,6 +195,12 @@ graph. _Avoid_: chart, release, manifest group
 written. _Avoid_: stage, tier, phase
 
 ## Retired
+
+**Claim**, in the sense of a cluster: A **cluster handle**. The word was
+inverted for the audience — in Kubernetes a claim is a request for something
+to be created, and this is the thing that already exists — and it named four
+separate things: the handle, the hole (`requires.cluster`), the provisioner
+that fills it, and a hostname, which is the one sense that keeps the word.
 
 **Preset**: A cluster floe. Inclusion lives in the floe interface now, so
 there is no second mechanism for it.

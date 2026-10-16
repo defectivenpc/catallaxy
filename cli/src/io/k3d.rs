@@ -425,7 +425,12 @@ pub fn node_image_for(spec: &crate::domain::ClusterSpec) -> String {
         .config
         .k3d()
         .and_then(|c| c.image.clone())
-        .unwrap_or_else(|| format!("rancher/k3s:v{}-k3s1", spec.claim.kubernetes.version))
+        .unwrap_or_else(|| {
+            format!(
+                "rancher/k3s:v{}-k3s1",
+                spec.cluster_handle.kubernetes.version
+            )
+        })
 }
 
 /// Wait for a replaced node to be usable again, and uncordon it.
