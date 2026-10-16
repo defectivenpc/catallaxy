@@ -180,6 +180,14 @@ in
   docDir = ../../docs/generated/floes;
   floeSet = allFloes;
 }
+// import ./kind-interface.nix {
+  inherit lib pkgs referencePages;
+  docDir = ../../docs/generated/kinds;
+  catallaxy = import ../../lib/floe-catallaxy {
+    inherit lib pkgs floeCore;
+    crdTypes = floeCrds.types;
+  };
+}
 // import ./signature-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/signatures;

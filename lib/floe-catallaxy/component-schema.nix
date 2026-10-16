@@ -6,147 +6,171 @@ let
 
   stepType = import ../eval/step-type.nix { inherit lib; };
 
-  helmChartSchema = T.record {
-    chart = T.str;
-    releaseName = T.str;
-    namespace = T.k8sName;
-    values = T.helmValues;
+  helmChartSchema = T.named "helmChart" (
+    T.record {
+      chart = T.str;
+      releaseName = T.str;
+      namespace = T.k8sName;
+      values = T.helmValues;
 
-    replacedHooks = T.attrsOf T.str;
-  };
+      replacedHooks = T.attrsOf T.str;
+    }
+  );
 
-  imageSchema = T.record {
-    registry = T.str;
-    repository = T.str;
-    tag = T.nullOr T.str;
-    digest = T.nullOr T.str;
-  };
+  imageSchema = T.named "image" (
+    T.record {
+      registry = T.str;
+      repository = T.str;
+      tag = T.nullOr T.str;
+      digest = T.nullOr T.str;
+    }
+  );
 
-  opsOptionSchema = T.record {
-    type = T.enum [
-      "str"
-      "bool"
-      "enum"
-    ];
-    values = T.listOf T.str;
-    required = T.bool;
-    default = T.nullOr T.str;
-    description = T.str;
-  };
+  opsOptionSchema = T.named "opsOption" (
+    T.record {
+      type = T.enum [
+        "str"
+        "bool"
+        "enum"
+      ];
+      values = T.listOf T.str;
+      required = T.bool;
+      default = T.nullOr T.str;
+      description = T.str;
+    }
+  );
 
   # A positional. `variadic` is last-only and takes the rest, which is what
   # `velero backup create` wants for its passthrough flags.
-  opsArgSchema = T.record {
-    name = T.str;
-    description = T.str;
-    required = T.bool;
-    variadic = T.bool;
-  };
+  opsArgSchema = T.named "opsArg" (
+    T.record {
+      name = T.str;
+      description = T.str;
+      required = T.bool;
+      variadic = T.bool;
+    }
+  );
 
-  opsCommandSchema = T.record {
-    description = T.str;
-    command = T.listOf T.str;
-    package = T.nullOr T.str;
-    options = T.attrsOf opsOptionSchema;
-    args = T.listOf opsArgSchema;
-  };
+  opsCommandSchema = T.named "opsCommand" (
+    T.record {
+      description = T.str;
+      command = T.listOf T.str;
+      package = T.nullOr T.str;
+      options = T.attrsOf opsOptionSchema;
+      args = T.listOf opsArgSchema;
+    }
+  );
 
-  lintCheckSchema = T.record {
-    description = T.str;
-    severity = T.enum [
-      "error"
-      "warning"
-    ];
-    scope = T.enum [
-      "per-file"
-      "per-cluster"
-    ];
-    format = T.enum [
-      "exit-code"
-      "json"
-    ];
-    command = T.str;
-  };
+  lintCheckSchema = T.named "lintCheck" (
+    T.record {
+      description = T.str;
+      severity = T.enum [
+        "error"
+        "warning"
+      ];
+      scope = T.enum [
+        "per-file"
+        "per-cluster"
+      ];
+      format = T.enum [
+        "exit-code"
+        "json"
+      ];
+      command = T.str;
+    }
+  );
 
-  verifyCheckSchema = T.record {
-    description = T.str;
-    timeout = T.str;
-    expect = T.nullOr T.any;
-    reject = T.listOf T.any;
-  };
+  verifyCheckSchema = T.named "verifyCheck" (
+    T.record {
+      description = T.str;
+      timeout = T.str;
+      expect = T.nullOr T.any;
+      reject = T.listOf T.any;
+    }
+  );
 
-  ownerSchema = T.record {
-    bootstrap = T.nullOr (
-      T.enum [
-        "install-target"
-        "argocd"
-      ]
-    );
-    steady = T.nullOr (
-      T.enum [
-        "imperative"
-        "argocd"
-      ]
-    );
-  };
+  ownerSchema = T.named "owner" (
+    T.record {
+      bootstrap = T.nullOr (
+        T.enum [
+          "install-target"
+          "argocd"
+        ]
+      );
+      steady = T.nullOr (
+        T.enum [
+          "imperative"
+          "argocd"
+        ]
+      );
+    }
+  );
 
-  bundleSchema = T.record {
-    resources = T.attrsOf T.any;
-    helmCharts = T.attrsOf helmChartSchema;
-    yamls = T.listOf T.str;
+  bundleSchema = T.named "bundle" (
+    T.record {
+      resources = T.attrsOf T.any;
+      helmCharts = T.attrsOf helmChartSchema;
+      yamls = T.listOf T.str;
 
-    createNamespaces = T.listOf T.str;
+      createNamespaces = T.listOf T.str;
 
-    crds = T.listOf T.str;
+      crds = T.listOf T.str;
 
-    secrets = T.listOf T.str;
+      secrets = T.listOf T.str;
 
-    needsSecrets = T.listOf T.str;
+      needsSecrets = T.listOf T.str;
 
-    externalSecrets = T.listOf T.str;
+      externalSecrets = T.listOf T.str;
 
-    routedHosts = T.listOf T.str;
+      routedHosts = T.listOf T.str;
 
-    ready = T.nullOr (T.attrsOf T.any);
-    awaitRollout = T.bool;
+      ready = T.nullOr (T.attrsOf T.any);
+      awaitRollout = T.bool;
 
-    needs = T.listOf T.str;
+      needs = T.listOf T.str;
 
-    owner = ownerSchema;
+      owner = ownerSchema;
 
-    images = T.attrsOf imageSchema;
+      images = T.attrsOf imageSchema;
 
-    ops = T.attrsOf (T.attrsOf opsCommandSchema);
-    lint = T.attrsOf lintCheckSchema;
-    verify = T.attrsOf verifyCheckSchema;
-  };
+      ops = T.attrsOf (T.attrsOf opsCommandSchema);
+      lint = T.attrsOf lintCheckSchema;
+      verify = T.attrsOf verifyCheckSchema;
+    }
+  );
 
-  driftSchema = T.record {
-    reason = T.str;
-    group = T.str;
-    kinds = T.listOf T.str;
-    managedBy = T.listOf T.str;
-  };
+  driftSchema = T.named "drift" (
+    T.record {
+      reason = T.str;
+      group = T.str;
+      kinds = T.listOf T.str;
+      managedBy = T.listOf T.str;
+    }
+  );
 
-  assertionSchema = T.record {
-    assertion = T.bool;
-    message = T.str;
-  };
+  assertionSchema = T.named "assertion" (
+    T.record {
+      assertion = T.bool;
+      message = T.str;
+    }
+  );
 
-  componentSchema = T.record {
-    bundles = T.attrsOf bundleSchema;
+  componentSchema = T.named "component" (
+    T.record {
+      bundles = T.attrsOf bundleSchema;
 
-    backs = T.attrsOf (T.listOf T.str);
+      backs = T.attrsOf (T.listOf T.str);
 
-    imagesComplete = T.bool;
+      imagesComplete = T.bool;
 
-    assertions = T.listOf assertionSchema;
-    warnings = T.listOf T.str;
+      assertions = T.listOf assertionSchema;
+      warnings = T.listOf T.str;
 
-    drift = T.listOf driftSchema;
+      drift = T.listOf driftSchema;
 
-    steps = T.attrsOf (T.moduleType stepType.declaredStepType);
-  };
+      steps = T.attrsOf (T.moduleType stepType.declaredStepType);
+    }
+  );
 
 in
 {

@@ -14,10 +14,12 @@
   cata,
   floePages,
   signaturePages,
+  kindPages,
 }:
 
 pkgs.runCommand "reference-pages" { } ''
   mkdir -p $out
   ${cata}/bin/cata-build docs pages ${floePages} $out
   ${cata}/bin/cata-build docs pages ${signaturePages} $out
+  ${cata}/bin/cata-build docs pages ${kindPages} $out
 ''

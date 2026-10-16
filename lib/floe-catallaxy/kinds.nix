@@ -49,75 +49,83 @@ let
     https = 30443;
   };
 
-  talosSchema = T.record {
-    clusterName = T.str;
-    image = T.nullOr T.str;
-    kubernetesVersion = T.nullOr T.str;
-    subnet = T.str;
-    exposedPorts = T.listOf T.str;
-    mounts = T.listOf T.str;
-    memory = T.str;
-    cpus = T.str;
-    configPatches = T.listOf T.str;
-    reachableFrom = T.listOf T.str;
-  };
+  talosSchema = T.named "talos" (
+    T.record {
+      clusterName = T.str;
+      image = T.nullOr T.str;
+      kubernetesVersion = T.nullOr T.str;
+      subnet = T.str;
+      exposedPorts = T.listOf T.str;
+      mounts = T.listOf T.str;
+      memory = T.str;
+      cpus = T.str;
+      configPatches = T.listOf T.str;
+      reachableFrom = T.listOf T.str;
+    }
+  );
 
-  externalSchema = T.record {
-    madeBy = T.str;
+  externalSchema = T.named "externalCluster" (
+    T.record {
+      madeBy = T.str;
 
-    provisionedBy = T.nullOr (
-      T.record {
-        resourceKind = T.str;
-        resourceName = T.k8sName;
-      }
-    );
+      provisionedBy = T.nullOr (
+        T.record {
+          resourceKind = T.str;
+          resourceName = T.k8sName;
+        }
+      );
 
-    kubeconfigFrom = T.nullOr (
-      T.record {
-        store = T.str;
-        key = T.str;
-      }
-    );
-  };
+      kubeconfigFrom = T.nullOr (
+        T.record {
+          store = T.str;
+          key = T.str;
+        }
+      );
+    }
+  );
 
-  edgeSchema = T.record {
-    mode = T.enum [
-      "proxy"
-      "self"
-      "none"
-    ];
+  edgeSchema = T.named "edge" (
+    T.record {
+      mode = T.enum [
+        "proxy"
+        "self"
+        "none"
+      ];
 
-    backend = T.nullOr T.str;
+      backend = T.nullOr T.str;
 
-    httpPort = T.port;
-    httpsPort = T.port;
-  };
+      httpPort = T.port;
+      httpsPort = T.port;
+    }
+  );
 
-  clusterSchema = T.record {
-    name = T.k8sName;
+  clusterSchema = T.named "clusterDescriptor" (
+    T.record {
+      name = T.k8sName;
 
-    instanceName = T.str;
+      instanceName = T.str;
 
-    kubeContext = T.str;
+      kubeContext = T.str;
 
-    wait = T.str;
-    kubernetes = T.record {
-      distribution = T.str;
-      version = T.str;
-      controlPlanes = T.int;
-      workers = T.int;
-    };
-    network = T.record {
-      podSubnet = T.str;
-      serviceSubnet = T.str;
-    };
-    edge = edgeSchema;
-    config = T.taggedUnion {
-      k3d = k3dSchema;
-      talos = talosSchema;
-      external = externalSchema;
-    };
-  };
+      wait = T.str;
+      kubernetes = T.record {
+        distribution = T.str;
+        version = T.str;
+        controlPlanes = T.int;
+        workers = T.int;
+      };
+      network = T.record {
+        podSubnet = T.str;
+        serviceSubnet = T.str;
+      };
+      edge = edgeSchema;
+      config = T.taggedUnion {
+        k3d = k3dSchema;
+        talos = talosSchema;
+        external = externalSchema;
+      };
+    }
+  );
 
   # Those keys are a CLI contract rather than labels, the same way a host
   # service's name is — and `resolve_store_or_path` additionally reads any

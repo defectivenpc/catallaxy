@@ -9,24 +9,28 @@ let
     "after-clusters"
   ];
 
-  resourceSchema = T.record {
-    provider = T.str;
-    type = T.str;
+  resourceSchema = T.named "resource" (
+    T.record {
+      provider = T.str;
+      type = T.str;
 
-    inputs = T.attrsOf T.any;
+      inputs = T.attrsOf T.any;
 
-    outputs = T.listOf T.str;
+      outputs = T.listOf T.str;
 
-    phase = T.enum phases;
-  };
+      phase = T.enum phases;
+    }
+  );
 
-  publicationSchema = T.record {
-    resource = T.str;
-    output = T.str;
+  publicationSchema = T.named "publication" (
+    T.record {
+      resource = T.str;
+      output = T.str;
 
-    store = T.str;
-    key = T.str;
-  };
+      store = T.str;
+      key = T.str;
+    }
+  );
 in
 {
   inherit phases;

@@ -113,6 +113,12 @@
           floeSet = floePaths;
         };
 
+        kindPages = import ./nix/kind-docs.nix {
+          inherit lib pkgs;
+          inherit (labs) catallaxy mkFloes;
+          floeSet = floePaths;
+        };
+
         signaturePages = import ./nix/signature-docs.nix {
           inherit lib pkgs;
           inherit (labs) catallaxy mkFloes;
@@ -125,6 +131,7 @@
             pkgs
             floePages
             signaturePages
+            kindPages
             ;
           inherit (packages') cata;
         };
