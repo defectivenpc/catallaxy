@@ -30,12 +30,26 @@ lib.runTests {
   #
   # One cluster here, because the stub is one claim. The multi-cluster shape is
   # pinned where the clusters are, in the plan snapshots.
+  # Every field, because `catallaxy.labSteps` is typed as the step module and
+  # so the value arrives with the module's defaults filled rather than as the
+  # contributor's sparse attrset.
   testItExpandsAConditionIntoOneAnchorPerCluster = {
     expr = (stepsWith [ ]).stub-step;
     expected = {
       kind = "run-script";
       description = "Stub contributed step";
       before = [ "optional:provides:cluster/stub-cluster/created" ];
+      after = [ ];
+      cluster = null;
+      direction = null;
+      origin = "lab";
+      params = { };
+      provides = [ ];
+      teardown = null;
+      policy = {
+        interactive = false;
+        onFailure = "fatal";
+      };
     };
   };
 

@@ -4,10 +4,13 @@
   lib,
   floe,
   crdTypes,
+  sigs,
 }:
 
 let
   T = floe.T;
+
+  stepType = import ../eval/step-type.nix { inherit lib; };
 
   k3dSchema = T.record {
     clusterName = T.str;
@@ -116,6 +119,39 @@ let
     };
   };
 
+  # Those keys are a CLI contract rather than labels, the same way a host
+  # service's name is — and `resolve_store_or_path` additionally reads any
+  # store argument containing `.` or `/` as a filesystem path.
+  # Derived from the signature each was collected under rather than restated,
+  # so a field added to `LAB_SECRET_STORE` cannot be missing here.
+  # `lab-secrets` strips `name` and `writable` — the key carries the first and
+  # `direction` says the second in the word the CLI uses.
+  labStoreRecord = T.named "labStore" (
+    T.record (
+      removeAttrs sigs.LAB_SECRET_STORE.fields [
+        "name"
+        "writable"
+      ]
+      // {
+        direction = T.enum [
+          "authored"
+          "runtime"
+        ];
+      }
+    )
+  );
+
+  # `readableKeys` is the cluster's half of the declaration and does not
+  # travel; `name` is the key.
+  labSecretRecord = T.named "labSecret" (
+    T.record (
+      removeAttrs sigs.LAB_SECRET.fields [
+        "name"
+        "readableKeys"
+      ]
+    )
+  );
+
   componentLib = import ./component.nix { inherit lib floe crdTypes; };
 
   # the resources category, registered here beside the bundle one. Both
@@ -166,21 +202,18 @@ componentLib
   # floe provides `LAB_SECRET_STORE` or `LAB_SECRET`, so these are loose maps
   # the collection already keyed.
   #
-  # Those keys are a CLI contract rather than labels, the same way a host
-  # service's name is — and `resolve_store_or_path` additionally reads any
-  # store argument containing `.` or `/` as a filesystem path.
   labStores = floe.mkSig {
     name = "catallaxy.labStores";
     canonicalName = "labStores";
     description = "Every store the lab reads authored secret values from, keyed by the name the CLI knows it as.";
-    fields = T.attrsOf (T.attrsOf T.any);
+    fields = T.attrsOf labStoreRecord;
   };
 
   labSecrets = floe.mkSig {
     name = "catallaxy.labSecrets";
     canonicalName = "labSecrets";
     description = "Every secret the lab holds, keyed by the name the CLI knows it as.";
-    fields = T.attrsOf (T.attrsOf T.any);
+    fields = T.attrsOf labSecretRecord;
   };
 
   # How the lab's manifests reach its clusters, as a floe's output.
@@ -263,7 +296,17 @@ componentLib
     name = "catallaxy.dnsInfo";
     canonicalName = "dnsInfo";
     description = "Where the lab's resolver answers, as `cata lab dns` configures the host.";
-    fields = T.attrsOf T.any;
+    fields = T.named "dnsInfo" (
+      T.record {
+        host = T.str;
+        port = T.port;
+        zone = T.dnsName;
+
+        tsigKeyname = T.str;
+        tsigSecret = T.str;
+        tsigSecretAlg = T.str;
+      }
+    );
   };
 
   # Every plan step the lab's floes contribute, keyed by step name.
@@ -277,7 +320,8 @@ componentLib
     name = "catallaxy.labSteps";
     canonicalName = "labSteps";
     description = "Every plan step the lab's floes contribute, keyed by step name.";
-    fields = T.attrsOf (T.attrsOf T.any);
+
+    fields = T.attrsOf (T.named "labStep" (T.moduleType stepType.declaredStepType));
   };
 
   # Every container the lab runs on the operator's machine, keyed by the name
@@ -292,11 +336,13 @@ componentLib
   # keys state directories by them, and `create_cluster.rs` finds
   # `registries.yaml` under `registry` while `import_lab_ca` is gated on
   # `proxy` existing.
+  # `lab-services` emits `collects.service` unchanged, so the element is
+  # `HOST_SERVICE` itself rather than a restatement of it.
   labServices = floe.mkSig {
     name = "catallaxy.labServices";
     canonicalName = "labServices";
     description = "Every host service the lab runs, keyed by the name the CLI knows it as.";
-    fields = T.attrsOf (T.attrsOf T.any);
+    fields = T.attrsOf (T.named "service" (T.record sigs.HOST_SERVICE.fields));
   };
 
   cluster = floe.mkSig {

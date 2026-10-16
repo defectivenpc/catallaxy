@@ -19,8 +19,16 @@ let
 
   inherit (import ./frame.nix { inherit lib floe; }) mkFramedFloe;
 
-  kinds = import ./kinds.nix { inherit lib floe crdTypes; };
   sigs = import ./sigs.nix { inherit floe; };
+
+  kinds = import ./kinds.nix {
+    inherit
+      lib
+      floe
+      crdTypes
+      sigs
+      ;
+  };
   policies = import ./policies.nix { inherit lib sigs; };
 
 in
