@@ -1,19 +1,4 @@
-/*
-  The labs used for testing e2e targeting.
-
-      nix run ./examples#e2e-all
-
-  A pass-through: for each lab, `cata lab up`, `cata lab verify`, `cata lab
-  destroy`, in turn, stopping at the first failure. What a lab should do when
-  it comes up is cata's to say, so anything this asserted in shell would be a
-  second opinion kept in a second language.
-
-  Eligibility is not derived. A lab is eligible when somebody has watched it
-  come up and go away again on a laptop; that cannot be computed from the
-  declaration, so it is written down. The list is baked into the script rather
-  than read back out of this flake, so a run pointed at another checkout still
-  knows its own set.
-*/
+# The labs used for testing e2e targeting. `nix run ./examples#e2e-all`
 {
   lib,
   pkgs,
@@ -59,10 +44,6 @@ let
         echo "" >&2
         echo "=== $lab ===" >&2
 
-        # Not an extra check: `cata` reads a lab's secrets from the
-        # environment and only tells you which file would set them. Two labs
-        # in the list name one, and the path is relative to the repository
-        # root rather than to this flake.
         env_file=$(nix eval --raw "$flake#labs.\"$lab\".secrets.envFile" 2> /dev/null || true)
         if [ -n "$env_file" ]; then
           set -a
