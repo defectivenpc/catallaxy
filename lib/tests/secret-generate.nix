@@ -7,8 +7,8 @@
 { lib, floeCore }:
 
 let
-  floe = import ../floe-catallaxy/prelude.nix { inherit lib floeCore; };
-  kinds = import ../floe-catallaxy/component.nix {
+  floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
+  kinds = import ../floe-catallaxy/domain/component.nix {
     inherit lib floe;
     crdTypes = { };
   };

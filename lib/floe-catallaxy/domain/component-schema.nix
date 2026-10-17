@@ -4,7 +4,7 @@
 let
   T = floe.T;
 
-  stepType = import ../eval/step-type.nix { inherit lib; };
+  stepType = import ../../eval/step-type.nix { inherit lib; };
 
   helmChartSchema = T.named "helmChart" (
     T.record {

@@ -6,7 +6,7 @@
 }:
 
 let
-  componentLib = import ./component.nix { inherit lib floe crdTypes; };
+  componentLib = import ../floe-catallaxy/domain/component.nix { inherit lib floe crdTypes; };
 
   waitUtil = import ../kubernetes/wait.nix { inherit lib; };
   manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };

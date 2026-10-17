@@ -14,14 +14,14 @@
 let
   # The distribution's prelude, not core's: `component.nix` is a
   # distribution module and speaks its domain's types.
-  floe = import ../floe-catallaxy/prelude.nix { inherit lib floeCore; };
-  kinds = import ../floe-catallaxy/component.nix {
+  floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
+  kinds = import ../floe-catallaxy/domain/component.nix {
     inherit lib floe;
     crdTypes = { };
   };
-  sigs = import ../floe-catallaxy/sigs.nix { inherit floe; };
-  policies = import ../floe-catallaxy/policies.nix { inherit lib sigs; };
-  elaborate = import ../floe-catallaxy/elaborate.nix {
+  sigs = import ../floe-catallaxy/domain/sigs.nix { inherit floe; };
+  policies = import ../floe-catallaxy/domain/policies.nix { inherit lib sigs; };
+  elaborate = import ../lower/elaborate.nix {
     inherit lib floe;
     crdTypes = { };
   };

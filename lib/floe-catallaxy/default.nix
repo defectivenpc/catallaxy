@@ -14,14 +14,14 @@
 }:
 
 let
-  # Core plus this domain's own types; see ./prelude.nix.
-  floe = import ./prelude.nix { inherit lib floeCore; };
+  # Core plus this domain's own types; see ./authoring/prelude.nix.
+  floe = import ./authoring/prelude.nix { inherit lib floeCore; };
 
-  inherit (import ./frame.nix { inherit lib floe; }) mkFramedFloe;
+  inherit (import ./authoring/frame.nix { inherit lib floe; }) mkFramedFloe;
 
-  sigs = import ./sigs.nix { inherit floe; };
+  sigs = import ./domain/sigs.nix { inherit floe; };
 
-  kinds = import ./kinds.nix {
+  kinds = import ./domain/kinds.nix {
     inherit
       lib
       floe
@@ -29,7 +29,7 @@ let
       sigs
       ;
   };
-  policies = import ./policies.nix { inherit lib sigs; };
+  policies = import ./domain/policies.nix { inherit lib sigs; };
 
   # What this distribution owns: the kinds a floe may emit, and the shape they
   # fold into. The document's type is generated from the Rust types `cata`
@@ -106,7 +106,7 @@ rec {
   # `lib/lab.nix` has both and finishes the application.
   mkLabFloeWith =
     { floes, placeCluster }:
-    import ./lab-floe.nix {
+    import ./authoring/lab-floe.nix {
       inherit
         lib
         floe
@@ -286,7 +286,7 @@ rec {
   # neither is something `mkFloe` should know about.
   #
   # An author may refine a framed input rather than redeclare it, and a name
-  # the frame does not declare is an ordinary new input. `lib/floe-catallaxy/frame.nix`.
+  # the frame does not declare is an ordinary new input. `lib/floe-catallaxy/authoring/frame.nix`.
   mkClusterFloe = mkFramedFloe clusterFrame;
 
   clusterFrame = {
@@ -339,7 +339,7 @@ rec {
   planTokens = import ../plan-tokens.nix { inherit lib; };
   inherit (import ../eval/anchors.nix { }) needs wants;
 
-  inherit (import ./elaborate.nix { inherit lib floe crdTypes; }) elaborateCluster;
-  inherit (import ./slice.nix { inherit lib; }) sliceFor;
-  inherit (import ./render.nix { inherit lib pkgs; }) renderCluster;
+  inherit (import ../lower/elaborate.nix { inherit lib floe crdTypes; }) elaborateCluster;
+  inherit (import ../lower/slice.nix { inherit lib; }) sliceFor;
+  inherit (import ../lower/render.nix { inherit lib pkgs; }) renderCluster;
 }
