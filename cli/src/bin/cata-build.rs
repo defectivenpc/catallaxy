@@ -38,6 +38,12 @@ enum Commands {
 
     #[command(about = "Regenerate Kubernetes API types from OpenAPI specs and CRDs")]
     Generate(generate::GenerateArgs),
+
+    #[command(about = "Emit the lab document's shape as a floes type")]
+    Document {
+        #[arg(value_name = "PATH", help = "Where to write the generated Nix")]
+        out: String,
+    },
 }
 
 #[tokio::main]
@@ -61,5 +67,6 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Commands::Docs { command } => docs::run(command, cata::commands::cli::Cli::command()),
         Commands::Generate(args) => generate::run(&ctx, args),
+        Commands::Document { out } => generate::document(&out),
     }
 }

@@ -211,7 +211,15 @@ in
             reachableFrom = lib.optional lab.hasIngress (catallaxy.hostContainerFor lab.name "ingress");
           };
 
-        external = c: removeAttrs c [ "kubeconfigFrom" ];
+        # `provisionedBy` joins `kubeconfigFrom` in not travelling: the
+        # provisioning edge is ordered in Nix, off `out.cluster`, and the
+        # document is what a command reads.
+        external =
+          c:
+          removeAttrs c [
+            "kubeconfigFrom"
+            "provisionedBy"
+          ];
       };
     in
     {

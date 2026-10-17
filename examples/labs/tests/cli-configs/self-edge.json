@@ -233,9 +233,6 @@
   "dnsInfo": {
     "host": "127.0.0.1",
     "port": 5310,
-    "tsigKeyname": "externaldns-key",
-    "tsigSecret": "kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=",
-    "tsigSecretAlg": "hmac-sha256",
     "zone": "self-edge.test"
   },
   "infraPublications": [],

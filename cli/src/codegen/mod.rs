@@ -1,5 +1,6 @@
 mod convert;
 pub mod crd;
+pub mod document;
 pub mod nix_emitter;
 pub mod schema;
 pub mod types;

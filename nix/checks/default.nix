@@ -47,6 +47,11 @@ in
   exposed = legacyPackages;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
+// import ./document-type.nix {
+  inherit lib pkgs floeCore;
+  cata = packages.cata;
+  cliConfigDir = ../../examples/labs/tests/cli-configs;
+}
 // import ./generated-types.nix {
   inherit
     lib

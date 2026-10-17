@@ -205,7 +205,10 @@
 
         inherit services;
 
-        dnsInfo = dnsInfo;
+        # Only what `cata lab dns` points the host resolver at. The TSIG key
+        # the floe also emits is for a Nix reader and stays out of a document
+        # that is handed to a command — and it is a secret.
+        dnsInfo = if dnsInfo == null then null else { inherit (dnsInfo) host port zone; };
 
         registryPort = if registrySetup == null then null else registrySetup.params.port;
         registryUpstreams = if registrySetup == null then [ ] else registrySetup.params.upstreams;

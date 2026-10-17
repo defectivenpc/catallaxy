@@ -64,7 +64,9 @@ let
 
         mgmt = wired.instName;
 
-        p = clusters.${provisioned}.spec.provisioning.config.external.provisionedBy;
+        # Off `out.cluster` rather than the document: the document is what a
+        # command reads and this is read here.
+        p = (lib.head (lib.attrValues clusters.${provisioned}.out.cluster)).config.external.provisionedBy;
       }
     ) clusters
   );

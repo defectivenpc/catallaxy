@@ -148,9 +148,6 @@
   "dnsInfo": {
     "host": "127.0.0.1",
     "port": 5388,
-    "tsigKeyname": "externaldns-key",
-    "tsigSecret": "kp4bgnFAVCmajGIqOW7rj0MNwRNZHBqMvYaLTwzPHgI=",
-    "tsigSecretAlg": "hmac-sha256",
     "zone": "minimal.test"
   },
   "infraPublications": [],

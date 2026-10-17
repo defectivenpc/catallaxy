@@ -586,7 +586,10 @@ let
           else
             lib.findFirst (v: v != null) null (map (valueIn envFile) varNames);
 
-        knotKey = if c.cliConfig.dnsInfo == null then null else c.cliConfig.dnsInfo.tsigSecret;
+        # Off the lab's link rather than its document: the key is a secret
+        # and the document no longer carries one.
+        emittedDns = lib.attrValues (c.link.out."catallaxy.dnsInfo" or { });
+        knotKey = if emittedDns == [ ] then null else (lib.head emittedDns).tsigSecret;
       in
       lib.optionals (projected != [ ]) (
         lib.optional (

@@ -191,11 +191,7 @@
       "provisioning": {
         "config": {
           "external": {
-            "madeBy": "clusters.kubernetes.digitalocean.crossplane.io/workload",
-            "provisionedBy": {
-              "resourceKind": "clusters.kubernetes.digitalocean.crossplane.io",
-              "resourceName": "workload"
-            }
+            "madeBy": "clusters.kubernetes.digitalocean.crossplane.io/workload"
           }
         },
         "hooks": [],
