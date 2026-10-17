@@ -42,13 +42,16 @@ let
     in
     if builtins.pathExists pin then import pin { upstream = upstreamLib; } else null;
 
-  inherit (import ./floe-crds.nix { inherit lib; } { floeSet = allFloePaths; }) types;
+  inherit (import ./floe-crds.nix { inherit lib; } { floeSet = allFloePaths; }) groups;
+
+  k8sSpecs = import ./k8s-specs.nix { inherit lib pkgs; };
 
   catallaxy = import ./floe-catallaxy {
     inherit lib pkgs floeCore;
     k8sApi = import ./kubernetes/api.nix {
-      inherit lib;
-      crdTypes = types;
+      inherit lib floeCore;
+      specFile = k8sSpecs.specs."1.31";
+      crdGroups = groups;
     };
   };
 

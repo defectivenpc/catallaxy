@@ -20,7 +20,15 @@
 */
 { lib, T }:
 
-{ spec }:
+{
+  spec,
+
+  # API group -> the group's schemas as `cata-build generate` emits them:
+  # `{ <Kind> = { apiVersion; schema; }; }`. A CRD's `openAPIV3Schema` is
+  # already JSON Schema, so it goes through the converter below — one
+  # vocabulary for the Kubernetes API and every CRD alike.
+  crdGroups ? { },
+}:
 
 let
   definitions = spec.definitions or (throw "the OpenAPI spec has no `definitions`");
@@ -135,7 +143,15 @@ let
         in
         T.record (
           lib.mapAttrs (
-            field: sub: if lib.elem field required then convert sub else T.optional (convert sub)
+            field: sub:
+            if lib.elem field required then
+              convert sub
+            else
+              # Absent *or* null. `lib/render/yaml.nix` strips nulls before a
+              # resource is written, so `null` is how a floe spells "leave
+              # this out" — and the value it hands conformance still carries
+              # the key.
+              T.optional (T.nullOr (convert sub))
           ) schema.properties
         )
 
@@ -146,6 +162,47 @@ let
   # Every definition, by its spec name, lazily. The recursion in
   # `JSONSchemaProps` resolves through this set.
   types = lib.mapAttrs (name: schema: T.named (shortName name) (convert schema)) definitions;
+
+  # Every object has these and most CRDs do not say so: a CRD's
+  # `openAPIV3Schema` typically declares `spec` and `status` alone, because the
+  # apiserver supplies the rest. The Kubernetes spec declares them explicitly,
+  # so this is only needed on the CRD side.
+  objectMeta = types."io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta";
+
+  withObjectMeta =
+    ty:
+    if (ty.tag or null) != "record" then
+      ty
+    else
+      ty
+      // {
+        fields = {
+          apiVersion = T.optional T.str;
+          kind = T.optional T.str;
+          metadata = T.optional objectMeta;
+        }
+        // ty.fields;
+      };
+
+  # Custom resources, by apiVersion then kind. A CRD schema is self-contained
+  # — no `$ref` — so nothing here resolves through `types`.
+  crdTypes = lib.foldl' lib.mergeAttrs { } (
+    lib.mapAttrsToList (
+      _group: kinds:
+      lib.foldl' (
+        acc: kind:
+        let
+          entry = kinds.${kind};
+        in
+        acc
+        // {
+          ${entry.apiVersion} = (acc.${entry.apiVersion} or { }) // {
+            ${kind} = T.named kind (withObjectMeta (convert entry.schema));
+          };
+        }
+      ) { } (lib.attrNames kinds)
+    ) crdGroups
+  );
 
   # `x-kubernetes-group-version-kind` is the spec's own GVK table, so the
   # mapping from a resource's `apiVersion` and `kind` is read rather than
@@ -185,11 +242,13 @@ in
     let
       definition = byApiVersion.${apiVersion}.${kind} or null;
     in
-    if definition == null then null else types.${definition};
+    if definition != null then types.${definition} else crdTypes.${apiVersion}.${kind} or null;
 
-  # Every kind the apiserver serves, which is the membership question
-  # `lib/lower/cluster.nix` asks and the only one that needs no field types.
-  coreKinds = lib.unique (map (g: g.kind) gvks);
+  # Every kind the apiserver serves, as a set, because the question asked of
+  # it is membership — `coreKinds ? Deployment`. 141 of them at 1.31, and
+  # installing a CRD cannot add to it: these are the spec's own
+  # group-version-kinds.
+  coreKinds = lib.genAttrs (map (g: g.kind) gvks) (_: true);
 
   # Where the conversion gave up, and why.
   fallbacks = fallbackList;

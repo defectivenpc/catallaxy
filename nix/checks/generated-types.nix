@@ -23,7 +23,6 @@ let
   committed = pkgs.runCommand "committed-types" { } (
     ''
       mkdir -p $out
-      cp -r ${../../lib/kubernetes/generated/k8s} $out/k8s
     ''
     + lib.concatStrings (
       lib.mapAttrsToList (floe: _: ''
@@ -65,14 +64,13 @@ in
     if ! diff -ru ${committed} ${generatedTypes} > $TMPDIR/diff; then
       cat $TMPDIR/diff >&2
       echo "" >&2
-      echo "The generated Kubernetes types are stale." >&2
+      echo "The committed CRD schemas are stale." >&2
       echo "" >&2
-      echo "They are generated from the same pinned artifacts the floes" >&2
-      echo "install — each floe's own \`upstream.nix\` pins one — so this diff" >&2
-      echo "means a source" >&2
-      echo "moved and the types still describe the old one. A resource is" >&2
-      echo "checked against these, so the gap is checks passing against a" >&2
-      echo "CRD that is no longer what gets applied." >&2
+      echo "They are the \`openAPIV3Schema\` of the same pinned artifacts the" >&2
+      echo "floes install — each floe's own \`upstream.nix\` pins one — so this" >&2
+      echo "diff means a source moved and the committed schema still describes" >&2
+      echo "the old one. A resource is checked against these, so the gap is" >&2
+      echo "checks passing against a CRD that is no longer what gets applied." >&2
       echo "" >&2
       echo "Refresh it and read the diff:" >&2
       echo "  nix build .#generatedTypes   # k8s/ and <floe>/crds/, to copy into place" >&2

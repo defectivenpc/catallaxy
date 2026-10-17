@@ -3,11 +3,11 @@
 
       floeCrds { floeSet = import ./floes; }
       -> { sources = { cert-manager = <fn>; … };
-           types   = { "cert-manager.io" = <path>; … }; }
+           groups  = { "cert-manager.io" = { Certificate = { apiVersion; schema; }; … }; … }; }
 
   Derived, not listed. A floe whose `upstream.nix` yields a `crds` attribute is
-  a floe whose CRDs get Nix types, and `crds/<group>.nix` beside it is the
-  output — so adding one needs no central edit, and deleting a floe deletes its
+  a floe whose CRDs get types, and `crds/<group>.json` beside it is the
+  schema — so adding one needs no central edit, and deleting a floe deletes its
   types with it.
 
   Takes the floe set rather than reading `floes/` directly, which is what lets
@@ -15,12 +15,13 @@
   special: it is the set catallaxy ships, collected by this same function.
 
   Two readers, which is why this is one expression. `sources` is what the
-  generator reads; `types` is what conformance resolves against. A group
+  generator reads; `groups` is what conformance resolves against, after
+  `lib/kubernetes/schema-to-type.nix` converts it. A group
   appearing in one and not the other means the committed types are stale, which
   is what `generated-types` compares.
 
   Evaluates no floe. It reads paths and applies `upstream.nix`, nothing more —
-  it has to, because `crdTypes` is what the distribution record is built from
+  it has to, because the API record is what the distribution is built from
   and a floe is defined against that record. A floe's types must exist before
   the floe can evaluate, so they can never be declared inside `mkFloe`.
 */
@@ -58,10 +59,16 @@ let
       crdDir = dir + "/crds";
     in
     lib.optionals (builtins.pathExists crdDir) (
-      map (f: {
-        group = lib.removeSuffix ".nix" f;
-        path = crdDir + "/${f}";
-      }) (lib.attrNames (lib.filterAttrs (_: k: k == "regular") (builtins.readDir crdDir)))
+      map
+        (f: {
+          group = lib.removeSuffix ".json" f;
+          path = crdDir + "/${f}";
+        })
+        (
+          lib.attrNames (
+            lib.filterAttrs (f: k: k == "regular" && lib.hasSuffix ".json" f) (builtins.readDir crdDir)
+          )
+        )
     );
 in
 {
@@ -72,15 +79,16 @@ in
     (import (dir + "/upstream.nix") { inherit upstream; }).crds
   ) withCrds;
 
-  # API group -> the generated type file. Keyed by the group verbatim, which is
-  # also the filename and also the `apiVersion` prefix a floe writes — one
-  # string, no mapping between the three.
+  # API group -> its kinds and their schemas. Keyed by the group verbatim,
+  # which is also the filename and also the `apiVersion` prefix a floe writes —
+  # one string, no mapping between the three.
   #
   # A group defined in two floes would be two files claiming one key, which
-  # `floe-crd-groups` refuses.
-  types = lib.listToAttrs (
-    lib.concatMap (dir: map (g: lib.nameValuePair g.group g.path) (groupsIn dir)) (
-      lib.attrValues withCrds
-    )
+  # `floe-upstream` refuses.
+  groups = lib.listToAttrs (
+    lib.concatMap (
+      dir:
+      map (g: lib.nameValuePair g.group (builtins.fromJSON (builtins.readFile g.path))) (groupsIn dir)
+    ) (lib.attrValues withCrds)
   );
 }

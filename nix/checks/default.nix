@@ -72,6 +72,8 @@ in
   inherit
     lib
     pkgs
+    floeCore
+    k8sSpecs
     labDefs
     floeCrds
     ;
@@ -135,6 +137,7 @@ in
     lib
     pkgs
     floeCore
+    k8sSpecs
     labDefs
     floeCrds
     mkFloes
@@ -185,8 +188,9 @@ in
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib;
-      crdTypes = floeCrds.types;
+      inherit lib floeCore;
+      specFile = k8sSpecs.specs."1.31";
+      crdGroups = floeCrds.groups;
     };
   };
   floeSet = allFloes;
@@ -202,8 +206,9 @@ in
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib;
-      crdTypes = floeCrds.types;
+      inherit lib floeCore;
+      specFile = k8sSpecs.specs."1.31";
+      crdGroups = floeCrds.groups;
     };
   };
 }
@@ -213,8 +218,9 @@ in
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib;
-      crdTypes = floeCrds.types;
+      inherit lib floeCore;
+      specFile = k8sSpecs.specs."1.31";
+      crdGroups = floeCrds.groups;
     };
   };
 }

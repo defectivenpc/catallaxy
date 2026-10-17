@@ -66,7 +66,7 @@ let
   resolved = lib.subtractLists claimed allowed;
 
   # Every group, with the floe that declared it, so a collision names both
-  # sides. `floeCrds.types` has already merged them and cannot.
+  # sides. `floeCrds.groups` has already merged them and cannot.
   groupsOf =
     dir:
     let

@@ -9,7 +9,11 @@
 #   3. install order is derived, including the edge between two floes that
 #      neither of them wrote
 #   4. the errors a wrong composition produces
-{ lib, floeCore }:
+{
+  lib,
+  floeCore,
+  specFile,
+}:
 
 let
   # The distribution's prelude, not core's: `component.nix` is a
@@ -18,8 +22,8 @@ let
   kinds = import ../floe-catallaxy/domain/component.nix {
     inherit lib floe;
     k8sApi = import ../kubernetes/api.nix {
-      inherit lib;
-      crdTypes = { };
+      inherit lib floeCore specFile;
+      crdGroups = { };
     };
   };
   sigs = import ../floe-catallaxy/domain/sigs.nix { inherit floe; };
@@ -27,8 +31,8 @@ let
   elaborate = import ../lower/elaborate.nix {
     inherit lib floe;
     k8sApi = import ../kubernetes/api.nix {
-      inherit lib;
-      crdTypes = { };
+      inherit lib floeCore specFile;
+      crdGroups = { };
     };
   };
 
@@ -423,6 +427,10 @@ let
       name = "w";
       namespace = "app";
     };
+    # `selector` is required of a Deployment, and this fixture went without one
+    # until the API was converted from its own spec.
+    spec.selector.matchLabels.app = "w";
+    spec.template.metadata.labels.app = "w";
     spec.template.spec.containers = [
       {
         name = "w";

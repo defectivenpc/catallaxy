@@ -2,7 +2,7 @@
   The Kubernetes API a cluster serves: resolve a resource's type, or ask
   whether a kind is built in.
 
-      mkApi { crdGroups = floeCrds.groups; }
+      mkApi { inherit floeCore specFile; crdGroups = floeCrds.groups; }
       -> { resolve; coreKinds; }
 
   The two questions anything asks of the API, and the only two. Threaded as
@@ -17,8 +17,14 @@
 */
 {
   lib,
+  floeCore,
 
-  # API group -> the group's generated types, from `lib/floe-crds.nix`.
+  # The pinned OpenAPI spec, as a path. Converted here rather than generated
+  # into Nix: `fromJSON` on 3.1 MB costs 35 ms, where the 77,623 lines of
+  # generated Nix this replaced cost 82 ms just to parse.
+  specFile,
+
+  # API group -> the group's schemas, from `lib/floe-crds.nix`.
   #
   # Required, with no default. `{ }` is a legal and useful answer — it means
   # "the Kubernetes API only", which is all `coreKinds` needs — but a *default*
@@ -26,24 +32,15 @@
   # `conform.nix` resolving a custom resource against that finds no schema and
   # checks none of its fields. One call site asked for it by accident and the
   # coverage check reported every CRD in the tree as unschema'd.
-  crdTypes,
-
-  k8sVersion ? "1.31",
+  crdGroups,
 }:
 
-let
-  types = import ./types.nix { inherit lib crdTypes k8sVersion; };
-in
-{
-  /*
-    The type for an apiVersion and kind, or null when nothing describes it.
-
-        resolve "apps/v1" "Deployment"   # => a type
-        resolve "nope.io/v1" "X"         # => null
-  */
-  resolve = types.generatedTypes.resolveResourceType types.typesByKind;
-
-  # The kinds an apiserver has without anyone installing a CRD, as a set for
-  # membership testing. 141 of them at 1.31.
-  inherit (types) coreKinds;
-}
+import ./schema-to-type.nix
+  {
+    inherit lib;
+    T = floeCore.T;
+  }
+  {
+    spec = builtins.fromJSON (builtins.readFile specFile);
+    inherit crdGroups;
+  }

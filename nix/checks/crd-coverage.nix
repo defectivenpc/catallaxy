@@ -19,17 +19,19 @@
 {
   lib,
   pkgs,
+  floeCore,
+  k8sSpecs,
   labDefs,
   floeCrds,
 }:
 
 let
-  k8sTypes = import ../../lib/kubernetes/types.nix {
-    inherit lib;
-    crdTypes = floeCrds.types;
+  k8sApi = import ../../lib/kubernetes/api.nix {
+    inherit lib floeCore;
+    specFile = k8sSpecs.specs."1.31";
+    crdGroups = floeCrds.groups;
   };
-  inherit (k8sTypes) coreKinds typesByKind;
-  inherit (k8sTypes.generatedTypes) resolveResourceType;
+  inherit (k8sApi) coreKinds resolve;
 
   groupOf = apiVersion: lib.head (lib.splitString "/" apiVersion);
 
@@ -61,7 +63,7 @@ let
                     av = r.apiVersion or "";
                     kind = r.kind or "";
                   in
-                  if coreKinds ? ${kind} || resolveResourceType typesByKind av kind != null then
+                  if coreKinds ? ${kind} || resolve av kind != null then
                     [ ]
                   else if lib.elem "${groupOf av}/${kind}" runtimeKinds then
                     [ ]

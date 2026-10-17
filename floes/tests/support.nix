@@ -15,8 +15,9 @@ let
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib;
-      crdTypes = (import ../../lib/floe-crds.nix { inherit lib; } { floeSet = floeSet'; }).types;
+      inherit lib floeCore;
+      specFile = (import ../../lib/k8s-specs.nix { inherit lib pkgs; }).specs."1.31";
+      crdGroups = (import ../../lib/floe-crds.nix { inherit lib; } { floeSet = floeSet'; }).groups;
     };
   };
   inherit (catallaxy) floe sigs kinds;

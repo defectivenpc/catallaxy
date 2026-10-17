@@ -60,12 +60,7 @@
         crdSources = lib.mapAttrs (_: f: f upstream) floeCrds.sources;
 
         typeGen = import ./nix/generated-types.nix {
-          inherit
-            lib
-            pkgs
-            k8sSpecs
-            crdSources
-            ;
+          inherit lib pkgs crdSources;
           inherit (packages') cata;
         };
 

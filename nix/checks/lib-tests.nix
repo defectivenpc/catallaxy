@@ -77,7 +77,19 @@ let
   # that never touch the floe library keep their `{ lib }` head and the two that
   # do just ask for `floeCore`.
   suites =
-    lib.mapAttrs (_: path: lib.callPackageWith { inherit lib floeCore; } path { }) pure // floeSuites;
+    lib.mapAttrs (
+      _: path:
+      lib.callPackageWith {
+        inherit lib floeCore;
+
+        # The two suites that build a Kubernetes API record need the spec it is
+        # converted from. In scope for all of them rather than threaded to
+        # those two, because `callPackageWith` gives a suite only what it asks
+        # for by name.
+        specFile = (import ../../lib/k8s-specs.nix { inherit lib pkgs; }).specs."1.31";
+      } path { }
+    ) pure
+    // floeSuites;
 
   # A new `lib/tests/*.nix` would otherwise sit there running nowhere and
   # looking like coverage.

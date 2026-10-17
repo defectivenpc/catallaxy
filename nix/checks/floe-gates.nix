@@ -17,6 +17,7 @@
   mkFloes,
   labDefs,
   floeCrds,
+  k8sSpecs,
   floeSet,
 
   # Floes that cannot answer for their own images, and say so.
@@ -46,8 +47,9 @@ let
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
     k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib;
-      crdTypes = floeCrds.types;
+      inherit lib floeCore;
+      specFile = k8sSpecs.specs."1.31";
+      crdGroups = floeCrds.groups;
     };
   };
 

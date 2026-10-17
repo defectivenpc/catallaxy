@@ -1,11 +1,9 @@
-mod convert;
+//! Turning a pinned schema into something Nix can check against.
+//!
+//! `document` emits the lab document's shape from the Rust types `cata` parses
+//! it into. `crd` hands a CRD's `openAPIV3Schema` over as JSON, because Nix has
+//! no `fromYAML` and that format change is the only thing generation buys —
+//! `lib/kubernetes/schema-to-type.nix` does the converting, for both the
+//! Kubernetes API and every CRD, in one vocabulary.
 pub mod crd;
 pub mod document;
-pub mod nix_emitter;
-pub mod schema;
-pub mod types;
-
-pub use crd::parse_crds_from_yaml;
-pub use nix_emitter::{EmitterConfig, emit_crd_types, emit_k8s_types};
-pub use schema::{convert_openapi_to_types, parse_openapi_spec};
-pub use types::GeneratorOptions;

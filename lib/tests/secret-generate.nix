@@ -4,15 +4,19 @@
 # parked suite. The generated CRDs are free-form to the schema, so eval
 # succeeding proves nothing about the keys: each case reads the field it cares
 # about.
-{ lib, floeCore }:
+{
+  lib,
+  floeCore,
+  specFile,
+}:
 
 let
   floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
   kinds = import ../floe-catallaxy/domain/component.nix {
     inherit lib floe;
     k8sApi = import ../kubernetes/api.nix {
-      inherit lib;
-      crdTypes = { };
+      inherit lib floeCore specFile;
+      crdGroups = { };
     };
   };
 

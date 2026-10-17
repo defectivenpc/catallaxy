@@ -1,4 +1,8 @@
-{ lib, k8sApi }:
+{
+  lib,
+  floeCore,
+  k8sApi,
+}:
 
 rec {
   /*
@@ -27,8 +31,12 @@ rec {
     nobody set would arrive as `null`: `r ? field` starts answering true for
     fields that are not there, `r.field or default` yields `null` instead of
     the default, and a resource stops comparing equal to the constructor that
-    built it. The module system does the checking either way; only the value
-    differs.
+    built it.
+
+    `conformValue` rather than the module system, which this used to run one
+    `evalModules` per resource through. Structural and strict: a field the
+    schema does not declare is an error rather than something to coerce or
+    merge.
 
     A failure is an evaluation error naming the option path and the offending
     value — `spec.replicas = "three"` says so here, rather than being refused
@@ -64,12 +72,8 @@ rec {
     else if t == null then
       resource
     else
-      builtins.deepSeq
-        (lib.evalModules {
-          modules = [
-            { options.resource = lib.mkOption { type = t; }; }
-            { inherit resource; }
-          ];
-        }).config.resource
-        resource;
+      builtins.deepSeq (floeCore.conformValue [
+        (resource.kind or "?")
+        (resource.metadata.name or "?")
+      ] t resource) resource;
 }

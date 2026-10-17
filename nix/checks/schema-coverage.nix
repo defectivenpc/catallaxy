@@ -52,7 +52,7 @@ in
         resolved = lib.concatStringsSep "\n" (lib.subtractLists found wanted);
 
         definitions = toString (lib.length (lib.attrNames converted.types));
-        kinds = toString (lib.length converted.coreKinds);
+        kinds = toString (lib.length (lib.attrNames converted.coreKinds));
       }
       ''
         if [ -n "$surprises" ]; then

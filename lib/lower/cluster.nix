@@ -25,13 +25,10 @@
 
 let
   # `coreKinds` is the built-in kinds only — the membership test behind "does
-  # this resource need an edge to whatever establishes its CRD" — so this is
-  # the one reader that wants no CRD types at all.
-  coreKinds =
-    (import ../kubernetes/api.nix {
-      inherit lib;
-      crdTypes = { };
-    }).coreKinds;
+  # this resource need an edge to whatever establishes its CRD". It is derived
+  # from the spec's own group-version-kinds, so installing a CRD cannot add to
+  # it and this needs no second API record to ask with no CRDs in scope.
+  inherit (catallaxy.k8sApi) coreKinds;
   infraLib = import ../render/infra.nix { inherit lib; };
 in
 {

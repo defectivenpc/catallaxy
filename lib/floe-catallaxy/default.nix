@@ -313,6 +313,8 @@ rec {
   # the parent's — so asked here the question has no cluster to find. The
   # policy's own note said where the true statement lives: "the statement one
   # level up is the true one". ADR 0003.
+  inherit k8sApi;
+
   inherit (distribution) conformDocument;
 
   clusterPolicies = [

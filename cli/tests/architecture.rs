@@ -347,10 +347,12 @@ fn no_untyped_json_crosses_a_public_boundary() {
 /// What still hands untyped JSON around outside `io/`. Shrinks only.
 fn untyped_json_baseline() -> BTreeSet<&'static str> {
     [
-        // JSON Schema *is* the subject of the generator, so a Value here is
-        // the input, not a missing type.
-        "codegen/convert.rs: convert",
-        "codegen/convert.rs: new",
+        // JSON Schema *is* the subject here, so a Value is the input and the
+        // output, not a missing type. `crd_schemas_from_yaml` hands a CRD's
+        // `openAPIV3Schema` over untouched on purpose — interpreting it is
+        // `lib/kubernetes/schema-to-type.nix`'s job, and a type here would be
+        // a second opinion about a schema this deliberately does not read.
+        "codegen/crd.rs: crd_schemas_from_yaml",
         // Golden-file rendering canonicalises whatever JSON it is handed,
         // which is the job.
         "commands/lab/golden.rs: canonicalize",

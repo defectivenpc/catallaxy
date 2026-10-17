@@ -1,117 +1,12 @@
+//! A CRD's schema, as the CRD carries it.
+//!
+//! Nix has no `fromYAML`, so this is the one format change generation has to
+//! perform. The `openAPIV3Schema` goes over untouched and
+//! `lib/kubernetes/schema-to-type.nix` converts it — the same path the
+//! Kubernetes API takes.
+
 use anyhow::{Context, Result};
 use serde_json::Value;
-
-use super::types::{GeneratorOptions, K8sResourceType};
-
-pub fn parse_crds_from_yaml(
-    yaml: &str,
-    options: &GeneratorOptions,
-) -> Result<Vec<K8sResourceType>> {
-    let mut resources = Vec::new();
-
-    for doc in yaml_rust2::YamlLoader::load_from_str(yaml).context("Failed to parse YAML")? {
-        let value = yaml_to_json(&doc)?;
-
-        let kind = value.get("kind").and_then(|v| v.as_str());
-
-        if kind == Some("CustomResourceDefinition") {
-            if let Some(crd) = parse_single_crd(&value, options)? {
-                resources.push(crd);
-            }
-        } else if kind == Some("List")
-            && let Some(items) = value.get("items").and_then(|v| v.as_array())
-        {
-            for item in items {
-                if item.get("kind").and_then(|v| v.as_str()) == Some("CustomResourceDefinition")
-                    && let Some(crd) = parse_single_crd(item, options)?
-                {
-                    resources.push(crd);
-                }
-            }
-        }
-    }
-
-    Ok(resources)
-}
-
-fn parse_single_crd(crd: &Value, options: &GeneratorOptions) -> Result<Option<K8sResourceType>> {
-    let spec = crd.get("spec").context("CRD missing spec")?;
-
-    let group = spec
-        .get("group")
-        .and_then(|v| v.as_str())
-        .context("CRD missing group")?;
-    let kind = spec
-        .get("names")
-        .and_then(|n| n.get("kind"))
-        .and_then(|v| v.as_str())
-        .context("CRD missing kind")?;
-
-    if options.exclude_groups.iter().any(|g| group.contains(g)) {
-        return Ok(None);
-    }
-
-    let versions = spec.get("versions").and_then(|v| v.as_array());
-    let version_info = if let Some(versions) = versions {
-        versions
-            .iter()
-            .find(|v| v.get("storage").and_then(|s| s.as_bool()).unwrap_or(false))
-            .or_else(|| {
-                versions
-                    .iter()
-                    .find(|v| v.get("served").and_then(|s| s.as_bool()).unwrap_or(true))
-            })
-            .or_else(|| versions.first())
-    } else {
-        None
-    };
-
-    let version = version_info
-        .and_then(|v| v.get("name").and_then(|n| n.as_str()))
-        .or_else(|| spec.get("version").and_then(|v| v.as_str()))
-        .unwrap_or("v1");
-
-    let mut resource =
-        K8sResourceType::new(group.to_string(), version.to_string(), kind.to_string());
-
-    let schema = version_info
-        .and_then(|v| v.get("schema"))
-        .and_then(|s| s.get("openAPIV3Schema"))
-        .or_else(|| {
-            spec.get("validation")
-                .and_then(|v| v.get("openAPIV3Schema"))
-        });
-
-    if let Some(schema) = schema {
-        if let Some(properties) = schema.get("properties").and_then(|p| p.as_object()) {
-            if let Some(spec_schema) = properties.get("spec") {
-                resource.spec =
-                    Some(super::convert::Converter::standalone(options).convert(spec_schema));
-            }
-
-            resource.top_level = super::schema::convert_top_level(
-                &mut super::convert::Converter::standalone(options),
-                properties,
-                options,
-            );
-        }
-
-        if options.include_descriptions {
-            resource.description = schema
-                .get("description")
-                .and_then(|v| v.as_str())
-                .map(String::from);
-        }
-    }
-
-    resource.namespaced = spec
-        .get("scope")
-        .and_then(|v| v.as_str())
-        .map(|s| s == "Namespaced")
-        .unwrap_or(true);
-
-    Ok(Some(resource))
-}
 
 fn yaml_to_json(yaml: &yaml_rust2::Yaml) -> Result<Value> {
     match yaml {
@@ -146,51 +41,87 @@ fn yaml_to_json(yaml: &yaml_rust2::Yaml) -> Result<Value> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Every CRD in a YAML stream as `kind -> { apiVersion, schema }`, with the
+/// schema exactly as the CRD carries it.
+///
+/// A CRD's `openAPIV3Schema` is already JSON Schema, so handing it over
+/// untouched lets Nix convert it with the same `T` converter the Kubernetes
+/// API goes through. The only thing generation buys here is the format change
+/// Nix forces: there is no `fromYAML`.
+pub fn crd_schemas_from_yaml(yaml: &str) -> Result<serde_json::Map<String, Value>> {
+    let mut out = serde_json::Map::new();
 
-    #[test]
-    fn test_parse_simple_crd() {
-        let yaml = r#"
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: certificates.cert-manager.io
-spec:
-  group: cert-manager.io
-  names:
-    kind: Certificate
-    plural: certificates
-  scope: Namespaced
-  versions:
-    - name: v1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            spec:
-              type: object
-              properties:
-                secretName:
-                  type: string
-                issuerRef:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                    kind:
-                      type: string
-"#;
+    let docs = yaml_rust2::YamlLoader::load_from_str(yaml).context("Failed to parse YAML")?;
 
-        let options = GeneratorOptions::default();
-        let crds = parse_crds_from_yaml(yaml, &options).unwrap();
+    let mut consider = |value: &Value| -> Result<()> {
+        if value.get("kind").and_then(Value::as_str) != Some("CustomResourceDefinition") {
+            return Ok(());
+        }
 
-        assert_eq!(crds.len(), 1);
-        assert_eq!(crds[0].kind, "Certificate");
-        assert_eq!(crds[0].group, "cert-manager.io");
-        assert_eq!(crds[0].version, "v1");
+        let spec = value.get("spec").context("a CRD with no `spec`")?;
+        let group = spec
+            .get("group")
+            .and_then(Value::as_str)
+            .context("a CRD with no `spec.group`")?;
+        let kind = spec
+            .get("names")
+            .and_then(|n| n.get("kind"))
+            .and_then(Value::as_str)
+            .context("a CRD with no `spec.names.kind`")?;
+
+        // The stored version is the one a cluster persists, so it is the one a
+        // resource written today is checked against.
+        let versions = spec.get("versions").and_then(Value::as_array);
+        let chosen = versions.and_then(|vs| {
+            vs.iter()
+                .find(|v| v.get("storage").and_then(Value::as_bool).unwrap_or(false))
+                .or_else(|| {
+                    vs.iter()
+                        .find(|v| v.get("served").and_then(Value::as_bool).unwrap_or(true))
+                })
+                .or_else(|| vs.first())
+        });
+
+        let version = chosen
+            .and_then(|v| v.get("name"))
+            .and_then(Value::as_str)
+            .or_else(|| spec.get("version").and_then(Value::as_str))
+            .unwrap_or("v1");
+
+        let schema = chosen
+            .and_then(|v| v.get("schema"))
+            .and_then(|s| s.get("openAPIV3Schema"))
+            .or_else(|| {
+                spec.get("validation")
+                    .and_then(|v| v.get("openAPIV3Schema"))
+            });
+
+        if let Some(schema) = schema {
+            out.insert(
+                kind.to_string(),
+                serde_json::json!({
+                    "apiVersion": format!("{group}/{version}"),
+                    "schema": schema,
+                }),
+            );
+        }
+
+        Ok(())
+    };
+
+    for doc in docs {
+        let value = yaml_to_json(&doc)?;
+
+        if value.get("kind").and_then(Value::as_str) == Some("List") {
+            if let Some(items) = value.get("items").and_then(Value::as_array) {
+                for item in items {
+                    consider(item)?;
+                }
+            }
+        } else {
+            consider(&value)?;
+        }
     }
+
+    Ok(out)
 }
