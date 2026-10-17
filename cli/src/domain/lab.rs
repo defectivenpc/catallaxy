@@ -19,7 +19,7 @@ pub struct InfraPublication {
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LabSpec {
     pub lab_name: String,
 
@@ -263,7 +263,6 @@ mod tests {
     fn lab_json() -> Value {
         serde_json::json!({
             "labName": "minimal.local",
-            "environment": "development",
             "clusterNames": ["app"],
             "clusters": { "app": super::super::cluster::tests::cluster_json() },
             "routedHosts": {},

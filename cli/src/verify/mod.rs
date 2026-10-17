@@ -221,7 +221,6 @@ mod tests {
     fn base_lab() -> Value {
         json!({
             "labName": "l",
-            "environment": "development",
             "clusterNames": [],
             "clusters": {},
             "routedHosts": {},

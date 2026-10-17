@@ -35,7 +35,7 @@ pub struct ProjectionKeyConfig {
 /// because `cata` is what applies them and has to be told which.
 /// `docs/cluster-spec.md` is the derivation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ClusterSpec {
     pub cluster_handle: ClusterHandle,
     pub provisioning: Provisioning,

@@ -796,7 +796,6 @@ mod tests {
     #[test]
     fn a_non_k3d_shape_records_no_k3d_options() {
         let mut json = crate::domain::cluster::tests::cluster_json();
-        json["provisioner"] = serde_json::json!("talos");
         json["provisioning"]["config"] = serde_json::json!({
             "talos": {
                 "clusterName": "minimal-talos-app",
@@ -824,9 +823,9 @@ mod tests {
     #[test]
     fn a_k3d_shape_still_records_them() {
         let mut json = crate::domain::cluster::tests::cluster_json();
-        json["provisioner"] = serde_json::json!("k3d");
-        json["provisionerConfig"]["k3d"]["noTraefik"] = serde_json::json!(true);
-        json["provisionerConfig"]["k3d"]["image"] = serde_json::json!("rancher/k3s:v1.31.4-k3s1");
+        json["provisioning"]["config"]["k3d"]["noTraefik"] = serde_json::json!(true);
+        json["provisioning"]["config"]["k3d"]["image"] =
+            serde_json::json!("rancher/k3s:v1.31.4-k3s1");
         let spec = ClusterSpec::from_value(json).expect("fixture parses");
 
         let recorded = ClusterShape::of(&spec);
