@@ -47,6 +47,14 @@ in
   exposed = legacyPackages;
 }
 // import ./option-docs.nix { inherit lib pkgs optionDocs; }
+// import ./schema-coverage.nix {
+  inherit
+    lib
+    pkgs
+    floeCore
+    k8sSpecs
+    ;
+}
 // import ./document-type.nix {
   inherit lib pkgs floeCore;
   cata = packages.cata;
