@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use super::cluster::{ClusterSpec, DeployStrategy};
 use super::plan::PlannedStep;
 use super::secrets::SecretsSpec;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct InfraPublication {
     pub stack: String,
@@ -17,7 +18,7 @@ pub struct InfraPublication {
     pub key: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LabSpec {
     pub lab_name: String,
@@ -75,14 +76,14 @@ pub struct LabSpec {
     pub verify: super::verify::VerifyConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkInfo {
     pub name: String,
     pub docker_subnet: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DnsInfo {
     pub host: String,
@@ -90,7 +91,7 @@ pub struct DnsInfo {
     pub zone: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CdConfig {
     pub bootstrap: BootstrapTool,
@@ -102,7 +103,7 @@ pub struct CdConfig {
 /// This was a `serde_json::Value` read through six `git_cfg.and_then(|g|
 /// g["..."])` chains, each supplying its own default. The defaults are the
 /// Nix option's to decide, and they are stated once here.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GitConfig {
     #[serde(default)]
@@ -140,7 +141,7 @@ impl GitConfig {
 }
 
 /// A Secret in some cluster holding the token `lab publish` pushes with.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GitCredentialRef {
     pub context: String,
@@ -159,7 +160,7 @@ impl GitCredentialRef {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum BootstrapTool {
     KubectlSsa,
@@ -167,7 +168,7 @@ pub enum BootstrapTool {
     None,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DestroyConfig {
     #[serde(default)]
@@ -346,7 +347,7 @@ mod tests {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HostService {
     pub container: String,
@@ -376,14 +377,14 @@ pub struct HostService {
     pub dns_containers: Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExtraMount {
     pub host: String,
     pub container: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceVolume {
     #[serde(default)]
@@ -392,7 +393,7 @@ pub struct ServiceVolume {
     pub persist: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReadyProbe {
     pub kind: String,
@@ -404,4 +405,53 @@ pub struct ReadyProbe {
     pub expected_status: Option<u16>,
     #[serde(default)]
     pub timeout: Option<String>,
+}
+
+#[cfg(test)]
+mod schema {
+    use super::LabSpec;
+
+    /// The document is reflectable, which is what lets Nix be handed the same
+    /// shape the parser enforces instead of a second description of it.
+    ///
+    /// Pinned at the top level only. The field *set* is the contract — a field
+    /// added here is a field a floe may write — and the nested shapes are
+    /// pinned where they are generated.
+    #[test]
+    fn the_document_reflects_every_block_the_parser_reads() {
+        let schema = schemars::schema_for!(LabSpec);
+        let json = serde_json::to_value(&schema).expect("schema serialises");
+
+        let mut props: Vec<&str> = json["properties"]
+            .as_object()
+            .expect("an object schema")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        props.sort_unstable();
+
+        assert_eq!(
+            props,
+            [
+                "cd",
+                "clusterNames",
+                "clusters",
+                "deploymentPlan",
+                "destroy",
+                "dnsInfo",
+                "infraPublications",
+                "labName",
+                "labOwnedRegistries",
+                "network",
+                "opsToolPath",
+                "registryPort",
+                "registryUpstreams",
+                "routedHosts",
+                "secrets",
+                "services",
+                "teardownPlan",
+                "verify"
+            ]
+        );
+    }
 }

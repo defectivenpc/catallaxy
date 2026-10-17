@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,7 @@ use serde_json::Value;
 /// which printed a warning and returned an empty map when the decode failed —
 /// so a misconfigured projection produced no Secret and no error, and the
 /// deploy went on to fail wherever that Secret was mounted.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectionConfig {
     pub source: String,
@@ -17,7 +18,7 @@ pub struct ProjectionConfig {
     pub keys: BTreeMap<String, ProjectionKeyConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectionKeyConfig {
     pub from: String,
@@ -33,7 +34,7 @@ pub struct ProjectionKeyConfig {
 /// and `delivery` is the one that converges the content onto it, carried here
 /// because `cata` is what applies them and has to be told which.
 /// `docs/cluster-spec.md` is the derivation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterSpec {
     pub cluster_handle: ClusterHandle,
@@ -49,7 +50,7 @@ pub struct ClusterSpec {
 /// detection could compare it against a running cluster. `provider` used to
 /// sit beside these and held `"docker"` or `"external"` — read only to be
 /// printed, and already carried by the provisioning union's own key.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterHandle {
     pub name: String,
@@ -66,7 +67,7 @@ pub struct ClusterHandle {
 }
 
 /// What establishes the handle: which tool, with which arguments.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Provisioning {
     /// Externally tagged, so the key *is* the tool. A second field naming it
@@ -82,7 +83,7 @@ pub struct Provisioning {
 }
 
 /// The desired state: what the components fold up to.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Content {
     /// The rendered waves, as a path. A document carrying the resources
@@ -106,7 +107,7 @@ pub struct Content {
 }
 
 /// One bundle, as the wave summary carries it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WaveBundle {
     pub name: String,
@@ -115,7 +116,7 @@ pub struct WaveBundle {
 }
 
 /// How content reaches the handle.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Delivery {
     pub strategy: DeployStrategy,
@@ -125,7 +126,7 @@ pub struct Delivery {
     pub wait_timeout: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ProvisionerKind {
     K3d,
@@ -145,7 +146,7 @@ impl ProvisionerKind {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KubernetesSpec {
     pub distribution: String,
@@ -154,14 +155,14 @@ pub struct KubernetesSpec {
     pub workers: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterNetwork {
     pub pod_subnet: String,
     pub service_subnet: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DeployStrategy {
     Kapp,
@@ -203,7 +204,7 @@ impl DeployStrategy {
 /// parse error naming the variant, which is the point: `#[serde(default)]` on
 /// a Talos block meant a missing one became an empty one and failed later, on
 /// a missing cluster name, somewhere that could not say why.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ProvisionerConfig {
     K3d(K3dConfig),
@@ -217,7 +218,7 @@ pub enum ProvisionerConfig {
 /// operator reading a plan and is never dispatched on — dispatching on it
 /// would make it a provisioner enum again, which is the shape this whole
 /// type replaced.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExternalConfig {
     pub made_by: String,
@@ -280,7 +281,7 @@ impl ProvisionerConfig {
 ///
 /// Colima is a VM the operator runs and the timeout is how long this lab is
 /// willing to wait; k3d is told neither. They lived under
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TalosConfig {
     pub cluster_name: String,
@@ -303,7 +304,7 @@ pub struct TalosConfig {
     pub reachable_from: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct K3dConfig {
     pub cluster_name: String,
@@ -346,7 +347,7 @@ pub struct K3dConfig {
 /// A flag handed to `k3s server` itself, rather than to one of the components
 /// it supervises. `extra_api_server_args` reaches only kube-apiserver; this
 /// reaches k3s, which is where `--datastore-endpoint` and its siblings live.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct K3sArg {
     pub arg: String,
@@ -356,21 +357,21 @@ pub struct K3sArg {
     pub scope: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExtraVolume {
     pub host_path: String,
     pub container_path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AutoDeployManifest {
     pub name: String,
     pub path: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ColimaConfig {
     pub enable: bool,
@@ -380,7 +381,7 @@ pub struct ColimaConfig {
     pub disk: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Hook {
     pub name: String,
@@ -390,7 +391,7 @@ pub struct Hook {
     pub order: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ExposedHost {
     pub host: String,

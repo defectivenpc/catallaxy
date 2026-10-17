@@ -5,11 +5,12 @@
 //! which made `lab verify` parse the evaluated lab twice — once untyped to
 //! reach `raw["verify"]`, and once into `LabSpec`.
 
+use schemars::JsonSchema;
 use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VerifyConfig {
     #[serde(default)]
@@ -18,7 +19,7 @@ pub struct VerifyConfig {
     pub endpoints: EndpointPolicy,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DeclaredCheck {
     pub description: String,
@@ -27,7 +28,7 @@ pub struct DeclaredCheck {
     pub command: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EndpointPolicy {
     pub enable: bool,

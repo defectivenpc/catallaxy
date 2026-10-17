@@ -18,6 +18,7 @@
 //! older catallaxy, or on another machine, cannot be verified at all, and that
 //! is its own answer rather than a pass.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::cluster::ClusterSpec;
@@ -30,7 +31,7 @@ use super::cluster::ClusterSpec;
 /// on a cluster nobody touched.
 pub const SCHEMA_VERSION: u32 = 2;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterShape {
     pub schema_version: u32,

@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
@@ -8,7 +9,7 @@ pub type StoreValues = HashMap<String, HashMap<String, String>>;
 pub type SecretsByStore = HashMap<String, StoreValues>;
 pub type SecretsCache = Arc<SecretsByStore>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Backend {
     Sops,
@@ -32,7 +33,7 @@ impl Backend {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SecretStore {
     pub backend: Backend,
@@ -49,7 +50,7 @@ pub struct SecretStore {
 /// Whether anything may write into a store at runtime.
 ///
 /// Derived on the Nix side from the backend, so the two cannot disagree.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum StoreDirection {
     #[default]
@@ -57,7 +58,7 @@ pub enum StoreDirection {
     Runtime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultStore {
     #[serde(default)]
@@ -86,7 +87,7 @@ fn default_kv_version() -> String {
     "v2".to_string()
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SecretKind {
     #[default]
@@ -94,14 +95,14 @@ pub enum SecretKind {
     Ca,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ManagedKeyDef {
     pub generator: Option<String>,
     pub length: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ManagedSecret {
     pub store: String,
@@ -111,7 +112,7 @@ pub struct ManagedSecret {
     pub keys: BTreeMap<String, ManagedKeyDef>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SecretsSpec {
     #[serde(default)]
@@ -124,7 +125,7 @@ pub struct SecretsSpec {
     pub host_projections: Vec<HostProjection>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HostProjection {
     pub secret_name: String,

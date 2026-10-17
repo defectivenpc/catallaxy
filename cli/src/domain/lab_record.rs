@@ -17,6 +17,7 @@
 //! `lab-core` produce the same k3d name, so the mapping cannot be inverted and
 //! has to be written down.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::lab::LabSpec;
@@ -25,7 +26,7 @@ use super::lab::LabSpec;
 /// absent rather than being misread.
 pub const SCHEMA_VERSION: u32 = 1;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceRecord {
     pub key: String,
@@ -33,7 +34,7 @@ pub struct ServiceRecord {
     pub ports: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterRecord {
     pub cluster: String,
@@ -43,7 +44,7 @@ pub struct ClusterRecord {
     pub kube_context: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LabRecord {
     pub schema_version: u32,

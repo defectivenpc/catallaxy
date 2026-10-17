@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::step_kind::StepKind;
@@ -26,7 +27,7 @@ impl Direction {
 }
 use serde_json::{Map, Value};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum Idempotency {
     Idempotent,
@@ -43,14 +44,14 @@ impl Idempotency {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum OnFailure {
     Fatal,
     Continue,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StepPolicy {
     pub retry: Idempotency,
@@ -66,7 +67,7 @@ fn fatal() -> OnFailure {
     OnFailure::Fatal
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(try_from = "WirePlannedStep")]
 pub struct PlannedStep {
     pub name: String,
@@ -77,7 +78,7 @@ pub struct PlannedStep {
     pub params: StepParams,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 struct WirePlannedStep {
     name: String,
@@ -162,14 +163,14 @@ impl PlannedStep {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ScriptEnv {
     pub name: String,
     pub secret: String,
     pub key: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum StepParams {
     SetupServices(SetupServicesParams),
@@ -201,10 +202,10 @@ pub enum StepParams {
     RemoveServices(RemoveServicesParams),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct SetupServicesParams {}
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerNetworkCreateParams {
     pub name: String,
@@ -212,13 +213,13 @@ pub struct DockerNetworkCreateParams {
     pub gateway: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CertGenerateParams {
     pub zone: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DnsSetupParams {
     pub host: String,
@@ -226,13 +227,13 @@ pub struct DnsSetupParams {
     pub zone: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DnsTeardownParams {
     pub zone: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrySetupParams {
     pub port: u64,
@@ -241,24 +242,24 @@ pub struct RegistrySetupParams {
     pub zone: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct WarmCacheParams {}
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateClusterParams {
     pub name: String,
     pub provisioner: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EnsureSecretsParams {
     #[serde(default)]
     pub stores: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DeployManifestsParams {
     pub target: String,
@@ -268,7 +269,7 @@ pub struct DeployManifestsParams {
     pub kube_context: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WaitForResourcesParams {
     pub target: String,
@@ -280,7 +281,7 @@ pub struct WaitForResourcesParams {
     pub kube_context: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncKubeconfigParams {
     pub target: String,
@@ -298,17 +299,17 @@ pub struct SyncKubeconfigParams {
 /// An address, never a value — which is what keeps a credential out of the
 /// rendered plan and out of `metadata.json`, and so gives the
 /// `<lab>-renders-no-secret-material` check nothing to find.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SecretRef {
     pub store: String,
     pub key: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct PublishManifestsParams {}
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ApplyRootApplicationParams {
     pub target: String,
@@ -320,7 +321,7 @@ pub struct ApplyRootApplicationParams {
     pub kube_context: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BootstrapForgejoReposParams {
     pub target: String,
@@ -332,7 +333,7 @@ pub struct BootstrapForgejoReposParams {
     pub kube_context: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct BootstrapArgocdKubectlSsaParams {
     pub target: String,
@@ -347,7 +348,7 @@ pub struct BootstrapArgocdKubectlSsaParams {
     pub wait_timeout_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RunScriptParams {
     pub bin: String,
@@ -357,7 +358,7 @@ pub struct RunScriptParams {
     pub kube_context: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DestroyClusterParams {
     pub name: String,
@@ -366,7 +367,7 @@ pub struct DestroyClusterParams {
     pub skip_if_missing: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReconcileManagedResourceParams {
     pub target: String,
@@ -378,7 +379,7 @@ pub struct ReconcileManagedResourceParams {
     pub external_name_discovery_bin: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteManagedResourceParams {
     pub target: String,
@@ -399,7 +400,7 @@ pub struct DeleteManagedResourceParams {
 /// The three infra kinds differ in what they run and in whether they mutate,
 /// not in what they are given, so they share a params type rather than three
 /// identical ones that could drift apart.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct InfraParams {
     pub stack: String,
@@ -407,7 +408,7 @@ pub struct InfraParams {
     pub working_dir: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WaitForClusterGoneParams {
     #[serde(default)]
@@ -422,7 +423,7 @@ pub struct WaitForClusterGoneParams {
     pub wait_timeout_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReleaseClusterCloudResourcesParams {
     pub target: String,
@@ -432,10 +433,10 @@ pub struct ReleaseClusterCloudResourcesParams {
     pub wait_timeout_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct RemoveNetworkParams {}
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct RemoveServicesParams {}
 
 impl StepParams {
