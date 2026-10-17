@@ -10,7 +10,7 @@
   # the types live beside the floes that install the CRDs, and a floe depends
   # on this distribution rather than the reverse — so the one thing that would
   # be a cycle arrives as an argument instead.
-  crdTypes,
+  k8sApi,
 }:
 
 let
@@ -25,7 +25,7 @@ let
     inherit
       lib
       floe
-      crdTypes
+      k8sApi
       sigs
       ;
   };
@@ -339,7 +339,7 @@ rec {
   planTokens = import ../plan-tokens.nix { inherit lib; };
   inherit (import ../eval/anchors.nix { }) needs wants;
 
-  inherit (import ../lower/elaborate.nix { inherit lib floe crdTypes; }) elaborateCluster;
+  inherit (import ../lower/elaborate.nix { inherit lib floe k8sApi; }) elaborateCluster;
   inherit (import ../lower/slice.nix { inherit lib; }) sliceFor;
   inherit (import ../lower/render.nix { inherit lib pkgs; }) renderCluster;
 }

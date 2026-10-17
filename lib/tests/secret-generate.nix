@@ -10,7 +10,10 @@ let
   floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
   kinds = import ../floe-catallaxy/domain/component.nix {
     inherit lib floe;
-    crdTypes = { };
+    k8sApi = import ../kubernetes/api.nix {
+      inherit lib;
+      crdTypes = { };
+    };
   };
 
   plain = kinds.mkGeneratedSecret {

@@ -4,13 +4,13 @@
 {
   lib,
   floe,
-  crdTypes,
+  k8sApi,
 }:
 
 let
   T = floe.T;
 
-  inherit (import ../../kubernetes/conform.nix { inherit lib crdTypes; }) checked;
+  inherit (import ../../kubernetes/conform.nix { inherit lib k8sApi; }) checked;
   inherit (import ../../eval/secret-refs.nix { inherit lib; }) secretAddress;
   inherit (import ../../kubernetes/labels.nix { }) catallaxyManaged;
 

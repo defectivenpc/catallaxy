@@ -2,11 +2,11 @@
 {
   lib,
   floe,
-  crdTypes,
+  k8sApi,
 }:
 
 let
-  componentLib = import ../floe-catallaxy/domain/component.nix { inherit lib floe crdTypes; };
+  componentLib = import ../floe-catallaxy/domain/component.nix { inherit lib floe k8sApi; };
 
   waitUtil = import ../kubernetes/wait.nix { inherit lib; };
   manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };

@@ -184,7 +184,10 @@ in
     ;
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
-    crdTypes = floeCrds.types;
+    k8sApi = import ../../lib/kubernetes/api.nix {
+      inherit lib;
+      crdTypes = floeCrds.types;
+    };
   };
   floeSet = allFloes;
 }
@@ -198,7 +201,10 @@ in
   docDir = ../../docs/generated/kinds;
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
-    crdTypes = floeCrds.types;
+    k8sApi = import ../../lib/kubernetes/api.nix {
+      inherit lib;
+      crdTypes = floeCrds.types;
+    };
   };
 }
 // import ./signature-interface.nix {
@@ -206,7 +212,10 @@ in
   docDir = ../../docs/generated/signatures;
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
-    crdTypes = floeCrds.types;
+    k8sApi = import ../../lib/kubernetes/api.nix {
+      inherit lib;
+      crdTypes = floeCrds.types;
+    };
   };
 }
 // import ./content-cache.nix { inherit lib pkgs labDefs; }

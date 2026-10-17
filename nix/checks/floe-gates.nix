@@ -45,7 +45,10 @@ let
   # own, and a name in a list would have had to be noticed and removed.
   catallaxy = import ../../lib/floe-catallaxy {
     inherit lib pkgs floeCore;
-    crdTypes = floeCrds.types;
+    k8sApi = import ../../lib/kubernetes/api.nix {
+      inherit lib;
+      crdTypes = floeCrds.types;
+    };
   };
 
   # Applied by the distribution rather than here. This file used to build

@@ -46,7 +46,10 @@ let
 
   catallaxy = import ./floe-catallaxy {
     inherit lib pkgs floeCore;
-    crdTypes = types;
+    k8sApi = import ./kubernetes/api.nix {
+      inherit lib;
+      crdTypes = types;
+    };
   };
 
   # applyFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }

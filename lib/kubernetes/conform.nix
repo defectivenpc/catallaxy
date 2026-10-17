@@ -1,8 +1,5 @@
-{ lib, crdTypes }:
+{ lib, k8sApi }:
 
-let
-  k8sTypes = import ./types.nix { inherit lib crdTypes; };
-in
 rec {
   /*
     The generated type for a resource's own `apiVersion` and `kind`, or null
@@ -19,10 +16,7 @@ rec {
       av = resource.apiVersion or null;
       kind = resource.kind or null;
     in
-    if av == null || kind == null then
-      null
-    else
-      k8sTypes.generatedTypes.resolveResourceType k8sTypes.typesByKind av kind;
+    if av == null || kind == null then null else k8sApi.resolve av kind;
 
   /*
     The resource unchanged, once it has been checked against the schema its own

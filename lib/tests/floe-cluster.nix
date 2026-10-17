@@ -17,13 +17,19 @@ let
   floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
   kinds = import ../floe-catallaxy/domain/component.nix {
     inherit lib floe;
-    crdTypes = { };
+    k8sApi = import ../kubernetes/api.nix {
+      inherit lib;
+      crdTypes = { };
+    };
   };
   sigs = import ../floe-catallaxy/domain/sigs.nix { inherit floe; };
   policies = import ../floe-catallaxy/domain/policies.nix { inherit lib sigs; };
   elaborate = import ../lower/elaborate.nix {
     inherit lib floe;
-    crdTypes = { };
+    k8sApi = import ../kubernetes/api.nix {
+      inherit lib;
+      crdTypes = { };
+    };
   };
 
   inherit (kinds)

@@ -28,7 +28,7 @@ let
   # this resource need an edge to whatever establishes its CRD" — so this is
   # the one reader that wants no CRD types at all.
   coreKinds =
-    (import ../kubernetes/types.nix {
+    (import ../kubernetes/api.nix {
       inherit lib;
       crdTypes = { };
     }).coreKinds;

@@ -28,7 +28,10 @@ let
   kinds =
     (import ../../lib/floe-catallaxy {
       inherit lib pkgs floeCore;
-      crdTypes = (import ../../lib/floe-crds.nix { inherit lib; } { floeSet = floeSet'; }).types;
+      k8sApi = import ../../lib/kubernetes/api.nix {
+        inherit lib;
+        crdTypes = (import ../../lib/floe-crds.nix { inherit lib; } { floeSet = floeSet'; }).types;
+      };
     }).kinds;
 in
 lib.runTests {
