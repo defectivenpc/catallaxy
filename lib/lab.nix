@@ -116,7 +116,13 @@ let
   # The four phases outside the lab's floe, each a plain function.
   inherit (import ./lower/link.nix { inherit lib catallaxy; }) linkLab;
   inherit (import ./lower/cluster.nix { inherit lib catallaxy; }) lowerCluster;
-  inherit (import ./lower/lab.nix { inherit lib pkgs; }) lowerLab;
+  inherit
+    (import ./lower/lab.nix {
+      inherit lib pkgs;
+      inherit (catallaxy) conformDocument;
+    })
+    lowerLab
+    ;
   plan = import ./lower/plan.nix { inherit lib catallaxy; };
   stepTypes = import ./eval/step-type.nix { inherit lib; };
 

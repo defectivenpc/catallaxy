@@ -12,7 +12,11 @@
 # A plain function, and its argument list is worth reading as one: it is the
 # whole of what lowering a lab needs to know, which is to say everything a lab
 # holds reaches `cata` through one of these fifteen things.
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  conformDocument,
+}:
 
 {
   # lowerLab :: { … } -> { cliConfig; package; opsCollisions; }
@@ -163,7 +167,10 @@
       };
     in
     {
-      cliConfig = {
+      # Checked against the document's shape, which is generated from the
+      # types `cata` parses it into: a field this fold emits that no command
+      # reads fails here rather than being ignored on the other side.
+      cliConfig = conformDocument {
         labName = labName;
 
         infraPublications = lib.concatLists (

@@ -31,6 +31,17 @@ let
   };
   policies = import ./policies.nix { inherit lib sigs; };
 
+  # What this distribution owns: the kinds a floe may emit, and the shape they
+  # fold into. The document's type is generated from the Rust types `cata`
+  # parses it into, so those are the one definition of it.
+  distribution = floe.mkDistribution {
+    name = "catallaxy";
+
+    kinds = lib.filterAttrs (_: k: (k.__floeSig or false)) kinds;
+
+    document = import ../document/generated.nix { T = floe.T; };
+  };
+
 in
 rec {
   inherit
@@ -302,6 +313,8 @@ rec {
   # the parent's — so asked here the question has no cluster to find. The
   # policy's own note said where the true statement lives: "the statement one
   # level up is the true one". ADR 0003.
+  inherit (distribution) conformDocument;
+
   clusterPolicies = [
     policies.oneDelivery
     policies.needsNameSiblings

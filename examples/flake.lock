@@ -78,8 +78,8 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1792212912,
-        "narHash": "sha256-IswJ9SFwCLNZF6pwXKWXKFrr66V1CANNNCRwo5a81H4=",
+        "lastModified": 1792217354,
+        "narHash": "sha256-mE0ywMQuZNjsc4A3UJHGJK3uKUbkXI2QffmjmRlfePo=",
         "path": "/home/whitehead/workspace/praxiotic/floes",
         "type": "path"
       },
