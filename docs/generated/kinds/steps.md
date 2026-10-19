@@ -16,4 +16,7 @@ Written as `out.steps`. Checked against this shape where the floe is linked, by 
 
 | floe | as |
 | --- | --- |
+| [`external-cluster`](../floes/external-cluster.md) | `out.steps` |
 | [`external-dns`](../floes/external-dns.md) | `out.steps` |
+| [`k3d-cluster`](../floes/k3d-cluster.md) | `out.steps` |
+| [`talos-cluster`](../floes/talos-cluster.md) | `out.steps` |

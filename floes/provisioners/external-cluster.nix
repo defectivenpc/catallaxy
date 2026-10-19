@@ -22,6 +22,9 @@
   ...
 }:
 
+let
+in
+
 floe.mkFloe {
   name = "external-cluster";
   summary = "A cluster something else brings into existence, which this lab installs into.";
@@ -174,6 +177,7 @@ floe.mkFloe {
   optional.labStore = sigs.LAB_SECRET_STORE;
 
   out.clusterDescriptor = kinds.cluster;
+  out.steps = kinds.steps;
 
   modules = [
     (
@@ -192,6 +196,18 @@ floe.mkFloe {
             serviceSubnet
             assignsLoadBalancers
             ;
+        };
+
+        config.floe.out.steps.create-cluster = {
+          kind = "create-cluster";
+          description = "Create external cluster '${inputs.name}'";
+          providesCluster = "created";
+          afterCluster = "kubeconfigSynced";
+
+          params = {
+            inherit (inputs) name;
+            provisioner = "external";
+          };
         };
 
         config.floe.out.clusterDescriptor = {

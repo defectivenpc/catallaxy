@@ -46,6 +46,10 @@ lib.runTests {
       params = { };
       provides = [ ];
       teardown = null;
+
+      afterCluster = null;
+      providesCluster = null;
+
       policy = {
         interactive = false;
         onFailure = "fatal";

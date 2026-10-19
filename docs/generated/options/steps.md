@@ -7,6 +7,7 @@ What a floe writes into each entry of its `LAB_STEPS` contribution. What a given
 | Option | Type | Default |
 | --- | --- | --- |
 | [`after`](#after) | `list of string` | `[ ]` |
+| [`afterCluster`](#aftercluster) | `null or one of "cloudReleased", "created", "deployed", "destroyed", "gone", "kubeconfigSynced", "managedResourceAdopted", "managedResourceDeleted", "managedResourceReconciled"` | `null` |
 | [`before`](#before) | `list of string` | `[ ]` |
 | [`cluster`](#cluster) | `null or string` | `null` |
 | [`description`](#description) | `string` | `the attribute name` |
@@ -15,6 +16,7 @@ What a floe writes into each entry of its `LAB_STEPS` contribution. What a given
 | [`origin`](#origin) | `string` | `"lab"` |
 | [`params`](#params) | `attribute set` | `{ }` |
 | [`provides`](#provides) | `list of string` | `[ ]` |
+| [`providesCluster`](#providescluster) | `null or one of "cloudReleased", "created", "deployed", "destroyed", "gone", "kubeconfigSynced", "managedResourceAdopted", "managedResourceDeleted", "managedResourceReconciled"` | `null` |
 | [`teardown`](#teardown) | `null or value "before-cluster-destroy" (singular enum)` | `null` |
 | [`policy.interactive`](#policy-interactive) | `boolean` | `false` |
 | [`policy.onFailure`](#policy-onfailure) | `one of "fatal", "continue"` | `"fatal"` |
@@ -34,6 +36,20 @@ run a DNS server".
 **Type:** `list of string`
 
 **Default:** `[ ]`
+
+**Declared in:** lib/eval/step-type.nix
+
+---
+
+### `afterCluster` {#aftercluster}
+
+A state this step waits for *its own* cluster to reach.
+
+Distinct from `afterClusters`, which waits on every cluster: a unit of
+a cluster that needs its own kubeconfig on disk is saying something
+about one cluster, and naming the others would over-order the plan.
+
+**Type:** `null or one of "cloudReleased", "created", "deployed", "destroyed", "gone", "kubeconfigSynced", "managedResourceAdopted", "managedResourceDeleted", "managedResourceReconciled"`
 
 **Declared in:** lib/eval/step-type.nix
 
@@ -134,6 +150,22 @@ Tokens that are true once this step has run.
 **Type:** `list of string`
 
 **Default:** `[ ]`
+
+**Declared in:** lib/eval/step-type.nix
+
+---
+
+### `providesCluster` {#providescluster}
+
+The state this step puts its cluster into, for a step a unit of a
+cluster contributes.
+
+The provide side of `beforeClusters`: a floe that creates a cluster
+says which state it reaches rather than spelling the token, because
+the name it would need is the lab's key for the cluster and the floe
+only has its own input. The planner knows both and expands it.
+
+**Type:** `null or one of "cloudReleased", "created", "deployed", "destroyed", "gone", "kubeconfigSynced", "managedResourceAdopted", "managedResourceDeleted", "managedResourceReconciled"`
 
 **Declared in:** lib/eval/step-type.nix
 

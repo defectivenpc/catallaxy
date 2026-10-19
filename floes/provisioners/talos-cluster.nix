@@ -19,8 +19,13 @@
   floe,
   sigs,
   kinds,
+  catallaxy,
   ...
 }:
+
+let
+  inherit (catallaxy) planTokens needs;
+in
 
 floe.mkFloe {
   name = "talos-cluster";
@@ -160,6 +165,7 @@ floe.mkFloe {
   provides.edge = sigs.CLUSTER_EDGE;
 
   out.clusterDescriptor = kinds.cluster;
+  out.steps = kinds.steps;
 
   modules = [
     (
@@ -198,6 +204,18 @@ floe.mkFloe {
           context = config.kubeContext;
 
           assignsLoadBalancers = false;
+        };
+
+        config.floe.out.steps.create-cluster = {
+          kind = "create-cluster";
+          description = "Create talos cluster '${inputs.name}'";
+          providesCluster = "created";
+          after = [ (needs planTokens.lab.network) ];
+
+          params = {
+            inherit (inputs) name;
+            provisioner = "talos";
+          };
         };
 
         config.floe.out.clusterDescriptor = {

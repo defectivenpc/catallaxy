@@ -38,6 +38,7 @@ A cluster something else brings into existence, which this lab installs into.
 | alias | kind | what it carries |
 | --- | --- | --- |
 | clusterDescriptor | catallaxy.cluster | How a cluster is created and who fronts it — the descriptor `cata` builds it from. |
+| steps | catallaxy.steps | Plan steps a unit of a cluster contributes, keyed by step name. |
 
 ## What it emits
 
@@ -50,3 +51,4 @@ lab's inclusion — so its declaration above is its interface.
 | kind | entries |
 | --- | --- |
 | catallaxy.cluster | config, edge, instanceName, kubeContext, kubernetes, name, network, wait |
+| catallaxy.steps | create-cluster |

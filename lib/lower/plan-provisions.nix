@@ -172,10 +172,6 @@ in
 
   steps = lib.foldl' lib.mergeAttrs { } (map stepsFor edges) // kubeconfigSteps;
 
-  extraAfterFor =
-    name:
-    lib.optional (variantOf clusters.${name} == "external") (needs (t.cluster name).kubeconfigSynced);
-
   teardownAfterFor =
     name: map (e: wants (t.cluster e.provisioned).gone) (lib.filter (e: e.mgmt == name) edges);
 }

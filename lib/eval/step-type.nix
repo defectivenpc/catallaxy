@@ -159,6 +159,32 @@ let
       '';
     };
 
+    afterCluster = mkOption {
+      type = types.nullOr (types.enum clusterStates);
+      default = null;
+      description = ''
+        A state this step waits for *its own* cluster to reach.
+
+        Distinct from `afterClusters`, which waits on every cluster: a unit of
+        a cluster that needs its own kubeconfig on disk is saying something
+        about one cluster, and naming the others would over-order the plan.
+      '';
+    };
+
+    providesCluster = mkOption {
+      type = types.nullOr (types.enum clusterStates);
+      default = null;
+      description = ''
+        The state this step puts its cluster into, for a step a unit of a
+        cluster contributes.
+
+        The provide side of `beforeClusters`: a floe that creates a cluster
+        says which state it reaches rather than spelling the token, because
+        the name it would need is the lab's key for the cluster and the floe
+        only has its own input. The planner knows both and expands it.
+      '';
+    };
+
     policy = policyOptions;
   };
 

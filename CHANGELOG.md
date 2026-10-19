@@ -9,26 +9,62 @@ The format is based on
 
 ### Changed
 
-- **A cluster's plan steps are their own output kind.** `steps` was a field of
-  `catallaxy.component`, so only a floe emitting a component could contribute
-  one — and a provisioner does not: it emits `clusterDescriptor`. The floe
-  that knows how to create a cluster had no way to say how, which is why
-  `lib/lower/plan.nix` synthesised `create-cluster-<name>` itself and read the
-  provisioner's identity back off the lowered descriptor with
+- **A provisioner declares how its cluster is created.** `create-cluster` was
+  synthesised by `lib/lower/plan.nix`, which meant lowering had to ask what
+  kind of cluster it was looking at — `lib.head (lib.attrNames
+  c.spec.provisioning.config)`, the tag of a tagged union taken off a lowered
+  document — and then special-case the answer twice: `onDockerNetwork` for
+  whether to wait on the lab network, and `extraAfterFor` for the external
+  case waiting on its kubeconfig.
+
+  `k3d-cluster`, `talos-cluster` and `external-cluster` each emit their own
+  `create-cluster` step now, and each says its own `after`: the two that put a
+  cluster on the lab bridge wait for it, and the one that does not simply does
+  not. `variantOf`'s two callers in `plan.nix` are gone with the question, and
+  so are `onDockerNetwork` and `extraAfterFor`.
+
+  Two sugars make this possible without a provisioner spelling a token.
+  `providesCluster = "created"` is the provide-side counterpart of
+  `beforeClusters`, and `afterCluster` waits on *this* cluster's state where
+  `afterClusters` waits on every one. Both are expanded by `orderSteps`, which
+  already renamed a cluster's steps and stamped their cluster — the name a
+  provisioner would have needed is the lab's key for the cluster, and a floe
+  has only its own input.
+
+  Every rendered manifest is byte-identical. What moved is the step's *name* —
+  `create-cluster-app` is `app-create-cluster`, because a cluster's steps are
+  prefixed with their cluster — and `metadata.json` with it, which is the one
+  line each of the 14 digests. `Step::label()` falls back to the name only
+  when the description is empty, and these always have one.
+
+  The plan's step *order* shifted in three labs where creates and deploys had
+  no edge between them: the name feeds the topological tie-break. Every
+  `deploy-manifests` still follows its own cluster's `create-cluster`, and
+  `provisions` still syncs the kubeconfig before creating the external
+  cluster.
+
+- **A cluster's plan steps are their own output kind.** `steps` was a field
+  of `catallaxy.component`, so only a floe emitting a component could
+  contribute one — and a provisioner does not: it emits `clusterDescriptor`.
+  The floe that knows how to create a cluster had no way to say how, which
+  is why `lib/lower/plan.nix` synthesised `create-cluster-<name>` itself and
+  read the provisioner's identity back off the lowered descriptor with
   `lib.head (lib.attrNames config)`.
 
-  `catallaxy.steps` is now a kind of its own, typed the same way the field was
-  and read by `elaborate.nix` from `link.out."catallaxy.steps"` beside the
-  components. Any unit of a cluster may emit one. Nothing else moved:
+  `catallaxy.steps` is now a kind of its own, typed the same way the field
+  was and read by `elaborate.nix` from `link.out."catallaxy.steps"` beside
+  the components. Any unit of a cluster may emit one. Nothing else moved:
   `orderSteps` already renamed cluster steps to `<cluster>-<step>`, stamped
-  the cluster and origin, and expanded `teardown = "before-cluster-destroy"`.
+  the cluster and origin, and expanded
+  `teardown = "before-cluster-destroy"`.
 
   `external-dns` is the one floe that was using the field and now emits the
-  kind. Its suite moved with it, and one test moved channel for a reason worth
-  recording: `testAnUnparseableIntervalIsRefused` forced `.component`, and the
-  interval is parsed only inside the purge script the step names, so the throw
-  used to be reachable through the component because the step lived there. It
-  asserts on `.steps` now. The validation itself never moved.
+  kind. Its suite moved with it, and one test moved channel for a reason
+  worth recording: `testAnUnparseableIntervalIsRefused` forced `.component`,
+  and the interval is parsed only inside the purge script the step names, so
+  the throw used to be reachable through the component because the step
+  lived there. It asserts on `.steps` now. The validation itself never
+  moved.
 
   Every plan, manifest digest and lab document is byte-identical, which is
   what says this changed only where a step is declared.

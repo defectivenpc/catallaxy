@@ -24,8 +24,6 @@ in
 
       hasServices = services != { };
 
-      onDockerNetwork = name: !(clusters.${name}.spec.provisioning.config ? external);
-
       stacks = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: c: c.stacks) clusters);
 
       phaseOfStack = name: (lib.head (lib.attrValues stacks.${name}.resources)).phase;
@@ -124,19 +122,6 @@ in
 
         // lib.foldl' lib.mergeAttrs { } (
           lib.mapAttrsToList (name: c: {
-            "create-cluster-${name}" = {
-              kind = "create-cluster";
-              description = "Create ${variantOf c} cluster '${name}'";
-              cluster = name;
-              provides = [ (t.cluster name).created ];
-
-              after = lib.optional (onDockerNetwork name) (needs t.lab.network) ++ provisions.extraAfterFor name;
-              params = {
-                inherit name;
-                provisioner = variantOf c;
-              };
-            };
-
             "deploy-manifests-${name}" = {
               kind = "deploy-manifests";
               description = "Deploy manifests to '${name}'";
@@ -185,13 +170,23 @@ in
                 {
                   name = "${clusterName}-${stepName}";
                   value =
-                    (builtins.removeAttrs step [ "teardown" ])
+                    (builtins.removeAttrs step [
+                      "teardown"
+                      "providesCluster"
+                      "afterCluster"
+                    ])
                     // {
                       cluster = clusterName;
                       inherit origin;
                     }
                     // lib.optionalAttrs (step.teardown or null == "before-cluster-destroy") {
                       before = (step.before or [ ]) ++ [ (wants (t.cluster clusterName).destroyed) ];
+                    }
+                    // lib.optionalAttrs (step.providesCluster != null) {
+                      provides = step.provides ++ [ (t.cluster clusterName).${step.providesCluster} ];
+                    }
+                    // lib.optionalAttrs (step.afterCluster != null) {
+                      after = step.after ++ [ (needs (t.cluster clusterName).${step.afterCluster}) ];
                     };
                 }
               ) unitSteps

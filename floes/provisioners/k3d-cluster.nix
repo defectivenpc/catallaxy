@@ -10,10 +10,12 @@
   floe,
   sigs,
   kinds,
+  catallaxy,
   ...
 }:
 
 let
+  inherit (catallaxy) planTokens needs;
   # Reads are the bulk of the traffic and the least of the interest.
   # Dropping them first is what keeps the log readable at `Metadata`.
   auditPolicyFor =
@@ -282,6 +284,7 @@ floe.mkFloe {
   optional.ociMirror = sigs.OCI_MIRROR;
 
   out.clusterDescriptor = kinds.cluster;
+  out.steps = kinds.steps;
 
   modules = [
     (
@@ -328,6 +331,18 @@ floe.mkFloe {
           context = config.kubeContext;
 
           assignsLoadBalancers = true;
+        };
+
+        config.floe.out.steps.create-cluster = {
+          kind = "create-cluster";
+          description = "Create k3d cluster '${inputs.name}'";
+          providesCluster = "created";
+          after = [ (needs planTokens.lab.network) ];
+
+          params = {
+            inherit (inputs) name;
+            provisioner = "k3d";
+          };
         };
 
         config.floe.out.clusterDescriptor = {
