@@ -1,27 +1,3 @@
-# What a floe's interface is, written out.
-#
-# The complete interface of a floe — inputs, requires,
-# provides, out kinds — is available from its declaration header without
-# evaluating the body. That was half true. The declaration side is there to be
-# read; the *return* side is one token, `out.component = kinds.component`,
-# standing for twenty-six channels. A reader could not see which bundles
-# install, which `<lab>-ops` commands appear, whether the floe adds a plan step,
-# or whether it lints every other floe's output.
-#
-# So the interface is derived rather than declared. Bundle names already live
-# in `needs`, in `backs` and in the committed cli-configs; a fourth declaration
-# would be churn on every rename. And the facts that matter most do not exist
-# until elaboration — an ops command's name folds in the bundle it sits on
-# (`elaborate.nix:322-331`), so no header could state it. Only the finished
-# article can.
-#
-# Two sections per floe, and the split is the point:
-#
-#   - **Declaration** comes from the floe definition alone. True wherever the
-#     floe is instantiated, and available for a floe no lab uses.
-#   - **What it emits** comes from linking and elaborating it in a real lab.
-#     Absent for a floe no lab renders, and the document says so rather than
-#     leaving a reader to wonder whether it emits nothing.
 {
   lib,
   pkgs,
@@ -32,41 +8,12 @@
 }:
 
 let
-  inherit (catallaxy) floe sigs kinds;
+  inherit (catallaxy) floe;
 
-  # Applied by the distribution rather than here. This file used to build
-  # the set itself, which meant a fourth copy of `applyFloes` that had to
-  # be kept in step with what a floe is handed.
   floes = mkFloes floeSet;
 
   defOf = name: floes.${name};
 
-  # ---- where each floe is rendered ----------------------------------------
-  #
-  # `<floe name> -> { lab; cluster; unit; }`, or absent. A lab names *units*,
-  # and a unit may be called anything; the link's `floeNames` is what floe each
-  # one actually is.
-  #
-  # Read off the link rather than off the clusters' own attrsets, because a
-  # cluster is an authored floe now and its units are inside its inclusion.
-  # The link flattens them to `<cluster>/<unit>`, nested as deep as the
-  # assembly goes — `core/platform/cert-manager` is a floe inside an inclusion
-  # inside a cluster, and its unit name is the whole of the path below the
-  # cluster, which is also how the elaborator keys its bundles.
-  #
-  # `cluster` is null for a key with no `/`: a unit of the lab itself, which is
-  # a cluster floe, a claim, or a lab-scope floe. Those render nothing into a
-  # cluster and their section says what they do instead.
-  #
-  # Every lab, not just `every-floe`. That lab exists so no floe's
-  # *declarations* go unchecked (`floe-gates.nix`), and it reads well as the
-  # one source until you notice what it cannot hold: a host floe is a unit of
-  # a lab and not of a cluster, and a claim is one per provisioner. So
-  # thirteen pages carried "no lab in this tree renders this floe" about floes
-  # every lab in the tree renders.
-  #
-  # `every-floe` still wins where it has an answer, so the richest rendering
-  # is the one documented; the rest are taken in name order, which is stable.
   placementsIn =
     labName: lab:
     lib.mapAttrsToList (
@@ -86,10 +33,6 @@ let
     placementsIn "every-floe" labDefs."every-floe"
     ++ lib.concatLists (lib.mapAttrsToList placementsIn (removeAttrs labDefs [ "every-floe" ]));
 
-  # How much a placement has to show: the entries across every output kind it
-  # emitted. Zero for an in-cluster floe, whose section is read off the
-  # elaborated cluster instead and for which `every-floe` is already the
-  # richest answer.
   entryCount =
     at:
     let
@@ -101,15 +44,6 @@ let
     else
       lib.foldl' (acc: byUnit: acc + size byUnit.${at.unit}) 0 (lib.attrValues kinds);
 
-  # A floe several labs render is documented from the one that shows the most.
-  # `lab-proxy` read from the first lab in name order is read from `cloud`,
-  # whose ingress fronts nothing — so the page's one table came out empty
-  # about the floe whose whole job is that table.
-  #
-  # Strict `>`, and the list is already in preference order, so a tie keeps
-  # `every-floe` and then name order. A fold rather than a sort because
-  # `builtins.sort` is not promised to be stable and this decides the bytes of
-  # a diff-checked file.
   best =
     group:
     (lib.foldl' (
@@ -118,19 +52,8 @@ let
 
   placement = lib.mapAttrs (_: best) (lib.groupBy (c: c.name) candidates);
 
-  # ---- the page, as data ---------------------------------------------------
-  #
-  # What the page *is*. The markdown is `cli/src/docs/page.rs`, so this file
-  # never decides how a table escapes a `|` or what an empty section looks
-  # like — three generators used to answer those three ways, and a `section`
-  # helper here left a stray blank line before every heading that followed a
-  # `###` block.
-
   table = columns: rows: { inherit columns rows; };
 
-  # A signature, as a hole sees it, linked to its own page. The description is
-  # the signature's own, so every floe requiring `X509_ISSUANCE` says the same
-  # thing about it and none of them had to write it down.
   holeRows =
     holes:
     lib.mapAttrsToList (hole: sig: [

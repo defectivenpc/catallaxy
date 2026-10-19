@@ -23,9 +23,6 @@
     includes = lib.mkForce [ "*.md" ];
     excludes = [
       "docs/book/src/SUMMARY.md"
-
-      "docs/generated/floes/*.md"
-
       "docs/generated/**"
     ];
   };

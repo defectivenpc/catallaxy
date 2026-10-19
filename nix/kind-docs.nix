@@ -1,4 +1,3 @@
-# A page per output kind, rendered from the `T` schema the linker checks against.
 {
   lib,
   pkgs,
@@ -19,9 +18,6 @@ let
   isKind = v: (v.__floeSig or false) && lib.hasPrefix "catallaxy." (v.name or "");
   kindSet = lib.filterAttrs (_: isKind) kinds;
 
-  # A type as one line. `T.named` is what makes a shape worth linking: an
-  # anonymous record renders its fields inline, a named one renders as its
-  # name and earns a row in `Types`.
   isNamed = ty: (ty.tag or null) == "record" && !lib.hasPrefix "record {" (ty.name or "record {");
 
   render =

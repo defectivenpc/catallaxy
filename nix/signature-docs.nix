@@ -1,15 +1,3 @@
-# One page per signature.
-#
-# A signature is a module's interface to every other module, and the only
-# documentation it had was repeated on the pages of the floes that touch it:
-# `docs/generated/floes/lab-ca.md` says what `DNS_ZONE` is because `lab-ca`
-# requires it, and so do nine others. What none of them could say is the thing
-# a reader actually arrives wanting — *which floe answers this* — because no
-# floe knows its own peers.
-#
-# That is computed here, off the floe set, and it is the point of the page.
-# `requires.zone = sigs.DNS_ZONE` is a question; this is where the answers are
-# listed.
 {
   lib,
   pkgs,
@@ -19,27 +7,10 @@
 }:
 
 let
-  inherit (catallaxy) floe sigs kinds;
+  inherit (catallaxy) sigs;
 
-  # Applied by the distribution rather than here. This file used to build
-  # the set itself, which meant a fourth copy of `applyFloes` that had to
-  # be kept in step with what a floe is handed.
   floes = mkFloes floeSet;
 
-  defOf = name: floes.${name};
-
-  defs = lib.mapAttrs (name: _: defOf name) floeSet;
-
-  # ---- who touches each signature -----------------------------------------
-  #
-  # Keyed by the signature's `name` and not by the attribute it is declared
-  # under, because a floe names its own holes: `lab-ca` calls its `DNS_ZONE`
-  # hole `zone` and the declaration is `requires.zone = sigs.DNS_ZONE`. The
-  # hole's name is the floe's business; the signature is what both sides agree
-  # on.
-  #
-  # `[{ floe; hole; }]`, so the page can say both — a reader following a link
-  # back wants to know what to grep for in the floe.
   touching =
     field: sigName:
     lib.concatLists (
@@ -49,19 +20,11 @@ let
           floe = floeName;
           inherit hole;
         }) (lib.filterAttrs (_: sig: sig.name == sigName) (def.${field} or { }))
-      ) defs
+      ) floes
     );
-
-  # ---- the page, as data ---------------------------------------------------
-  #
-  # What the page *is*. The markdown is `cli/src/docs/page.rs`, so this file
-  # never decides how a table escapes a `|` or what an empty section looks
-  # like — three generators used to answer those three ways.
 
   table = columns: rows: { inherit columns rows; };
 
-  # A floe, as a link to its own page. Sibling directories under
-  # `docs/generated/`, so the hop is one level up and back down.
   floeLink = name: "[`${name}`](../floes/${name}.md)";
 
   touchSection = heading: field: sigName: {
