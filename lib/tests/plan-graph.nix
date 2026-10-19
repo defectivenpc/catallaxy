@@ -110,45 +110,6 @@ lib.concatLists [
     ]
   )
 
-  (assertEq "kind:X anchor matches any step of that kind"
-    (orderOf {
-      user = s {
-        kind = "consumer";
-        after = [ "kind:producer" ];
-      };
-      p1 = s { kind = "producer"; };
-      p2 = s { kind = "producer"; };
-    })
-    [
-      "p1"
-      "p2"
-      "user"
-    ]
-  )
-
-  (assertEq "kind:X:cluster narrows by the step's cluster"
-    (orderOf {
-      user = s {
-        kind = "consumer";
-        after = [ "kind:producer:apps" ];
-      };
-      mgmt-p = s {
-        kind = "producer";
-        cluster = "mgmt";
-      };
-      apps-p = s {
-        kind = "producer";
-        cluster = "apps";
-      };
-    })
-
-    [
-      "apps-p"
-      "mgmt-p"
-      "user"
-    ]
-  )
-
   (assertEq "provides:token anchor matches any provider"
     (orderOf {
       user = s { after = [ "provides:tok" ]; };
@@ -172,10 +133,6 @@ lib.concatLists [
       "user"
     ]
   )
-
-  (assertEq "optional: prefix silences a missing kind anchor" (orderOf {
-    user = s { after = [ "optional:kind:nonexistent" ]; };
-  }) [ "user" ])
 
   (assertEq "optional: prefix silences a missing provides anchor" (orderOf {
     user = s { after = [ "optional:provides:nobody-publishes-this" ]; };
@@ -209,12 +166,6 @@ lib.concatLists [
       "user"
     ]
   )
-
-  (assertThrows "hard kind: anchor miss fails eval" (
-    force (orderOf {
-      user = s { after = [ "kind:no-such-kind" ]; };
-    })
-  ))
 
   (assertThrows "hard provides: anchor miss fails eval" (
     force (orderOf {
@@ -308,10 +259,10 @@ lib.concatLists [
 
   (assertEq "requires takes the same grammar as after"
     (orderOf {
-      user = s { requires = [ "kind:maker" ]; };
+      user = s { requires = [ "provides:made" ]; };
       maker = s {
         kind = "maker";
-        provides = [ "unused" ];
+        provides = [ "made" ];
       };
     })
     [

@@ -5,13 +5,10 @@ let
     attrNames
     concatMap
     concatStringsSep
-    elemAt
     filterAttrs
     foldl'
-    hasPrefix
     length
     removePrefix
-    splitString
     ;
 
   shared = import ./graph.nix { inherit lib; };
@@ -19,22 +16,8 @@ let
   inherit (shared) parseAnchor buildProvidesIdx;
 
   matchAnchor =
-    steps: providesIdx: body:
-    if hasPrefix "kind:" body then
-      let
-        parts = splitString ":" body;
-        kind = elemAt parts 1;
-
-        scope = if length parts > 2 then elemAt parts 2 else null;
-        matching = filterAttrs (
-          _: s: (s.kind or null) == kind && (scope == null || (s.cluster or null) == scope)
-        ) steps;
-      in
-      attrNames matching
-    else if hasPrefix "provides:" body then
-      providesIdx.${removePrefix "provides:" body} or [ ]
-    else
-      providesIdx.${body} or [ ];
+    _steps: providesIdx: body:
+    providesIdx.${removePrefix "provides:" body} or [ ];
 
   originOf =
     steps: stepName:
@@ -56,10 +39,8 @@ let
       throw ''
         ${originOf nodes node}: ${field} names '${body}', which no step provides.
 
-        A bare name is looked up among the tokens steps publish. `kind:<kind>`
-        and `kind:<kind>:<cluster>` address steps by what they are, which is
-        the only way to name a step: a step's own key is private to whichever
-        module emitted it, and a cluster's steps are renamed to
+        An anchor names a token, never a step: a step's own key is private to
+        whichever module emitted it, and a cluster's steps are renamed to
         `<cluster>-<name>` before they get here.
 
         Supply it with `provides = [ "${body}" ]` on the step that does, or
