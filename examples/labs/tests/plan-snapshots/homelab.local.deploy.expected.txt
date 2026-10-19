@@ -4,6 +4,6 @@
 [004] registry-setup name=registry-setup params.port=5186 params.upstreams=["codeberg.org","registry.k8s.io","ghcr.io","quay.io","docker.io","public.ecr.aws","xpkg.upbound.io","oci.external-secrets.io"] params.zone=homelab.test
 [005] warm-cache name=warm-cache
 [006] create-cluster name=core-create-cluster cluster=core params.name=core params.provisioner=k3d
-[007] deploy-manifests name=deploy-manifests-core cluster=core params.kubeContext=k3d-homelab-local-core params.target=core
+[007] deploy-manifests name=core-deploy-manifests cluster=core params.kubeContext=k3d-homelab-local-core params.target=core
 [008] create-cluster name=obs-create-cluster cluster=obs params.name=obs params.provisioner=k3d
-[009] deploy-manifests name=deploy-manifests-obs cluster=obs params.kubeContext=k3d-homelab-local-obs params.target=obs
+[009] deploy-manifests name=obs-deploy-manifests cluster=obs params.kubeContext=k3d-homelab-local-obs params.target=obs

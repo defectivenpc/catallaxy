@@ -124,7 +124,7 @@ let
 
       framework = plan.frameworkSteps {
         inherit clusters;
-        inherit (folds) services link;
+        inherit (folds) link;
       };
 
       steps = stepTypes.mergeSteps [

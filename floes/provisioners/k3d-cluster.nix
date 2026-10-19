@@ -345,6 +345,32 @@ floe.mkFloe {
           };
         };
 
+        config.floe.out.steps.deploy-manifests = {
+          kind = "deploy-manifests";
+          description = "Deploy manifests to '${inputs.name}'";
+          providesCluster = "deployed";
+          afterCluster = "created";
+
+          params = {
+            target = inputs.name;
+            bootstrap = false;
+            kubeContext = config.kubeContext;
+          };
+        };
+
+        config.floe.out.steps.destroy-cluster = {
+          kind = "destroy-cluster";
+          direction = "teardown";
+          description = "Destroy k3d cluster '${inputs.name}'";
+          providesCluster = "destroyed";
+
+          params = {
+            inherit (inputs) name;
+            provisioner = "k3d";
+            skipIfMissing = true;
+          };
+        };
+
         config.floe.out.clusterDescriptor = {
           inherit (inputs) name instanceName;
           kubeContext = config.kubeContext;

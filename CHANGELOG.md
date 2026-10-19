@@ -9,36 +9,72 @@ The format is based on
 
 ### Changed
 
-- **A provisioner declares how its cluster is created.** `create-cluster` was
-  synthesised by `lib/lower/plan.nix`, which meant lowering had to ask what
-  kind of cluster it was looking at — `lib.head (lib.attrNames
-  c.spec.provisioning.config)`, the tag of a tagged union taken off a lowered
-  document — and then special-case the answer twice: `onDockerNetwork` for
-  whether to wait on the lab network, and `extraAfterFor` for the external
-  case waiting on its kubeconfig.
+- **The lab lifecycle is declared by the floes that own it.** `deploy-manifests`
+  and `destroy-cluster` join `create-cluster` on the three provisioners;
+  `setup-services` and `remove-services` move to `lab-services`, which already
+  collects the containers they start. `frameworkSteps` keeps the infra stack
+  steps and nothing else, and no longer takes `services`.
+
+  `remove-services` is the clearest case for the condition sugars: `after =
+  map (n: wants (t.cluster n).destroyed) clusterNames` and `before = [ (wants
+  t.lab.networkRemoved) ]` are `afterClusters = "destroyed"` and `beforeLab =
+  "networkRemoved"`. The floe says when it runs; it never learns a cluster's
+  name or a token's spelling.
+
+  `teardownAfterFor` is gone by inversion rather than by moving. It pushed
+  "wait for the clusters this one provisions to be gone" onto a management
+  cluster's destroy step, which is why that step could not leave lowering —
+  only the lab knows the provisioning edges. But `wait-for-cluster-gone`
+  already knows both clusters, so it declares `before = [ (wants (t.cluster
+  e.mgmt).destroyed) ]` and the graph inverts it. That is what `before` is
+  for: a step inserting itself ahead of something that has never heard of it.
+
+- **A cluster's name is the key it is placed under.** It was a placement
+  *default*, so a lab could give its provisioner a different one — and
+  `create_cluster.rs` does `sctx.lab.cluster(name)?`, looking the cluster up in
+  the document by that param. A divergent name meant a step that could not find
+  its own cluster, and nothing said so: no lab overrode it, so no fixture
+  exercised it.
+
+  Refused now, and only on disagreement — `nix/checks/secret-sharing.nix`
+  passes `name = clusterName` redundantly but correctly, and a redundant
+  agreeing value is not a fault. This is what makes a floe's own
+  `inherit (inputs) name` sound in a step param.
+
+  Every rendered manifest is byte-identical. Step names moved as they did for
+  `create-cluster` — `deploy-manifests-app` is `app-deploy-manifests` — with
+  `metadata.json` and the plan snapshots following.
+
+- **A provisioner declares how its cluster is created.** `create-cluster`
+  was synthesised by `lib/lower/plan.nix`, which meant lowering had to ask
+  what kind of cluster it was looking at —
+  `lib.head (lib.attrNames c.spec.provisioning.config)`, the tag of a tagged
+  union taken off a lowered document — and then special-case the answer
+  twice: `onDockerNetwork` for whether to wait on the lab network, and
+  `extraAfterFor` for the external case waiting on its kubeconfig.
 
   `k3d-cluster`, `talos-cluster` and `external-cluster` each emit their own
-  `create-cluster` step now, and each says its own `after`: the two that put a
-  cluster on the lab bridge wait for it, and the one that does not simply does
-  not. `variantOf`'s two callers in `plan.nix` are gone with the question, and
-  so are `onDockerNetwork` and `extraAfterFor`.
+  `create-cluster` step now, and each says its own `after`: the two that put
+  a cluster on the lab bridge wait for it, and the one that does not simply
+  does not. `variantOf`'s two callers in `plan.nix` are gone with the
+  question, and so are `onDockerNetwork` and `extraAfterFor`.
 
   Two sugars make this possible without a provisioner spelling a token.
   `providesCluster = "created"` is the provide-side counterpart of
-  `beforeClusters`, and `afterCluster` waits on *this* cluster's state where
-  `afterClusters` waits on every one. Both are expanded by `orderSteps`, which
-  already renamed a cluster's steps and stamped their cluster — the name a
-  provisioner would have needed is the lab's key for the cluster, and a floe
-  has only its own input.
+  `beforeClusters`, and `afterCluster` waits on _this_ cluster's state where
+  `afterClusters` waits on every one. Both are expanded by `orderSteps`,
+  which already renamed a cluster's steps and stamped their cluster — the
+  name a provisioner would have needed is the lab's key for the cluster, and
+  a floe has only its own input.
 
-  Every rendered manifest is byte-identical. What moved is the step's *name* —
-  `create-cluster-app` is `app-create-cluster`, because a cluster's steps are
-  prefixed with their cluster — and `metadata.json` with it, which is the one
-  line each of the 14 digests. `Step::label()` falls back to the name only
-  when the description is empty, and these always have one.
+  Every rendered manifest is byte-identical. What moved is the step's _name_
+  — `create-cluster-app` is `app-create-cluster`, because a cluster's steps
+  are prefixed with their cluster — and `metadata.json` with it, which is
+  the one line each of the 14 digests. `Step::label()` falls back to the
+  name only when the description is empty, and these always have one.
 
-  The plan's step *order* shifted in three labs where creates and deploys had
-  no edge between them: the name feeds the topological tie-break. Every
+  The plan's step _order_ shifted in three labs where creates and deploys
+  had no edge between them: the name feeds the topological tie-break. Every
   `deploy-manifests` still follows its own cluster's `create-cluster`, and
   `provisions` still syncs the kubeconfig before creating the external
   cluster.

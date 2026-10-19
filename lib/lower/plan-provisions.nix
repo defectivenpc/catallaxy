@@ -159,6 +159,8 @@ let
         cluster = e.mgmt;
         provides = [ (t.cluster target).gone ];
         after = [ (needs (t.cluster target).managedResourceDeleted) ];
+
+        before = [ (wants (t.cluster e.mgmt).destroyed) ];
         params = resourceParams // {
           waitTimeoutSeconds = 1800;
         };
@@ -166,12 +168,8 @@ let
     };
 in
 {
-  inherit ;
-
   assertions = assertions ++ unreachable;
 
   steps = lib.foldl' lib.mergeAttrs { } (map stepsFor edges) // kubeconfigSteps;
 
-  teardownAfterFor =
-    name: map (e: wants (t.cluster e.provisioned).gone) (lib.filter (e: e.mgmt == name) edges);
 }

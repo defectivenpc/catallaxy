@@ -27,7 +27,17 @@ in
 
       placedProvisioner =
         (provisioner.def.instantiate (
-          (lib.filterAttrs (k: _: provisioner.def.inputs ? ${k}) placementDefaults) // provisioner.supplied
+          lib.throwIf ((provisioner.supplied.name or clusterName) != clusterName)
+            (
+              "cluster '${clusterName}': its provisioner is given `name = \"${
+                toString (provisioner.supplied.name or "")
+              }\"`. A cluster's name is the key it is placed under, because that is what "
+              + "addresses it everywhere else — `manifests/<name>/` in the lab package, "
+              + "`cata lab cluster <name>`, and the params of every step its own floes "
+              + "contribute. Two names would mean a step that cannot find its own "
+              + "cluster. Rename the key, or drop the input and take the default."
+            )
+            ((lib.filterAttrs (k: _: provisioner.def.inputs ? ${k}) placementDefaults) // provisioner.supplied)
         )).bind
           provisioner.bindings;
 

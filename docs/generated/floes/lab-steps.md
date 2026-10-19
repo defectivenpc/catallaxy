@@ -20,4 +20,4 @@ lab's inclusion — so its declaration above is its interface.
 
 | kind | entries |
 | --- | --- |
-| catallaxy.labSteps | apply-root-application, bootstrap-argocd, bootstrap-repos, cert-generate, docker-network-create, publish-manifests, registry-setup, remove-network, warm-cache |
+| catallaxy.labSteps | apply-root-application, bootstrap-argocd, bootstrap-repos, cert-generate, docker-network-create, publish-manifests, registry-setup, remove-network, remove-services, setup-services, warm-cache |

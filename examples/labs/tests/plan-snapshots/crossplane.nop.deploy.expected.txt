@@ -3,4 +3,4 @@
 [003] registry-setup name=registry-setup params.port=5160 params.upstreams=["codeberg.org","registry.k8s.io","ghcr.io","quay.io","docker.io","public.ecr.aws","xpkg.upbound.io","oci.external-secrets.io"] params.zone=crossplane.test
 [004] warm-cache name=warm-cache
 [005] create-cluster name=control-create-cluster cluster=control params.name=control params.provisioner=k3d
-[006] deploy-manifests name=deploy-manifests-control cluster=control params.kubeContext=k3d-crossplane-nop-control params.target=control
+[006] deploy-manifests name=control-deploy-manifests cluster=control params.kubeContext=k3d-crossplane-nop-control params.target=control

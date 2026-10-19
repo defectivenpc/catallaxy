@@ -16,13 +16,10 @@ in
   frameworkSteps =
     {
       clusters,
-      services,
       link,
     }:
     let
       clusterNames = lib.attrNames clusters;
-
-      hasServices = services != { };
 
       stacks = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: c: c.stacks) clusters);
 
@@ -98,57 +95,13 @@ in
       assertions = provisions.assertions;
 
       steps =
-        lib.optionalAttrs hasServices {
-          setup-services = {
-            kind = "setup-services";
-            description = "Start lab infrastructure services";
-            provides = [ t.lab.services ];
-            after = [ (needs t.lab.network) ];
-          };
-
-          remove-services = {
-            kind = "remove-services";
-            description = "Remove lab infrastructure services";
-            provides = [ t.lab.servicesRemoved ];
-
-            after = map (n: wants (t.cluster n).destroyed) clusterNames;
-            before = [ (wants t.lab.networkRemoved) ];
-          };
-        }
-
-        // infraSteps
+        infraSteps
 
         // provisions.steps
 
         // lib.foldl' lib.mergeAttrs { } (
           lib.mapAttrsToList (name: c: {
-            "deploy-manifests-${name}" = {
-              kind = "deploy-manifests";
-              description = "Deploy manifests to '${name}'";
-              cluster = name;
-              provides = [ (t.cluster name).deployed ];
-              after = [ (needs (t.cluster name).created) ];
-              params = {
-                target = name;
-                bootstrap = false;
-                kubeContext = c.spec.clusterHandle.context;
-              };
-            };
 
-            "destroy-cluster-${name}" = {
-              kind = "destroy-cluster";
-              direction = "teardown";
-              description = "Destroy ${variantOf c} cluster '${name}'";
-              cluster = name;
-              provides = [ (t.cluster name).destroyed ];
-
-              after = provisions.teardownAfterFor name;
-              params = {
-                inherit name;
-                provisioner = variantOf c;
-                skipIfMissing = true;
-              };
-            };
           }) clusters
         );
     };

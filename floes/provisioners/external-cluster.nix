@@ -210,6 +210,32 @@ floe.mkFloe {
           };
         };
 
+        config.floe.out.steps.deploy-manifests = {
+          kind = "deploy-manifests";
+          description = "Deploy manifests to '${inputs.name}'";
+          providesCluster = "deployed";
+          afterCluster = "created";
+
+          params = {
+            target = inputs.name;
+            bootstrap = false;
+            kubeContext = inputs.context;
+          };
+        };
+
+        config.floe.out.steps.destroy-cluster = {
+          kind = "destroy-cluster";
+          direction = "teardown";
+          description = "Destroy external cluster '${inputs.name}'";
+          providesCluster = "destroyed";
+
+          params = {
+            inherit (inputs) name;
+            provisioner = "external";
+            skipIfMissing = true;
+          };
+        };
+
         config.floe.out.clusterDescriptor = {
           inherit (inputs) name;
 

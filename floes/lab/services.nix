@@ -15,8 +15,13 @@
   floe,
   sigs,
   kinds,
+  catallaxy,
   ...
 }:
+
+let
+  inherit (catallaxy) planTokens needs;
+in
 
 floe.mkFloe {
   name = "lab-services";
@@ -28,11 +33,31 @@ floe.mkFloe {
 
   collects.service = sigs.HOST_SERVICE;
 
+  provides.step = sigs.LAB_STEPS;
+
   out.labServices = kinds.labServices;
 
   body =
     { collects, ... }:
     {
       out.labServices = collects.service;
+
+      provides.step.steps = lib.optionalAttrs (collects.service != { }) {
+        setup-services = {
+          kind = "setup-services";
+          description = "Start lab infrastructure services";
+          provides = [ planTokens.lab.services ];
+          after = [ (needs planTokens.lab.network) ];
+        };
+
+        remove-services = {
+          kind = "remove-services";
+          description = "Remove lab infrastructure services";
+          provides = [ planTokens.lab.servicesRemoved ];
+
+          afterClusters = "destroyed";
+          beforeLab = "networkRemoved";
+        };
+      };
     };
 }

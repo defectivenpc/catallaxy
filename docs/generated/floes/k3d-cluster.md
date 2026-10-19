@@ -53,4 +53,4 @@ lab's inclusion — so its declaration above is its interface.
 | kind | entries |
 | --- | --- |
 | catallaxy.cluster | config, edge, instanceName, kubeContext, kubernetes, name, network, wait |
-| catallaxy.steps | create-cluster |
+| catallaxy.steps | create-cluster, deploy-manifests, destroy-cluster |

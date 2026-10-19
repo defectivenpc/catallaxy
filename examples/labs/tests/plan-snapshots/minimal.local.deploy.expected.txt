@@ -3,4 +3,4 @@
 [003] registry-setup name=registry-setup params.port=5002 params.upstreams=["codeberg.org","registry.k8s.io","ghcr.io","quay.io","docker.io","public.ecr.aws","xpkg.upbound.io","oci.external-secrets.io"] params.zone=minimal.test
 [004] warm-cache name=warm-cache
 [005] create-cluster name=app-create-cluster cluster=app params.name=app params.provisioner=k3d
-[006] deploy-manifests name=deploy-manifests-app cluster=app params.kubeContext=k3d-minimal-local-app params.target=app
+[006] deploy-manifests name=app-deploy-manifests cluster=app params.kubeContext=k3d-minimal-local-app params.target=app

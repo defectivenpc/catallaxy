@@ -24,6 +24,7 @@ anything.
 | [`lab-network`](../floes/lab-network.md) | `provides.step` |
 | [`lab-registry`](../floes/lab-registry.md) | `provides.step` |
 | [`lab-secrets`](../floes/lab-secrets.md) | `provides.step` |
+| [`lab-services`](../floes/lab-services.md) | `provides.step` |
 
 ## Collected by
 
