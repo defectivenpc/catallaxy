@@ -21,7 +21,7 @@ let
       sigs
       ;
   };
-  policies = import ./domain/policies.nix { inherit lib sigs; };
+  policies = import ./domain/policies.nix { inherit lib sigs k8sApi; };
 
   distribution = floe.mkDistribution {
     name = "catallaxy";
@@ -200,6 +200,7 @@ rec {
   inherit (distribution) conformDocument;
 
   clusterPolicies = [
+    policies.crdsResolveToASchema
     policies.oneDelivery
     policies.needsNameSiblings
     policies.backsNameOwnBundles

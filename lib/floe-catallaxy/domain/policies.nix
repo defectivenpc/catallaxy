@@ -1,4 +1,8 @@
-{ lib, sigs }:
+{
+  lib,
+  sigs,
+  k8sApi,
+}:
 
 let
   clustersIn = result: result.out."catallaxy.cluster" or { };
@@ -34,6 +38,72 @@ in
         ) (result.providersOf sigName);
     in
     lib.concatLists (lib.mapAttrsToList missingFor obligated);
+
+  # Every custom resource a floe renders has a schema to be checked against.
+  #
+  # `conform.nix` checks a resource against the generated type its `apiVersion`
+  # and `kind` name. When nothing describes that kind it checks against nothing,
+  # and says nothing — so an `apiVersion` typo and a legitimately uncovered kind
+  # look identical, and both pass. This is what tells them apart.
+  #
+  # The exemption is derived rather than listed. A bundle that declares `crds`
+  # but carries neither `yamls` nor `helmCharts` installs no CRD content: its
+  # kinds arrive when some controller does, long after the manifest that asked
+  # for them was applied, so no artifact a floe could name would have held them.
+  # `crossplane-provider-nop` is the case — crossplane installs the nop
+  # provider's CRDs when the provider goes healthy.
+  #
+  # Derived, so it cannot go stale. The day those CRDs become extractable and a
+  # floe's `upstream.nix` yields them, the kind gets a schema and stops being
+  # reported whatever this believes.
+  crdsResolveToASchema =
+    result:
+    let
+      groupOf = apiVersion: lib.head (lib.splitString "/" apiVersion);
+
+      installsNoCrdContent =
+        b: (b.crds or [ ]) != [ ] && (b.yamls or [ ]) == [ ] && (b.helmCharts or { }) == { };
+
+      bundles = lib.concatLists (
+        lib.mapAttrsToList (
+          unit: c: lib.mapAttrsToList (name: b: { inherit unit name b; }) (c.bundles or { })
+        ) (componentsIn result)
+      );
+
+      # Over every bundle in the cluster, not just the one holding the
+      # resource: the floe that establishes a kind at runtime is rarely the
+      # floe that renders one.
+      runtimeKinds = lib.unique (
+        lib.concatMap (e: lib.optionals (installsNoCrdContent e.b) (e.b.crds or [ ])) bundles
+      );
+
+      covered =
+        av: kind:
+        k8sApi.coreKinds ? ${kind}
+        || k8sApi.resolve av kind != null
+        || lib.elem "${groupOf av}/${kind}" runtimeKinds;
+    in
+    lib.concatMap (
+      e:
+      lib.concatLists (
+        lib.mapAttrsToList (
+          resName: r:
+          let
+            av = r.apiVersion or "";
+            kind = r.kind or "";
+          in
+          lib.optional (!(covered av kind)) (
+            "'${e.unit}' renders ${e.name}/${resName} as ${av}/${kind}, which resolves "
+            + "to no generated schema — so it is checked against nothing, and an "
+            + "`apiVersion` typo looks exactly like this. Give the floe that installs "
+            + "the CRD an `upstream.nix` yielding the artifact they come from, then copy "
+            + "`nix build .#generatedTypes` into place. If the CRDs genuinely arrive at "
+            + "runtime, the bundle establishing them should declare `crds` and carry no "
+            + "`yamls` or `helmCharts`, which is how that case is recognised."
+          )
+        ) (e.b.resources or { })
+      )
+    ) bundles;
 
   oneDelivery =
     result:

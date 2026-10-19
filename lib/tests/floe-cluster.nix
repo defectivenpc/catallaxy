@@ -6,22 +6,16 @@
 
 let
   floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
-  kinds = import ../floe-catallaxy/domain/component.nix {
-    inherit lib floe;
-    k8sApi = import ../kubernetes/api.nix {
-      inherit lib floeCore specFile;
-      crdGroups = { };
-    };
+
+  k8sApi = import ../kubernetes/api.nix {
+    inherit lib floeCore specFile;
+    crdGroups = { };
   };
+
+  kinds = import ../floe-catallaxy/domain/component.nix { inherit lib floe k8sApi; };
   sigs = import ../floe-catallaxy/domain/sigs.nix { inherit lib floe; };
-  policies = import ../floe-catallaxy/domain/policies.nix { inherit lib sigs; };
-  elaborate = import ../lower/elaborate.nix {
-    inherit lib floe;
-    k8sApi = import ../kubernetes/api.nix {
-      inherit lib floeCore specFile;
-      crdGroups = { };
-    };
-  };
+  policies = import ../floe-catallaxy/domain/policies.nix { inherit lib sigs k8sApi; };
+  elaborate = import ../lower/elaborate.nix { inherit lib floe k8sApi; };
 
   inherit (kinds)
     mkBundle

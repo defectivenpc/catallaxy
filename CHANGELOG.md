@@ -9,27 +9,44 @@ The format is based on
 
 ### Changed
 
+- **CRD coverage is a cluster policy, not a check.** `nix/checks/crd-coverage.nix`
+  is deleted; `policies.crdsResolveToASchema` joins `clusterPolicies`. It reads
+  `result.out."catallaxy.component"` and nothing else, which is what made it
+  movable — the cluster that renders a resource no generated type describes is
+  now refused where it is linked, naming the floe and the resource, instead of
+  one repo-wide check listing findings across every lab.
+
+  `policies.nix` takes `k8sApi` for `coreKinds` and `resolve`.
+  `lib/tests/floe-cluster.nix` built the same API record three times and now
+  builds it once.
+
+  A limitation it inherits rather than introduces: `coreKinds` is keyed by kind
+  name alone, so `apps/v1beta9` with `kind = Deployment` reads as covered. The
+  gate catches a group or version that resolves to nothing, which is the CRD
+  case it exists for.
+
 - **A step's kind is an enum over the table, not a string.**
   `lib/step-kinds.nix` is reached through `catallaxy.stepKinds`, and
   `declaredOptions.kind` is `types.enum (lib.attrNames stepKinds)`. A step
   naming a kind the executor does not implement is refused where it is
-  declared, with the site named — `registry.provides.step.steps.registry-setup`
-  rather than a planner error about a step somewhere in the lab.
+  declared, with the site named —
+  `registry.provides.step.steps.registry-setup` rather than a planner error
+  about a step somewhere in the lab.
 
   That deletes two runtime checks that asked the same question twice:
   `directionOf`'s membership throw and the `unknownKinds` assertion. The
-  `wrongDirection` assertion survives and lost its `or null` guard, because the
-  kind is now always in the table.
+  `wrongDirection` assertion survives and lost its `or null` guard, because
+  the kind is now always in the table.
 
-  This replaces the plan to add `stepKinds` to `mkDistribution`, which was the
-  wrong home. Nothing in `floes/lib/` reads `distribution.kinds` or
-  `distribution.policies`; what the library does with a declaration is *refuse
-  it when malformed*, and a step kind's fields — `directions`, `idempotency`,
-  `dryRunSafe`, `dialsLabEndpoints` — are this distribution's executor
-  semantics, one of them naming a lab outright. The library has no vocabulary
-  to validate them against, so the field would have been the first
-  `mkDistribution` takes and can neither check nor consume. The pattern
-  generalises; the schema does not.
+  This replaces the plan to add `stepKinds` to `mkDistribution`, which was
+  the wrong home. Nothing in `floes/lib/` reads `distribution.kinds` or
+  `distribution.policies`; what the library does with a declaration is
+  _refuse it when malformed_, and a step kind's fields — `directions`,
+  `idempotency`, `dryRunSafe`, `dialsLabEndpoints` — are this distribution's
+  executor semantics, one of them naming a lab outright. The library has no
+  vocabulary to validate them against, so the field would have been the
+  first `mkDistribution` takes and can neither check nor consume. The
+  pattern generalises; the schema does not.
 
 - **The lab lifecycle is declared by the floes that own it.**
   `deploy-manifests` and `destroy-cluster` join `create-cluster` on the

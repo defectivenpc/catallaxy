@@ -67,16 +67,6 @@ in
     floeCrds
     ;
 }
-// import ./crd-coverage.nix {
-  inherit
-    lib
-    pkgs
-    floeCore
-    k8sSpecs
-    labDefs
-    floeCrds
-    ;
-}
 // import ./chart-values.nix { inherit lib pkgs labDefs; }
 // import ./teaching.nix { inherit lib pkgs; }
 // import ./lib-exports.nix { inherit lib pkgs; }
