@@ -7,6 +7,7 @@ let
   stepTypes = import ../../lib/eval/step-type.nix {
     inherit lib;
     planTokens = import ../../lib/plan-tokens.nix { inherit lib; };
+    stepKinds = import ../../lib/step-kinds.nix { inherit lib; };
   };
 
   relative =

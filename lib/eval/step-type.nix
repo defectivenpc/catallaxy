@@ -1,4 +1,8 @@
-{ lib, planTokens }:
+{
+  lib,
+  planTokens,
+  stepKinds,
+}:
 
 let
   inherit (lib) mkOption types;
@@ -63,7 +67,7 @@ let
   };
   declaredOptions = name: {
     kind = mkOption {
-      type = types.str;
+      type = types.enum (lib.attrNames stepKinds);
       description = ''
         Which of the 34 step kinds this is. The kind decides what params
         are legal, whether the step may run in a given direction, and the

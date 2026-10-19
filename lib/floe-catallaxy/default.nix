@@ -213,6 +213,7 @@ rec {
   ];
 
   planTokens = import ../plan-tokens.nix { inherit lib; };
+  stepKinds = import ../step-kinds.nix { inherit lib; };
   inherit (import ../eval/anchors.nix { }) needs wants;
 
   inherit (import ../lower/elaborate.nix { inherit lib floe k8sApi; }) elaborateCluster;

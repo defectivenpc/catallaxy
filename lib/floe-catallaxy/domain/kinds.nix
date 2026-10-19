@@ -11,6 +11,7 @@ let
   stepType = import ../../eval/step-type.nix {
     inherit lib;
     planTokens = import ../../plan-tokens.nix { inherit lib; };
+    stepKinds = import ../../step-kinds.nix { inherit lib; };
   };
 
   k3dSchema = T.record {

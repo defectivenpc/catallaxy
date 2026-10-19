@@ -12,7 +12,7 @@ What a floe writes into each entry of its `LAB_STEPS` contribution. What a given
 | [`cluster`](#cluster) | `null or string` | `null` |
 | [`description`](#description) | `string` | `the attribute name` |
 | [`direction`](#direction) | `null or one of "deploy", "teardown"` | `null` |
-| [`kind`](#kind) | `string` |  |
+| [`kind`](#kind) | `one of "apply-root-application", "bootstrap-argocd-kubectl-ssa", "bootstrap-forgejo-repos", "cert-generate", "create-cluster", "delete-managed-resource", "deploy-manifests", "destroy-cluster", "dns-setup", "dns-teardown", "docker-network-create", "ensure-secrets", "infra-apply", "infra-destroy", "infra-plan", "publish-manifests", "reconcile-managed-resource", "registry-setup", "release-cluster-cloud-resources", "remove-network", "remove-services", "run-script", "setup-services", "sync-kubeconfig", "wait-for-cluster-gone", "wait-for-resources", "warm-cache"` |  |
 | [`origin`](#origin) | `string` | `"lab"` |
 | [`params`](#params) | `attribute set` | `{ }` |
 | [`provides`](#provides) | `list of string` | `[ ]` |
@@ -109,7 +109,7 @@ Which of the 34 step kinds this is. The kind decides what params
 are legal, whether the step may run in a given direction, and the
 retry class the executor applies.
 
-**Type:** `string`
+**Type:** `one of "apply-root-application", "bootstrap-argocd-kubectl-ssa", "bootstrap-forgejo-repos", "cert-generate", "create-cluster", "delete-managed-resource", "deploy-manifests", "destroy-cluster", "dns-setup", "dns-teardown", "docker-network-create", "ensure-secrets", "infra-apply", "infra-destroy", "infra-plan", "publish-manifests", "reconcile-managed-resource", "registry-setup", "release-cluster-cloud-resources", "remove-network", "remove-services", "run-script", "setup-services", "sync-kubeconfig", "wait-for-cluster-gone", "wait-for-resources", "warm-cache"`
 
 **Declared in:** lib/eval/step-type.nix
 

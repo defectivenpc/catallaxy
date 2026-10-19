@@ -8,7 +8,7 @@ let
   inherit (import ../eval/anchors.nix { }) needs wants;
   planGraph = import ../eval/plan-graph.nix { inherit lib; };
   infraLib = import ../render/infra.nix { inherit lib; };
-  kindTable = import ../step-kinds.nix { inherit lib; };
+  inherit (catallaxy) stepKinds;
 
   variantOf = c: lib.head (lib.attrNames c.spec.provisioning.config);
 in
@@ -162,17 +162,12 @@ in
         if step.direction != null then
           step.direction
 
-        else if !(kindTable ? ${step.kind}) then
-          throw ''
-            step '${name}' (${step.origin}) has kind '${step.kind}', which is not
-            one of the ${toString (lib.length (lib.attrNames kindTable))} the CLI implements.
-          ''
-        else if lib.length kindTable.${step.kind}.directions == 1 then
-          lib.head kindTable.${step.kind}.directions
+        else if lib.length stepKinds.${step.kind}.directions == 1 then
+          lib.head stepKinds.${step.kind}.directions
         else
           throw ''
             step '${name}' (${step.origin}) has kind '${step.kind}', which runs in
-            ${lib.concatStringsSep " and " kindTable.${step.kind}.directions}, and does not say which
+            ${lib.concatStringsSep " and " stepKinds.${step.kind}.directions}, and does not say which
             plan it belongs to. Set `direction`.
           '';
 
@@ -198,7 +193,7 @@ in
         name:
         let
           step = allSteps.${name};
-          kind = kindTable.${step.kind} or null;
+          kind = stepKinds.${step.kind} or null;
           retry = if kind == null then "idempotent" else kind.idempotency;
         in
         {
@@ -216,19 +211,14 @@ in
           };
         };
 
-      unknownKinds = lib.mapAttrsToList (
-        name: step:
-        "step '${name}' (${step.origin}) has kind '${step.kind}', which is not one of the ${toString (lib.length (lib.attrNames kindTable))} the CLI implements"
-      ) (lib.filterAttrs (_: step: !(kindTable ? ${step.kind})) allSteps);
-
       wrongDirection = lib.concatLists (
         lib.mapAttrsToList (
           name: step:
           let
-            kind = kindTable.${step.kind} or null;
-            want = if step.direction == null then null else step.direction;
+            kind = stepKinds.${step.kind};
+            want = step.direction;
           in
-          lib.optional (kind != null && want != null && !(lib.elem want kind.directions))
+          lib.optional (want != null && !(lib.elem want kind.directions))
             "step '${name}' (${step.origin}) is declared in the ${want} plan, and kind '${step.kind}' only runs in ${lib.concatStringsSep " or " kind.directions}"
         ) allSteps
       );
@@ -237,7 +227,7 @@ in
       assertions = map (message: {
         assertion = false;
         inherit message;
-      }) (unknownKinds ++ wrongDirection);
+      }) wrongDirection;
 
       warnings =
         planGraph.floatingSteps { steps = toGraph (inDirection "deploy"); }

@@ -9,41 +9,65 @@ The format is based on
 
 ### Changed
 
-- **The lab lifecycle is declared by the floes that own it.** `deploy-manifests`
-  and `destroy-cluster` join `create-cluster` on the three provisioners;
-  `setup-services` and `remove-services` move to `lab-services`, which already
-  collects the containers they start. `frameworkSteps` keeps the infra stack
-  steps and nothing else, and no longer takes `services`.
+- **A step's kind is an enum over the table, not a string.**
+  `lib/step-kinds.nix` is reached through `catallaxy.stepKinds`, and
+  `declaredOptions.kind` is `types.enum (lib.attrNames stepKinds)`. A step
+  naming a kind the executor does not implement is refused where it is
+  declared, with the site named — `registry.provides.step.steps.registry-setup`
+  rather than a planner error about a step somewhere in the lab.
 
-  `remove-services` is the clearest case for the condition sugars: `after =
-  map (n: wants (t.cluster n).destroyed) clusterNames` and `before = [ (wants
-  t.lab.networkRemoved) ]` are `afterClusters = "destroyed"` and `beforeLab =
-  "networkRemoved"`. The floe says when it runs; it never learns a cluster's
-  name or a token's spelling.
+  That deletes two runtime checks that asked the same question twice:
+  `directionOf`'s membership throw and the `unknownKinds` assertion. The
+  `wrongDirection` assertion survives and lost its `or null` guard, because the
+  kind is now always in the table.
+
+  This replaces the plan to add `stepKinds` to `mkDistribution`, which was the
+  wrong home. Nothing in `floes/lib/` reads `distribution.kinds` or
+  `distribution.policies`; what the library does with a declaration is *refuse
+  it when malformed*, and a step kind's fields — `directions`, `idempotency`,
+  `dryRunSafe`, `dialsLabEndpoints` — are this distribution's executor
+  semantics, one of them naming a lab outright. The library has no vocabulary
+  to validate them against, so the field would have been the first
+  `mkDistribution` takes and can neither check nor consume. The pattern
+  generalises; the schema does not.
+
+- **The lab lifecycle is declared by the floes that own it.**
+  `deploy-manifests` and `destroy-cluster` join `create-cluster` on the
+  three provisioners; `setup-services` and `remove-services` move to
+  `lab-services`, which already collects the containers they start.
+  `frameworkSteps` keeps the infra stack steps and nothing else, and no
+  longer takes `services`.
+
+  `remove-services` is the clearest case for the condition sugars:
+  `after = map (n: wants (t.cluster n).destroyed) clusterNames` and
+  `before = [ (wants t.lab.networkRemoved) ]` are
+  `afterClusters = "destroyed"` and `beforeLab = "networkRemoved"`. The floe
+  says when it runs; it never learns a cluster's name or a token's spelling.
 
   `teardownAfterFor` is gone by inversion rather than by moving. It pushed
   "wait for the clusters this one provisions to be gone" onto a management
   cluster's destroy step, which is why that step could not leave lowering —
   only the lab knows the provisioning edges. But `wait-for-cluster-gone`
-  already knows both clusters, so it declares `before = [ (wants (t.cluster
-  e.mgmt).destroyed) ]` and the graph inverts it. That is what `before` is
-  for: a step inserting itself ahead of something that has never heard of it.
+  already knows both clusters, so it declares
+  `before = [ (wants (t.cluster e.mgmt).destroyed) ]` and the graph inverts
+  it. That is what `before` is for: a step inserting itself ahead of
+  something that has never heard of it.
 
 - **A cluster's name is the key it is placed under.** It was a placement
-  *default*, so a lab could give its provisioner a different one — and
-  `create_cluster.rs` does `sctx.lab.cluster(name)?`, looking the cluster up in
-  the document by that param. A divergent name meant a step that could not find
-  its own cluster, and nothing said so: no lab overrode it, so no fixture
-  exercised it.
+  _default_, so a lab could give its provisioner a different one — and
+  `create_cluster.rs` does `sctx.lab.cluster(name)?`, looking the cluster up
+  in the document by that param. A divergent name meant a step that could
+  not find its own cluster, and nothing said so: no lab overrode it, so no
+  fixture exercised it.
 
   Refused now, and only on disagreement — `nix/checks/secret-sharing.nix`
   passes `name = clusterName` redundantly but correctly, and a redundant
   agreeing value is not a fault. This is what makes a floe's own
   `inherit (inputs) name` sound in a step param.
 
-  Every rendered manifest is byte-identical. Step names moved as they did for
-  `create-cluster` — `deploy-manifests-app` is `app-deploy-manifests` — with
-  `metadata.json` and the plan snapshots following.
+  Every rendered manifest is byte-identical. Step names moved as they did
+  for `create-cluster` — `deploy-manifests-app` is `app-deploy-manifests` —
+  with `metadata.json` and the plan snapshots following.
 
 - **A provisioner declares how its cluster is created.** `create-cluster`
   was synthesised by `lib/lower/plan.nix`, which meant lowering had to ask

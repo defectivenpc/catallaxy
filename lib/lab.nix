@@ -89,6 +89,7 @@ let
   stepTypes = import ./eval/step-type.nix {
     inherit lib;
     planTokens = import ./plan-tokens.nix { inherit lib; };
+    stepKinds = import ./step-kinds.nix { inherit lib; };
   };
 
   mkLab =
