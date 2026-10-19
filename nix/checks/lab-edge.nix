@@ -22,6 +22,7 @@
 }:
 
 let
+  refuses = import ./refuses.nix { inherit lib; };
   # Two clusters would need two subnets and there is only one arrangement
   # under test, so one cluster and one set of ports throughout.
   mkEdgeLab =
@@ -102,8 +103,6 @@ let
       serviceSubnet = "10.96.0.0/12";
       kubeconfigKey = "clusters/app/kubeconfig";
     };
-
-  refuses = l: !(builtins.tryEval (builtins.deepSeq l.cliConfig "evaluated")).success;
 
   results = lib.runTests {
 

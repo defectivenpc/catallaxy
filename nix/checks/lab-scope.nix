@@ -38,6 +38,7 @@
 }:
 
 let
+  refuses = import ./refuses.nix { inherit lib; };
   inherit (import ../../lib/lower/cluster.nix { inherit lib catallaxy; }) placeCluster;
 
   # Ports and subnets differ per lab because two labs evaluated in one
@@ -132,8 +133,6 @@ let
         provisioner = floes.k3d-cluster { };
       };
     };
-
-  refuses = l: !(builtins.tryEval (builtins.deepSeq l.cliConfig "evaluated")).success;
 
   # ---- downward: a fact the lab holds reaches a cluster -------------------
 

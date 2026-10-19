@@ -20,6 +20,7 @@
 }:
 
 let
+  refuses = import ./refuses.nix { inherit lib; };
   shared = labDefs."secret-sharing".clusters;
 
   resourcesOf =
@@ -173,11 +174,6 @@ let
       secret = "core-lab-ca";
     };
   };
-
-  # `tryEval` catches the assertion `lib/lab.nix` throws, and the link error
-  # the floe library throws. `deepSeq` because the failure is inside a lazily
-  # built attribute.
-  refuses = lab: !(builtins.tryEval (builtins.deepSeq lab.cliConfig "evaluated")).success;
 
   results = lib.runTests {
 

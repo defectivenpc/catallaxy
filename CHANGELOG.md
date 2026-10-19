@@ -9,19 +9,21 @@ The format is based on
 
 ### Changed
 
-- **What two labs do to each other has its own file.** `nix/checks/across-labs.nix`
-  holds `lab-subnets` and `lab-host-ports`, the two laws whose subject is a
-  *pair* of labs: each lab is correct on its own in every case, and the fault
-  exists only in the set of labs this repository builds. That is why neither can
-  be a policy, and the filename is the answer to a reader who asks.
+- **What two labs do to each other has its own file.**
+  `nix/checks/across-labs.nix` holds `lab-subnets` and `lab-host-ports`, the
+  two laws whose subject is a _pair_ of labs: each lab is correct on its own
+  in every case, and the fault exists only in the set of labs this
+  repository builds. That is why neither can be a policy, and the filename
+  is the answer to a reader who asks.
 
   `lab-checks.nix` is 529 lines from 655 and means one thing again — what a
   built lab package must look like. Its own banner comments had drifted:
-  `unclaimedHosts` sat under "between labs" and is a per-lab law, so it stayed.
+  `unclaimedHosts` sat under "between labs" and is a per-lab law, so it
+  stayed.
 
-  `refuse` — findings to a derivation that fails when the list is non-empty —
-  was copied in `lab-checks.nix` and `floe-gates.nix`, and the split would have
-  made a third. It is `nix/checks/refuse.nix` with three importers.
+  `refuse` — findings to a derivation that fails when the list is non-empty
+  — was copied in `lab-checks.nix` and `floe-gates.nix`, and the split would
+  have made a third. It is `nix/checks/refuse.nix` with three importers.
 
 - **CRD coverage is a cluster policy, not a check.**
   `nix/checks/crd-coverage.nix` is deleted; `policies.crdsResolveToASchema`
