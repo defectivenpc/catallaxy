@@ -505,6 +505,7 @@ in
       inherit link cluster def;
       component = link.out."catallaxy.component".${name};
       bundles = link.out."catallaxy.component".${name}.bundles;
+      steps = link.out."catallaxy.steps".${name} or { };
       provides = link.provides.${name};
       waves = map (w: map (b: b.name) w) cluster.waves;
     };

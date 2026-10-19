@@ -55,6 +55,8 @@ in
     let
       components = linkResult.out."catallaxy.component" or { };
 
+      unitSteps = linkResult.out."catallaxy.steps" or { };
+
       projections = lib.foldl' lib.mergeAttrs { } (
         lib.attrValues (linkResult.out."catallaxy.projections" or { })
       );
@@ -377,9 +379,10 @@ in
         lint = liftChannel "lint";
         verify = liftChannel "verify";
 
+        steps = unitSteps;
+
         inherit (joined)
           network
-          steps
           imagesComplete
           assertions
           warnings

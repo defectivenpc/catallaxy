@@ -138,6 +138,7 @@ floe.mkFloe {
   requires.gatewayApi = sigs.GATEWAY_API;
 
   out.component = kinds.component;
+  out.steps = kinds.steps;
   modules = [
     (
       { config, ... }:
@@ -275,20 +276,20 @@ floe.mkFloe {
         };
       in
       {
+        config.floe.out.steps = lib.optionalAttrs (inputs.policy == "sync") {
+          purge-records = {
+            kind = "run-script";
+            direction = "teardown";
+            description = "Delete external-dns-watched objects and wait for records to drain";
+            teardown = "before-cluster-destroy";
+
+            policy.onFailure = "continue";
+            params.bin = "${purge}/bin/external-dns-purge-records";
+          };
+        };
+
         config.floe.out.component = kinds.mkComponent {
           imagesComplete = true;
-
-          steps = lib.optionalAttrs (inputs.policy == "sync") {
-            purge-records = {
-              kind = "run-script";
-              direction = "teardown";
-              description = "Delete external-dns-watched objects and wait for records to drain";
-              teardown = "before-cluster-destroy";
-
-              policy.onFailure = "continue";
-              params.bin = "${purge}/bin/external-dns-purge-records";
-            };
-          };
 
           bundles.external-dns = kinds.mkBundle {
             createNamespaces = [ inputs.namespace ];

@@ -31,6 +31,7 @@ external-dns, publishing routed hostnames into the lab's zone over RFC2136.
 | alias | kind | what it carries |
 | --- | --- | --- |
 | component | catallaxy.component | What a floe installs into a cluster: bundles, and the operator surface around them. |
+| steps | catallaxy.steps | Plan steps a unit of a cluster contributes, keyed by step name. |
 
 ## Bundles
 

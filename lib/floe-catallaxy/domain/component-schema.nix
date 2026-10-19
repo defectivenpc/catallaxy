@@ -167,8 +167,6 @@ let
       warnings = T.listOf T.str;
 
       drift = T.listOf driftSchema;
-
-      steps = T.attrsOf (T.moduleType stepType.declaredStepType);
     }
   );
 

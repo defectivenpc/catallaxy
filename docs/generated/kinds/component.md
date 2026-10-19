@@ -21,7 +21,6 @@ Written as `out.component`. Checked against this shape where the floe is linked,
 | `bundles` | map of [`bundle`](#bundle) |
 | `drift` | list of [`drift`](#drift) |
 | `imagesComplete` | `bool` |
-| `steps` | map of `module type submodule` |
 | `warnings` | list of `string` |
 
 ## assertion

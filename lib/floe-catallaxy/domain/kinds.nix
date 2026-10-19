@@ -245,6 +245,14 @@ componentLib
     );
   };
 
+  steps = floe.mkSig {
+    name = "catallaxy.steps";
+    canonicalName = "steps";
+    description = "Plan steps a unit of a cluster contributes, keyed by step name.";
+
+    fields = T.attrsOf (T.named "clusterStep" (T.moduleType stepType.declaredStepType));
+  };
+
   labSteps = floe.mkSig {
     name = "catallaxy.labSteps";
     canonicalName = "labSteps";

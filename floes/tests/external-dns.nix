@@ -30,7 +30,7 @@ let
 
   r = evalWith { };
   values = r.bundles.external-dns.helmCharts.external-dns.values;
-  step = r.component.steps.purge-records;
+  step = r.steps.purge-records;
 
   # `deepSeq` so a lazy throw inside the value is forced rather than passed
   # over as a value that happens not to be looked at.
@@ -122,7 +122,7 @@ lib.runTests {
   # Only `sync` deletes, so only `sync` can leave anything behind. A teardown
   # step with nothing to do still costs the drain wait.
   testOnlyASyncingControllerNeedsCleaningUpAfter = {
-    expr = lib.attrNames (evalWith { policy = "upsert-only"; }).component.steps;
+    expr = lib.attrNames (evalWith { policy = "upsert-only"; }).steps;
     expected = [ ];
   };
 
@@ -154,7 +154,7 @@ lib.runTests {
   };
 
   testAnUnparseableIntervalIsRefused = {
-    expr = throws (evalWith { interval = "every so often"; }).component;
+    expr = throws (evalWith { interval = "every so often"; }).steps;
     expected = true;
   };
 

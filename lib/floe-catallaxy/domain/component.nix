@@ -558,7 +558,6 @@ rec {
       assertions ? [ ],
       warnings ? [ ],
       drift ? [ ],
-      steps ? { },
     }:
     {
       inherit
@@ -567,7 +566,6 @@ rec {
         imagesComplete
         assertions
         warnings
-        steps
         ;
 
       drift = map mkDrift drift;
@@ -580,7 +578,6 @@ rec {
     assertions = [ ];
     warnings = [ ];
     drift = [ ];
-    steps = { };
   };
 
   qualify =
@@ -604,8 +601,6 @@ rec {
 
       imagesComplete.${unit} = c.imagesComplete;
 
-      steps.${unit} = c.steps;
-
       assertions = map (a: a // { message = "floe '${unit}': ${a.message}"; }) c.assertions;
       warnings = map (w: "floe '${unit}': ${w}") c.warnings;
 
@@ -616,7 +611,6 @@ rec {
     bundles = a.bundles // b.bundles;
     backs = a.backs // b.backs;
     imagesComplete = a.imagesComplete // b.imagesComplete;
-    steps = a.steps // b.steps;
     assertions = a.assertions ++ b.assertions;
     warnings = a.warnings ++ b.warnings;
     drift = a.drift ++ b.drift;

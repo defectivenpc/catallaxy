@@ -24,3 +24,4 @@ which of the two a thing should be.
 | [catallaxy.publications](./publications.md) | `publications` | Where a resource's output lands once it exists, as an address in a lab secret store. |
 | [catallaxy.resources](./resources.md) | `resources` | Infrastructure declared for a state-based tool to create, for the case no cluster can own it. |
 | [catallaxy.routedHosts](./routedHosts.md) | `routedHosts` | Hostnames the lab's ingress routes, keyed by the cluster that serves them. |
+| [catallaxy.steps](./steps.md) | `steps` | Plan steps a unit of a cluster contributes, keyed by step name. |
