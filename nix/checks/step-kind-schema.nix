@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  kinds = import ../../lib/lower/plan-kinds { inherit lib; };
+  kinds = import ../../lib/step-kinds.nix { inherit lib; };
 
   sampleFor =
     kindName: fieldName: type:
@@ -28,7 +28,7 @@ let
       throw ''
         ${kindName}.params.${fieldName} has type '${type.name}', which the
         step-kind schema emitter cannot sample. Teach `sampleFor` in
-        lib/eval/step-kind-schema.nix how to build a value of it, so the
+        nix/checks/step-kind-schema.nix how to build a value of it, so the
         conformance check can keep exercising this field.
       '';
 

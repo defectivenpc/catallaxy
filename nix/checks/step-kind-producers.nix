@@ -9,13 +9,7 @@
 let
   # declared :: [KindName]
   declared = lib.sort (a: b: a < b) (
-    map (lib.removeSuffix ".nix") (
-      lib.filter (n: n != "default.nix") (
-        builtins.attrNames (
-          lib.filterAttrs (_: t: t == "regular") (builtins.readDir ../../lib/lower/plan-kinds)
-        )
-      )
-    )
+    lib.attrNames (import ../../lib/step-kinds.nix { inherit lib; })
   );
 
   # orphans :: { KindName -> Why }

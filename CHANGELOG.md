@@ -9,11 +9,30 @@ The format is based on
 
 ### Changed
 
+- **The step-kind table is one file.** `lib/lower/plan-kinds/` was 27 files
+  averaging 24 lines, five of them nine lines, plus a hand-written 28-line
+  `default.nix` of `"<name>" = import ./<name>.nix`. It is
+  `lib/step-kinds.nix`, one attrset — the same species of catalogue as
+  `sigs.nix`, and read in one place rather than assembled from a directory
+  listing.
+
+  Out of `lower/` because it is not a lowering detail: a step kind is what
+  the executor implements, declared in Nix and mirrored by
+  `cli/src/domain/step_kind_conformance.rs`. It is the distribution's
+  vocabulary, the way an output kind is, and sits next to the other things a
+  distribution owns rather than inside the phase that happens to read it.
+
+  `step-kind-producers` enumerated the kinds by `readDir` over the directory
+  and now reads the table, so it is held to what the planner actually
+  consults rather than to a set of filenames that agreed with it.
+  `checks.step-kinds` regenerates the Rust fixture from the table and passes
+  unchanged, which is what says the collapse preserved it.
+
 - **A step a floe contributes is typed, and may name a lab phase.**
   `LAB_STEPS` carried `T.attrsOf (T.attrsOf T.any)` — the one `T.any` escape
   among the channels a floe writes. The type already existed:
   `lib/eval/step-type.nix`'s submodule, which `catallaxy.labSteps` was
-  already holding the *expanded* step to through `T.moduleType`. It was
+  already holding the _expanded_ step to through `T.moduleType`. It was
   attached to the collector's output and not its input, so what an author
   wrote went unchecked and only what `lab-steps` emitted was verified.
 
@@ -180,16 +199,17 @@ The format is based on
 ### Removed
 
 - The plan graph's `kind:<kind>` and `kind:<kind>:<cluster>` anchors, which
-  no step used. Every surviving `kind:` is the *manifest* graph's
+  no step used. Every surviving `kind:` is the _manifest_ graph's
   `kind:<group>/<Kind>`, a Kubernetes resource kind and a different thing;
-  the plan form appeared only in its own tests. It was also the wrong kind of
-  coupling — a token is a fact a step opted into publishing, where
+  the plan form appeared only in its own tests. It was also the wrong kind
+  of coupling — a token is a fact a step opted into publishing, where
   `kind:deploy-manifests` ordered against whatever steps the lab happened to
   contain, and changed meaning when an unrelated floe joined.
 
   `matchAnchor` is one line now, which also collapses the two spellings it
   used to accept: `provides:<token>` and a bare `<token>` were the same
   lookup through different branches.
+
 - `checks.allocations`, the `allocations` package and
   `examples/labs/tests/allocations.json`. The address plan is derived from
   the lab's name, and each lab's allocation already travels in its own

@@ -8,7 +8,7 @@ let
   inherit (import ../eval/anchors.nix { }) needs wants;
   planGraph = import ../eval/plan-graph.nix { inherit lib; };
   infraLib = import ../render/infra.nix { inherit lib; };
-  kindTable = import ./plan-kinds { inherit lib; };
+  kindTable = import ../step-kinds.nix { inherit lib; };
 
   variantOf = c: lib.head (lib.attrNames c.spec.provisioning.config);
 in
