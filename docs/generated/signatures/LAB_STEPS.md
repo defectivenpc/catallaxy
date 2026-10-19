@@ -12,7 +12,7 @@ anything.
 
 | field | type |
 | --- | --- |
-| steps | attrs of attrs of any |
+| steps | attrs of authoredStep |
 
 ## Provided by
 

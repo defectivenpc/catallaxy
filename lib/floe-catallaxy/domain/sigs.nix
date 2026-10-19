@@ -1,7 +1,12 @@
-{ floe }:
+{ lib, floe }:
 
 let
   T = floe.T;
+
+  stepType = import ../../eval/step-type.nix {
+    inherit lib;
+    planTokens = import ../../plan-tokens.nix { inherit lib; };
+  };
 
   edgeTarget = {
     backend = T.str;
@@ -535,7 +540,7 @@ rec {
     canonicalName = "step";
     description = "Plan steps a floe contributes, keyed by step name.";
     fields = {
-      steps = T.attrsOf (T.attrsOf T.any);
+      steps = T.attrsOf (T.named "authoredStep" (T.moduleType stepType.authoredStepType));
     };
   };
 

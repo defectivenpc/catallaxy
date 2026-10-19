@@ -13,7 +13,7 @@ let
       crdGroups = { };
     };
   };
-  sigs = import ../floe-catallaxy/domain/sigs.nix { inherit floe; };
+  sigs = import ../floe-catallaxy/domain/sigs.nix { inherit lib floe; };
   policies = import ../floe-catallaxy/domain/policies.nix { inherit lib sigs; };
   elaborate = import ../lower/elaborate.nix {
     inherit lib floe;

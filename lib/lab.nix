@@ -86,7 +86,10 @@ let
     lowerLab
     ;
   plan = import ./lower/plan.nix { inherit lib catallaxy; };
-  stepTypes = import ./eval/step-type.nix { inherit lib; };
+  stepTypes = import ./eval/step-type.nix {
+    inherit lib;
+    planTokens = import ./plan-tokens.nix { inherit lib; };
+  };
 
   mkLab =
     instance:

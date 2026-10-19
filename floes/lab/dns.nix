@@ -27,7 +27,7 @@
 }:
 
 let
-  inherit (catallaxy) planTokens wants;
+  inherit (catallaxy) planTokens;
 in
 floe.mkFloe {
   name = "lab-dns";
@@ -218,7 +218,7 @@ floe.mkFloe {
           kind = "dns-setup";
           description = "Point host DNS for '${zone}' at the lab resolver";
           provides = [ planTokens.lab.hostDns ];
-          after = [ (wants planTokens.lab.services) ];
+          afterLab = "services";
           params = {
             host = "127.0.0.1";
             port = inputs.hostPort;

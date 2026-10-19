@@ -45,19 +45,26 @@ floe.mkFloe {
     let
       clusterNames = map clusterOfProvisionerUnit (lib.attrNames collects.cluster);
 
-      perCluster = token: map (n: wants (planTokens.cluster n).${token}) clusterNames;
+      perCluster = state: map (n: wants (planTokens.cluster n).${state}) clusterNames;
+      perLab = phase: [ (wants planTokens.lab.${phase}) ];
+
+      anchorsOf =
+        step: field: expandCondition:
+        lib.optionals (step.${field} != null) (expandCondition step.${field});
 
       expand =
         step:
         builtins.removeAttrs step [
           "beforeClusters"
           "afterClusters"
+          "beforeLab"
+          "afterLab"
         ]
-        // lib.optionalAttrs (step ? beforeClusters) {
-          before = (step.before or [ ]) ++ perCluster step.beforeClusters;
-        }
-        // lib.optionalAttrs (step ? afterClusters) {
-          after = (step.after or [ ]) ++ perCluster step.afterClusters;
+        // {
+          before =
+            step.before ++ anchorsOf step "beforeClusters" perCluster ++ anchorsOf step "beforeLab" perLab;
+
+          after = step.after ++ anchorsOf step "afterClusters" perCluster ++ anchorsOf step "afterLab" perLab;
         };
     in
     {

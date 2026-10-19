@@ -11,7 +11,7 @@ let
 
   inherit (import ./authoring/frame.nix { inherit lib floe; }) mkFramedFloe;
 
-  sigs = import ./domain/sigs.nix { inherit floe; };
+  sigs = import ./domain/sigs.nix { inherit lib floe; };
 
   kinds = import ./domain/kinds.nix {
     inherit

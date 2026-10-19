@@ -4,7 +4,10 @@
 }:
 
 let
-  stepTypes = import ../../lib/eval/step-type.nix { inherit lib; };
+  stepTypes = import ../../lib/eval/step-type.nix {
+    inherit lib;
+    planTokens = import ../../lib/plan-tokens.nix { inherit lib; };
+  };
 
   relative =
     path:

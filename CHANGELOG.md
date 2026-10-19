@@ -9,6 +9,32 @@ The format is based on
 
 ### Changed
 
+- **A step a floe contributes is typed, and may name a lab phase.**
+  `LAB_STEPS` carried `T.attrsOf (T.attrsOf T.any)` — the one `T.any` escape
+  among the channels a floe writes. The type already existed:
+  `lib/eval/step-type.nix`'s submodule, which `catallaxy.labSteps` was
+  already holding the *expanded* step to through `T.moduleType`. It was
+  attached to the collector's output and not its input, so what an author
+  wrote went unchecked and only what `lab-steps` emitted was verified.
+
+  `step-type.nix` is now one `declaredOptions` table feeding two submodules:
+  `declaredStepType` for the expanded step and `authoredStepType` for the
+  authored one, which is the same plus the conditions.
+
+  `beforeLab` and `afterLab` join `beforeClusters` and `afterClusters`, and
+  all four take their values from the token registry —
+  `attrNames (planTokens.cluster "any")` and `attrNames planTokens.lab` — so
+  the vocabulary a floe orders against cannot drift from the tokens that
+  vocabulary expands into. A floe ordering itself against a lab phase no
+  longer reaches for `planTokens` at all: `floes/lab/dns.nix` is the first,
+  trading `after = [ (wants planTokens.lab.services) ]` for
+  `afterLab = "services"` and dropping `wants` from what it imports.
+
+  What this closes is a silent failure. `beforeClusters = "creatd"` expanded
+  to `optional:provides:cluster/<n>/creatd`, matched nothing — which is what
+  `optional:` is for — and left the step unordered with nothing said. It is
+  now refused, with the nine states listed.
+
 - **One combinator under the three page generators.** `nix/docs/page.nix`
   holds `table`, `floeLink`, `banner` and `emitPages`, which the floe, kind
   and signature generators each had their own copy of. The one that mattered
@@ -153,6 +179,17 @@ The format is based on
 
 ### Removed
 
+- The plan graph's `kind:<kind>` and `kind:<kind>:<cluster>` anchors, which
+  no step used. Every surviving `kind:` is the *manifest* graph's
+  `kind:<group>/<Kind>`, a Kubernetes resource kind and a different thing;
+  the plan form appeared only in its own tests. It was also the wrong kind of
+  coupling — a token is a fact a step opted into publishing, where
+  `kind:deploy-manifests` ordered against whatever steps the lab happened to
+  contain, and changed meaning when an unrelated floe joined.
+
+  `matchAnchor` is one line now, which also collapses the two spellings it
+  used to accept: `provides:<token>` and a bare `<token>` were the same
+  lookup through different branches.
 - `checks.allocations`, the `allocations` package and
   `examples/labs/tests/allocations.json`. The address plan is derived from
   the lab's name, and each lab's allocation already travels in its own
