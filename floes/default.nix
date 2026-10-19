@@ -1,21 +1,3 @@
-# The floes catallaxy ships :: { Group -> { FloeName -> Path } }
-#
-# An attrset so a consumer can `removeAttrs` one or substitute their own.
-# `lib/lab.nix` flattens the groups; they are disk layout, not a namespace.
-#
-# A group says *where the unit sits*, which is the only question that cannot be
-# answered by reading the floe's inputs:
-#
-#   provisioners  establish the handle — they make the cluster the others install into
-#   components    inside a cluster
-#   clusters      an assembly of components, placed as one thing
-#   delivery      how a cluster's content reaches it
-#   lab           at lab scope: installs nothing, answers a signature every
-#                 cluster can resolve
-#
-# Which is also why `lab` is a group of one and that is not a smell. The
-# alternative is `lab/zone.nix` filed under `components/` while being the one
-# thing that is not in a cluster.
 {
   components = {
     argocd = ./components/argocd;
@@ -58,21 +40,14 @@
     zot = ./components/zot;
   };
 
-  # Floes whose units are components: an assembly with an interface, which a
-  # lab places as one thing. Its claim and its zone are left open.
   clusters = {
     standard-cluster = ./clusters/standard-cluster.nix;
   };
 
-  # How a cluster's content reaches it. A delivery floe answers
-  # `DELIVERY_POLICY` and installs nothing of its own, or installs the tool
-  # that takes over — `argocd` is a component because it does.
   delivery = {
     kapp = ./delivery/kapp.nix;
   };
 
-  # Floes that live at lab scope rather than in a cluster: they install
-  # nothing and answer a signature every cluster can resolve.
   lab = {
     lab-network = ./lab/network.nix;
     lab-ca = ./lab/ca.nix;
