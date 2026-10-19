@@ -1,11 +1,8 @@
-# Duration strings (`3m`, `10m`, `1h`) to seconds.
 { lib }:
 
 let
   inherit (import ./parse.nix { inherit lib; }) toIntOrNull;
 
-  # Seconds per unit. Adding a unit here is the whole change; nothing else
-  # enumerates them.
   unitSeconds = {
     s = 1;
     m = 60;

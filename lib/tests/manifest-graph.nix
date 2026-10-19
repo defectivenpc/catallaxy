@@ -153,9 +153,6 @@ lib.concatLists [
     ]
   )
 
-  # `kind:` names admissibility, not containment. It used to mean "any bundle
-  # holding a resource of this kind", which answers the opposite question:
-  # every emitter of a Certificate rather than the one thing that admits one.
   (assertEq "kind:X matches whoever provides that kind, not who emits it"
     (orderOf {
       consumer = b { requires = [ "kind:cert-manager.io/Certificate" ]; };

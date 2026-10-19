@@ -363,14 +363,6 @@ lib.concatLists [
     two = s { provides = [ "lab/services" ]; };
   }) 0)
 
-  # ---- floating steps --------------------------------------------------
-  #
-  # The `ensure-secrets` shape. Its one anchor was `before (wants
-  # lab/services)`; in a lab with no lab-level services that matched nothing,
-  # and the step was left wholly unconstrained rather than merely unordered
-  # against the thing that was absent. It sorted last — after the clusters it
-  # exists to run before.
-
   (assertEq "a step whose every anchor misses is reported" (lib.length (floating {
     ensure-secrets = s {
       before = [ "optional:provides:lab/services" ];
@@ -379,9 +371,6 @@ lib.concatLists [
     create-cluster = s { provides = [ "cluster/app/created" ]; };
   })) 1)
 
-  # The paired positive, and the reason this is not simply "warn on any
-  # unmatched soft anchor": `registry-setup` wants the lab CA, and a lab with
-  # TLS off has none. One anchor matching is enough to place the step.
   (assertEq "a step with one anchor matching and one missing is not reported" (lib.length (floating {
     registry-setup = s {
       after = [
@@ -392,7 +381,6 @@ lib.concatLists [
     setup-services = s { provides = [ "lab/services" ]; };
   })) 0)
 
-  # Declaring none is a decision, not an oversight — `dns-teardown` makes it.
   (assertEq "a step with no anchors at all is not reported" (lib.length (floating {
     lonely = s { provides = [ "lab/host-dns-removed" ]; };
   })) 0)

@@ -1,19 +1,3 @@
-# What a lab's own floe is built with.
-#
-# Exactly what `mkClusterFloe` is one level down: the lab frame — the inputs
-# every lab has and the policies every lab is held to — plus the units every
-# lab holds, and the result is callable so `labs.minimal { }` instantiates it
-# the way `clusters.app { }` does.
-#
-# An author declares the inputs *their* lab's environments may vary, so what
-# can differ between `minimal.local` and `minimal.tls` is readable from the
-# definition's header. That was five files and a module merge.
-#
-# The definition is built once. It was rebuilt per instantiation while
-# `inclusion.defaults` was a plain attrset and the lab's had to be derived
-# from units arriving as an input — so a second throwaway `mkFloe` existed
-# only to resolve the inputs early. Both are gone: `defaults` takes the same
-# argument `units` does, and a `singleton` provider needs no entry at all.
 {
   lib,
   floe,
@@ -35,13 +19,6 @@ let
     check = v: v ? __floeInstance;
   };
 
-  # What a lab writes about one cluster: the floe, and the claim that answers
-  # the hole it leaves open.
-  #
-  # A plain record where it was a 189-line submodule whose other ten options
-  # were `lowerCluster`'s results. Those are the lowering's to return, and a
-  # submodule that holds two authored fields and eight computed ones reads as
-  # though a deployer might set any of them.
   clusterEntry = types.submodule {
     options = {
       floe = mkOption {
@@ -80,7 +57,6 @@ let
     };
   };
 
-  # The inputs every lab has, whatever else its author declares.
   labInputs = {
     name = mkOption {
       type = types.str;
@@ -282,17 +258,6 @@ let
     };
   };
 
-  # A unit name a cluster already took.
-  #
-  # `//` is what joins the framework's units, the clusters', the author's and
-  # the instantiation's, and a collision does not fail — it replaces. Whatever
-  # the loser provided is then simply absent, and the symptom is an export that
-  # resolved yesterday reading `attribute 'delivery' missing` somewhere in the
-  # lowering, naming neither thing that collided.
-  #
-  # A throw and not a policy, because a policy runs on a link and this is about
-  # what the link is built from: by the time one could look, one of the two is
-  # already gone.
   refuseCollisions =
     labName: clusterNames: units:
     let
@@ -318,16 +283,11 @@ let
         + "provided is simply gone. Rename the lab unit."
       );
 
-  # The lab frame. `labInputs` above is the half an author reads; this is the
-  # pair that gets applied.
   labFrame = {
     baseInputs = labInputs;
     policies = labPolicies;
   };
 
-  # The definition without any instantiation, for the generated page: the
-  # declared interface is what a reader needs and it does not depend on what a
-  # lab was handed.
   labFloeInterface =
     args:
     floe.mkFloe (
@@ -339,13 +299,6 @@ let
       )
     );
 
-  # Everything about one lab that follows from its inputs: what it is called,
-  # what it is allocated, where its clusters are placed, and the units that
-  # places them.
-  #
-  # One function, because `units` and the facts the lowering is handed have to
-  # be describing the same lab — the placements the link is built from are the
-  # ones it then lowers.
   labOf =
     args: given:
     let
@@ -403,26 +356,6 @@ let
 
 in
 {
-  # mkLabFloe :: mkFloe-args -> callable floe definition
-  #
-  #   labs.minimal = mkLabFloe {
-  #     name = "minimal";
-  #     summary = "One cluster, a platform, and one service behind it.";
-  #     inputs.tls = lib.mkOption { type = lib.types.bool; default = false; };
-  #     units = _: { registry = floes.lab-registry { }; };
-  #     clusters = { inputs, ... }: { app = { floe = …; claim = …; }; };
-  #   };
-  #
-  #   labs.minimal { name = "minimal.tls"; tls = true; }
-  #
-  # Callable, so an environment instantiates it the way `clusters.app { }`
-  # instantiates a cluster floe, and an attrset, so the declared interface is
-  # readable without instantiating anything.
-  #
-  # `units` and `clusters` may be functions of the checked inputs or plain
-  # values. A lab's own are merged over the framework's, and over whatever the
-  # instantiation passed through the `units` input — which is how a consumer
-  # adds theirs.
   mkLabFloe =
     args:
     let

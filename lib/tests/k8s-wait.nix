@@ -294,17 +294,6 @@ lib.runTests {
     };
   };
 
-  # ---- probes that cannot ever match -----------------------------------
-  #
-  # `kubectl wait --for=condition=X` on a workload with no `.status.conditions`
-  # does not fail fast. It polls until the timeout and *then* says the
-  # condition was never met, so the bundle reads as a slow deploy rather than a
-  # broken probe. cilium cost ten minutes that way on a cluster it had already
-  # brought up, and otel-collector's agent the same before it.
-  #
-  # A comment on each floe was the first attempt at preventing this, and it did
-  # not work: the same mistake was made three floes after the comment was
-  # written, by the same person who wrote it.
   testAConditionOnADaemonSetIsRefused = {
     expr =
       wait.conditionOnConditionless {
@@ -315,7 +304,6 @@ lib.runTests {
     expected = true;
   };
 
-  # The short alias too, because a floe writes whichever it is used to.
   testTheShortNameIsRefusedAsWell = {
     expr =
       wait.conditionOnConditionless {
@@ -326,10 +314,6 @@ lib.runTests {
     expected = true;
   };
 
-  # A Job carries `Complete` and `Failed`, and waiting on one is the standard
-  # pattern — openbao's init bundle does exactly that. The first draft of this
-  # list had Jobs on it, and this check caught that on its very first run,
-  # which is the whole argument for it being a check and not a comment.
   testAJobIsFine = {
     expr = wait.conditionOnConditionless {
       kind = "condition";
@@ -339,8 +323,6 @@ lib.runTests {
     expected = "";
   };
 
-  # The paired positive, and it is not decorative: a Deployment *does* carry
-  # conditions, and refusing that would break every floe that waits on one.
   testADeploymentIsFine = {
     expr = wait.conditionOnConditionless {
       kind = "condition";
@@ -350,8 +332,6 @@ lib.runTests {
     expected = "";
   };
 
-  # Only `condition` probes. A jsonpath probe reads `.status` directly and is
-  # the right way to wait on a DaemonSet if a probe is wanted at all.
   testOtherProbeKindsAreUntouched = {
     expr = wait.conditionOnConditionless {
       kind = "jsonpath";

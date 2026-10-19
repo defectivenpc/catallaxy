@@ -1,4 +1,3 @@
-# A Job that re-runs when what you asked for changes, and not otherwise.
 { lib }:
 
 let

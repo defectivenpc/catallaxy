@@ -18,8 +18,6 @@ let
     }
     // attrs;
 
-  # Enough of the API server's own kinds for these fixtures. The real set comes
-  # from the generated schemas.
   core = {
     ConfigMap = true;
     Deployment = true;
@@ -99,9 +97,6 @@ let
     else
       [ ];
 
-  # Asserting on resolved predecessors rather than on the raw `after` strings:
-  # the strings are the representation, the edges are the behaviour, and only
-  # the second is what the deploy acts on.
   derive =
     args:
     deriveAutoEdges (
@@ -154,9 +149,6 @@ lib.concatLists [
     };
   }) [ ])
 
-  # The failure this whole derivation exists to make impossible. Eleven floes
-  # wrote the cert-manager edge by hand and four forgot; forgetting it now is
-  # not expressible.
   (assertThrows "a custom resource nobody installs a CRD for is refused" (
     predsOf "issuer-cr" {
       bundles = {
@@ -172,8 +164,6 @@ lib.concatLists [
     };
   }) [ "crds-from-a-chart" ])
 
-  # `Cluster` is CloudNativePG's, Cluster API's and Crossplane's. Keyed on the
-  # kind alone, a cnpg Cluster would have been satisfied by Cluster API.
   (assertEq "the API group qualifies the kind" (predsOf "db" {
     bundles = {
       capi = b { provides = [ "kind:cluster.x-k8s.io/Cluster" ]; };
@@ -188,9 +178,6 @@ lib.concatLists [
     };
   }) [ ])
 
-  # kapp reads its own Config out of the stream and never applies it, so
-  # nothing ever installs the kind. Derived as a requirement it deadlocks:
-  # crossplane's rebase rules failed eval the moment they first rendered.
   (assertEq "a kapp Config waits for nobody" (predsOf "rebase" {
     bundles = {
       rebase = b { resources.c = cr "kapp.k14s.io" "Config" "rebase-rules" "default"; };
@@ -245,9 +232,6 @@ lib.concatLists [
     ]
   )
 
-  # A namespace the cluster already had, kube-system say, is nobody's to
-  # create. Refusing here would make every lab declare namespaces it does not
-  # own.
   (assertEq "a namespace nothing in the lab creates is not an error" (predsOf "workload" {
     bundles = {
       workload = b { resources.d = workload "app" "no-such-ns"; };
@@ -265,8 +249,6 @@ lib.concatLists [
     };
   }) [ "namespaces/_all" ])
 
-  # Two bundles listing the same namespace in `createNamespaces` must not end
-  # up waiting on each other. Each providing it is what made that happen.
   (assertEq "co-creators of one namespace do not wait on each other"
     (waveNamesOf {
       namespaceAggregate = "namespaces/_all";

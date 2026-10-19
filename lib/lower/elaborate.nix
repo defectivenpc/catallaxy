@@ -1,4 +1,3 @@
-# bundles + link edges -> cluster metadata.
 {
   lib,
   floe,
@@ -13,14 +12,10 @@ let
   autoedges = import ../eval/manifest-autoedges.nix { inherit lib; };
   inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;
 
-  # The aggregate bundle every `createNamespaces` resolves to, so two bundles
-  # that both name a namespace do not end up waiting on each other.
   namespaceAggregate = "namespaces";
 
   projectionPrefix = "projection/";
 
-  # Namespaces every cluster already has. A resource in one of these is not
-  # missing a creator.
   builtinNamespaces = [
     "default"
     "kube-system"
@@ -45,7 +40,6 @@ in
 {
   inherit namespaceAggregate;
 
-  # elaborateCluster :: { linkResult; coreKinds; defaultOwner } -> clusterMetadata
   elaborateCluster =
     {
       linkResult,

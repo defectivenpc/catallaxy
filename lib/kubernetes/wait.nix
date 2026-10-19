@@ -1,4 +1,3 @@
-# The readiness probe DSL, and the Pod that runs a probe the applier cannot.
 {
   lib,
   images ? { },
@@ -263,7 +262,6 @@ let
     "ds"
   ];
 
-  # `""` when the probe is fine, otherwise why it is not.
   conditionOnConditionless =
     probe:
     let

@@ -1,4 +1,3 @@
-# Providers a lab may pin, and the tool built with exactly the ones it uses.
 { lib, pkgs }:
 
 let

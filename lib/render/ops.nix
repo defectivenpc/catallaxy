@@ -1,24 +1,9 @@
-# The ops channel -> one `<lab>-ops <category> <name> [args...]` executable.
-#
-# A command runs either `command` (a fixed argv) or `package` (an executable),
-# and may declare `options` (`--<name> <value>`, or bare for a bool) and
-# positional `args`. Options reach it as `OPT_<NAME>` in the environment.
 { lib, pkgs }:
 
 let
-  # `--backup-name` becomes `OPT_BACKUP_NAME`. Uppercased as well as
-  # de-hyphenated: a lowercase exported name collides with the ordinary shell
-  # environment far too easily, and `OPT_path` beside `PATH` is the kind of
-  # thing that works until it does not.
   shellVar = n: "OPT_" + lib.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] n);
 in
 {
-  # mkOpsTool :: { labName; ops } -> package or null
-  #
-  # `ops` is `cluster.out.ops`: category -> name -> command.
-  # Null when there is nothing to dispatch, so the lab can omit
-  # `opsToolPath` rather than shipping a tool that only ever prints that it
-  # has no commands.
   mkOpsTool =
     { labName, ops }:
     let

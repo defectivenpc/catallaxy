@@ -1,5 +1,3 @@
-# Ordering edges derived from what a resource structurally needs — its
-# namespace, its CRD, the Secret it reads.
 { lib }:
 
 let

@@ -1,44 +1,18 @@
-/*
-  The Kubernetes API, as `T`, from the OpenAPI spec itself.
-
-      fromSpec { spec = builtins.fromJSON (builtins.readFile ./swagger.json); }
-      -> { types; resolve; coreKinds; fallbacks; }
-
-  Reads the pinned spec at evaluation time rather than generating Nix from it.
-  The spec is 3.1 MB of JSON and `fromJSON` takes 35 ms; the 77,623 lines of
-  Nix this replaces took 82 ms just to parse, and two thirds of the resources
-  it defined had `specType = types.attrs` — no field checking at all below the
-  top level.
-
-  `JSONSchemaProps` is the one self-referential definition in 635, and Nix's
-  laziness is what makes it free: `types.JSONSchemaProps` is a thunk that
-  mentions itself, forced only as deep as a value being checked requires.
-
-  What it cannot express is recorded in `fallbacks` rather than quietly
-  becoming `T.any`, so the gap is a number somebody can watch instead of a
-  property of the output.
-*/
 { lib, T }:
 
 {
   spec,
 
-  # API group -> the group's schemas as `cata-build generate` emits them:
-  # `{ <Kind> = { apiVersion; schema; }; }`. A CRD's `openAPIV3Schema` is
-  # already JSON Schema, so it goes through the converter below — one
-  # vocabulary for the Kubernetes API and every CRD alike.
   crdGroups ? { },
 }:
 
 let
   definitions = spec.definitions or (throw "the OpenAPI spec has no `definitions`");
 
-  # `io.k8s.api.apps.v1.Deployment` -> `Deployment`, for error messages.
   shortName = name: lib.last (lib.splitString "." name);
 
   refTarget = schema: lib.removePrefix "#/definitions/" (schema."$ref" or "");
 
-  # Kinds `T` has no word for. Each is `T.any` *and* an entry in `fallbacks`.
   unexpressible = {
     "int-or-string" =
       "an int or a string, and `T` has no union of two primitives — a Quantity or a port that may be named";
@@ -49,9 +23,6 @@ let
     lib.flatten (lib.mapAttrsToList (name: _: fallbacksIn [ name ] definitions.${name}) definitions)
   );
 
-  # Every place the conversion gave up, with the path and the reason. Walks
-  # the schema rather than the output, because the output cannot say why it is
-  # `T.any`.
   fallbacksIn =
     path: schema:
     let
@@ -93,7 +64,6 @@ let
     in
     here ++ inner;
 
-  # The type of one schema node.
   convert =
     schema:
     let
@@ -104,8 +74,6 @@ let
       types.${refTarget schema}
       or (throw "the spec references `${refTarget schema}`, which it does not define")
 
-    # A combinator, a float, or an int-or-string. `T` has no word for these;
-    # `fallbacks` says where and why.
     else if
       schema ? allOf
       || schema ? anyOf
@@ -129,8 +97,6 @@ let
 
     else if type == "object" then
       let
-        # A map, when the schema names no properties and says what the values
-        # are. `additionalProperties: true` is an object with no shape at all.
         extra = schema.additionalProperties or null;
       in
       if !(schema ? properties) && lib.isAttrs extra then
@@ -143,30 +109,15 @@ let
         in
         T.record (
           lib.mapAttrs (
-            field: sub:
-            if lib.elem field required then
-              convert sub
-            else
-              # Absent *or* null. `lib/render/yaml.nix` strips nulls before a
-              # resource is written, so `null` is how a floe spells "leave
-              # this out" — and the value it hands conformance still carries
-              # the key.
-              T.optional (T.nullOr (convert sub))
+            field: sub: if lib.elem field required then convert sub else T.optional (T.nullOr (convert sub))
           ) schema.properties
         )
 
-    # A definition with no `type` and no `$ref` carries only a description.
     else
       T.any;
 
-  # Every definition, by its spec name, lazily. The recursion in
-  # `JSONSchemaProps` resolves through this set.
   types = lib.mapAttrs (name: schema: T.named (shortName name) (convert schema)) definitions;
 
-  # Every object has these and most CRDs do not say so: a CRD's
-  # `openAPIV3Schema` typically declares `spec` and `status` alone, because the
-  # apiserver supplies the rest. The Kubernetes spec declares them explicitly,
-  # so this is only needed on the CRD side.
   objectMeta = types."io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta";
 
   withObjectMeta =
@@ -184,8 +135,6 @@ let
         // ty.fields;
       };
 
-  # Custom resources, by apiVersion then kind. A CRD schema is self-contained
-  # — no `$ref` — so nothing here resolves through `types`.
   crdTypes = lib.foldl' lib.mergeAttrs { } (
     lib.mapAttrsToList (
       _group: kinds:
@@ -204,9 +153,6 @@ let
     ) crdGroups
   );
 
-  # `x-kubernetes-group-version-kind` is the spec's own GVK table, so the
-  # mapping from a resource's `apiVersion` and `kind` is read rather than
-  # reconstructed from the definition's dotted name.
   gvkOf =
     name:
     map (g: {
@@ -230,13 +176,6 @@ in
 {
   inherit types;
 
-  /*
-    The type for a resource's own `apiVersion` and `kind`, or null when the
-    spec describes no such thing.
-
-        resolve "apps/v1" "Deployment"   # => a T type
-        resolve "nope.io/v1" "X"         # => null
-  */
   resolve =
     apiVersion: kind:
     let
@@ -244,12 +183,7 @@ in
     in
     if definition != null then types.${definition} else crdTypes.${apiVersion}.${kind} or null;
 
-  # Every kind the apiserver serves, as a set, because the question asked of
-  # it is membership — `coreKinds ? Deployment`. 141 of them at 1.31, and
-  # installing a CRD cannot add to it: these are the spec's own
-  # group-version-kinds.
   coreKinds = lib.genAttrs (map (g: g.kind) gvks) (_: true);
 
-  # Where the conversion gave up, and why.
   fallbacks = fallbackList;
 }

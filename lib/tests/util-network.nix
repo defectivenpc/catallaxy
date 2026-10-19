@@ -12,8 +12,6 @@ let
 in
 lib.runTests {
 
-  # The docker bridge gateway and a cluster's first assignable host are both
-  # this. Three places derived it by hand while this had no callers at all.
   testFirstIPIsTheAddressAfterTheNetworks = {
     expr = net.cidrFirstIP "172.20.0.0/16";
     expected = "172.20.0.1";
@@ -35,9 +33,6 @@ lib.runTests {
     expected = "192.168.1.255";
   };
 
-  # Only one of the three hand-rolled copies checked this. The other two
-  # produced a nonsense address or failed inside `toInt`, so the check now
-  # lives with the function.
   testAnIncompleteAddressIsRefused = {
     expr = throws (net.cidrFirstIP "10.0.0/8");
     expected = true;
@@ -58,8 +53,6 @@ lib.runTests {
     expected = false;
   };
 
-  # The reason this exists: a lab whose pod and service subnets overlap comes
-  # up and then routes to the wrong place.
   testOverlappingRangesAreDetected = {
     expr = net.cidrsOverlap "10.42.0.0/16" "10.42.128.0/17";
     expected = true;

@@ -1,4 +1,3 @@
-# Floe verify checks -> one Chainsaw Test per cluster.
 { lib, pkgs }:
 
 let
@@ -6,11 +5,6 @@ let
   verifyTypes = import ../verify-types.nix { inherit lib; };
 in
 {
-  # mkVerifyTest :: { labName; clusterName; checks } -> package
-  #
-  # `checks` is `cluster.out.verify`: the lifted channel, keyed
-  # `<instName>/<bundle>/<check>`, whose values are the floe's `verifyCheckSchema`
-  # records.
   mkVerifyTest =
     {
       labName,

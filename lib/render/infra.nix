@@ -1,4 +1,3 @@
-# Stacks, and the `main.tf.json` each one renders to.
 { lib }:
 
 let
@@ -21,14 +20,10 @@ let
       map (interpolate resolve) v
     else
       v;
-  # `scope` is the cluster the floe was instantiated in, or `lab` for one the
-  # lab holds. Two labs are two instantiations by `lab.name` already, since
-  # every stack's state lives under the lab's own directory.
   stackNameFor =
     scope: unit: phase:
     "${scope}-${unit}-${phase}";
 
-  # Every deferred token in a value, wherever it sits.
   tokensIn =
     v:
     if isToken v then
@@ -44,12 +39,6 @@ in
 rec {
   inherit outputName;
 
-  # stackNameFor :: scope -> unit -> phase -> string
-  #
-  # Every stack in a lab, with the resources and publications that belong to
-  # it, from the per-unit output collections the linker produced.
-  #
-  # collectStacks :: { scope; resources; publications; } -> { <stack> = { … } }
   collectStacks =
     {
       scope,
@@ -99,10 +88,6 @@ rec {
       ) stackNames
     );
 
-  # The document the tool reads. Pure data; `builtins.toJSON` of this is the
-  # file, so it is diffable as a fixture without building anything.
-  #
-  # renderStack :: { name; stack; stacks; providers; stateDir } -> attrs
   renderStack =
     {
       name,

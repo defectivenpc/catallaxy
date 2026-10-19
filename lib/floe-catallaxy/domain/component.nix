@@ -1,6 +1,3 @@
-# What a cluster-component floe contributes, and the monoid that joins two of
-# them. One kind, so every component floe has the same output type and the
-# cluster picture is a fold rather than a pile.
 {
   lib,
   floe,
@@ -36,7 +33,6 @@ let
     componentSchema
     ;
 
-  # point someone writes it, which is the only place they can act on it.
   mkImage =
     ref:
     let
@@ -143,7 +139,6 @@ rec {
     }
     // lib.optionalAttrs (namespace != null) { inherit namespace; };
 
-  # The overwhelmingly common one: a Deployment reporting Available.
   readyDeployment =
     {
       name,
@@ -156,8 +151,6 @@ rec {
       condition = "Available";
       inherit namespace timeout;
     };
-
-  # ---- constructors ------------------------------------------------------
 
   mkBundle =
     {
@@ -219,13 +212,6 @@ rec {
       args = map mkOpsArg args;
     };
 
-  # ---- constructors a floe ships for its consumers ------------------------
-
-  # Deny everything not otherwise allowed, except DNS. `podSelector = {}`
-  # selects every pod in the namespace, and a NetworkPolicy is additive, so a
-  # policy with no allow rules is a deny. A namespace whose pods cannot
-  # resolve turns every failure into a name error, which is why DNS is the
-  # one exception and why it is stated here rather than configured.
   mkDefaultDeny =
     { namespace }:
     {
@@ -586,8 +572,6 @@ rec {
 
       drift = map mkDrift drift;
     };
-
-  # ---- the monoid --------------------------------------------------------
 
   empty = {
     bundles = { };

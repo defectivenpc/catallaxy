@@ -1,4 +1,3 @@
-# The `resources` delivery category.
 { lib, floe }:
 
 let

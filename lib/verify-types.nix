@@ -9,16 +9,6 @@ let
 in
 rec {
 
-  /*
-    A JMESPath key matching a resource whose `type` condition is present and
-    is not `status`.
-
-    The parentheses are load-bearing: `|` binds looser than `&&` in JMESPath,
-    so writing the two halves without them parses as a pipeline and quietly
-    evaluates to nonsense rather than erroring. The null guard is equally
-    load-bearing: selection is a wildcard over the kind, so a resource that
-    has not reported the condition yet would otherwise match and fire.
-  */
   conditionIsNot =
     {
       type,
@@ -31,13 +21,6 @@ rec {
 
   fieldIsNot = { field, value }: "(${field} != null && ${field} != '${value}')";
 
-  /*
-    A check lowered to Chainsaw steps.
-
-    `lib/render/chainsaw.nix` lowers the checks a floe contributed. A floe's
-    check is plain data from a kind schema rather than a module, so it never
-    reaches `config`.
-  */
   stepsFor =
     {
       name,

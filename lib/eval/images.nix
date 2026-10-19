@@ -1,4 +1,3 @@
-# Reading image references back out of rendered manifests.
 { lib }:
 
 let

@@ -3,7 +3,6 @@
 let
   duration = import ../util/duration.nix { inherit lib; };
 
-  # What the type would say about a value, without an evalModules round trip.
   accepts = v: duration.type.check v;
 in
 lib.runTests {
@@ -46,9 +45,6 @@ lib.runTests {
     };
   };
 
-  # Every one of these used to be worth 60 seconds inside the external-dns
-  # floe, because its copy of the parse substituted a default rather than
-  # refusing the input.
   testAnUnknownUnitIsNotADuration = {
     expr = duration.parse "5y";
     expected = null;
@@ -79,8 +75,6 @@ lib.runTests {
     expected = null;
   };
 
-  # `lib.toInt` reads a leading minus happily, which would have turned a
-  # deadline negative rather than rejecting it.
   testANegativeIsNotADuration = {
     expr = duration.parse "-5m";
     expected = null;

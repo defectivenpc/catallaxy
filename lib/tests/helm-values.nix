@@ -1,9 +1,3 @@
-# `T.helmValues`: a chart value written as a quoted boolean.
-#
-# Neither of the other two guards can see this one. `chart-values` renders the
-# chart and finds the value has an effect, which it does — the opposite one.
-# Helm's own schema validation would catch it, for the nine of twenty-one
-# charts that ship a schema.
 { lib, floeCore }:
 
 let
@@ -18,9 +12,6 @@ lib.runTests {
     expected = true;
   };
 
-  # The trap: every non-empty string is truthy in a Go template, so this
-  # enables what it says it disables. `argo-cd` ships no values schema, so
-  # nothing downstream would have objected.
   testAQuotedFalseIsRefused = {
     expr = accepts { redis-ha.enabled = "false"; };
     expected = false;
@@ -42,10 +33,6 @@ lib.runTests {
     ];
   };
 
-  # Scoped to toggle-named keys, because a string-typed boolean is ordinary
-  # elsewhere: velero hands `backupStorageLocation[].config` to a CR field that
-  # is `map[string]string`, so this one is correct and its suite asserts it. An
-  # unscoped rule reported it on its first run.
   testAStringBooleanOutsideAToggleIsLeftAlone = {
     expr = accepts {
       configuration.backupStorageLocation = [ { config.s3ForcePathStyle = "true"; } ];
@@ -53,15 +40,11 @@ lib.runTests {
     expected = true;
   };
 
-  # Charts take string-typed ports and quantities, and cilium's schema types
-  # `k8sServicePort` as `["string","integer"]` — so a numeric-string rule
-  # would have been wrong about a value already in the tree.
   testANumericStringIsLeftAlone = {
     expr = accepts { k8sServicePort = "6443"; };
     expected = true;
   };
 
-  # Nothing stops at the top level: a value is as wrong nested as it is flat.
   testItReachesNestedAttributes = {
     expr = accepts { server.standalone.enabled = "false"; };
     expected = false;
@@ -72,15 +55,11 @@ lib.runTests {
     expected = false;
   };
 
-  # `installCRDs = "false"` is the same mistake and is not caught: precision
-  # was chosen over recall, because a rule with a false positive on day one is
-  # a rule people switch off.
   testANonToggleNameIsNotCovered = {
     expr = accepts { installCRDs = "false"; };
     expected = true;
   };
 
-  # `"true"` is a perfectly good *word*. Only a whole value counts.
   testAStringThatMerelyContainsOneIsFine = {
     expr = accepts { enabled = "false alarm"; };
     expected = true;

@@ -1,4 +1,3 @@
-# The lint channel -> executables under `$out/lint/<cluster>/`.
 { lib, pkgs }:
 
 let
@@ -7,9 +6,6 @@ in
 {
   inherit sanitize;
 
-  # mkLintChecks :: { clusterName; checks } -> package or null
-  #
-  # `checks` is `cluster.out.lint`, keyed `<instName>/<bundle>/<name>`.
   mkLintChecks =
     { clusterName, checks }:
     let

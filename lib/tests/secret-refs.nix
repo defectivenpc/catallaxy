@@ -1,8 +1,3 @@
-# What counts as making a Secret, and what counts as reading one.
-#
-# The distinction is the whole point of the file under test: the parked walker
-# treated any `secretName` as a read, which made cert-manager a consumer of its
-# own output. Every case here is one of the two directions.
 { lib }:
 
 let
@@ -14,7 +9,6 @@ let
   };
 in
 lib.runTests {
-  # ---- production -------------------------------------------------------
 
   testAPlainSecretIsMade = {
     expr = sr.secretsCreatedBy {
@@ -24,7 +18,6 @@ lib.runTests {
     expected = [ "ns/creds" ];
   };
 
-  # The case the parked walker got backwards.
   testACertificateMakesItsSecret = {
     expr = sr.secretsCreatedBy {
       kind = "Certificate";
@@ -52,8 +45,6 @@ lib.runTests {
     expected = [ "ns/minted" ];
   };
 
-  # external-secrets defaults the target to the ExternalSecret's own name, so
-  # a bundle omitting `target` still provides something.
   testAnExternalSecretWithNoTargetUsesItsOwnName = {
     expr = sr.secretsCreatedBy {
       kind = "ExternalSecret";
@@ -62,8 +53,6 @@ lib.runTests {
     };
     expected = [ "ns/e" ];
   };
-
-  # ---- consumption ------------------------------------------------------
 
   testEveryWayAPodNamesASecret = {
     expr = sr.secretsUsedBy {
@@ -97,8 +86,6 @@ lib.runTests {
     expected = [ "ns/gw-tls" ];
   };
 
-  # `certificateRefs` defaults to Secret but may name another kind, and a
-  # reference to something that is not a Secret is not a missing Secret.
   testACertificateRefOfAnotherKindIsNotASecret = {
     expr = sr.secretsUsedBy {
       kind = "Gateway";
@@ -133,11 +120,6 @@ lib.runTests {
     expected = [ "ns/ca" ];
   };
 
-  # ---- what is deliberately not answered --------------------------------
-
-  # A ClusterIssuer resolves `spec.ca.secretName` against the controller's
-  # resource namespace, which is not on the resource. Guessing would invent a
-  # reference; the floe says so with `needsSecrets` instead.
   testAClusterScopedResourceIsSkipped = {
     expr = sr.secretsUsedBy {
       kind = "ClusterIssuer";
@@ -155,8 +137,6 @@ lib.runTests {
     expected = [ ];
   };
 
-  # An ExternalSecret names its store in `secretStoreRef`, which is a store,
-  # not a Secret. Ordering against it already has its own token.
   testAStoreReferenceIsNotASecretReference = {
     expr = sr.secretsUsedBy {
       kind = "ExternalSecret";

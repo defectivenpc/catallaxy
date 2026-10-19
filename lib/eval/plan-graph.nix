@@ -1,4 +1,3 @@
-# The plan graph: lab steps ordered into a sequence.
 { lib }:
 
 let

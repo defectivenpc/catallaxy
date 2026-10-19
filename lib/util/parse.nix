@@ -1,4 +1,3 @@
-# Reading numbers out of strings, without a character class.
 { lib }:
 
 {

@@ -1,4 +1,3 @@
-# What a step is, before and after the sort.
 { lib }:
 
 let
@@ -35,7 +34,6 @@ let
       '';
     };
   };
-  # What a floe or a lab writes.
   declaredStepType = types.submodule (
     { name, ... }:
     {
@@ -141,16 +139,6 @@ let
       };
     }
   );
-  # The one option `declaredStepType` is reached through, as a module.
-  #
-  # Two readers, and that it is one module is what keeps them honest: the merge
-  # below, and `nix/docs/options-json.nix`, which runs `nixosOptionsDoc` over exactly
-  # this to generate the step schema page. A schema page generated from
-  # anything else could describe a field the merge does not accept.
-  #
-  # `_file` so the page can say where each field is declared. `internal`
-  # because `steps` itself is not an authoring surface — it is the merge point
-  # for the three producers — while the fields under it are what a floe writes.
   stepsModule = {
     _file = toString ./step-type.nix;
 
@@ -165,25 +153,9 @@ in
 {
   inherit declaredStepType stepsModule;
 
-  # mergeSteps :: [{ StepName -> declaredStep }] -> { StepName -> step }
-  #
-  #   mergeSteps [ floeSteps frameworkSteps ]
-  #
-  # Every step a lab holds, from each of the three producers that contribute
-  # one: the floes' through `lab-steps`, the framework's lifecycle steps, and
-  # one set per provisioning edge.
-  #
-  # The merge is `evalModules` and not `//` for two reasons, and both are
-  # load-bearing. A `//` would silently resolve two producers claiming one step
-  # name, which is a step that vanishes rather than an error. And the type is
-  # where every field a step does not state gets its default — `direction`
-  # from the kind, `description` from the attribute name — so a set that has
-  # not been through it is a different set.
   mergeSteps =
     producers:
     (lib.evalModules {
       modules = [ stepsModule ] ++ map (steps: { inherit steps; }) producers;
     }).config.steps;
-
-  inherit ;
 }

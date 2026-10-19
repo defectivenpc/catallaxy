@@ -1,8 +1,6 @@
-# Which Secrets a resource creates, and which it reads.
 { lib }:
 
 let
-  # secretAddress :: Namespace -> Name -> "<ns>/<name>"
   key = namespace: name: "${namespace}/${name}";
 
   nsOf = res: res.metadata.namespace or null;
@@ -23,8 +21,6 @@ let
     (node.secret.name or null)
   ];
 
-  # List-valued reference forms, which the generic walk reaches as attrsets but
-  # whose shape differs enough to name explicitly.
   readersIn =
     node:
     map (r: r.name or null) (node.imagePullSecrets or [ ])
@@ -42,14 +38,11 @@ let
     else
       [ ];
 
-  # Sorted, so a bundle's token list depends on what it references and not on
-  # where in the resource body the reference happened to be found.
   present = names: lib.naturalSort (lib.unique (lib.filter (n: n != null && n != "") names));
 in
 {
   inherit key;
 
-  # secretsCreatedBy :: resource -> [ "<ns>/<name>" ]
   secretsCreatedBy =
     res:
     let
@@ -58,7 +51,6 @@ in
     in
     if nsOf res == null then [ ] else map (key (nsOf res)) (present names);
 
-  # secretsUsedBy :: resource -> [ "<ns>/<name>" ]
   secretsUsedBy =
     res: if nsOf res == null then [ ] else lib.unique (map (key (nsOf res)) (present (walk res)));
 

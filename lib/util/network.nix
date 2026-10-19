@@ -1,4 +1,3 @@
-# CIDR arithmetic.
 { lib }:
 
 let

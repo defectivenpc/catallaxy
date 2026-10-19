@@ -4,7 +4,6 @@
   directions = [ "deploy" ];
   idempotency = "idempotent";
   dialsLabEndpoints = false;
-  # Read-only but not inert: it authenticates and calls the provider's API.
   dryRunSafe = false;
   params.options = {
     stack = lib.mkOption {

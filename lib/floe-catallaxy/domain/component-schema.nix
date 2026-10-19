@@ -1,4 +1,3 @@
-# The schemas a cluster component is typed against.
 { lib, floe }:
 
 let
@@ -40,8 +39,6 @@ let
     }
   );
 
-  # A positional. `variadic` is last-only and takes the rest, which is what
-  # `velero backup create` wants for its passthrough flags.
   opsArgSchema = T.named "opsArg" (
     T.record {
       name = T.str;

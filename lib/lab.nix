@@ -1,29 +1,17 @@
-# Evaluating a lab.
 {
   lib,
   pkgs,
   floeCore,
   kubelib,
 
-  # Floes from outside this repository, by name. They are collected for their
-  # CRD types exactly as the built-in ones are, which is the whole point: a
-  # floe's custom resources are checked against a schema only if its groups
-  # reached the record the floe was defined against, and that record is built
-  # below. `legacyPackages.withFloes` is how a consumer gets one.
   extraFloes ? { },
 }:
 
 let
-  # The CRD types the floes carry, which this hands to the distribution. It
-  # cannot import them itself: a floe depends on the distribution, so the
-  # distribution importing the floe tree would be the cycle.
   upstreamLib = import ./upstream.nix { inherit lib pkgs kubelib; };
 
   builtInPaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../floes));
 
-  # A floe outside this repository cannot take a built-in name. Both halves
-  # are one namespace — a link resolves `floes.<name>` against the merged set
-  # — so a silent override would mean a lab linking the floe it did not mean.
   shadowed = lib.attrNames (lib.intersectAttrs builtInPaths extraFloes);
 
   allFloePaths = lib.throwIf (shadowed != [ ]) (
@@ -32,8 +20,6 @@ let
     + "the merge happened to keep. Rename yours."
   ) (builtInPaths // extraFloes);
 
-  # What this floe vendors, or null. A component floe is a directory and a lab
-  # floe is a file, so only the first can carry a pin beside it.
   pinOf =
     path:
     let
@@ -55,19 +41,6 @@ let
     };
   };
 
-  # applyFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
-  #
-  # `pkgs` and `upstream` are definition-time arguments rather than floe
-  # inputs: `instantiate` deep-forces inputs, so a derivation could not travel
-  # that way. `upstream` is this floe's own pin and no other's — a floe cannot
-  # reach a sibling's chart, which is what a central registry allowed.
-  #
-  # `floes` is in that list too, and is the set being defined. A floe whose
-  # units are other floes reaches them through it, and laziness is what makes
-  # that legal: forcing one definition never forces the set, so a cluster floe
-  # naming `floes.cert-manager` pulls one path import rather than a cycle. It
-  # used to need a second pass of its own, applied after this one, because the
-  # preset mechanism it needed was not a floe.
   applyFloes =
     set:
     lib.mapAttrs (
@@ -89,9 +62,6 @@ let
 
   floes = applyFloes allFloePaths;
 
-  # `mkLabFloe`, finished: the helper needs the floe set above and the placer,
-  # and `lib/floe-catallaxy` can see neither — the set is built out of its own
-  # definitions, and `lib/lower/cluster.nix` takes the whole distribution.
   inherit
     (catallaxy.mkLabFloeWith {
       inherit floes;
@@ -100,26 +70,12 @@ let
     mkLabFloe
     ;
 
-  # The distribution a *lab* is handed, which is the one above plus the two
-  # things that could only be finished here. A lab author reaches
-  # `catallaxy.mkLabFloe` the way a cluster author reaches
-  # `catallaxy.mkClusterFloe`, and that the one is partially applied inside is
-  # not their problem.
   labCatallaxy = catallaxy // {
     inherit mkLabFloe;
   };
 
-  # catalogue :: { FloeName -> [SignatureName] }
-  #
-  # What each floe provides, read off its declaration — the same read
-  # `nix/docs/floes.nix` makes to generate its page. Derived, so adding a floe
-  # adds it here and deleting one removes it; there is no second list.
-  #
-  # Lazy: `link` forces this only when a hole has no provider and it has an
-  # error to write.
   catalogue = lib.mapAttrs (_: def: map (s: s.name) (lib.attrValues def.provides)) floes;
 
-  # The four phases outside the lab's floe, each a plain function.
   inherit (import ./lower/link.nix { inherit lib catallaxy; }) linkLab;
   inherit (import ./lower/cluster.nix { inherit lib catallaxy; }) lowerCluster;
   inherit
@@ -132,19 +88,6 @@ let
   plan = import ./lower/plan.nix { inherit lib catallaxy; };
   stepTypes = import ./eval/step-type.nix { inherit lib; };
 
-  # mkLab :: LabInstance -> Lab
-  #
-  # Lab is a plain record:
-  #
-  #   { name; zone; subnet; clusters; link; services;
-  #     cliConfig; package; deploymentPlan; teardownPlan; }
-  #
-  #   mkLab (labs.minimal { name = "minimal.local"; })
-  #
-  # A lab is a floe, so the argument is one instantiated, and `mkLab` is the
-  # four phases outside it: link, lower each cluster, plan, lower the lab. They
-  # are outside because a body cannot read its own units' link — that is what
-  # sealing means, ADR 0007 — and every one of them is a read of it.
   mkLab =
     instance:
     let
@@ -276,22 +219,10 @@ in
     floes
     ;
 
-  # The distribution, as a lab author sees it: `mkClusterFloe`, `mkLabFloe`,
-  # the signatures and the kinds. What a `lab.nix` is handed, together with
-  # `floes` and `lib`, whether it lives in this repo or in yours.
   catallaxy = labCatallaxy;
 
-  # mkFloes :: { FloeName -> Path } -> { FloeName -> Inputs -> Floe }
-  #
-  # What a consumer calls on its own floe directory. The built-in set is
-  # built by the same function, so a floe outside this repo is handed the
-  # same arguments as one inside it.
   mkFloes = applyFloes;
 
-  # One cluster, with no lab around it. The same option surface a lab writes
-  # under `lab.clusters.<name>`, evaluated on its own — which is possible
-  # because a cluster is a floe and lowering is defined on closed
-  # compositions.
   inherit
     (import ./cluster.nix {
       inherit

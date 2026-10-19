@@ -286,13 +286,6 @@ let
         )}
       '';
 
-  # Stamped on every rendered resource, whoever produced it: a Nix-authored
-  # resource, helm output, or raw upstream YAML. It is what lets `lab up` ask
-  # the cluster which resources it owns and delete the ones the declaration no
-  # longer names. Without it, disabling a floe left everything it created
-  # running and `lab up` reported success.
-  #
-  # The same namespace the containers carry, for the same reason.
   ownershipLabels = ownership: {
     "catallaxy.io/lab" = ownership.lab;
     "catallaxy.io/bundle" = ownership.bundle;

@@ -1,58 +1,13 @@
-# Lowering one cluster: an authored floe, its claim, and the document the pair
-# makes.
-#
-# A plain function, because there is nothing here to merge. It places the
-# claim, binds the cluster's hole to it, elaborates, renders, and folds the
-# result into `ClusterSpec`. Every input is handed in and every output is
-# returned; nothing reads an option tree.
-#
-# It was `modules/lab/cluster/default.nix`, a submodule — and the submodule had
-# two callers both building its input by hand, `lib/lab.nix` synthesising a
-# whole `lab` record to evaluate exactly one of them. That is a function
-# pretending to be a submodule. The authoring surface it carried stays a
-# submodule; this is the half below it.
-#
-# Before this it *synthesized* the cluster's floe: `requires` scanned off
-# whatever was in a bag of instances, `provides` assembled from a table of
-# crossable signatures plus a hardcoded list of what the lab reads. A floe's
-# interface has to be readable from its header before anything evaluates, and
-# a synthesized one is readable only after — which is the single property floes
-# exist to provide, given up by the thing holding them. ADR 0003.
 {
   lib,
   catallaxy,
 }:
 
 let
-  # `coreKinds` is the built-in kinds only — the membership test behind "does
-  # this resource need an edge to whatever establishes its CRD". It is derived
-  # from the spec's own group-version-kinds, so installing a CRD cannot add to
-  # it and this needs no second API record to ask with no CRDs in scope.
   inherit (catallaxy.k8sApi) coreKinds;
   infraLib = import ../render/infra.nix { inherit lib; };
 in
 {
-  # lowerCluster :: { clusterName; floe; claim; lab; } -> lowered
-  #
-  # `lab` is what a cluster may read of the lab around it: its name, whether
-  # the lab fronts it, the one link, and the delivery arrangement
-  # folded from what every cluster said. Not the whole lab, so that the list
-  # is visible — every one of these is a coupling, and a cluster authored on
-  # its own has to be handed an answer for each.
-  #
-  # Returns the placed `claim` as well as the lowering, because the lab links
-  # the placed instance and the placement happens here.
-  # placeCluster :: { clusterName; floe; claim; labName; } -> { claim; clusterFloe; security; }
-  #
-  # The half that happens *before* linking, and the reason it is its own
-  # function: the lab floe's `units` are what gets linked, so the claim has to
-  # be placed and the cluster's hole bound to it while there is still no link
-  # to read. Everything here comes off the two declarations and the lab's name.
-  #
-  # It was the top of `lowerCluster`, and that it was one function with the
-  # lowering was the module system's laziness hiding two phases: the submodule
-  # produced `placedProvisioner` and `spec` from one call, and the link that `spec`
-  # needs is built out of `placedProvisioner`.
   placeCluster =
     {
       clusterName,
@@ -82,15 +37,6 @@ in
 
       edgeHoles = lib.attrNames (lib.filterAttrs (_: sig: sig.name == "CLUSTER_EDGE") floe.def.optional);
 
-      # Every hole the claim answers rather than the cluster, by signature. The
-      # provisioner is what knows whether a PVC has anywhere to bind, so a
-      # cluster holding a stateful floe declares the hole and this fills it
-      # from the claim — the same move the edge is.
-      #
-      # A cluster that places its own storage provisioner resolves the hole
-      # inside and declares none; one that places a provisioner *and* declares
-      # the hole has two storage classes, which is a real choice and the
-      # linker asks for it.
       provisionerProvided =
         sigName: surface: lib.attrNames (lib.filterAttrs (_: sig: sig.name == sigName) surface);
 
@@ -118,16 +64,6 @@ in
       security = floe.inputsChecked;
     };
 
-  # lowerCluster :: { clusterName; placed; lab; } -> lowered
-  #
-  # The half that happens *after* linking. `placed` is what `placeCluster`
-  # returned, and `lab.link` is the one resolution every cluster is a view of.
-  #
-  # `lab` is what a cluster may read of the lab around it: its name, whether
-  # the lab fronts it, the one link, and the delivery arrangement folded from
-  # what every cluster said. Not the whole lab, so that the list is visible —
-  # every one of these is a coupling, and a cluster authored on its own has to
-  # be handed an answer for each.
   lowerCluster =
     {
       clusterName,
@@ -166,11 +102,6 @@ in
 
       descriptor = lib.head (lib.attrValues out.cluster);
 
-      # Whether anything in this cluster enforces a policy, as whatever
-      # implements the network said. It was `k3d.noFlannel`, with every other
-      # provisioner assumed to enforce — so a Talos cluster asking for
-      # default-deny got objects that applied, reported healthy and denied
-      # nothing, which is the failure this exists to catch.
       policyEngines = lib.attrValues (link.out."catallaxy.networkPolicy" or { });
 
       policyAssertions =
@@ -208,9 +139,6 @@ in
             reachableFrom = lib.optional lab.hasIngress (catallaxy.hostContainerFor lab.name "ingress");
           };
 
-        # `provisionedBy` joins `kubeconfigFrom` in not travelling: the
-        # provisioning edge is ordered in Nix, off `out.cluster`, and the
-        # document is what a command reads.
         external =
           c:
           removeAttrs c [
@@ -226,14 +154,6 @@ in
         manifests
         ;
 
-      # What `metadata.json` carries for the network-policy lint rule, which
-      # returned early on a field nothing could set.
-      #
-      # Both halves, because the rule asks "every flow needs a policy
-      # permitting it" and that is only true under a default-deny: with no
-      # policies at all nothing is denied, so a flow without one is fine. A
-      # policy engine and no default-deny is a cluster that *could* enforce
-      # and does not.
       networkPolicy = {
         enabled = policyEngines != [ ] && security.defaultDenyNamespaces != [ ];
         implementations = map (p: p.implementation) policyEngines;

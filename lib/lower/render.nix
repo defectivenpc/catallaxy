@@ -1,5 +1,3 @@
-# Lays an elaborated cluster out as numbered wave directories of YAML.
-# Templating, null-stripping and ownership stamping are `lib/render/manifest.nix`'s.
 { lib, pkgs }:
 
 let
@@ -7,7 +5,6 @@ let
   yamlUtil = import ../render/yaml.nix { inherit lib pkgs; };
   inherit (import ../eval/bundle-key.nix { }) sanitize;
 
-  # `mkHelmChart` says only what varies; the rest is filled here.
   toHelmSpec = spec: {
     inherit (spec)
       chart
@@ -25,8 +22,6 @@ let
     };
   };
 
-  # A bundle carries raw YAML as a store path string, not a derivation:
-  # `instantiate` deep-forces inputs and never returns from one.
   materialise =
     path:
     pkgs.runCommand (baseNameOf path) { } ''
@@ -37,8 +32,6 @@ let
 
   waitLib = import ../kubernetes/wait.nix { inherit lib; };
 
-  # Probe kinds the applier runs directly. `http`, `tcp` and `dns` ask about
-  # in-cluster reachability, so `wait.nix` lowers those into a one-shot Pod.
   nativeProbeKinds = [
     "condition"
     "jsonpath"
@@ -76,10 +69,6 @@ let
         };
 in
 {
-  # renderCluster :: { name; cluster; owner ? name } -> derivation
-  #
-  # Wave numbering exists so the directory listing reads in apply order.
-  # Nothing downstream may reference a wave index.
   renderCluster =
     {
       name,

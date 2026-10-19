@@ -21,7 +21,5 @@ let
 
 in
 {
-  # `specs` is the input to `lib/kubernetes/generated/`, wired to it by
-  # nothing; it records which API versions those were generated from.
   inherit specs;
 }

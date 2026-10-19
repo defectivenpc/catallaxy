@@ -1,6 +1,3 @@
-# Link-time policies: functions over the link result returning violations.
-# Core owns coherence — exactly one provider, sealed provides. A policy owns
-# domain legality, which core has no vocabulary for.
 { lib, sigs }:
 
 let
@@ -8,30 +5,6 @@ let
   componentsIn = result: result.out."catallaxy.component" or { };
 in
 {
-  # A provider must verify what its signature promises.
-  #
-  # Compatibility settles a provider's *shape* — that `X509_ISSUANCE.issuerRef`
-  # names an object, that `publicIssuer` is a bool. It cannot settle that the
-  # issuer signs anything, and a ClusterIssuer that exists and never becomes
-  # Ready leaves every Certificate pending while every check over rendered
-  # output passes. That gap is NixOS RFC 0189's `behaviorTest`.
-  #
-  # The answer is not a new mechanism, which is the whole reason this is a
-  # policy and not a library feature. Floes already declare runtime checks —
-  # `verify.<name>` on a component, run by `cata lab verify` and by `cata-e2e`
-  # against a real cluster. A signature names the checks any provider of it
-  # owes, and this refuses a provider that declared none of them. The
-  # obligation is inherited, which is the point: a second provider of
-  # `API_GATEWAY` is told exactly which check it owes, and that is the
-  # substitutability property the signature existed for.
-  #
-  # Two things it deliberately does not do. It does not judge the check —
-  # "has one called `issuers-ready`" is weaker than "has a correct one", and
-  # nothing static can close that. And it does not ask a unit that installs
-  # nothing: a lab-scope floe, a provisioner, or a unit carrying a value in
-  # from another cluster emits no component, so there is nothing of it running
-  # to verify. Those are skipped rather than excused, because the absence of a
-  # component is the honest signal and it needs no marking on the signature.
   providersVerifyWhatTheyPromise =
     result:
     let
@@ -62,15 +35,6 @@ in
     in
     lib.concatLists (lib.mapAttrsToList missingFor obligated);
 
-  # A cluster says how its content reaches it, exactly once.
-  #
-  # The other half of the pair: a cluster denotes a claim and its content,
-  # and delivery is the function that
-  # converges one onto the other, so a cluster with no answer has no way to be
-  # applied and one with two has no way to choose. Absence used to mean kapp,
-  # decided in `modules/lab/cd.nix` by finding no provider — so a lab that
-  # meant to run Argo and forgot to add it was applied by hand, quietly, and
-  # the cluster's document asserted a strategy nothing had chosen.
   oneDelivery =
     result:
     let
@@ -90,18 +54,6 @@ in
         + "One cluster is applied one way, so one of them has to go."
       );
 
-  # A unit that holds a value this cluster was handed from outside promises
-  # hostnames that are routed where the thing actually runs, so asking this
-  # cluster to route one is asking the wrong cluster. They were invisible here
-  # until a crossing value became an ordinary unit, which is the one place
-  # that change is visible outside the linker.
-  #
-  # Derived rather than passed: a unit that provides something and installs
-  # nothing is not installing whatever answers for the hostname, which is the
-  # whole of what "carried" meant. It used to be a list of the crossing units,
-  # handed in from the module — so a lab-scope floe linked in some other way,
-  # or a floe like `kapp` that answers a signature and renders nothing, was
-  # outside the list and asked to route what it does not run.
   promisedHostsAreRouted =
     result:
     let
@@ -216,18 +168,6 @@ in
       )
     ) (lib.unique (map (c: c.name) claims));
 
-  # A component inside an inclusion does not reach the cluster directly: its
-  # hole resolves to the unit the inclusion injected to carry the value inward,
-  # and an edge to one of those is dropped by the linker because the value is
-  # the parent's. So the question is asked of whatever holds the unit — the
-  # inclusion declared `requires.cluster` and a hole nothing inside reads is
-  # refused, so an inclusion that reaches a cluster is one whose units have
-  # one.
-  #
-  # The residue: a unit inside an inclusion that renders bundles and requires
-  # no cluster is covered by a sibling that does. The statement one level up is
-  # the true one, and the alternative is per-member attribution of a parent's
-  # value, which is exactly what the linker declines to invent.
   componentsTargetTheCluster =
     result:
     let
@@ -273,8 +213,6 @@ in
       ) (componentsIn result)
     );
 
-  # `backs` says which of a floe's own bundles stand behind a provide, so it
-  # can only name its own.
   backsNameOwnBundles =
     result:
     lib.concatLists (

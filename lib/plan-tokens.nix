@@ -1,8 +1,3 @@
-# The readiness tokens a cluster's lifecycle publishes.
-#
-# One spelling per token, because a producer and a consumer have to agree on
-# the exact string and an `optional:` anchor that matches nothing fails
-# silently. `checks.plan-tokens` refuses a token literal written anywhere else.
 { lib }:
 
 let

@@ -1,15 +1,3 @@
-# The plan, derived rather than written out.
-#
-# Two functions, because there are two jobs with a merge between them.
-# `frameworkSteps` is what the framework itself contributes; `orderSteps`
-# takes every step the lab holds — the floes', the framework's, provisioning's
-# — and resolves the set into the two sequences `cata lab up` and `cata lab
-# destroy` execute.
-#
-# A contributed step cannot know what else is in the lab, so it cannot name a
-# position — only a condition. `after`/`before` name anchors, the kinds table
-# says which direction a step may run in and how it retries, and the order is
-# what falls out.
 {
   lib,
   catallaxy,
@@ -22,31 +10,9 @@ let
   infraLib = import ../render/infra.nix { inherit lib; };
   kindTable = import ./plan-kinds { inherit lib; };
 
-  # Which provisioning variant a cluster's document names, which is the
-  # union's own key: there is no field beside it to disagree.
   variantOf = c: lib.head (lib.attrNames c.spec.provisioning.config);
 in
 {
-  # frameworkSteps :: { clusters; services; link; } -> { steps; assertions; }
-  #
-  # The steps no floe contributes: starting and removing the lab's host
-  # services, planning and applying each provisioning stack, and the create /
-  # deploy / destroy lifecycle of every cluster.
-  #
-  # Declared, not ordered. Each one says what it publishes and what it waits
-  # on, so a floe's step can insert itself between two of these without either
-  # knowing about it.
-  #
-  # The ordering facts here are the same ones the hand-written list carried,
-  # now written as conditions rather than as positions:
-  #
-  #   - `registry-setup` reads the live DNS container's address, so it cannot
-  #     precede `setup-services`;
-  #   - both must precede `create-cluster`, because `k3d cluster create` mounts
-  #     `registries.yaml` at creation and k3s never reads it again;
-  #   - `cert-generate` must precede `setup-services`, because the ingress
-  #     bind-mounts the certificate and a container cannot mount a file that is
-  #     not there yet.
   frameworkSteps =
     {
       clusters,
@@ -202,17 +168,6 @@ in
         );
     };
 
-  # orderSteps :: { clusters; steps; } -> { deploymentPlan; teardownPlan;
-  #                                        assertions; warnings; }
-  #
-  # `steps` is every step the lab holds, already merged and typed. Each is
-  # sorted into the direction its kind runs in, ordered against the others by
-  # the anchors it names, and lowered to what the CLI parses.
-  #
-  # The two plans come back ordered. `assertions` are the refusals the sort
-  # cannot make — a kind that does not exist, a step declared in a direction
-  # its kind does not run in — and `warnings` names each step whose every
-  # anchor matched nothing.
   orderSteps =
     { clusters, steps }:
     let

@@ -1,4 +1,3 @@
-# The install graph: bundles ordered into waves.
 { lib }:
 
 let

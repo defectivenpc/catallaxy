@@ -1,17 +1,3 @@
-# Lowering a lab: the one JSON document the CLI reads and the one store path.
-#
-# `cata` resolves exactly two attribute paths — `labs."<lab>"` for the document
-# and `labPackages."<lab>"` for the package — and nothing else. Every field
-# below is required by a Rust struct in `cli/src/domain/`; anything the parser
-# defaults is omitted.
-#
-# The package is the second half of that contract and is easy to under-read:
-# `cata lab lint` and `cata images` do not fail gracefully when an entry is
-# absent, they abort. `metadata.json` and `images.txt` are load-bearing.
-#
-# A plain function, and its argument list is worth reading as one: it is the
-# whole of what lowering a lab needs to know, which is to say everything a lab
-# holds reaches `cata` through one of these fifteen things.
 {
   lib,
   pkgs,
@@ -19,15 +5,6 @@
 }:
 
 {
-  # lowerLab :: { … } -> { cliConfig; package; opsCollisions; }
-  #
-  # `opsCollisions` comes back rather than being raised here, because it is a
-  # lab assertion and gathering those is the lab's job.
-  #
-  # `labName` rather than `name`, because three `mapAttrs (name: …)` below
-  # shadow it — and did, when this was a module reading `config.lab.name`: the
-  # chainsaw test came out keyed by the cluster instead of the lab, which the
-  # digests caught and nothing else would have.
   lowerLab =
     {
       labName,
@@ -154,11 +131,6 @@
 
           inherit (c) assertions warnings;
 
-          # `enabled` is whatever implements the cluster's network saying it
-          # has a policy engine. `floes` stays empty: it is keyed by a floe's
-          # declaration of the ports it serves, and no floe declares one — the
-          # rule reading it is a check waiting on a surface that does not
-          # exist, not a wiring gap.
           networkPolicies = {
             inherit (c.networkPolicy) enabled;
             floes = { };
@@ -167,9 +139,6 @@
       };
     in
     {
-      # Checked against the document's shape, which is generated from the
-      # types `cata` parses it into: a field this fold emits that no command
-      # reads fails here rather than being ignored on the other side.
       cliConfig = conformDocument {
         labName = labName;
 
@@ -212,9 +181,6 @@
 
         inherit services;
 
-        # Only what `cata lab dns` points the host resolver at. The TSIG key
-        # the floe also emits is for a Nix reader and stays out of a document
-        # that is handed to a command — and it is a secret.
         dnsInfo = if dnsInfo == null then null else { inherit (dnsInfo) host port zone; };
 
         registryPort = if registrySetup == null then null else registrySetup.params.port;

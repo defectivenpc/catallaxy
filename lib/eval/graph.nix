@@ -1,4 +1,3 @@
-# Anchor resolution and topological sorting, shared by the install and plan graphs.
 { lib }:
 
 let
