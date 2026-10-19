@@ -266,7 +266,7 @@ pub fn is_undescribed(opt: &OptionDoc) -> bool {
 }
 
 /// The step schema, and nothing else. A lab is a floe, so what a lab writes
-/// is rendered from floe declarations by `nix/floe-docs.nix`; what is left
+/// is rendered from floe declarations by `nix/docs/floes.nix`; what is left
 /// here is a *floe author's* document — the fields a floe writes into each
 /// entry of its `LAB_STEPS` contribution.
 ///

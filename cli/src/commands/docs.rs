@@ -21,8 +21,8 @@ pub enum DocsCommands {
     #[command(
         about = "Render reference pages from the page JSON a generator emits",
         long_about = "Reads one JSON file per page — what the page is, not what it \
-                      looks like — and writes the markdown. `nix/floe-docs.nix` and \
-                      `nix/signature-docs.nix` emit it; the markdown rules live in \
+                      looks like — and writes the markdown. `nix/docs/floes.nix` and \
+                      `nix/docs/signatures.nix` emit it; the markdown rules live in \
                       one place so every family gets the same escaping, the same \
                       empty-section rule and the same anchor check."
     )]

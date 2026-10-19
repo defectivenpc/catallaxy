@@ -144,7 +144,7 @@ let
   # The one option `declaredStepType` is reached through, as a module.
   #
   # Two readers, and that it is one module is what keeps them honest: the merge
-  # below, and `nix/option-docs.nix`, which runs `nixosOptionsDoc` over exactly
+  # below, and `nix/docs/options-json.nix`, which runs `nixosOptionsDoc` over exactly
   # this to generate the step schema page. A schema page generated from
   # anything else could describe a field the merge does not accept.
   #

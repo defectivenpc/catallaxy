@@ -59,7 +59,7 @@
         floeCrds = import ./lib/floe-crds.nix { inherit lib; } { floeSet = floePaths; };
         crdSources = lib.mapAttrs (_: f: f upstream) floeCrds.sources;
 
-        typeGen = import ./nix/generated-types.nix {
+        typeGen = import ./nix/crd-types.nix {
           inherit lib pkgs crdSources;
           inherit (packages') cata;
         };
@@ -74,7 +74,7 @@
             rustToolchain
             ;
 
-          optionsJSON = import ./nix/option-docs.nix { inherit lib pkgs; };
+          optionsJSON = import ./nix/docs/options-json.nix { inherit lib pkgs; };
         };
 
         labArgs = {
@@ -100,23 +100,17 @@
 
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
-        floePages = import ./nix/floe-docs.nix {
-          inherit lib pkgs labDefs;
+        page = import ./nix/docs/page.nix { inherit lib pkgs; };
+
+        pageArgs = {
+          inherit lib page;
           inherit (labs) catallaxy mkFloes;
           floeSet = floePaths;
         };
 
-        kindPages = import ./nix/kind-docs.nix {
-          inherit lib pkgs;
-          inherit (labs) catallaxy mkFloes;
-          floeSet = floePaths;
-        };
-
-        signaturePages = import ./nix/signature-docs.nix {
-          inherit lib pkgs;
-          inherit (labs) catallaxy mkFloes;
-          floeSet = floePaths;
-        };
+        floePages = import ./nix/docs/floes.nix (pageArgs // { inherit labDefs; });
+        kindPages = import ./nix/docs/kinds.nix pageArgs;
+        signaturePages = import ./nix/docs/signatures.nix pageArgs;
 
         referencePages = import ./pkgs/reference-pages.nix {
           inherit

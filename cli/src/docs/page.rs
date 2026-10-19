@@ -2,8 +2,8 @@
 //!
 //! Every generated page in `docs/generated/` has the same shape — a title, some
 //! paragraphs, and sections that hold a table or more paragraphs or both — and
-//! until now each generator wrote its own markdown. `nix/floe-docs.nix` had
-//! `esc`, `table` and `section`; `nix/signature-docs.nix` had the same three
+//! until now each generator wrote its own markdown. `nix/docs/floes.nix` had
+//! `esc`, `table` and `section`; `nix/docs/signatures.nix` had the same three
 //! copied; [`super::options`] had a third implementation in Rust. Three sets of
 //! escaping rules and three answers to "what does an empty section look like".
 //!

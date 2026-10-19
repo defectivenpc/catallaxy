@@ -9,6 +9,31 @@ The format is based on
 
 ### Changed
 
+- **One combinator under the three page generators.** `nix/docs/page.nix`
+  holds `table`, `floeLink`, `banner` and `emitPages`, which the floe, kind
+  and signature generators each had their own copy of. The one that mattered
+  was the fold: `kind-docs.nix`'s `writers` was `signature-docs.nix`'s
+  `touching` with the field fixed to `out`, so a kind now finds its writers
+  through the same function a signature finds its providers — because a kind
+  is a hole field like any other.
+
+  This is the half that was left behind when `cli/src/docs/page.rs` took the
+  markdown rules. Nix says what a page _is_ and Rust renders it; the data
+  helpers stayed copied three ways.
+
+  The generators move to `nix/docs/` with the options JSON, so `nix/` is
+  flake plumbing, `nix/checks/` and `nix/docs/` rather than three subjects
+  in one flat directory. `nix/generated-types.nix` is `nix/crd-types.nix`,
+  no longer one letter from the check that diffs it, and
+  `nix/option-docs.nix` is `nix/docs/options-json.nix`, no longer sharing a
+  name with the `pkgs/` renderer that consumes it.
+
+  A page's banner names `nix build .#referencePages` and no longer the
+  generator's path. The path was the half that rots when a file moves, and
+  it was the redundant half — the command was already there. Every one of
+  the 115 pages is otherwise byte-identical, which is what says the
+  extraction changed nothing.
+
 - **A lab is a floe, and an environment instantiates it.** ADR 0010, which
   supersedes ADR 0009. `modules/lab/` is deleted — 2,239 lines of option
   tree to none. A lab is a `catallaxy.mkLabFloe` call declaring the inputs

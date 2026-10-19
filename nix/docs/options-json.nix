@@ -4,7 +4,7 @@
 }:
 
 let
-  stepTypes = import ../lib/eval/step-type.nix { inherit lib; };
+  stepTypes = import ../../lib/eval/step-type.nix { inherit lib; };
 
   relative =
     path:

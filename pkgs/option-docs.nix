@@ -1,6 +1,6 @@
 # The generated option reference.
 #
-# `cata-build docs render` and `nix/option-docs.nix` are the two halves: the
+# `cata-build docs render` and `nix/docs/options-json.nix` are the two halves: the
 # JSON comes from `nixosOptionsDoc` over the tree `mkLab` evaluates, and the
 # splicer routes it into pages and a nav block.
 {

@@ -135,7 +135,7 @@ nix build .#docs && open result/index.html
 ```
 
 The per-floe pages come from `docs/generated/floes/`, which
-`nix/floe-docs.nix` generates and 37 checks diff. `pkgs/docs.nix` copies
+`nix/docs/floes.nix` generates and 37 checks diff. `pkgs/docs.nix` copies
 them in, derives an index and the `SUMMARY.md` nav entries from the file
 list, and appends the repo's `CHANGELOG.md`. So adding a floe adds a page
 and a nav entry with no edit to anything.

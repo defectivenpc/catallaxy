@@ -112,7 +112,7 @@ let
   # catalogue :: { FloeName -> [SignatureName] }
   #
   # What each floe provides, read off its declaration — the same read
-  # `nix/floe-docs.nix` makes to generate its page. Derived, so adding a floe
+  # `nix/docs/floes.nix` makes to generate its page. Derived, so adding a floe
   # adds it here and deleting one removes it; there is no second list.
   #
   # Lazy: `link` forces this only when a hole has no provider and it has an
