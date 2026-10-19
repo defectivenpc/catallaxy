@@ -9,21 +9,36 @@ The format is based on
 
 ### Changed
 
-- **CRD coverage is a cluster policy, not a check.** `nix/checks/crd-coverage.nix`
-  is deleted; `policies.crdsResolveToASchema` joins `clusterPolicies`. It reads
-  `result.out."catallaxy.component"` and nothing else, which is what made it
-  movable — the cluster that renders a resource no generated type describes is
-  now refused where it is linked, naming the floe and the resource, instead of
-  one repo-wide check listing findings across every lab.
+- **What two labs do to each other has its own file.** `nix/checks/across-labs.nix`
+  holds `lab-subnets` and `lab-host-ports`, the two laws whose subject is a
+  *pair* of labs: each lab is correct on its own in every case, and the fault
+  exists only in the set of labs this repository builds. That is why neither can
+  be a policy, and the filename is the answer to a reader who asks.
+
+  `lab-checks.nix` is 529 lines from 655 and means one thing again — what a
+  built lab package must look like. Its own banner comments had drifted:
+  `unclaimedHosts` sat under "between labs" and is a per-lab law, so it stayed.
+
+  `refuse` — findings to a derivation that fails when the list is non-empty —
+  was copied in `lab-checks.nix` and `floe-gates.nix`, and the split would have
+  made a third. It is `nix/checks/refuse.nix` with three importers.
+
+- **CRD coverage is a cluster policy, not a check.**
+  `nix/checks/crd-coverage.nix` is deleted; `policies.crdsResolveToASchema`
+  joins `clusterPolicies`. It reads `result.out."catallaxy.component"` and
+  nothing else, which is what made it movable — the cluster that renders a
+  resource no generated type describes is now refused where it is linked,
+  naming the floe and the resource, instead of one repo-wide check listing
+  findings across every lab.
 
   `policies.nix` takes `k8sApi` for `coreKinds` and `resolve`.
   `lib/tests/floe-cluster.nix` built the same API record three times and now
   builds it once.
 
-  A limitation it inherits rather than introduces: `coreKinds` is keyed by kind
-  name alone, so `apps/v1beta9` with `kind = Deployment` reads as covered. The
-  gate catches a group or version that resolves to nothing, which is the CRD
-  case it exists for.
+  A limitation it inherits rather than introduces: `coreKinds` is keyed by
+  kind name alone, so `apps/v1beta9` with `kind = Deployment` reads as
+  covered. The gate catches a group or version that resolves to nothing,
+  which is the CRD case it exists for.
 
 - **A step's kind is an enum over the table, not a string.**
   `lib/step-kinds.nix` is reached through `catallaxy.stepKinds`, and

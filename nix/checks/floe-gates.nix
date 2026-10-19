@@ -31,6 +31,7 @@
 }:
 
 let
+  refuse = import ./refuse.nix { inherit lib pkgs; };
   imageUtil = import ../../lib/eval/images.nix { inherit lib; };
 
   # Only the floes that install something into a cluster.
@@ -90,18 +91,6 @@ let
   );
 
   claimingImages = lib.unique (map (c: c.floe) claims);
-
-  refuse =
-    name: what: findings:
-    pkgs.runCommand name { } ''
-      ${lib.concatMapStringsSep "\n" (f: "echo ${lib.escapeShellArg f} >&2") findings}
-      ${lib.optionalString (findings != [ ]) ''
-        echo "" >&2
-        echo ${lib.escapeShellArg what} >&2
-        exit 1
-      ''}
-      touch $out
-    '';
 
   # `docker.io/traefik` and `traefik` are one image spelled two ways. Both
   # sides drop the implicit registry before they meet.

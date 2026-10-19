@@ -108,6 +108,7 @@ in
   };
 }
 // import ./ops-tool.nix { inherit lib pkgs; }
+// import ./across-labs.nix { inherit lib pkgs labDefs; }
 // import ./lab-checks.nix {
   inherit
     lib
