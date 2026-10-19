@@ -60,6 +60,48 @@ function as yours" — and a floe that depends on this repo's tree takes that
 back. The asymmetry is not a gap: a consumer's floe is held to the same
 policies ours are, and neither is held to our committed files.
 
+## Nix or Rust: who needs telling
+
+The link-versus-repository rule says whether a law can be a policy. It does
+not say whether a law belongs in Nix at all, and that question has its own
+criterion: **does a consumer need it?**
+
+A consumer installs catallaxy and runs `cata`. They never run our
+`nix flake check`. So:
+
+| site                     | fires when                | protects                   |
+| ------------------------ | ------------------------- | -------------------------- |
+| `T` and the module types | the author evaluates      | whoever wrote the value    |
+| policies                 | the author evaluates      | whoever assembled the link |
+| `nix/checks/`            | `nix flake check`         | this repository only       |
+| `cata lab lint`          | an operator or CI runs it | every consumer             |
+| `cata … verify`          | after apply               | every consumer             |
+
+A policy is strong enforcement, verified rather than assumed: with a
+resource bent to an unresolvable `apiVersion`, `crdsResolveToASchema`
+refuses through every route — the manifests (`<lab>-eval`), the package
+(`manifest-digest`), the rendered tree (`<lab>-lint`), and the document
+`cata` reads (`cliConfig-<lab>`, which forces exactly `lab.cliConfig`).
+There is no path to a lab a policy would refuse.
+
+What a policy cannot do is reach a consumer who did not build from this
+source. That is Rust's job, and the two are not alternatives:
+
+**`crdsResolveToASchema` and Rust's `missing-crd` are one subject with two
+sources of truth.** The policy asks whether _this distribution_ has a
+generated type for the kind, so a floe's resource is never conformed against
+nothing — which is the fault `conform.nix` cannot report, because checking
+against no schema and passing look identical. `missing-crd` asks whether a
+CRD _in the rendered tree_ declares the kind, so the cluster will accept it.
+A resource whose CRD is present but ungenerated: the policy refuses, the
+lint passes. A resource with a generated type whose CRD this lab never
+installs: the lint warns, the policy passes. Keep both, and expect the
+overlap.
+
+One duplication this leaves: Rust's `BUILTIN_API_GROUPS` is eighteen
+hardcoded group names, where Nix reads `coreKinds` from the Kubernetes spec.
+Two answers to "what is built in", and only one of them moves with the spec.
+
 ## Consequences
 
 **`labPolicies` and `clusterPolicies` are where a lab-wide or cluster-wide
@@ -76,3 +118,16 @@ assemblies that must not exist. None of them is waiting to become a floe.
 **A new check asks the question first.** If it reads only the link result,
 it is a policy and belongs in `lib/floe-catallaxy/domain/policies.nix`. If
 it reads a document, a package, a file or the tree, it is a check.
+
+**Then it asks who needs telling.** A law a consumer has to obey cannot live
+only in `nix/checks/`, because they will never run it. It is a policy if the
+link can see it and a `cata lab lint` rule if it cannot.
+
+**Testing a policy means reaching its failure first.** Three attempts to
+show `crdsResolveToASchema` firing proved nothing, and each passed for a
+different reason: `examples/` pins `catallaxy.url = "path:.."` with a lock
+and reads a store snapshot; `--override-input catallaxy ..` resolves to a
+_committed_ revision, so a staged change is invisible; and `coreKinds` is
+keyed by kind name alone, so `apps/v1beta9` with `kind = Deployment` reads
+as covered and no mutation of a core kind can fail. A green result from a
+check whose failure mode was never reachable says nothing at all.
