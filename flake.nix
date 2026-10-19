@@ -77,8 +77,6 @@
           optionsJSON = import ./nix/option-docs.nix { inherit lib pkgs; };
         };
 
-        allocations = import ./nix/allocations.nix { inherit lib pkgs labDefs; };
-
         labArgs = {
           inherit
             lib
@@ -193,7 +191,6 @@
             treefmtEval
             labDefs
             exampleLabs
-            allocations
             cliConfigs
             referencePages
             generatedTypes

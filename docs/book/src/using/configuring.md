@@ -131,10 +131,10 @@ because a floe instance is opaque and the module system had no merge for two
 of them.
 
 Environments need distinct identities to run side by side, and they get them
-from their own `name`: the subnet and every host port are derived from it
-and recorded in `examples/labs/tests/allocations.json`. Set one by hand only
-when the address is somebody's contract — a firewall rule, a bookmark — and
-a lab-level check still refuses two labs that collide.
+from their own `name`: the subnet and every host port are derived from it,
+and each lab's document carries what it was given. Set one by hand only when
+the address is somebody's contract — a firewall rule, a bookmark — and a
+lab-level check still refuses two labs that collide.
 
 ## The escape hatch
 

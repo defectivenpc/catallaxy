@@ -40,11 +40,6 @@
             inherit lib pkgs;
             labDefs = all;
           };
-
-          allocations = import ../nix/allocations.nix {
-            inherit lib pkgs;
-            labDefs = all;
-          };
         };
 
         packages = e2e.packages;

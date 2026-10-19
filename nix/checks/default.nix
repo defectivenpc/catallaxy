@@ -16,7 +16,6 @@
   mkFloes,
   withFloes,
   optionDocs,
-  allocations,
   cliConfigs,
   referencePages,
   generatedTypes,
@@ -79,7 +78,6 @@ in
     ;
 }
 // import ./chart-values.nix { inherit lib pkgs labDefs; }
-// import ./allocations.nix { inherit lib pkgs allocations; }
 // import ./teaching.nix { inherit lib pkgs; }
 // import ./lib-exports.nix { inherit lib pkgs; }
 // import ./signature-reach.nix {

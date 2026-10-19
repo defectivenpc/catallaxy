@@ -128,6 +128,15 @@ The format is based on
 
 ### Removed
 
+- `checks.allocations`, the `allocations` package and
+  `examples/labs/tests/allocations.json`. The address plan is derived from
+  the lab's name, and each lab's allocation already travels in its own
+  document, which `cliConfig-<lab>` pins byte for byte. The committed table
+  was a second place the same fact lived, recording nothing the documents
+  did not and reading as coverage. The property worth guarding is the
+  collision, and a table cannot see one: `lab-host-ports` reads the ports
+  host services actually publish, so it refuses a slot collision and a
+  hand-set port alike.
 - `lab.proxy.tls.enable`, set by no lab: it defaulted true and every proxy
   lab took the default, so the TLS-off branch was untested at lab level. A
   lab terminates TLS when it holds a `lab-ca`.

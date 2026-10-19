@@ -1,16 +1,20 @@
 # What a lab is allocated on the host it shares with every other lab.
 #
-# Subnets and host ports are scarce and shared, so an address
-# plan is a decision and must be written down. It is — in
-# `examples/labs/tests/allocations.json`, generated from this and diff-checked.
-# What §5 asked for is that a plan be visible and stable, not that a person
-# choose the numbers: choosing by hand meant nine env files carrying 43
+# Subnets and host ports are scarce and shared, so an address plan is a
+# decision and must be visible and stable — which is not the same as a person
+# choosing the numbers. Choosing by hand meant nine env files carrying 43
 # literals, a collision on every merge of two branches that each added a lab,
 # and a failure naming two labs neither author owned.
 #
+# Each lab's allocation is in its own document, so `cliConfig-<lab>` pins it.
+# There is no second table: a committed one said nothing the documents did not,
+# and the property worth guarding is the collision, which no table can see.
+#
 # One slot per lab decides everything. Two labs either collide on all of it or
-# on none, which is what makes a collision obvious rather than partial, and
-# `lab-checks` refuses one and names a free slot.
+# on none, which is what makes a collision obvious rather than partial.
+# `lab-checks`' `lab-host-ports` reads the ports host services actually
+# publish, refuses a clash and names a free slot — so it catches a slot
+# collision and a hand-set port alike.
 { lib }:
 
 let
@@ -41,9 +45,7 @@ let
   };
 
 in
-rec {
-  inherit slotOf;
-
+{
   # allocationFor :: LabName -> { subnet; egress; registry; dns; proxyHttp; proxyHttps }
   allocationFor =
     labName:
