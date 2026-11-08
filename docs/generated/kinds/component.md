@@ -142,6 +142,7 @@ Written as `out.component`. Checked against this shape where the floe is linked,
 | [`argocd`](../floes/argocd.md) | `out.component` |
 | [`cert-manager`](../floes/cert-manager.md) | `out.component` |
 | [`cilium`](../floes/cilium.md) | `out.component` |
+| [`cluster-store`](../floes/cluster-store.md) | `out.component` |
 | [`cnpg`](../floes/cnpg.md) | `out.component` |
 | [`coredns-zone`](../floes/coredns-zone.md) | `out.component` |
 | [`crossplane`](../floes/crossplane.md) | `out.component` |
@@ -170,7 +171,6 @@ Written as `out.component`. Checked against this shape where the floe is linked,
 | [`seaweedfs`](../floes/seaweedfs.md) | `out.component` |
 | [`secret-projection`](../floes/secret-projection.md) | `out.component` |
 | [`secret-publication`](../floes/secret-publication.md) | `out.component` |
-| [`secret-store`](../floes/secret-store.md) | `out.component` |
 | [`secret-subscription`](../floes/secret-subscription.md) | `out.component` |
 | [`tempo`](../floes/tempo.md) | `out.component` |
 | [`trust-manager`](../floes/trust-manager.md) | `out.component` |

@@ -6,7 +6,7 @@
 # the routed one, and only one of those resolves in each place.
 #
 # It exposes no HA, dex or per-repo TLS settings, and no `oidc` block: a
-# consumer registers its own client with `kinds.mkOAuth2Client`, so there is
+# consumer registers its own client with `content.mkOAuth2Client`, so there is
 # nothing here for a second one to duplicate.
 {
   lib,
@@ -14,6 +14,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -98,7 +99,7 @@ floe.mkFloe {
 
         adminSecret = "argocd-admin";
 
-        admin = kinds.mkGeneratedSecret {
+        admin = content.mkGeneratedSecret {
           namespace = ns;
           secret = adminSecret;
           key = "password";
@@ -107,7 +108,7 @@ floe.mkFloe {
           extraData.username = "admin";
         };
 
-        redis = kinds.mkGeneratedSecret {
+        redis = content.mkGeneratedSecret {
           namespace = ns;
           secret = "argocd-redis";
           key = "auth";
@@ -119,7 +120,7 @@ floe.mkFloe {
           if oidcProvider == null then
             { }
           else
-            kinds.mkOAuth2Client {
+            content.mkOAuth2Client {
               provider = oidcProvider;
               name = "argocd";
               namespace = ns;
@@ -138,10 +139,10 @@ floe.mkFloe {
 
         config.floe.provides.route.host = host;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.argocd = kinds.mkBundle {
+          bundles.argocd = content.mkBundle {
             createNamespaces = [ ns ];
 
             images.argocd = {
@@ -150,7 +151,7 @@ floe.mkFloe {
               tag = "v3.0.1";
               digest = null;
             };
-            images.redis = kinds.mkImage "public.ecr.aws/docker/library/redis:7.2.8-alpine";
+            images.redis = content.mkImage "public.ecr.aws/docker/library/redis:7.2.8-alpine";
 
             resources =
               admin.resources
@@ -176,7 +177,7 @@ floe.mkFloe {
                   // lib.optionalAttrs inputs.insecureRepo { insecure = "true"; };
                 };
 
-                argocd-route = kinds.mkRoute {
+                argocd-route = content.mkRoute {
                   inherit gateway;
                   name = "argocd";
                   namespace = ns;
@@ -192,9 +193,9 @@ floe.mkFloe {
 
             externalSecrets = lib.optional (client != { }) "${ns}/${client.secret.name}";
 
-            helmCharts.argocd = kinds.mkHelmChart {
+            helmCharts.argocd = content.mkHelmChart {
               replacedHooks.argocd-redis-secret-init =
-                "the floe mints `argocd-redis` itself with `kinds.mkGeneratedSecret`, "
+                "the floe mints `argocd-redis` itself with `content.mkGeneratedSecret`, "
                 + "so the credential exists before anything reads it";
               inherit (inputs) chart;
               releaseName = "argocd";
@@ -226,14 +227,14 @@ floe.mkFloe {
               };
             };
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "argocd-server";
               namespace = ns;
               timeout = "10m";
             };
 
             ops.cd = {
-              apps = kinds.mkOpsCommand {
+              apps = content.mkOpsCommand {
                 description = "Every Application and its sync status";
                 command = [
                   "kubectl"

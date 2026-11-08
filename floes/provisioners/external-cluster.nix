@@ -174,7 +174,7 @@ floe.mkFloe {
   # a lab store. Which store is resolved rather than spelled; the key is
   # written on both sides because the publisher and this cluster have
   # different names and neither can derive the other's.
-  optional.labStore = sigs.LAB_SECRET_STORE;
+  optional.labStore = sigs.LAB_STORE;
 
   out.clusterDescriptor = kinds.cluster;
   out.steps = kinds.steps;
@@ -276,9 +276,9 @@ floe.mkFloe {
               else if labStore == null then
                 throw (
                   "external-cluster '${inputs.name}': kubeconfigKey is "
-                  + "'${inputs.kubeconfigKey}' and no LAB_SECRET_STORE resolved, so there is "
+                  + "'${inputs.kubeconfigKey}' and no LAB_STORE resolved, so there is "
                   + "no store to read it from. Declare `optional.labStore` on the cluster floe "
-                  + "and name the store with `lab.defaults.LAB_SECRET_STORE`."
+                  + "and name the store with `lab.defaults.LAB_STORE`."
                 )
               else
                 {

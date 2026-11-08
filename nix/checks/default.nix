@@ -81,7 +81,7 @@ in
   # Why nothing reads these. Each is a decision; a signature that gains a
   # consumer fails this check as a stale entry, so the list cannot rot.
   unread = {
-    VAULT_SERVER = "the in-cluster address, and the only would-be reader needs the other one: `lab-secret-store` is dialled from the *host*, which its own option says.";
+    VAULT_SERVER = "the in-cluster address, and the only would-be reader needs the other one: `lab-store` is dialled from the *host*, which its own option says.";
     OCI_REGISTRY = "harbor and zot can both serve one, and nothing in the tree pushes to or pulls from an in-cluster registry yet.";
     POSTGRES_OPERATOR = "cnpg ships the capability; no floe asks for a database yet.";
     REDIS_OPERATOR = "redis-operator ships the capability; no floe asks for a cache yet.";

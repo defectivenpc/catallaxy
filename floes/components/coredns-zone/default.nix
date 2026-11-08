@@ -18,6 +18,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -57,10 +58,10 @@ floe.mkFloe {
         '';
       in
       {
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.coredns = kinds.mkBundle {
+          bundles.coredns = content.mkBundle {
             resources.coredns-custom = {
               apiVersion = "v1";
               kind = "ConfigMap";

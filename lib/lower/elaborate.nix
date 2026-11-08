@@ -5,7 +5,7 @@
 }:
 
 let
-  componentLib = import ../authoring/component.nix { inherit lib floe k8sApi; };
+  componentLib = import ../authoring/content.nix { inherit lib floe k8sApi; };
 
   waitUtil = import ../kubernetes/wait.nix { inherit lib; };
   manifestGraph = import ./manifest-graph.nix { inherit lib; };

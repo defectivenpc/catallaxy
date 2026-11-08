@@ -13,6 +13,7 @@ neither side names the other.
 | [API_GATEWAY](./API_GATEWAY.md) | `gateway` | An ingress a workload attaches an HTTPRoute to, and the zone its hostnames live in. |
 | [CLUSTER_EDGE](./CLUSTER_EDGE.md) | `edge` | Where a cluster's gateway is dialled from the host running the lab. |
 | [CLUSTER_PROVISIONING](./CLUSTER_PROVISIONING.md) | `provisioning` | An object in another cluster that reconciles into this one. |
+| [CLUSTER_STORE](./CLUSTER_STORE.md) | `clusterStore` | A named store an ExternalSecret reads from, and whether it may be written to. |
 | [CNI_BOOTSTRAP](./CNI_BOOTSTRAP.md) | `cniBootstrap` | A CNI's bootstrap manifest, applied by the provisioner before the first node is Ready. |
 | [CONFIG_RELOAD](./CONFIG_RELOAD.md) | `reload` | The annotations that make a workload restart when a Secret or ConfigMap it mounts changes. |
 | [DELIVERY_POLICY](./DELIVERY_POLICY.md) | `delivery` | How manifests reach the cluster, what bootstraps the applier, and how long an apply may take. |
@@ -27,8 +28,8 @@ neither side names the other.
 | [LAB_CA](./LAB_CA.md) | `labCa` | The lab's own root: where its certificate and key are on the host, and where it lands in a cluster. |
 | [LAB_NETWORK](./LAB_NETWORK.md) | `network` | The docker network a lab's containers share, and the gateway address on it. |
 | [LAB_SECRET](./LAB_SECRET.md) | `labSecret` | A secret the lab holds on the operator's machine, and the keys a cluster may read from it. |
-| [LAB_SECRET_STORE](./LAB_SECRET_STORE.md) | `labStore` | A store on the operator's machine that `cata` reads authored secret values from. |
 | [LAB_STEPS](./LAB_STEPS.md) | `step` | Plan steps a floe contributes, keyed by step name. |
+| [LAB_STORE](./LAB_STORE.md) | `labStore` | A store on the operator's machine that `cata` reads authored secret values from. |
 | [LOG_INGEST](./LOG_INGEST.md) | `logs` | Where logs are pushed and queried. |
 | [MANAGED_RESOURCE_CONTROL_PLANE](./MANAGED_RESOURCE_CONTROL_PLANE.md) | `controlPlane` | A control plane that installs providers and reconciles the resources they define. |
 | [MANAGED_RESOURCE_PROVIDER](./MANAGED_RESOURCE_PROVIDER.md) | `resourceProvider` | A provider is healthy and the resource kinds it defines can be applied. |
@@ -47,7 +48,6 @@ neither side names the other.
 | [RESOURCE_OUTPUT](./RESOURCE_OUTPUT.md) | `resourceOutput` | Readable from a declared output of another resource, once that resource exists. |
 | [ROUTE_CLAIM](./ROUTE_CLAIM.md) | `route` | A public hostname this floe publishes, for whoever answers for the zone. |
 | [SECRET_GENERATION](./SECRET_GENERATION.md) | `generation` | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
-| [SECRET_STORE](./SECRET_STORE.md) | `secretStore` | A named store an ExternalSecret reads from, and whether it may be written to. |
 | [STORAGE_CLASS](./STORAGE_CLASS.md) | `storageClass` | A StorageClass a PVC can name, and whether it is the cluster's default. |
 | [TRACE_INGEST](./TRACE_INGEST.md) | `traces` | Where traces are sent and queried. |
 | [TRUST_BUNDLE](./TRUST_BUNDLE.md) | `trust` | A CA bundle distributed into namespaces, for workloads that verify the lab's own certificates. |

@@ -14,6 +14,8 @@
   upstream ? null,
   sigs,
   kinds,
+  catallaxy,
+  content,
   ...
 }:
 
@@ -117,7 +119,7 @@ floe.mkFloe {
   # `provides.gateway` below, not a collection.
   #
   # A consumer requires API_GATEWAY, gets `parentRef`, and renders its own
-  # HTTPRoute with `kinds.mkRoute`. That is how Kubernetes already works: a
+  # HTTPRoute with `content.mkRoute`. That is how Kubernetes already works: a
   # registered CRD is a primitive anyone may use. What this floe keeps is the
   # part only it can do — knowing what a well-formed route looks like, and
   # refusing an out-of-zone one at construction.
@@ -159,7 +161,7 @@ floe.mkFloe {
 
         reachedByNodePort = !config.floe.requires.cluster.assignsLoadBalancers;
 
-        nodePorts = kinds.gatewayNodePorts;
+        nodePorts = catallaxy.gatewayNodePorts;
 
         listenerName = if tls then "https" else "http";
 
@@ -218,7 +220,7 @@ floe.mkFloe {
           };
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           assertions = [ ];
@@ -229,8 +231,8 @@ floe.mkFloe {
           ];
 
           bundles = {
-            controller = kinds.mkBundle {
-              helmCharts.traefik = kinds.mkHelmChart {
+            controller = content.mkBundle {
+              helmCharts.traefik = content.mkHelmChart {
                 inherit (inputs) chart namespace;
                 releaseName = "traefik";
                 values = {
@@ -259,14 +261,14 @@ floe.mkFloe {
                 };
               };
 
-              images.traefik = kinds.mkImage "docker.io/traefik:v3.3.6";
+              images.traefik = content.mkImage "docker.io/traefik:v3.3.6";
 
-              ready = kinds.readyDeployment {
+              ready = content.readyDeployment {
                 name = "traefik";
                 namespace = inputs.namespace;
               };
 
-              ops.gateway.listeners = kinds.mkOpsCommand {
+              ops.gateway.listeners = content.mkOpsCommand {
                 description = "Show every listener the Gateway declares and its programmed status";
                 command = [
                   "kubectl"
@@ -281,7 +283,7 @@ floe.mkFloe {
               };
             };
 
-            gateway = kinds.mkBundle {
+            gateway = content.mkBundle {
               needs = [ "controller" ];
 
               resources = {
@@ -349,7 +351,7 @@ floe.mkFloe {
                     apiVersion = "gateway.networking.k8s.io/v1";
                     kind = "Gateway";
                     metadata.namespace = inputs.namespace;
-                    ${kinds.conditionIsNot { type = "Programmed"; }} = true;
+                    ${content.conditionIsNot { type = "Programmed"; }} = true;
                   }
                 ];
               };

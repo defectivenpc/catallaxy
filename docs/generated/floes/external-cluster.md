@@ -24,7 +24,7 @@ A cluster something else brings into existence, which this lab installs into.
 
 | hole | signature | what it is |
 | --- | --- | --- |
-| labStore | [LAB_SECRET_STORE](../signatures/LAB_SECRET_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
+| labStore | [LAB_STORE](../signatures/LAB_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
 | provisioning | [CLUSTER_PROVISIONING](../signatures/CLUSTER_PROVISIONING.md) | An object in another cluster that reconciles into this one. |
 
 ## Provides

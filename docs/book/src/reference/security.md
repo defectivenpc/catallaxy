@@ -64,7 +64,7 @@ deny nothing — which teaches that it worked. `disableFlannel = true` plus
 the `cilium` floe is the combination that enforces, and `minimal.cilium`
 exists to be it.
 
-`kinds.mkDefaultDeny` renders the deny above. There is no general
+`content.mkDefaultDeny` renders the deny above. There is no general
 `mkNetworkPolicy` helper: a floe writing its own allow rules writes the
 resource, and a helper wrapping four fields would have had one caller.
 
@@ -90,7 +90,7 @@ pass through Nix, so it cannot reach the store or a rendered manifest. An
 eval-time check asks, of every Secret referenced, which floe creates it —
 and refuses one that nothing does.
 
-**A route may not leave its zone.** `kinds.mkRoute` refuses an out-of-zone
+**A route may not leave its zone.** `content.mkRoute` refuses an out-of-zone
 hostname at construction, so a workload cannot claim a name the lab does not
 serve.
 

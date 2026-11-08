@@ -5,8 +5,6 @@
 }:
 
 let
-  T = floe.T;
-
   inherit
     (import ../kubernetes/conform.nix {
       inherit lib k8sApi;
@@ -16,22 +14,6 @@ let
     ;
   inherit (import ../kubernetes/secret-refs.nix { inherit lib; }) secretAddress;
   inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
-
-  schemas = import ./component-schema.nix { inherit lib floe; };
-  inherit (schemas)
-    helmChartSchema
-    imageSchema
-    opsOptionSchema
-    opsArgSchema
-    opsCommandSchema
-    lintCheckSchema
-    verifyCheckSchema
-    ownerSchema
-    bundleSchema
-    driftSchema
-    assertionSchema
-    componentSchema
-    ;
 
   mkImage =
     ref:
@@ -116,13 +98,6 @@ let
 
 in
 rec {
-  component = floe.mkSig {
-    name = "catallaxy.component";
-    canonicalName = "component";
-    description = "What a floe installs into a cluster: bundles, and the operator surface around them.";
-    fields = componentSchema;
-  };
-
   inherit (verifyTypes) conditionIsNot fieldIsNot;
   inherit mkImage;
 

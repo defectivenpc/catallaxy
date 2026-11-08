@@ -13,6 +13,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -47,7 +48,7 @@ floe.mkFloe {
   };
 
   # The controller and its generator kinds, which is what this floe actually
-  # installs. It creates no store, so it cannot answer SECRET_STORE.
+  # installs. It creates no store, so it cannot answer CLUSTER_STORE.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
   provides.generation = sigs.external-secrets.SECRET_GENERATION;
 
@@ -77,23 +78,23 @@ floe.mkFloe {
           generatorApiVersion = "generators.external-secrets.io/v1alpha1";
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.generation = [
             "crds"
             "external-secrets"
           ];
           imagesComplete = true;
 
-          bundles.crds = kinds.mkBundle {
+          bundles.crds = content.mkBundle {
             yamls = [ inputs.crds ];
             crds = crdKinds;
           };
 
-          bundles.external-secrets = kinds.mkBundle {
+          bundles.external-secrets = content.mkBundle {
             needs = [ "crds" ];
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.external-secrets = kinds.mkHelmChart {
+            helmCharts.external-secrets = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "external-secrets";
               values = {
@@ -101,9 +102,9 @@ floe.mkFloe {
               };
             };
 
-            images.controller = kinds.mkImage "oci.external-secrets.io/external-secrets/external-secrets:v0.15.0";
+            images.controller = content.mkImage "oci.external-secrets.io/external-secrets/external-secrets:v0.15.0";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "external-secrets-webhook";
               namespace = inputs.namespace;
             };

@@ -32,7 +32,7 @@
     seaweedfs = ./components/seaweedfs;
     secret-projection = ./components/secret-projection;
     secret-publication = ./components/secret-publication;
-    secret-store = ./components/secret-store;
+    cluster-store = ./components/cluster-store;
     secret-subscription = ./components/secret-subscription;
     tempo = ./components/tempo;
     trust-manager = ./components/trust-manager;
@@ -58,7 +58,7 @@
     lab-proxy = ./lab/proxy.nix;
     lab-services = ./lab/services.nix;
     lab-steps = ./lab/steps.nix;
-    lab-secret-store = ./lab/secret-store.nix;
+    lab-store = ./lab/store.nix;
     lab-authored-secret = ./lab/authored-secret.nix;
     lab-secrets = ./lab/secrets.nix;
     lab-delivery = ./lab/delivery.nix;

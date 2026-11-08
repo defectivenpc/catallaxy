@@ -8,6 +8,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -48,14 +49,14 @@ floe.mkFloe {
           otlpHttp = "http://${host}:4318";
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.traces = [ "tempo" ];
           imagesComplete = true;
 
-          bundles.tempo = kinds.mkBundle {
+          bundles.tempo = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.tempo = kinds.mkHelmChart {
+            helmCharts.tempo = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "tempo";
               values.tempo = {
@@ -70,9 +71,9 @@ floe.mkFloe {
               };
             };
 
-            images.tempo = kinds.mkImage "docker.io/grafana/tempo:2.7.1";
+            images.tempo = content.mkImage "docker.io/grafana/tempo:2.7.1";
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "statefulset/tempo";
               condition = "Available";
               namespace = inputs.namespace;

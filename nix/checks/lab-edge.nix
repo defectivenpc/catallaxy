@@ -40,7 +40,7 @@ let
           units = _: {
             proxy = floes.lab-proxy { httpPort = 8091; };
 
-            declared = floes.lab-secret-store { backend = "env"; };
+            declared = floes.lab-store { backend = "env"; };
           };
 
           clusters = _: {
@@ -86,7 +86,7 @@ let
 
           zonePort = 5371;
 
-          defaults.LAB_SECRET_STORE = "declared";
+          defaults.LAB_STORE = "declared";
         }
     );
 

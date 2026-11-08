@@ -11,6 +11,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -83,7 +84,7 @@ floe.mkFloe {
               };
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.trust = [ "bundles" ];
           imagesComplete = true;
 
@@ -98,12 +99,12 @@ floe.mkFloe {
             }
           ];
 
-          bundles.trust-manager = kinds.mkBundle {
+          bundles.trust-manager = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             crds = [ "trust.cert-manager.io/Bundle" ];
 
-            helmCharts.trust-manager = kinds.mkHelmChart {
+            helmCharts.trust-manager = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "trust-manager";
               values = {
@@ -115,17 +116,17 @@ floe.mkFloe {
               };
             };
 
-            images.controller = kinds.mkImage "quay.io/jetstack/trust-manager:v0.22.1";
-            images.defaultCAs = kinds.mkImage "quay.io/jetstack/trust-pkg-debian-bookworm:20230311-deb12u1.6";
+            images.controller = content.mkImage "quay.io/jetstack/trust-manager:v0.22.1";
+            images.defaultCAs = content.mkImage "quay.io/jetstack/trust-pkg-debian-bookworm:20230311-deb12u1.6";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "trust-manager";
               namespace = inputs.namespace;
               timeout = "3m";
             };
           };
 
-          bundles.bundles = kinds.mkBundle {
+          bundles.bundles = content.mkBundle {
             needs = [ "trust-manager" ];
 
             secrets = lib.optionals (source != null) [ "*/${secretBundleName}" ];
@@ -172,7 +173,7 @@ floe.mkFloe {
               };
             };
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "bundle/${inputs.bundleName}";
               condition = "Synced";
               timeout = "3m";

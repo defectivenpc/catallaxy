@@ -1,4 +1,4 @@
-# lab-secret-store
+# lab-store
 
 A sops file, a set of environment variables, or a vault, as something a floe can resolve.
 
@@ -19,7 +19,7 @@ A sops file, a set of environment variables, or a vault, as something a floe can
 
 | provision | signature | what it is |
 | --- | --- | --- |
-| labStore | [LAB_SECRET_STORE](../signatures/LAB_SECRET_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
+| labStore | [LAB_STORE](../signatures/LAB_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
 
 ## What it emits
 

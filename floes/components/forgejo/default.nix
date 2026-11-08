@@ -13,6 +13,7 @@
   pkgs,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -105,7 +106,7 @@ floe.mkFloe {
         adminSecret = "forgejo-admin";
         idempotent = import ../../../lib/kubernetes/idempotent-job.nix { inherit lib; };
 
-        admin = kinds.mkGeneratedSecret {
+        admin = content.mkGeneratedSecret {
           namespace = ns;
           secret = adminSecret;
           key = "password";
@@ -124,7 +125,7 @@ floe.mkFloe {
             ''
           else
             lib.optionalAttrs inputs.oidc (
-              kinds.mkOAuth2Client {
+              content.mkOAuth2Client {
                 provider = oidcProvider;
                 name = "forgejo";
                 namespace = ns;
@@ -151,12 +152,12 @@ floe.mkFloe {
 
         config.floe.provides.route.host = host;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           backs.git = [ "forgejo" ];
 
-          bundles.forgejo = kinds.mkBundle {
+          bundles.forgejo = content.mkBundle {
             createNamespaces = [ ns ];
 
             images.forgejo = {
@@ -170,7 +171,7 @@ floe.mkFloe {
               admin.resources
               // lib.optionalAttrs (client != { }) { oauth2-client = client.resource; }
               // {
-                forgejo-route = kinds.mkRoute {
+                forgejo-route = content.mkRoute {
                   inherit gateway;
                   name = "forgejo";
                   namespace = ns;
@@ -184,7 +185,7 @@ floe.mkFloe {
             inherit (admin) secrets;
             externalSecrets = lib.optional (client != { }) "${ns}/${client.secret.name}";
 
-            helmCharts.forgejo = kinds.mkHelmChart {
+            helmCharts.forgejo = content.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "forgejo";
               namespace = ns;
@@ -229,7 +230,7 @@ floe.mkFloe {
             };
 
             ops.git = {
-              add-login-source = kinds.mkOpsCommand {
+              add-login-source = content.mkOpsCommand {
                 description = "Register the lab's OIDC issuer as a Forgejo login source";
                 command = [
                   "kubectl"
@@ -247,10 +248,10 @@ floe.mkFloe {
             };
           };
 
-          bundles.bootstrap = kinds.mkBundle {
+          bundles.bootstrap = content.mkBundle {
             needs = [ "forgejo" ];
 
-            images.bootstrap = kinds.mkImage "docker.io/curlimages/curl:8.11.1";
+            images.bootstrap = content.mkImage "docker.io/curlimages/curl:8.11.1";
 
             resources =
               (idempotent.mkIdempotentJob {

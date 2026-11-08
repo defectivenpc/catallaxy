@@ -6,7 +6,7 @@
 
 let
   floe = import ../authoring/prelude.nix { inherit lib floeCore; };
-  kinds = import ../authoring/component.nix {
+  content = import ../authoring/content.nix {
     inherit lib floe;
     k8sApi = import ../kubernetes/api.nix {
       inherit lib floeCore specFile;
@@ -14,25 +14,25 @@ let
     };
   };
 
-  plain = kinds.mkGeneratedSecret {
+  plain = content.mkGeneratedSecret {
     namespace = "app";
     secret = "creds";
   };
 
-  renamed = kinds.mkGeneratedSecret {
+  renamed = content.mkGeneratedSecret {
     namespace = "app";
     secret = "creds";
     key = "token";
   };
 
-  withLiteral = kinds.mkGeneratedSecret {
+  withLiteral = content.mkGeneratedSecret {
     namespace = "app";
     secret = "grafana-admin";
     key = "admin-password";
     extraData.admin-user = "admin";
   };
 
-  encoded = kinds.mkGeneratedSecret {
+  encoded = content.mkGeneratedSecret {
     namespace = "app";
     secret = "enc-key";
     encoding = "base64";

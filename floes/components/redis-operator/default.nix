@@ -5,6 +5,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -45,11 +46,11 @@ floe.mkFloe {
           ];
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.redisOperator = [ "redis-operator" ];
           imagesComplete = true;
 
-          bundles.redis-operator = kinds.mkBundle {
+          bundles.redis-operator = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             crds = [
@@ -57,15 +58,15 @@ floe.mkFloe {
               "redis.redis.opstreelabs.in/RedisCluster"
             ];
 
-            helmCharts.redis-operator = kinds.mkHelmChart {
+            helmCharts.redis-operator = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "redis-operator";
               values = { };
             };
 
-            images.operator = kinds.mkImage "ghcr.io/ot-container-kit/redis-operator/redis-operator:v0.18.0";
+            images.operator = content.mkImage "ghcr.io/ot-container-kit/redis-operator/redis-operator:v0.18.0";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "redis-operator";
               namespace = inputs.namespace;
               timeout = "3m";

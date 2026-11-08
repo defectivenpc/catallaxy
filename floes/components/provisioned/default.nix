@@ -55,7 +55,7 @@ floe.mkFloe {
   requires.cluster = sigs.KUBERNETES_CLUSTER;
 
   # Which lab store the credential lands in, resolved rather than spelled.
-  optional.labStore = sigs.LAB_SECRET_STORE;
+  optional.labStore = sigs.LAB_STORE;
 
   out.resources = kinds.resources;
   out.publications = kinds.publications;
@@ -109,7 +109,7 @@ floe.mkFloe {
                 labStore.name
               else
                 throw (
-                  "provisioned: publishKey is '${inputs.publishKey}' and no LAB_SECRET_STORE "
+                  "provisioned: publishKey is '${inputs.publishKey}' and no LAB_STORE "
                   + "resolved, so there is nowhere to publish it."
                 );
             key = inputs.publishKey;

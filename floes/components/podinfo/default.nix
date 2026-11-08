@@ -15,6 +15,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -87,15 +88,15 @@ floe.mkFloe {
 
         config.floe.provides.route.host = host;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.podinfo = kinds.mkBundle {
+          bundles.podinfo = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            images.podinfo = kinds.mkImage inputs.image;
+            images.podinfo = content.mkImage inputs.image;
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "podinfo";
               namespace = inputs.namespace;
               timeout = "3m";
@@ -194,7 +195,7 @@ floe.mkFloe {
                 };
               };
 
-              podinfo-route = kinds.mkRoute {
+              podinfo-route = content.mkRoute {
                 inherit gateway;
                 name = "podinfo";
                 inherit (inputs) namespace;

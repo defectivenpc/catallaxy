@@ -19,6 +19,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -119,7 +120,7 @@ floe.mkFloe {
           };
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
 
           backs = {
             webhook = [ "cert-manager" ];
@@ -128,12 +129,12 @@ floe.mkFloe {
 
           imagesComplete = true;
 
-          bundles.cert-manager = kinds.mkBundle {
+          bundles.cert-manager = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             crds = crdKinds;
 
-            helmCharts.cert-manager = kinds.mkHelmChart {
+            helmCharts.cert-manager = content.mkHelmChart {
               replacedHooks = {
                 cert-manager-startupapicheck =
                   "the webhook bundle waits on `readyDeployment cert-manager-webhook`, "
@@ -150,18 +151,18 @@ floe.mkFloe {
               };
             };
 
-            images.controller = kinds.mkImage "quay.io/jetstack/cert-manager-controller:v1.17.2";
-            images.webhook = kinds.mkImage "quay.io/jetstack/cert-manager-webhook:v1.17.2";
-            images.cainjector = kinds.mkImage "quay.io/jetstack/cert-manager-cainjector:v1.17.2";
-            images.startupapicheck = kinds.mkImage "quay.io/jetstack/cert-manager-startupapicheck:v1.17.2";
+            images.controller = content.mkImage "quay.io/jetstack/cert-manager-controller:v1.17.2";
+            images.webhook = content.mkImage "quay.io/jetstack/cert-manager-webhook:v1.17.2";
+            images.cainjector = content.mkImage "quay.io/jetstack/cert-manager-cainjector:v1.17.2";
+            images.startupapicheck = content.mkImage "quay.io/jetstack/cert-manager-startupapicheck:v1.17.2";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "cert-manager-webhook";
               namespace = inputs.namespace;
             };
           };
 
-          bundles.issuers = kinds.mkBundle {
+          bundles.issuers = content.mkBundle {
             needs = [ "cert-manager" ];
 
             externalSecrets = lib.optional fromLab "${caSecretNamespace}/${caSecretName}";
@@ -208,7 +209,7 @@ floe.mkFloe {
                 };
               };
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "clusterissuer/${inputs.issuerName}";
               condition = "Ready";
               namespace = inputs.namespace;
@@ -223,7 +224,7 @@ floe.mkFloe {
                 {
                   apiVersion = "cert-manager.io/v1";
                   kind = "ClusterIssuer";
-                  ${kinds.conditionIsNot { type = "Ready"; }} = true;
+                  ${content.conditionIsNot { type = "Ready"; }} = true;
                 }
               ];
             };

@@ -3,14 +3,14 @@
 # **Authored**, which is the whole of what the name is for: this is material a
 # human or an external system wrote down, the one kind no floe can mint for
 # itself. A floe wanting a *random* credential does not come here — it mints
-# one in its own bundle with `kinds.mkGeneratedSecret` and publishes the
+# one in its own bundle with `content.mkGeneratedSecret` and publishes the
 # coordinates on its provide. The distinction decides which of the two a reader
 # is looking at, and it used to be carried by a paragraph rather than a name:
 # this was `lab-secret`, one letter from `lab-secrets`, which is the collector
 # that folds every one of these into what the CLI reads.
 #
 # Which store backs it is resolved, not spelled: it `requires` a
-# `LAB_SECRET_STORE`, so a lab with one store needs to say nothing and a lab
+# `LAB_STORE`, so a lab with one store needs to say nothing and a lab
 # with several says which with `.bind`. It was `store = "<name>"` under
 # `lab.secrets.managed`, guarded by an assertion comparing the string against
 # the declared stores — which is resolution, written out by hand.
@@ -102,7 +102,7 @@ floe.mkFloe {
     };
   };
 
-  requires.labStore = sigs.LAB_SECRET_STORE;
+  requires.labStore = sigs.LAB_STORE;
 
   provides.labSecret = sigs.LAB_SECRET;
 

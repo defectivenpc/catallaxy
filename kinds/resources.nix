@@ -1,4 +1,4 @@
-{ lib, floe }:
+{ lib, floe, ... }:
 
 let
   T = floe.T;
@@ -32,8 +32,6 @@ let
   );
 in
 {
-  inherit phases;
-
   resources = floe.mkSig {
     name = "catallaxy.resources";
     canonicalName = "resources";

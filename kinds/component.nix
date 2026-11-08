@@ -1,9 +1,9 @@
-{ lib, floe }:
+{ lib, floe, ... }:
 
 let
   T = floe.T;
 
-  stepType = (import ../../steps { inherit lib; }).types;
+  stepType = (import ../steps { inherit lib; }).types;
 
   helmChartSchema = T.named "helmChart" (
     T.record {
@@ -169,18 +169,10 @@ let
 
 in
 {
-  inherit
-    helmChartSchema
-    imageSchema
-    opsOptionSchema
-    opsArgSchema
-    opsCommandSchema
-    lintCheckSchema
-    verifyCheckSchema
-    ownerSchema
-    bundleSchema
-    driftSchema
-    assertionSchema
-    componentSchema
-    ;
+  component = floe.mkSig {
+    name = "catallaxy.component";
+    canonicalName = "component";
+    description = "What a floe installs into a cluster: bundles, and the operator surface around them.";
+    fields = componentSchema;
+  };
 }

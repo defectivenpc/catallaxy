@@ -10,30 +10,27 @@ and the one this page follows.
 
 ## Is it a floe at all?
 
-Two trees look like they could hold the same thing, so one test decides:
-**could someone drop yours in its place?** `floes/` is a catalogue — every
-entry is a unit of a link, named by signature, and a consumer can
-`removeAttrs` one and register their own. `modules/lab/` is the shape of the
-declaration they write and the lowering from it: the option tree, the
-document, the plan.
+One test decides: **could someone drop yours in its place?** `floes/` is a
+catalogue — every entry is a unit of a link, named by signature, and a
+consumer can `removeAttrs` one and register their own. `lib/` is the
+machinery that links and lowers them, and nothing in it is substitutable.
 
 So "installs Kubernetes resources" does not make something a floe, and not
 installing any does not disqualify it. `floes/lab/zone.nix` installs nothing
 and is a floe, because a lab could answer `DNS_ZONE` some other way.
-`modules/lab/host/proxy.nix` runs a container and is not, because the lab's
-own ingress is part of what a lab is rather than a choice it makes.
+`floes/lab/proxy.nix` runs a container on the host and is a floe for the
+same reason.
 
-One exception, and it is written where it lives:
-`modules/lab/cluster/security.nix` emits content — Pod Security Admission
-labels and a default-deny NetworkPolicy — from the framework rather than
-from a floe. They are about _every_ namespace in the cluster, including ones
-other floes create, so no single floe can own them without declaring things
-about its neighbours.
+One exception, and it is the frame: Pod Security Admission labels and a
+default-deny NetworkPolicy come from the cluster frame rather than from a
+floe. They are about _every_ namespace in the cluster, including ones other
+floes create, so no single floe can own them without declaring things about
+its neighbours.
 
 ## The whole shape
 
 ```nix
-{ lib, floe, sigs, kinds, ... }:
+{ lib, floe, sigs, kinds, content, ... }:
 
 floe.mkFloe {
   name = "podinfo";
@@ -53,7 +50,7 @@ floe.mkFloe {
   out.component = kinds.component;
   modules = [
     ({ config, lib, ... }: {
-      config.floe.out.component = kinds.mkComponent { … };
+      config.floe.out.component = content.mkComponent { … };
     })
   ];
 }
@@ -139,18 +136,18 @@ isolated `evalModules`. `config.floe.inputs` is what the deployer passed;
 `config.floe.requires.<hole>` is what the linker resolved; you write
 `config.floe.out.<kind>`.
 
-For a cluster component that is `out.component`, built with `kinds.*`:
+For a cluster component that is `out.component`, built with `content.*`:
 
 ```nix
-config.floe.out.component = kinds.mkComponent {
+config.floe.out.component = content.mkComponent {
   imagesComplete = true;
 
-  bundles.podinfo = kinds.mkBundle {
+  bundles.podinfo = content.mkBundle {
     createNamespaces = [ inputs.namespace ];
-    ready = kinds.readyDeployment { name = "podinfo"; namespace = inputs.namespace; };
+    ready = content.readyDeployment { name = "podinfo"; namespace = inputs.namespace; };
     resources = {
       podinfo-deployment = { apiVersion = "apps/v1"; kind = "Deployment"; … };
-      podinfo-route = kinds.mkRoute { inherit gateway; name = "podinfo"; … };
+      podinfo-route = content.mkRoute { inherit gateway; name = "podinfo"; … };
     };
   };
 };
@@ -168,7 +165,7 @@ the checks about it stay with the floe that serves it.
 sibling bundles in the same floe and nothing else:
 
 ```nix
-bundles.issuers = kinds.mkBundle {
+bundles.issuers = content.mkBundle {
   needs = [ "operator" ];
   …
 };
@@ -187,7 +184,7 @@ from `lib/charts.nix`, which pins it and extracts its CRDs; the floe
 defaults to that pin, so a lab author never spells a version:
 
 ```nix
-bundles.grafana = kinds.mkBundle {
+bundles.grafana = content.mkBundle {
   helmCharts.grafana = {
     chart = inputs.chart;
     namespace = ns;

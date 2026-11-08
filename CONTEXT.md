@@ -32,6 +32,11 @@ payload, desired state, workloads
 what bootstraps whatever applies it. _Avoid_: deploy strategy, CD, apply
 method
 
+**Delivery floe**: A floe that answers `DELIVERY_POLICY` and installs
+nothing, because the applier runs from the operator's machine — kapp. One
+that installs its applier into the cluster, as Argo CD does, is a component
+that also answers it. _Avoid_: delivery component, applier floe
+
 ## Composing one
 
 **Component**: A floe installed into a cluster: it requires
@@ -114,8 +119,8 @@ input admits null.
 
 **Lab store**: A place on the operator's machine that holds values nothing
 in a lab can mint — a sops file, a set of environment variables, or a vault
-elsewhere. A floe providing `LAB_SECRET_STORE`, resolved by whatever reads
-or writes it. _Avoid_: secret backend, vault, keystore
+elsewhere. A floe providing `LAB_STORE`, resolved by whatever reads or
+writes it. _Avoid_: secret backend, vault, keystore, lab secret store
 
 **Authored secret**: One secret a lab holds and the keys in it, written down
 by a human or held by an external system. A floe providing `LAB_SECRET`,
@@ -129,7 +134,7 @@ lab store, and asking for one there would put it in the manifest and in the
 digest pinning it. _Avoid_: dynamic secret, runtime secret
 
 **Cluster store**: The `ClusterSecretStore` a cluster reads values through,
-pointing at the lab store behind it. A floe providing `SECRET_STORE`.
+pointing at the lab store behind it. A floe providing `CLUSTER_STORE`.
 Cluster-scoped and not namespaced, because a value minted in one namespace
 is usually read in another. Not shared between clusters — only the backend
 is. _Avoid_: secret store, ESO store

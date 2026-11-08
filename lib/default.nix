@@ -62,7 +62,12 @@ let
             floes
             ;
           upstream = pinOf path;
-          inherit (catallaxy) floe sigs kinds;
+          inherit (catallaxy)
+            floe
+            sigs
+            kinds
+            content
+            ;
         };
       in
       def // { __functor = _: def.instantiate; }

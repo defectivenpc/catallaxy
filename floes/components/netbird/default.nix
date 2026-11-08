@@ -52,6 +52,7 @@
   lib,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -184,7 +185,7 @@ floe.mkFloe {
 
         image = repo: tag: "${inputs.registry}/${repo}:${tag}";
 
-        client = kinds.mkOAuth2Client {
+        client = content.mkOAuth2Client {
           provider = oidcProvider;
           name = "netbird";
           namespace = ns;
@@ -197,7 +198,7 @@ floe.mkFloe {
           ];
         };
 
-        serviceAccount = kinds.mkServiceAccount {
+        serviceAccount = content.mkServiceAccount {
           provider = oidcProvider;
           name = "netbird-operator";
           namespace = ns;
@@ -205,7 +206,7 @@ floe.mkFloe {
           displayName = "netbird-operator";
         };
 
-        relaySecret = kinds.mkGeneratedSecret {
+        relaySecret = content.mkGeneratedSecret {
           namespace = ns;
           secret = "netbird-relay-auth";
           key = "secret";
@@ -213,7 +214,7 @@ floe.mkFloe {
           symbols = 0;
         };
 
-        datastoreKey = kinds.mkGeneratedSecret {
+        datastoreKey = content.mkGeneratedSecret {
           namespace = ns;
           secret = "netbird-datastore-key";
           key = "key";
@@ -350,11 +351,11 @@ floe.mkFloe {
 
         config.floe.provides.route.host = apiDomain;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           bundles = {
-            credentials = kinds.mkBundle {
+            credentials = content.mkBundle {
               createNamespaces = [ ns ];
 
               resources =
@@ -371,7 +372,7 @@ floe.mkFloe {
               awaitRollout = false;
             };
 
-            server = kinds.mkBundle {
+            server = content.mkBundle {
               needs = [ "credentials" ];
 
               resources =
@@ -389,13 +390,13 @@ floe.mkFloe {
                 wait = imageParts "busybox" "1.36";
               };
 
-              ready = kinds.readyDeployment {
+              ready = content.readyDeployment {
                 name = "netbird-management";
                 namespace = ns;
               };
 
               ops.mesh = {
-                config = kinds.mkOpsCommand {
+                config = content.mkOpsCommand {
                   description = "Show what the running server substituted into its config";
                   command = [
                     "sh"
@@ -416,18 +417,18 @@ floe.mkFloe {
               };
             };
 
-            dashboard = kinds.mkBundle {
+            dashboard = content.mkBundle {
               resources = workloads.dashboard;
 
               images.dashboard = imageParts "netbirdio/dashboard" inputs.dashboardVersion;
 
-              ready = kinds.readyDeployment {
+              ready = content.readyDeployment {
                 name = "netbird-dashboard";
                 namespace = ns;
               };
             };
 
-            automation = kinds.mkBundle {
+            automation = content.mkBundle {
               needs = [ "server" ];
 
               resources = automation.resources;

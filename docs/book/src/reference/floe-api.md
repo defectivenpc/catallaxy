@@ -6,8 +6,9 @@ distribution's sugar and catalogues are in `lib/authoring/`.
 ```nix
 catallaxy.floe   # mkFloe, mkSig, link, narrows, T — the library, plus this
                  # distribution's k8sName and its `behaviour` argument
-catallaxy.sigs   # the signature catalogue
-catallaxy.kinds  # the constructors a component is built from
+catallaxy.sigs     # the signatures: capabilities, and sigs.<floe> for product ones
+catallaxy.kinds    # the output kinds a floe emits, from kinds/
+catallaxy.content  # the constructors a component is built from
 ```
 
 ## `mkFloe`

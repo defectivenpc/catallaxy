@@ -21,6 +21,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -170,7 +171,7 @@ floe.mkFloe {
             ''
           else
             lib.optionalAttrs inputs.oidc (
-              kinds.mkOAuth2Client {
+              content.mkOAuth2Client {
                 provider = oidc;
                 name = inputs.name;
                 inherit (inputs) namespace;
@@ -182,10 +183,10 @@ floe.mkFloe {
 
         config.floe.provides.route.host = host;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = false;
 
-          bundles.${inputs.name} = kinds.mkBundle {
+          bundles.${inputs.name} = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
             inherit (inputs) yamls images ready;
 
@@ -193,7 +194,7 @@ floe.mkFloe {
               inputs.resources
               // lib.optionalAttrs (client != { }) { oauth2-client = client.resource; }
               // {
-                route = kinds.mkRoute {
+                route = content.mkRoute {
                   inherit gateway service;
                   name = inputs.name;
                   inherit (inputs) namespace path;

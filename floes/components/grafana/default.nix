@@ -6,7 +6,7 @@
 # to override and no assertion to keep in step.
 #
 # OIDC was once six consumers indexing a client registry by an id each
-# had invented. Grafana registers its own client with `kinds.mkOAuth2Client`
+# had invented. Grafana registers its own client with `content.mkOAuth2Client`
 # and reads the credentials from the Secret kaniop writes beside it.
 {
   lib,
@@ -14,6 +14,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -111,7 +112,7 @@ floe.mkFloe {
 
         adminSecret = "grafana-admin";
 
-        admin = kinds.mkGeneratedSecret {
+        admin = content.mkGeneratedSecret {
           inherit (inputs) namespace;
           secret = adminSecret;
           key = "admin-password";
@@ -129,7 +130,7 @@ floe.mkFloe {
             ''
           else
             lib.optionalAttrs inputs.oidc (
-              kinds.mkOAuth2Client {
+              content.mkOAuth2Client {
                 provider = oidcProvider;
                 name = "grafana";
                 inherit (inputs) namespace;
@@ -189,10 +190,10 @@ floe.mkFloe {
       {
         config.floe.provides.route.host = host;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.grafana = kinds.mkBundle {
+          bundles.grafana = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             images.grafana = {
@@ -202,7 +203,7 @@ floe.mkFloe {
               digest = null;
             };
 
-            images.init = kinds.mkImage "docker.io/library/busybox:1.31.1";
+            images.init = content.mkImage "docker.io/library/busybox:1.31.1";
 
             resources =
               admin.resources
@@ -210,7 +211,7 @@ floe.mkFloe {
                 oauth2-client = client.resource;
               }
               // {
-                grafana-route = kinds.mkRoute {
+                grafana-route = content.mkRoute {
                   inherit gateway;
                   name = "grafana";
                   inherit (inputs) namespace;
@@ -223,7 +224,7 @@ floe.mkFloe {
 
             externalSecrets = lib.optional (client != { }) "${inputs.namespace}/${client.secret.name}";
 
-            helmCharts.grafana = kinds.mkHelmChart {
+            helmCharts.grafana = content.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "grafana";
               namespace = inputs.namespace;
@@ -259,7 +260,7 @@ floe.mkFloe {
               };
             };
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "grafana";
               namespace = inputs.namespace;
             };

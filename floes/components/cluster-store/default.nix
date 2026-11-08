@@ -1,7 +1,7 @@
 # A store this cluster can read secrets from, and write them back into.
 #
 # The floe half of secret sharing. It renders one `ClusterSecretStore` and
-# says so through `SECRET_STORE`; the lab half — which cluster publishes what,
+# says so through `CLUSTER_STORE`; the lab half — which cluster publishes what,
 # and who subscribes — is wiring between clusters, which core links
 # cannot express and which therefore lives on the lab.
 #
@@ -13,11 +13,12 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
 floe.mkFloe {
-  name = "secret-store";
+  name = "cluster-store";
   summary = "A ClusterSecretStore pointing at a backend the lab holds.";
 
   inputs = {
@@ -128,9 +129,9 @@ floe.mkFloe {
   # hand beside a `labStore` string — two statements about one store, and the
   # one that decided whether a cluster could push was not the one that decided
   # what the backend was.
-  requires.labStore = sigs.LAB_SECRET_STORE;
+  requires.labStore = sigs.LAB_STORE;
 
-  provides.secretStore = sigs.SECRET_STORE;
+  provides.clusterStore = sigs.CLUSTER_STORE;
 
   out.component = kinds.component;
   modules = [
@@ -145,17 +146,17 @@ floe.mkFloe {
 
       in
       {
-        config.floe.provides.secretStore = {
+        config.floe.provides.clusterStore = {
           inherit storeName;
           storeKind = "ClusterSecretStore";
           inherit (labStore) writable;
         };
 
-        config.floe.out.component = kinds.mkComponent {
-          backs.secretStore = [ "store" ];
+        config.floe.out.component = content.mkComponent {
+          backs.clusterStore = [ "store" ];
           imagesComplete = true;
 
-          bundles.store = kinds.mkBundle {
+          bundles.store = content.mkBundle {
             needsSecrets = [ "${inputs.tokenSecret.namespace}/${inputs.tokenSecret.name}" ];
 
             resources.store = {
@@ -176,7 +177,7 @@ floe.mkFloe {
               };
             };
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "clustersecretstore/${storeName}";
               condition = "Ready";
               timeout = "3m";

@@ -3,7 +3,7 @@
 # This is the half of the secret story a floe cannot do for itself: a value a
 # human or an external system authored. A floe that wants a *random*
 # credential does not come here — it mints one in its own bundle with
-# `kinds.mkGeneratedSecret` and publishes the coordinates on its provide.
+# `content.mkGeneratedSecret` and publishes the coordinates on its provide.
 #
 # The store is `env`-backed so the lab stands up with no key management:
 # `cata secrets generate --format env` prints the exports, and the variable
@@ -36,7 +36,7 @@ lab {
     # resolves the store rather than naming it and the projection in the
     # cluster resolves the secret. With one of each there is nothing to
     # disambiguate.
-    app-store = floes.lab-secret-store { backend = "env"; };
+    app-store = floes.lab-store { backend = "env"; };
 
     app-credentials = floes.lab-authored-secret {
       keys = {

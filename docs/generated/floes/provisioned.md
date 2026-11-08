@@ -21,7 +21,7 @@ A fixture resource floe: mints a value and writes a local file.
 
 | hole | signature | what it is |
 | --- | --- | --- |
-| labStore | [LAB_SECRET_STORE](../signatures/LAB_SECRET_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
+| labStore | [LAB_STORE](../signatures/LAB_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
 
 ## Emits
 

@@ -84,9 +84,9 @@ first". Applying a CRD and the CRD being usable are two different moments.
 A floe author writes almost none of that. What a bundle declares is:
 
 ```nix
-bundles.issuers = kinds.mkBundle {
+bundles.issuers = content.mkBundle {
   needs = [ "operator" ];                    # a SIBLING bundle in this floe
-  ready = kinds.readyDeployment { … };       # how "ready" is decided
+  ready = content.readyDeployment { … };       # how "ready" is decided
   resources = { … };
 };
 ```
@@ -145,10 +145,13 @@ them needs a cluster.
 - `signatures/` — the capabilities, one file per family. A floe's own
   product signatures sit beside it in `signatures.nix` and are written
   `sigs.<floe>.<NAME>`.
+- `kinds/` — the output kinds a floe emits: `component.nix` is the bundle
+  schema, and the cluster, lab and resource kinds sit beside it.
 - `lib/default.nix` — the entry point: loads the floe set and defines
   `mkLab` and `mkCluster`.
 - `lib/authoring/` — this distribution on top of core: the prelude, the
-  frames, `component.nix` (the bundle schema), the kinds and the policies.
+  frames, `content.nix` (the constructors a component is built from) and the
+  policies.
 - `lib/lower/` — `elaborate.nix` turns a link result into a cluster picture;
   `manifest-graph.nix` and `plan-graph.nix` are the two sorts, and
   `manifest-autoedges.nix` derives the structural edges.

@@ -24,6 +24,7 @@
   pkgs,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -131,7 +132,7 @@ floe.mkFloe {
         storeIsOpen = store.credentials == null;
       in
       {
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           assertions = [
@@ -146,7 +147,7 @@ floe.mkFloe {
             }
           ];
 
-          bundles.crds = kinds.mkBundle {
+          bundles.crds = content.mkBundle {
             yamls = [ inputs.crds ];
             crds = map (k: "velero.io/${k}") [
               "Backup"
@@ -164,7 +165,7 @@ floe.mkFloe {
             awaitRollout = false;
           };
 
-          bundles.velero = kinds.mkBundle {
+          bundles.velero = content.mkBundle {
             needs = [ "crds" ];
             createNamespaces = [ inputs.namespace ];
 
@@ -208,7 +209,7 @@ floe.mkFloe {
               }
             ) inputs.schedules;
 
-            helmCharts.velero = kinds.mkHelmChart {
+            helmCharts.velero = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "velero";
               values = {
@@ -257,16 +258,16 @@ floe.mkFloe {
               };
             };
 
-            images.velero = kinds.mkImage "docker.io/velero/velero:v1.16.0";
-            images.awsPlugin = kinds.mkImage "docker.io/velero/velero-plugin-for-aws:v1.12.0";
+            images.velero = content.mkImage "docker.io/velero/velero:v1.16.0";
+            images.awsPlugin = content.mkImage "docker.io/velero/velero-plugin-for-aws:v1.12.0";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "velero";
               namespace = inputs.namespace;
             };
 
             ops.backup = {
-              create = kinds.mkOpsCommand {
+              create = content.mkOpsCommand {
                 description = "Create a backup";
                 args = [
                   {
@@ -288,14 +289,14 @@ floe.mkFloe {
                 '';
               };
 
-              list = kinds.mkOpsCommand {
+              list = content.mkOpsCommand {
                 description = "List backups";
                 package = velero "list" ''
                   velero backup get --kubecontext "$KUBE_CONTEXT"
                 '';
               };
 
-              describe = kinds.mkOpsCommand {
+              describe = content.mkOpsCommand {
                 description = "Describe a backup";
                 args = [
                   {
@@ -308,7 +309,7 @@ floe.mkFloe {
                 '';
               };
 
-              delete = kinds.mkOpsCommand {
+              delete = content.mkOpsCommand {
                 description = "Delete a backup";
                 args = [
                   {
@@ -321,7 +322,7 @@ floe.mkFloe {
                 '';
               };
 
-              restore = kinds.mkOpsCommand {
+              restore = content.mkOpsCommand {
                 description = "Restore from a backup";
                 args = [
                   {
@@ -334,14 +335,14 @@ floe.mkFloe {
                 '';
               };
 
-              schedules = kinds.mkOpsCommand {
+              schedules = content.mkOpsCommand {
                 description = "List backup schedules";
                 package = velero "schedules" ''
                   velero schedule get --kubecontext "$KUBE_CONTEXT"
                 '';
               };
 
-              trigger = kinds.mkOpsCommand {
+              trigger = content.mkOpsCommand {
                 description = "Run a schedule now";
                 args = [
                   {

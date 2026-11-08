@@ -18,6 +18,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -62,7 +63,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  requires.secretStore = sigs.SECRET_STORE;
+  requires.clusterStore = sigs.CLUSTER_STORE;
 
   provides.publication = sigs.PUBLISHED_SECRET;
 
@@ -72,7 +73,7 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        store = config.floe.requires.secretStore;
+        store = config.floe.requires.clusterStore;
       in
       {
         config.floe.provides.publication = {
@@ -80,7 +81,7 @@ floe.mkFloe {
           inherit (inputs) key keys;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           assertions = [
@@ -96,7 +97,7 @@ floe.mkFloe {
 
           backs.publication = [ "publication" ];
 
-          bundles.publication = kinds.mkBundle {
+          bundles.publication = content.mkBundle {
             needsSecrets = [ "${inputs.namespace}/${inputs.secret}" ];
 
             resources.push = {

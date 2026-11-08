@@ -64,9 +64,9 @@ lab {
     # Both are units of the lab's link, so what reads them resolves them. With
     # two in the link nothing resolves by default and every reader says which
     # it means, which is the ambiguity being real rather than ceremony.
-    authored = floes.lab-secret-store { backend = "sops"; };
+    authored = floes.lab-store { backend = "sops"; };
 
-    runtime = floes.lab-secret-store {
+    runtime = floes.lab-store {
       backend = "vault";
       inherit (clusters) vaultServer;
     };

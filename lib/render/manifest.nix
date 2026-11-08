@@ -143,7 +143,7 @@ let
           echo "has to be done by the floe instead." >&2
           echo "" >&2
           echo "Declare each on the chart once that is true:" >&2
-          echo "  kinds.mkHelmChart { replacedHooks.\"<name>\" = \"what does it instead\"; }" >&2
+          echo "  content.mkHelmChart { replacedHooks.\"<name>\" = \"what does it instead\"; }" >&2
           exit 1
         fi
 

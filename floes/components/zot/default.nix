@@ -20,6 +20,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -90,14 +91,14 @@ floe.mkFloe {
           credentials = null;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.registry = [ "zot" ];
           imagesComplete = true;
 
-          bundles.zot = kinds.mkBundle {
+          bundles.zot = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.zot = kinds.mkHelmChart {
+            helmCharts.zot = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "zot";
               values = {
@@ -119,9 +120,9 @@ floe.mkFloe {
               };
             };
 
-            images.zot = kinds.mkImage "ghcr.io/project-zot/zot:v2.1.16";
+            images.zot = content.mkImage "ghcr.io/project-zot/zot:v2.1.16";
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "statefulset/zot";
               condition = "Available";
               namespace = inputs.namespace;

@@ -38,7 +38,7 @@ let
       crds = "/dev/null";
     };
 
-    store = floes.secret-store { server = "https://vault.refuse.test"; };
+    store = floes.cluster-store { server = "https://vault.refuse.test"; };
 
     projection = floes.secret-projection {
       secret = "vault-token";
@@ -67,7 +67,7 @@ let
       requires = {
         cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
 
-        labStore = catallaxy.sigs.LAB_SECRET_STORE;
+        labStore = catallaxy.sigs.LAB_STORE;
         labSecret = catallaxy.sigs.LAB_SECRET;
       }
       // requires;
@@ -110,9 +110,9 @@ let
           summary = "Two clusters sharing a secret, bent one way.";
 
           units = _: {
-            authored = floes.lab-secret-store { backend = "sops"; };
+            authored = floes.lab-store { backend = "sops"; };
 
-            runtime = floes.lab-secret-store {
+            runtime = floes.lab-store {
               backend = "vault";
               vaultServer = "https://vault.refuse.test";
             };

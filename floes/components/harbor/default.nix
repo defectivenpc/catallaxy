@@ -16,6 +16,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -97,13 +98,13 @@ floe.mkFloe {
 
         gen =
           secret: key: length:
-          kinds.mkGeneratedSecret {
+          content.mkGeneratedSecret {
             namespace = ns;
             inherit secret key length;
             symbols = 0;
           };
 
-        admin = kinds.mkGeneratedSecret {
+        admin = content.mkGeneratedSecret {
           namespace = ns;
           secret = "harbor-admin";
           key = "HARBOR_ADMIN_PASSWORD";
@@ -119,7 +120,7 @@ floe.mkFloe {
 
         registryUser = "harbor_registry_user";
         registryCredSecret = "harbor-registry-credential";
-        registryCred = kinds.mkGeneratedSecret {
+        registryCred = content.mkGeneratedSecret {
           namespace = ns;
           secret = registryCredSecret;
           key = "REGISTRY_PASSWD";
@@ -150,7 +151,7 @@ floe.mkFloe {
             ''
           else
             lib.optionalAttrs inputs.oidc (
-              kinds.mkOAuth2Client {
+              content.mkOAuth2Client {
                 provider = oidcProvider;
                 name = "harbor";
                 namespace = ns;
@@ -176,22 +177,22 @@ floe.mkFloe {
 
         config.floe.provides.route.host = host;
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           backs.registry = [ "harbor" ];
 
-          bundles.harbor = kinds.mkBundle {
+          bundles.harbor = content.mkBundle {
             createNamespaces = [ ns ];
 
-            images.core = kinds.mkImage "docker.io/goharbor/harbor-core:v2.15.1";
-            images.portal = kinds.mkImage "docker.io/goharbor/harbor-portal:v2.15.1";
-            images.jobservice = kinds.mkImage "docker.io/goharbor/harbor-jobservice:v2.15.1";
-            images.registry = kinds.mkImage "docker.io/goharbor/registry-photon:v2.15.1";
-            images.registryctl = kinds.mkImage "docker.io/goharbor/harbor-registryctl:v2.15.1";
-            images.database = kinds.mkImage "docker.io/goharbor/harbor-db:v2.15.1";
-            images.redis = kinds.mkImage "docker.io/goharbor/redis-photon:v2.15.1";
-            images.nginx = kinds.mkImage "docker.io/goharbor/nginx-photon:v2.15.1";
+            images.core = content.mkImage "docker.io/goharbor/harbor-core:v2.15.1";
+            images.portal = content.mkImage "docker.io/goharbor/harbor-portal:v2.15.1";
+            images.jobservice = content.mkImage "docker.io/goharbor/harbor-jobservice:v2.15.1";
+            images.registry = content.mkImage "docker.io/goharbor/registry-photon:v2.15.1";
+            images.registryctl = content.mkImage "docker.io/goharbor/harbor-registryctl:v2.15.1";
+            images.database = content.mkImage "docker.io/goharbor/harbor-db:v2.15.1";
+            images.redis = content.mkImage "docker.io/goharbor/redis-photon:v2.15.1";
+            images.nginx = content.mkImage "docker.io/goharbor/nginx-photon:v2.15.1";
 
             resources =
               lib.foldl' (acc: g: acc // g.resources) { } generated
@@ -220,7 +221,7 @@ floe.mkFloe {
                     inherit (issuance) issuerRef;
                   };
                 };
-                harbor-route = kinds.mkRoute {
+                harbor-route = content.mkRoute {
                   inherit gateway;
                   name = "harbor";
                   namespace = ns;
@@ -235,7 +236,7 @@ floe.mkFloe {
             ]
             ++ lib.optional (client != { }) "${ns}/${client.secret.name}";
 
-            helmCharts.harbor = kinds.mkHelmChart {
+            helmCharts.harbor = content.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "harbor";
               namespace = ns;
@@ -277,7 +278,7 @@ floe.mkFloe {
               };
             };
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "harbor-core";
               namespace = ns;
               timeout = "10m";

@@ -1,4 +1,4 @@
-# secret-store
+# cluster-store
 
 A ClusterSecretStore pointing at a backend the lab holds.
 
@@ -20,13 +20,13 @@ A ClusterSecretStore pointing at a backend the lab holds.
 | --- | --- | --- |
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
 | generation | [SECRET_GENERATION](../signatures/SECRET_GENERATION.md) | A controller that mints secret values in the cluster, so none is rendered into a manifest. |
-| labStore | [LAB_SECRET_STORE](../signatures/LAB_SECRET_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
+| labStore | [LAB_STORE](../signatures/LAB_STORE.md) | A store on the operator's machine that `cata` reads authored secret values from. |
 
 ## Provides
 
 | provision | signature | what it is |
 | --- | --- | --- |
-| secretStore | [SECRET_STORE](../signatures/SECRET_STORE.md) | A named store an ExternalSecret reads from, and whether it may be written to. |
+| clusterStore | [CLUSTER_STORE](../signatures/CLUSTER_STORE.md) | A named store an ExternalSecret reads from, and whether it may be written to. |
 
 ## Emits
 
@@ -42,7 +42,7 @@ A ClusterSecretStore pointing at a backend the lab holds.
 
 ## Provides, as linked
 
-### `secretStore` — [SECRET_STORE](../signatures/SECRET_STORE.md)
+### `clusterStore` — [CLUSTER_STORE](../signatures/CLUSTER_STORE.md)
 
 | field |
 | --- |

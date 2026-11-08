@@ -1,7 +1,7 @@
 # A store on the operator's machine, holding values nothing in a lab can mint.
 #
 # A floe that wants a *random* credential does not come here: it mints one in
-# its own bundle with `kinds.mkGeneratedSecret` and publishes the coordinates
+# its own bundle with `content.mkGeneratedSecret` and publishes the coordinates
 # on its provide. What is left is the material no floe can generate — a value
 # a human authored, or one an external system holds.
 #
@@ -22,7 +22,7 @@
 }:
 
 floe.mkFloe {
-  name = "lab-secret-store";
+  name = "lab-store";
   summary = "A sops file, a set of environment variables, or a vault, as something a floe can resolve.";
 
   inputs = {
@@ -119,7 +119,7 @@ floe.mkFloe {
     };
   };
 
-  provides.labStore = sigs.LAB_SECRET_STORE;
+  provides.labStore = sigs.LAB_STORE;
 
   body =
     { inputs, floe, ... }:

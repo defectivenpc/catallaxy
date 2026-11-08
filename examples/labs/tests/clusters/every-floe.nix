@@ -31,9 +31,9 @@ in
 
       # Three stores and two secrets in this lab, so every one of these is a
       # named hole and the lab says which it means. This is the ambiguous case
-      # on purpose: one `LAB_SECRET_STORE` hole and one `LAB_SECRET` hole
+      # on purpose: one `LAB_STORE` hole and one `LAB_SECRET` hole
       # would resolve for free, and then nothing here would exercise `.bind`.
-      labStore = sigs.LAB_SECRET_STORE;
+      labStore = sigs.LAB_STORE;
       vaultCredential = sigs.LAB_SECRET;
       tsigSecret = sigs.LAB_SECRET;
     };
@@ -223,7 +223,7 @@ in
 
       external-secrets = floes.external-secrets { };
 
-      secret-store = floes.secret-store { server = "https://vault.${zone}"; };
+      cluster-store = floes.cluster-store { server = "https://vault.${zone}"; };
 
       # The two halves of secret sharing, in one cluster because this lab is one
       # cluster. Across two they are what the boundary carries: the publication

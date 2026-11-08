@@ -9,6 +9,7 @@
   lib,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -48,10 +49,10 @@ floe.mkFloe {
         inputs = config.floe.inputs;
       in
       {
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.nop = kinds.mkBundle {
+          bundles.nop = content.mkBundle {
             resources.nop = {
               apiVersion = "nop.crossplane.io/v1alpha1";
               kind = "NopResource";
@@ -65,7 +66,7 @@ floe.mkFloe {
               ];
             };
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "nopresource/${inputs.name}";
               condition = "Ready";
               timeout = "3m";

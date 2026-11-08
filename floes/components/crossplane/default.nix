@@ -10,6 +10,7 @@
   lib,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -55,14 +56,14 @@ floe.mkFloe {
           providerKind = "pkg.crossplane.io/Provider";
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.controlPlane = [
             "crds"
             "crossplane"
           ];
           imagesComplete = true;
 
-          bundles.crds = kinds.mkBundle {
+          bundles.crds = content.mkBundle {
             yamls = [ inputs.crds ];
             crds = [
               "apiextensions.crossplane.io/CompositeResourceDefinition"
@@ -84,20 +85,20 @@ floe.mkFloe {
             ];
           };
 
-          bundles.crossplane = kinds.mkBundle {
+          bundles.crossplane = content.mkBundle {
             needs = [ "crds" ];
             createNamespaces = [ inputs.namespace ];
 
-            images.crossplane = kinds.mkImage "xpkg.upbound.io/crossplane/crossplane:v1.18.2";
+            images.crossplane = content.mkImage "xpkg.upbound.io/crossplane/crossplane:v1.18.2";
 
-            helmCharts.crossplane = kinds.mkHelmChart {
+            helmCharts.crossplane = content.mkHelmChart {
               chart = inputs.chart;
               releaseName = "crossplane";
               namespace = inputs.namespace;
               values = { };
             };
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "crossplane";
               namespace = inputs.namespace;
               timeout = "5m";

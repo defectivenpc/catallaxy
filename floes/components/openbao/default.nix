@@ -25,6 +25,7 @@
   pkgs,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -260,7 +261,7 @@ floe.mkFloe {
           autoUnseals = false;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           backs.vault = [
@@ -268,7 +269,7 @@ floe.mkFloe {
             "init"
           ];
 
-          bundles.server = kinds.mkBundle {
+          bundles.server = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             images.openbao = {
@@ -278,7 +279,7 @@ floe.mkFloe {
               digest = null;
             };
 
-            helmCharts.openbao = kinds.mkHelmChart {
+            helmCharts.openbao = content.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "openbao";
               namespace = inputs.namespace;
@@ -306,10 +307,10 @@ floe.mkFloe {
             };
           };
 
-          bundles.init = kinds.mkBundle {
+          bundles.init = content.mkBundle {
             needs = [ "server" ];
 
-            images.init = kinds.mkImage "docker.io/alpine/k8s:1.31.4";
+            images.init = content.mkImage "docker.io/alpine/k8s:1.31.4";
 
             resources = {
               "${initSa}" = {
@@ -327,7 +328,7 @@ floe.mkFloe {
 
             secrets = [ "${inputs.secretNamespace}/${inputs.tokenSecret}" ];
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "job/${job.name}";
               condition = "Complete";
               namespace = inputs.namespace;
@@ -335,7 +336,7 @@ floe.mkFloe {
             };
 
             ops.secrets = {
-              unseal = kinds.mkOpsCommand {
+              unseal = content.mkOpsCommand {
                 description = "Unseal a restarted vault (needs the keys init printed)";
                 args = [
                   {
@@ -347,7 +348,7 @@ floe.mkFloe {
                 package = opsScript "unseal" (builtins.readFile ./scripts/ops-unseal.sh);
               };
 
-              status = kinds.mkOpsCommand {
+              status = content.mkOpsCommand {
                 description = "Whether the vault is initialised, sealed, and who the leader is";
                 package = opsScript "status" (builtins.readFile ./scripts/ops-status.sh);
               };

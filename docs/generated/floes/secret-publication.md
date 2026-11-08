@@ -18,7 +18,7 @@ Pushes a Secret this cluster holds into a lab store.
 | hole | signature | what it is |
 | --- | --- | --- |
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
-| secretStore | [SECRET_STORE](../signatures/SECRET_STORE.md) | A named store an ExternalSecret reads from, and whether it may be written to. |
+| clusterStore | [CLUSTER_STORE](../signatures/CLUSTER_STORE.md) | A named store an ExternalSecret reads from, and whether it may be written to. |
 
 ## Provides
 

@@ -12,7 +12,8 @@ let
     crdGroups = { };
   };
 
-  kinds = import ../authoring/component.nix { inherit lib floe k8sApi; };
+  content = import ../authoring/content.nix { inherit lib floe k8sApi; };
+  kinds = import ../../kinds { inherit lib floe sigs; };
   sigs = import ../../signatures { inherit lib floe; };
   policies = import ../authoring/policies.nix {
     inherit lib k8sApi;
@@ -20,7 +21,7 @@ let
   };
   elaborate = import ../lower/elaborate.nix { inherit lib floe k8sApi; };
 
-  inherit (kinds)
+  inherit (content)
     mkBundle
     mkOpsCommand
     mkComponent
@@ -685,7 +686,7 @@ lib.runTests {
   };
 
   testAnImageIsReadOffTheRefAnOperatorWouldType = {
-    expr = kinds.mkImage "quay.io/jetstack/trust-manager:v0.22.1";
+    expr = content.mkImage "quay.io/jetstack/trust-manager:v0.22.1";
     expected = {
       registry = "quay.io";
       repository = "jetstack/trust-manager";
@@ -695,7 +696,7 @@ lib.runTests {
   };
 
   testADigestPinnedRefKeepsBothHalves = {
-    expr = kinds.mkImage "quay.io/cilium/cilium:v1.17.2@sha256:deadbeef";
+    expr = content.mkImage "quay.io/cilium/cilium:v1.17.2@sha256:deadbeef";
     expected = {
       registry = "quay.io";
       repository = "cilium/cilium";
@@ -764,17 +765,17 @@ lib.runTests {
   };
 
   testARegistryPortIsNotMistakenForATag = {
-    expr = (kinds.mkImage "localhost:5000/app:v1").registry;
+    expr = (content.mkImage "localhost:5000/app:v1").registry;
     expected = "localhost:5000";
   };
 
   testARefWithNoRegistryIsRefused = {
-    expr = fails (kinds.mkImage "traefik:v3.3.6");
+    expr = fails (content.mkImage "traefik:v3.3.6");
     expected = true;
   };
 
   testADockerHubNamespaceIsNotARegistry = {
-    expr = fails (kinds.mkImage "chrislusf/seaweedfs:4.0.0");
+    expr = fails (content.mkImage "chrislusf/seaweedfs:4.0.0");
     expected = true;
   };
 }

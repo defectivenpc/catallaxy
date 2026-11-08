@@ -23,20 +23,15 @@ let
     lib.attrValues productSignatures
   );
 
-  kinds = import ./kinds.nix {
-    inherit
-      lib
-      floe
-      k8sApi
-      sigs
-      ;
-  };
+  kinds = import ../../kinds { inherit lib floe sigs; };
+
+  content = import ./content.nix { inherit lib floe k8sApi; };
   policies = import ./policies.nix { inherit lib signatures k8sApi; };
 
   distribution = floe.mkDistribution {
     name = "catallaxy";
 
-    kinds = lib.filterAttrs (_: k: (k.__floeSig or false)) kinds;
+    inherit kinds;
 
     document = import ../document/generated.nix { T = floe.T; };
   };
@@ -46,6 +41,7 @@ rec {
   inherit
     floe
     kinds
+    content
     sigs
     signatures
     productSignatures
@@ -57,6 +53,11 @@ rec {
     description = "an instantiated floe";
     descriptionClass = "noun";
     check = v: builtins.isAttrs v && (v.__floeInstance or false);
+  };
+
+  gatewayNodePorts = {
+    http = 30080;
+    https = 30443;
   };
 
   provisionerUnitFor = clusterName: "${clusterName}-provisioner";

@@ -9,6 +9,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -53,14 +54,14 @@ floe.mkFloe {
           isDefault = true;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.storageClass = [ "openebs" ];
           imagesComplete = true;
 
-          bundles.openebs = kinds.mkBundle {
+          bundles.openebs = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.openebs = kinds.mkHelmChart {
+            helmCharts.openebs = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "local-path-provisioner";
               values.storageClass = {
@@ -69,9 +70,9 @@ floe.mkFloe {
               };
             };
 
-            images.localPathProvisioner = kinds.mkImage "docker.io/rancher/local-path-provisioner:v0.0.28";
+            images.localPathProvisioner = content.mkImage "docker.io/rancher/local-path-provisioner:v0.0.28";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "openebs-localpv-provisioner";
               namespace = inputs.namespace;
             };

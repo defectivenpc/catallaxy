@@ -10,20 +10,20 @@
 ## Where they went
 
 A floe no longer receives an ambient bag of Kubernetes helpers. Constructors
-now come from `kinds`, and the ones that build a resource _against a
+now come from `content`, and the ones that build a resource _against a
 capability_ come from the provider through the sealed value:
 
 | Was                          | Now                                                                     |
 | ---------------------------- | ----------------------------------------------------------------------- |
-| `k8sHelpers.mkHttpRoute`     | `kinds.mkRoute { inherit gateway; … }`                                  |
-| `k8sHelpers.mkTlsRoute`      | `kinds.mkRoute`, with the gateway's passthrough listener                |
+| `k8sHelpers.mkHttpRoute`     | `content.mkRoute { inherit gateway; … }`                                |
+| `k8sHelpers.mkTlsRoute`      | `content.mkRoute`, with the gateway's passthrough listener              |
 | `k8sHelpers.mkCertificate`   | rendered by the consumer against the sealed `X509_ISSUANCE` value       |
 | `k8sHelpers.mkGatewayParent` | gone — `mkRoute` takes the sealed gateway and derives the parent itself |
 | `k8sHelpers.mkNetworkPolicy` | gone. No NetworkPolicy renderer exists anywhere in the tree             |
-| `catallaxy.lib.mkComponent`  | `kinds.mkComponent`                                                     |
+| `catallaxy.lib.mkComponent`  | `content.mkComponent`                                                   |
 
 The reason is the same in every row. A helper that takes a gateway's name
-and namespace as strings requires the caller to know them; `kinds.mkRoute`
+and namespace as strings requires the caller to know them; `content.mkRoute`
 takes the _sealed_ `API_GATEWAY` value, so the caller knows only that it has
 a gateway. That is what lets a floe never spell the gateway's name, its
 listener, or the lab's zone.
@@ -43,7 +43,7 @@ generated page shows which it used.
 | `wait.*`                   | `lib/util/wait.nix`           | the readiness probe DSL                                      |
 | duration, CIDR, HCL, parse | `lib/util/`                   | small pure helpers                                           |
 
-`wait.nix` is the same probe language a bundle's `ready` uses — `kinds`
+`wait.nix` is the same probe language a bundle's `ready` uses — `content`
 wraps it as `readyDeployment` and `readyCondition` — but rendered into a
 container you place yourself. `lib/util/wait.nix:requiredBy` is the table
 saying which fields a probe of each kind needs, and the elaborator checks
@@ -51,6 +51,6 @@ against it.
 
 ## Related
 
-- [mkFloe API](./floe-api.md): `kinds.*` in full.
+- [mkFloe API](./floe-api.md): `content.*` in full.
 - [Write a Floe](../using/writing-a-floe.md): using them.
 - [Bundle Schema](./bundles.md): `ready`.

@@ -13,6 +13,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -51,14 +52,14 @@ floe.mkFloe {
           configMapAnnotation = "configmap.reloader.stakater.com/reload";
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.reload = [ "reloader" ];
           imagesComplete = true;
 
-          bundles.reloader = kinds.mkBundle {
+          bundles.reloader = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.reloader = kinds.mkHelmChart {
+            helmCharts.reloader = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "reloader";
               values.reloader = {
@@ -67,9 +68,9 @@ floe.mkFloe {
               };
             };
 
-            images.controller = kinds.mkImage "ghcr.io/stakater/reloader:v1.4.19";
+            images.controller = content.mkImage "ghcr.io/stakater/reloader:v1.4.19";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "reloader-reloader";
               namespace = inputs.namespace;
               timeout = "3m";

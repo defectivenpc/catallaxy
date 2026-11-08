@@ -39,7 +39,7 @@ floe.mkFloe {
   singleton = true;
 
   collects = {
-    store = sigs.LAB_SECRET_STORE;
+    store = sigs.LAB_STORE;
 
     secret = sigs.LAB_SECRET;
   };

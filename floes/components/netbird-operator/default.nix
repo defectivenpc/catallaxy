@@ -36,6 +36,7 @@
   lib,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -174,13 +175,13 @@ floe.mkFloe {
           routerRef = null;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.operator = kinds.mkBundle {
+          bundles.operator = content.mkBundle {
             createNamespaces = [ ns ];
 
-            helmCharts.netbird-operator = kinds.mkHelmChart {
+            helmCharts.netbird-operator = content.mkHelmChart {
               inherit (inputs) chart;
               releaseName = "netbird-operator";
               namespace = ns;
@@ -197,11 +198,11 @@ floe.mkFloe {
 
             needsSecrets = [ "${token.namespace}/${token.name}" ];
 
-            images.operator = kinds.mkImage "ghcr.io/netbirdio/netbird-operator:v0.7.0";
+            images.operator = content.mkImage "ghcr.io/netbirdio/netbird-operator:v0.7.0";
 
             crds = crdKinds;
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "netbird-operator";
               namespace = ns;
             };

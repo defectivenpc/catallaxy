@@ -4,8 +4,8 @@ let
   T = floe.T;
 in
 {
-  LAB_SECRET_STORE = floe.mkSig {
-    name = "LAB_SECRET_STORE";
+  LAB_STORE = floe.mkSig {
+    name = "LAB_STORE";
     canonicalName = "labStore";
     description = "A store on the operator's machine that `cata` reads authored secret values from.";
     fields = {
@@ -68,9 +68,9 @@ in
     };
   };
 
-  SECRET_STORE = floe.mkSig {
-    name = "SECRET_STORE";
-    canonicalName = "secretStore";
+  CLUSTER_STORE = floe.mkSig {
+    name = "CLUSTER_STORE";
+    canonicalName = "clusterStore";
     description = "A named store an ExternalSecret reads from, and whether it may be written to.";
     fields = {
 

@@ -6,13 +6,14 @@
 #
 # It publishes no client registry. kaniop registers `KanidmOAuth2Client`, so a
 # client is an ordinary namespaced resource and each consumer renders its own
-# with `kinds.mkOAuth2Client` — the provider collects nothing, and no consumer
+# with `content.mkOAuth2Client` — the provider collects nothing, and no consumer
 # has to invent an id for itself.
 {
   lib,
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -82,8 +83,8 @@ floe.mkFloe {
         On, because a consumer renders its own and a consumer lives in its own
         namespace. Off, kaniop looks only in this one: a resource elsewhere is
         admitted, stored, and never reconciled, and the consumer waits for a
-        Secret that is not coming. `kinds.mkOAuth2Client` and
-        `kinds.mkServiceAccount` refuse that combination rather than letting
+        Secret that is not coming. `content.mkOAuth2Client` and
+        `content.mkServiceAccount` refuse that combination rather than letting
         it render.
 
         Named for clients because that is what the `OIDC_PROVIDER` field is
@@ -171,10 +172,10 @@ floe.mkFloe {
           inherit (inputs) clientsAnyNamespace;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.server = kinds.mkBundle {
+          bundles.server = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             images.server = {
@@ -273,7 +274,7 @@ floe.mkFloe {
 
             secrets = [ "${inputs.namespace}/${tlsSecret}" ];
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "kanidm/${name}";
               condition = "Available";
               namespace = inputs.namespace;

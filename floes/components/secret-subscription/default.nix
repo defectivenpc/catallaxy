@@ -12,6 +12,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -71,7 +72,7 @@ floe.mkFloe {
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
   requires = {
-    secretStore = sigs.SECRET_STORE;
+    clusterStore = sigs.CLUSTER_STORE;
     publication = sigs.PUBLISHED_SECRET;
   };
 
@@ -81,11 +82,11 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        store = config.floe.requires.secretStore;
+        store = config.floe.requires.clusterStore;
         publication = config.floe.requires.publication;
       in
       {
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           assertions = [
@@ -99,7 +100,7 @@ floe.mkFloe {
             }
           ];
 
-          bundles.subscription = kinds.mkBundle {
+          bundles.subscription = content.mkBundle {
             resources.pull = {
               apiVersion = "external-secrets.io/v1beta1";
               kind = "ExternalSecret";

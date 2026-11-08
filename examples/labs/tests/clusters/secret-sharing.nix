@@ -31,15 +31,15 @@ let
 
     external-secrets = floes.external-secrets { };
 
-    store = floes.secret-store { server = vaultServer; };
+    store = floes.cluster-store { server = vaultServer; };
   };
 
   # What `shared` reads of the lab, so every cluster built from it declares
-  # the same two holes: the runtime store its `secret-store` backs, and the
+  # the same two holes: the runtime store its `cluster-store` backs, and the
   # authored secret the projection fills from. The lab has two stores, so it
   # says which the first means.
   sharedRequires = {
-    labStore = sigs.LAB_SECRET_STORE;
+    labStore = sigs.LAB_STORE;
     labSecret = sigs.LAB_SECRET;
   };
 

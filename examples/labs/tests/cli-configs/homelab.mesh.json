@@ -166,17 +166,17 @@
           [
             {
               "hasReadyProbe": true,
+              "name": "cluster-store/store",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": true,
               "name": "openbao/init",
               "resourceCount": 7
             },
             {
               "hasReadyProbe": true,
               "name": "platform/cert-manager/issuers",
-              "resourceCount": 1
-            },
-            {
-              "hasReadyProbe": true,
-              "name": "secret-store/store",
               "resourceCount": 1
             },
             {
@@ -411,12 +411,12 @@
           [
             {
               "hasReadyProbe": true,
-              "name": "platform/cert-manager/issuers",
+              "name": "cluster-store/store",
               "resourceCount": 1
             },
             {
               "hasReadyProbe": true,
-              "name": "secret-store/store",
+              "name": "platform/cert-manager/issuers",
               "resourceCount": 1
             }
           ],

@@ -16,6 +16,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -129,11 +130,11 @@ floe.mkFloe {
         gatewayExporters = logExporters // traceExporters // metricExporters;
       in
       {
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           bundles = {
-            gateway = kinds.mkBundle {
+            gateway = content.mkBundle {
               createNamespaces = [ inputs.namespace ];
 
               images.collector = {
@@ -143,7 +144,7 @@ floe.mkFloe {
                 digest = null;
               };
 
-              helmCharts.gateway = kinds.mkHelmChart {
+              helmCharts.gateway = content.mkHelmChart {
                 chart = inputs.chart;
                 releaseName = release;
                 namespace = inputs.namespace;
@@ -193,7 +194,7 @@ floe.mkFloe {
                 };
               };
 
-              ready = kinds.readyDeployment {
+              ready = content.readyDeployment {
                 name = "${release}-opentelemetry-collector";
                 namespace = inputs.namespace;
                 timeout = "3m";
@@ -202,10 +203,10 @@ floe.mkFloe {
 
           }
           // lib.optionalAttrs inputs.agent {
-            agent = kinds.mkBundle {
+            agent = content.mkBundle {
               needs = [ "gateway" ];
 
-              helmCharts.agent = kinds.mkHelmChart {
+              helmCharts.agent = content.mkHelmChart {
                 chart = inputs.chart;
                 releaseName = "${release}-agent";
                 namespace = inputs.namespace;

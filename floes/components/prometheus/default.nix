@@ -16,6 +16,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -141,7 +142,7 @@ floe.mkFloe {
           remoteWriteUrl = "${base}/api/v1/write";
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.metrics = [
             "crds"
             "prometheus"
@@ -149,18 +150,18 @@ floe.mkFloe {
 
           imagesComplete = true;
 
-          bundles.crds = kinds.mkBundle {
+          bundles.crds = content.mkBundle {
             yamls = [ inputs.crds ];
             crds = crdKinds;
 
             awaitRollout = false;
           };
 
-          bundles.prometheus = kinds.mkBundle {
+          bundles.prometheus = content.mkBundle {
             needs = [ "crds" ];
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.prometheus = kinds.mkHelmChart {
+            helmCharts.prometheus = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "prometheus";
               values = {
@@ -194,11 +195,11 @@ floe.mkFloe {
               };
             };
 
-            images.operator = kinds.mkImage "quay.io/prometheus-operator/prometheus-operator:v0.82.2";
-            images.prometheus = kinds.mkImage "quay.io/prometheus/prometheus:v3.4.0";
-            images.configReloader = kinds.mkImage "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2";
+            images.operator = content.mkImage "quay.io/prometheus-operator/prometheus-operator:v0.82.2";
+            images.prometheus = content.mkImage "quay.io/prometheus/prometheus:v3.4.0";
+            images.configReloader = content.mkImage "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2";
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "statefulset/${statefulSet}";
               condition = "Available";
               namespace = inputs.namespace;

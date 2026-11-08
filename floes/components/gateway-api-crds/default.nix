@@ -11,6 +11,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -72,12 +73,12 @@ floe.mkFloe {
           crdKinds = infraKinds ++ routeKinds;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
           backs.gatewayApi = [ "crds" ];
 
-          bundles.crds = kinds.mkBundle {
+          bundles.crds = content.mkBundle {
             yamls = [ inputs.manifest ];
 
             crds = map (lib.removePrefix "kind:") (infraKinds ++ routeKinds);

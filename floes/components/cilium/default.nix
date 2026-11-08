@@ -31,6 +31,7 @@
   pkgs,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -138,24 +139,24 @@ let
 
           config.floe.out.networkPolicy.implementation = "cilium";
 
-          config.floe.out.component = kinds.mkComponent {
+          config.floe.out.component = content.mkComponent {
             imagesComplete = true;
 
-            bundles.cilium = kinds.mkBundle {
-              helmCharts.cilium = kinds.mkHelmChart {
+            bundles.cilium = content.mkBundle {
+              helmCharts.cilium = content.mkHelmChart {
                 inherit (inputs) chart;
                 releaseName = "cilium";
                 namespace = "kube-system";
                 inherit values;
               };
 
-              images.agent = kinds.mkImage "quay.io/cilium/cilium:v1.17.2@sha256:3c4c9932b5d8368619cb922a497ff2ebc8def5f41c18e410bcc84025fcd385b1";
-              images.operator = kinds.mkImage "quay.io/cilium/operator-generic:v1.17.2@sha256:81f2d7198366e8dec2903a3a8361e4c68d47d19c68a0d42f0b7b6e3f0523f249";
+              images.agent = content.mkImage "quay.io/cilium/cilium:v1.17.2@sha256:3c4c9932b5d8368619cb922a497ff2ebc8def5f41c18e410bcc84025fcd385b1";
+              images.operator = content.mkImage "quay.io/cilium/operator-generic:v1.17.2@sha256:81f2d7198366e8dec2903a3a8361e4c68d47d19c68a0d42f0b7b6e3f0523f249";
 
-              images.envoy = kinds.mkImage "quay.io/cilium/cilium-envoy:v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211@sha256:377c78c13d2731f3720f931721ee309159e782d882251709cb0fac3b42c03f4b";
+              images.envoy = content.mkImage "quay.io/cilium/cilium-envoy:v1.31.5-1741765102-efed3defcc70ab5b263a0fc44c93d316b846a211@sha256:377c78c13d2731f3720f931721ee309159e782d882251709cb0fac3b42c03f4b";
 
               ops.network = {
-                status = kinds.mkOpsCommand {
+                status = content.mkOpsCommand {
                   description = "Cilium's own view of the datapath, per node";
                   command = [
                     "kubectl"

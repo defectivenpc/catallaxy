@@ -10,6 +10,7 @@
   pkgs,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -52,14 +53,14 @@ floe.mkFloe {
           inherit crdsEstablished;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.identityOperator = [
             "crds"
             "kaniop"
           ];
           imagesComplete = true;
 
-          bundles.crds = kinds.mkBundle {
+          bundles.crds = content.mkBundle {
             yamls = [ "${crds}" ];
             crds = [
               "kaniop.rs/Kanidm"
@@ -70,11 +71,11 @@ floe.mkFloe {
             ];
           };
 
-          bundles.kaniop = kinds.mkBundle {
+          bundles.kaniop = content.mkBundle {
             needs = [ "crds" ];
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.kaniop = kinds.mkHelmChart {
+            helmCharts.kaniop = content.mkHelmChart {
               replacedHooks = {
                 kaniop-crd-migrate = "the floe installs the CRDs itself, from the chart's own `crds/`, in `bundles.crds`";
                 kaniop-crd-migrator = "as above";
@@ -85,9 +86,9 @@ floe.mkFloe {
               values = { };
             };
 
-            images.operator = kinds.mkImage "ghcr.io/pando85/kaniop:0.11.1";
+            images.operator = content.mkImage "ghcr.io/pando85/kaniop:0.11.1";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "kaniop";
               namespace = inputs.namespace;
             };

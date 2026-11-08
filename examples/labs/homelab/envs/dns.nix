@@ -22,7 +22,7 @@ lab {
   core = clusters.coreWithDns { };
 
   units = {
-    authored = floes.lab-secret-store { backend = "env"; };
+    authored = floes.lab-store { backend = "env"; };
     externaldns-tsig = floes.lab-authored-secret { keys.tsig-secret.generator = null; };
   };
 

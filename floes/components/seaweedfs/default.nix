@@ -5,6 +5,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -52,11 +53,11 @@ floe.mkFloe {
           credentials = null;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.objectStore = [ "seaweedfs" ];
           imagesComplete = true;
 
-          bundles.seaweedfs = kinds.mkBundle {
+          bundles.seaweedfs = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             resources.db-init-config = {
@@ -69,7 +70,7 @@ floe.mkFloe {
               data = { };
             };
 
-            helmCharts.seaweedfs = kinds.mkHelmChart {
+            helmCharts.seaweedfs = content.mkHelmChart {
               replacedHooks = {
                 secret-seaweedfs-db =
                   "nothing needs it: the filer here uses leveldb, the chart reads "
@@ -109,7 +110,7 @@ floe.mkFloe {
               digest = null;
             };
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "seaweedfs-s3";
               namespace = inputs.namespace;
               timeout = "10m";

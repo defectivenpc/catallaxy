@@ -13,6 +13,7 @@
   lib,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -65,14 +66,14 @@ floe.mkFloe {
           inherit crdKinds healthy;
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
           backs.resourceProvider = [ "provider" ];
 
-          bundles.provider = kinds.mkBundle {
+          bundles.provider = content.mkBundle {
             crds = crdKinds;
 
-            images.provider = kinds.mkImage inputs.package;
+            images.provider = content.mkImage inputs.package;
 
             resources.provider = {
               apiVersion = "pkg.crossplane.io/v1";
@@ -81,7 +82,7 @@ floe.mkFloe {
               spec.package = inputs.package;
             };
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "provider/${inputs.name}";
               condition = "Healthy";
               namespace = controlPlane.namespace;

@@ -45,9 +45,9 @@ catallaxy.mkLabFloe
       # Two stores: one a human authored, one the lab writes into at runtime.
       # Both are units of the link, so with two of them every reader says which
       # it means.
-      authored = floes.lab-secret-store { backend = "sops"; };
+      authored = floes.lab-store { backend = "sops"; };
 
-      runtime = floes.lab-secret-store {
+      runtime = floes.lab-store {
         backend = "vault";
         inherit vaultServer;
       };

@@ -13,6 +13,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -110,10 +111,10 @@ floe.mkFloe {
               keys = lib.mapAttrs (_: k: { inherit (k) from transform jsonKey; }) inputs.keys;
             };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.projection = kinds.mkBundle {
+          bundles.projection = content.mkBundle {
             secrets = [ "${inputs.namespace}/${inputs.secret}" ];
           };
         };

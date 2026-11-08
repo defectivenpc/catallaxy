@@ -9,6 +9,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -51,11 +52,11 @@ floe.mkFloe {
           ];
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.postgresOperator = [ "cnpg" ];
           imagesComplete = true;
 
-          bundles.cnpg = kinds.mkBundle {
+          bundles.cnpg = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             crds = [
@@ -65,15 +66,15 @@ floe.mkFloe {
               "postgresql.cnpg.io/Backup"
             ];
 
-            helmCharts.cnpg = kinds.mkHelmChart {
+            helmCharts.cnpg = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "cnpg";
               values = { };
             };
 
-            images.operator = kinds.mkImage "ghcr.io/cloudnative-pg/cloudnative-pg:1.25.0";
+            images.operator = content.mkImage "ghcr.io/cloudnative-pg/cloudnative-pg:1.25.0";
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "cnpg-cloudnative-pg";
               namespace = inputs.namespace;
             };

@@ -20,8 +20,8 @@ Materialises a value another cluster published, as a Secret here.
 | hole | signature | what it is |
 | --- | --- | --- |
 | cluster | [KUBERNETES_CLUSTER](../signatures/KUBERNETES_CLUSTER.md) | The cluster a member installs into: its name, version, context and address ranges. |
+| clusterStore | [CLUSTER_STORE](../signatures/CLUSTER_STORE.md) | A named store an ExternalSecret reads from, and whether it may be written to. |
 | publication | [PUBLISHED_SECRET](../signatures/PUBLISHED_SECRET.md) | A value one cluster pushed into a lab store, and where to read it. |
-| secretStore | [SECRET_STORE](../signatures/SECRET_STORE.md) | A named store an ExternalSecret reads from, and whether it may be written to. |
 
 ## Emits
 

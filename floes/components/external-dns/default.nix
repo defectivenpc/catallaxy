@@ -26,6 +26,7 @@
   pkgs,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -288,17 +289,17 @@ floe.mkFloe {
           };
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.external-dns = kinds.mkBundle {
+          bundles.external-dns = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
             needsSecrets = [ inputs.tsigSecretRef ];
 
-            images.controller = kinds.mkImage "registry.k8s.io/external-dns/external-dns:v0.16.1";
+            images.controller = content.mkImage "registry.k8s.io/external-dns/external-dns:v0.16.1";
 
-            helmCharts.external-dns = kinds.mkHelmChart {
+            helmCharts.external-dns = content.mkHelmChart {
               chart = inputs.chart;
               releaseName = "external-dns";
               namespace = inputs.namespace;
@@ -331,14 +332,14 @@ floe.mkFloe {
               };
             };
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "external-dns";
               namespace = inputs.namespace;
               timeout = "3m";
             };
 
             ops.dns = {
-              records = kinds.mkOpsCommand {
+              records = content.mkOpsCommand {
                 description = "Show what external-dns currently believes it owns";
                 package = "${
                   pkgs.writeShellApplication {

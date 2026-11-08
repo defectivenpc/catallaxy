@@ -9,6 +9,7 @@
   upstream ? null,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -50,14 +51,14 @@ floe.mkFloe {
           otlpUrl = "${base}/otlp";
         };
 
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           backs.logs = [ "loki" ];
           imagesComplete = true;
 
-          bundles.loki = kinds.mkBundle {
+          bundles.loki = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            helmCharts.loki = kinds.mkHelmChart {
+            helmCharts.loki = content.mkHelmChart {
               inherit (inputs) chart namespace;
               releaseName = "loki";
               values = {
@@ -88,12 +89,12 @@ floe.mkFloe {
               };
             };
 
-            images.loki = kinds.mkImage "docker.io/grafana/loki:3.5.0";
-            images.canary = kinds.mkImage "docker.io/grafana/loki-canary:3.5.0";
-            images.sidecar = kinds.mkImage "docker.io/kiwigrid/k8s-sidecar:1.30.3";
-            images.gateway = kinds.mkImage "docker.io/nginxinc/nginx-unprivileged:1.28-alpine";
+            images.loki = content.mkImage "docker.io/grafana/loki:3.5.0";
+            images.canary = content.mkImage "docker.io/grafana/loki-canary:3.5.0";
+            images.sidecar = content.mkImage "docker.io/kiwigrid/k8s-sidecar:1.30.3";
+            images.gateway = content.mkImage "docker.io/nginxinc/nginx-unprivileged:1.28-alpine";
 
-            ready = kinds.readyCondition {
+            ready = content.readyCondition {
               resource = "statefulset/loki";
               condition = "Available";
               namespace = inputs.namespace;

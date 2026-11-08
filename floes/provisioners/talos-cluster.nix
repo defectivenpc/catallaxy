@@ -188,8 +188,8 @@ floe.mkFloe {
 
         config.edge = {
           backend = "${inputs.instanceName}-controlplane-1";
-          httpPort = kinds.gatewayNodePorts.http;
-          httpsPort = kinds.gatewayNodePorts.https;
+          httpPort = catallaxy.gatewayNodePorts.http;
+          httpsPort = catallaxy.gatewayNodePorts.https;
         };
 
         config.floe.provides.edge = config.edge;

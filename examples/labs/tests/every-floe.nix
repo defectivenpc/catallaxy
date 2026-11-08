@@ -40,9 +40,9 @@ catallaxy.mkLabFloe
       # Three stores and two secrets, every one a unit of the lab's link.
       # Nothing resolves by itself at this width, which is the point of having
       # it here: each secret binds its store and the cluster binds each secret.
-      authored = floes.lab-secret-store { backend = "sops"; };
-      runtime = floes.lab-secret-store { backend = "vault"; };
-      knot = floes.lab-secret-store { backend = "env"; };
+      authored = floes.lab-store { backend = "sops"; };
+      runtime = floes.lab-store { backend = "vault"; };
+      knot = floes.lab-store { backend = "env"; };
 
       vault-credential =
         (floes.lab-authored-secret {

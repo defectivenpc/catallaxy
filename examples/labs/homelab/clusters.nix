@@ -1,16 +1,11 @@
-# The two clusters `homelab` stands up, and the two variants of them.
+# The two clusters `homelab` stands up
 #
 # `core` is the platform: identity, source control, a registry, trust,
-# routing, backups. `obs` is observability: metrics, logs, traces and a
-# dashboard over them. Each is a floe whose header is its interface, and each
-# environment of this lab builds its own pair from the same base — which is
-# what an environment is here, since `homelab.mesh` is not `homelab.local`
-# with a flag but a different cluster: one on a mesh, holding a store, with a
-# credential crossing to its sibling.
-#
-# Every one leaves its claim and the zone open. The claim because a cluster
-# floe is not the thing that creates a cluster; the zone because it is a fact
-# the lab holds and no cluster can derive.
+# routing, backups.
+
+# `obs` is observability: metrics, logs, traces and a dashboard over them.
+# Each is a floe whose header is its interface, and each
+# environment of this lab builds its own pair from the same base
 {
   catallaxy,
   floes,
@@ -60,10 +55,6 @@ let
       }
       // requires;
 
-      # Where the cluster is dialled, answered by its claim. Both of this
-      # lab's clusters are fronted, so both read it.
-      # The lab's root, so the issuer in here signs from it rather than minting
-      # a second. It was `rootFromLab = true` threaded down two levels.
       optional.labCa = sigs.LAB_CA;
 
       optional.edge = sigs.CLUSTER_EDGE;
@@ -71,8 +62,6 @@ let
       provides = {
         delivery = sigs.DELIVERY_POLICY;
 
-        # What the lab's resolver answers for. Exported because this lab fronts
-        # both of its clusters. ADR 0004.
         exposure = sigs.HOST_EXPOSURE;
       }
       // provides;
@@ -202,7 +191,7 @@ rec {
   # ---- `homelab.mesh`: both clusters on a mesh, sharing a PAT ------------
 
   # What both mesh clusters read of the lab: the runtime store their
-  # `secret-store` backs, and the authored secret their projection fills from.
+  # `cluster-store` backs, and the authored secret their projection fills from.
   # Two holes of two signatures, declared because `meshStoreClient` is in both
   # clusters and neither can mint either value.
   #
@@ -211,7 +200,7 @@ rec {
   # "runtime"` string on the floe plus a `writable` flag beside it that could
   # disagree with the store's backend.
   meshRequires = {
-    labStore = sigs.LAB_SECRET_STORE;
+    labStore = sigs.LAB_STORE;
     labSecret = sigs.LAB_SECRET;
   };
 
@@ -222,7 +211,7 @@ rec {
       keys.token.from = "token";
     };
 
-    secret-store = floes.secret-store { server = vaultServer; };
+    cluster-store = floes.cluster-store { server = vaultServer; };
   };
 
   patSecret = "netbird-api-token";

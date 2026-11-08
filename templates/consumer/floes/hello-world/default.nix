@@ -9,6 +9,7 @@
   floe,
   sigs,
   kinds,
+  content,
   ...
 }:
 
@@ -59,15 +60,15 @@ floe.mkFloe {
         selector."app.kubernetes.io/name" = "hello-world";
       in
       {
-        config.floe.out.component = kinds.mkComponent {
+        config.floe.out.component = content.mkComponent {
           imagesComplete = true;
 
-          bundles.hello-world = kinds.mkBundle {
+          bundles.hello-world = content.mkBundle {
             createNamespaces = [ inputs.namespace ];
 
-            images.hello-world = kinds.mkImage inputs.image;
+            images.hello-world = content.mkImage inputs.image;
 
-            ready = kinds.readyDeployment {
+            ready = content.readyDeployment {
               name = "hello-world";
               namespace = inputs.namespace;
               timeout = "3m";
