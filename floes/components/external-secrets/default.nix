@@ -49,7 +49,7 @@ floe.mkFloe {
   # The controller and its generator kinds, which is what this floe actually
   # installs. It creates no store, so it cannot answer SECRET_STORE.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  provides.generation = sigs.SECRET_GENERATION;
+  provides.generation = sigs.external-secrets.SECRET_GENERATION;
 
   out.component = kinds.component;
   modules = [

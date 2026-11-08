@@ -13,7 +13,7 @@ let
   sources = [
     "README.md"
     "floes/default.nix"
-    "lib/lab.nix"
+    "lib/default.nix"
     "docs/prior-implementations.md"
   ]
   ++ map (n: "docs/book/src/${n}") [

@@ -8,7 +8,7 @@ The Gateway API CRDs, so Gateway and route kinds have types.
 
 | input | type | default | description |
 | --- | --- | --- | --- |
-| manifest | string | `upstream.crds` | Store path of the upstream CRD bundle. Required — the caller pins the URL and hash in `lib/k8s-specs.nix`.  |
+| manifest | string | `upstream.crds` | Store path of the upstream CRD bundle. Required — the caller pins the URL and hash in `lib/kubernetes/specs.nix`.  |
 | version | string | `upstream.version` | Gateway API release the manifest came from, defaulted from the same pin the manifest is fetched with, so the two cannot disagree.  |
 
 ## Requires

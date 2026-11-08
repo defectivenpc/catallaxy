@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  graph = import ../eval/plan-graph.nix { inherit lib; };
+  graph = import ../lower/plan-graph.nix { inherit lib; };
   inherit (graph) topoSort;
 
   floating = steps: graph.floatingSteps { inherit steps; };

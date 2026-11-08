@@ -7,7 +7,7 @@
 # why these stay in `nix/checks/` rather than becoming policies — they are
 # about an assembly that must not exist.
 #
-# `tryEval` catches the assertion `lib/lab.nix` throws and the link error the
+# `tryEval` catches the assertion `lib/default.nix` throws and the link error the
 # floe library throws. `deepSeq` because the failure is inside a lazily held
 # field: forcing the document shallowly returns an attrset and proves nothing.
 #

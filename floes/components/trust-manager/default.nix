@@ -47,7 +47,7 @@ floe.mkFloe {
   # issuance, because the CA it distributes is the one that issuer signs
   # from — this floe reads the Secret cert-manager's root Certificate wrote.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  requires.webhook = sigs.X509_WEBHOOK;
+  requires.webhook = sigs.cert-manager.X509_WEBHOOK;
   requires.issuance = sigs.X509_ISSUANCE;
 
   provides.trust = sigs.TRUST_BUNDLE;

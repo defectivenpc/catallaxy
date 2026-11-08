@@ -8,14 +8,14 @@ let
   T = floe.T;
 
   inherit
-    (import ../../kubernetes/conform.nix {
+    (import ../kubernetes/conform.nix {
       inherit lib k8sApi;
       floeCore = floe;
     })
     checked
     ;
-  inherit (import ../../eval/secret-refs.nix { inherit lib; }) secretAddress;
-  inherit (import ../../kubernetes/labels.nix { }) catallaxyManaged;
+  inherit (import ../kubernetes/secret-refs.nix { inherit lib; }) secretAddress;
+  inherit (import ../kubernetes/labels.nix { }) catallaxyManaged;
 
   schemas = import ./component-schema.nix { inherit lib floe; };
   inherit (schemas)
@@ -63,7 +63,7 @@ let
           digest
           ;
       };
-  verifyTypes = import ../../verify-types.nix { inherit lib; };
+  verifyTypes = import ./verify-types.nix { inherit lib; };
   mkOpsOption =
     {
       type ? "str",

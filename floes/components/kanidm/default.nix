@@ -119,7 +119,7 @@ floe.mkFloe {
 
   # The CRD and something reconciling it. Without both, the CR below is a
   # resource of an unknown kind or a resource nothing acts on.
-  requires.identityOperator = sigs.IDENTITY_OPERATOR;
+  requires.identityOperator = sigs.kaniop.IDENTITY_OPERATOR;
 
   # Kanidm serves TLS and will not start without a certificate. It is one of
   # the few servers with no plaintext mode at all — WebAuthn requires a secure

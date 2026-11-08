@@ -25,8 +25,6 @@ let
       fi
     '';
 
-  floesDir = ../../floes/tests;
-
   nixFilesIn =
     dir:
     lib.attrNames (
@@ -50,46 +48,21 @@ let
     render-infra = testsDir + "/render-infra.nix";
   };
 
-  # Discovered, not listed. A hand-written list beside a `readDir` only ever
-  # achieves failing when someone adds a floe and forgets to name it here.
-  # `support.nix` is the harness, not a suite.
-  floeSuiteFiles = lib.filter (f: f != "support.nix") (nixFilesIn floesDir);
-
-  floeSuites = lib.listToAttrs (
-    map (file: {
-      name = "floe-${lib.removeSuffix ".nix" file}";
-      value = import (floesDir + "/${file}") { inherit lib pkgs floeCore; };
-    }) floeSuiteFiles
-  );
-
-  # Discovery cuts the other way too: a floe added to the set with no suite
-  # beside it is silent, because there is no name here for its absence to
-  # fail. `coredns-zone` and `k3d-cluster` both sat like that. Flattened across
-  # `cluster` and `provisioners`, the way `lib/lab.nix` flattens it.
-  shippedFloes = lib.attrNames (lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes)));
-
-  suitedFloes = map (lib.removeSuffix ".nix") floeSuiteFiles;
-
-  floesWithNoSuite = lib.subtractLists suitedFloes shippedFloes;
-  suitesWithNoFloe = lib.subtractLists shippedFloes suitedFloes;
-
   # `callPackageWith` hands a suite only the arguments it declares, so the ones
   # that never touch the floe library keep their `{ lib }` head and the two that
   # do just ask for `floeCore`.
-  suites =
-    lib.mapAttrs (
-      _: path:
-      lib.callPackageWith {
-        inherit lib floeCore;
+  suites = lib.mapAttrs (
+    _: path:
+    lib.callPackageWith {
+      inherit lib floeCore;
 
-        # The two suites that build a Kubernetes API record need the spec it is
-        # converted from. In scope for all of them rather than threaded to
-        # those two, because `callPackageWith` gives a suite only what it asks
-        # for by name.
-        specFile = (import ../../lib/k8s-specs.nix { inherit lib pkgs; }).specs."1.31";
-      } path { }
-    ) pure
-    // floeSuites;
+      # The two suites that build a Kubernetes API record need the spec it is
+      # converted from. In scope for all of them rather than threaded to
+      # those two, because `callPackageWith` gives a suite only what it asks
+      # for by name.
+      specFile = (import ../../lib/kubernetes/specs.nix { inherit lib pkgs; }).specs."1.31";
+    } path { }
+  ) pure;
 
   # A new `lib/tests/*.nix` would otherwise sit there running nowhere and
   # looking like coverage.
@@ -100,14 +73,5 @@ in
 assert lib.assertMsg (unrunTests == [ ]) ''
   lib/tests holds test files no check runs: ${lib.concatStringsSep ", " unrunTests}.
   Add each to `pure` in nix/checks/lib-tests.nix.
-'';
-assert lib.assertMsg (floesWithNoSuite == [ ]) ''
-  floes/default.nix ships floes with no isolation suite: ${lib.concatStringsSep ", " floesWithNoSuite}.
-  Add floes/tests/<name>.nix for each. A floe checked only through a lab is
-  checked only in the labs that happen to include it.
-'';
-assert lib.assertMsg (suitesWithNoFloe == [ ]) ''
-  floes/tests holds suites for floes the set does not ship: ${lib.concatStringsSep ", " suitesWithNoFloe}.
-  Either add the floe to floes/default.nix or delete the suite.
 '';
 lib.mapAttrs mkCheck suites

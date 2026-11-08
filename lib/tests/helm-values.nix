@@ -1,7 +1,7 @@
 { lib, floeCore }:
 
 let
-  floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
+  floe = import ../authoring/prelude.nix { inherit lib floeCore; };
 
   accepts =
     v: (builtins.tryEval (builtins.deepSeq (floe.checkValue [ ] floe.T.helmValues v) true)).success;

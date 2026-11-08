@@ -39,7 +39,7 @@
 
 let
   refuses = import ./refuses.nix { inherit lib; };
-  inherit (import ../../lib/lower/cluster.nix { inherit lib catallaxy; }) placeCluster;
+  inherit (import ../../lib/lower/cluster.nix { inherit lib pkgs catallaxy; }) placeCluster;
 
   # Ports and subnets differ per lab because two labs evaluated in one
   # expression are still two labs, and the host-port checks are real.
@@ -223,7 +223,7 @@ let
         floe = mkTestCluster {
           name = "mesh-holder";
           units.netbird = floes.netbird { };
-          provides.mesh = catallaxy.sigs.MESH_NETWORK_SHARED;
+          provides.mesh = catallaxy.sigs.netbird.MESH_NETWORK_SHARED;
           exports.mesh = "netbird/mesh";
         } { };
 

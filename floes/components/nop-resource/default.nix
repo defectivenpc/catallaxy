@@ -38,7 +38,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  requires.resourceProvider = sigs.MANAGED_RESOURCE_PROVIDER;
+  requires.resourceProvider = sigs.crossplane.MANAGED_RESOURCE_PROVIDER;
 
   out.component = kinds.component;
   modules = [

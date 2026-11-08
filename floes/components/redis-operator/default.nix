@@ -28,7 +28,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  provides.redisOperator = sigs.REDIS_OPERATOR;
+  provides.redisOperator = sigs.redis-operator.REDIS_OPERATOR;
 
   out.component = kinds.component;
   modules = [

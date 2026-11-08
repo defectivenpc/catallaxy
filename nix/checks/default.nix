@@ -28,7 +28,7 @@
 }:
 
 let
-  # allFloes :: { FloeName -> Path }, groups flattened as `lib/lab.nix` does.
+  # allFloes :: { FloeName -> Path }, groups flattened as `lib/default.nix` does.
   # `floe-gates.nix` takes only `.cluster` on purpose.
   allFloes = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../../floes));
 in
@@ -125,10 +125,7 @@ in
   inherit
     lib
     pkgs
-    floeCore
-    k8sSpecs
     labDefs
-    floeCrds
     mkFloes
     ;
   floeSet = (import ../../floes).components;
@@ -174,14 +171,7 @@ in
     mkFloes
     labDefs
     ;
-  catallaxy = import ../../lib/floe-catallaxy {
-    inherit lib pkgs floeCore;
-    k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib floeCore;
-      specFile = k8sSpecs.specs."1.31";
-      crdGroups = floeCrds.groups;
-    };
-  };
+  inherit catallaxy;
   floeSet = allFloes;
 }
 // import ./floe-interface.nix {
@@ -192,26 +182,12 @@ in
 // import ./kind-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/kinds;
-  catallaxy = import ../../lib/floe-catallaxy {
-    inherit lib pkgs floeCore;
-    k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib floeCore;
-      specFile = k8sSpecs.specs."1.31";
-      crdGroups = floeCrds.groups;
-    };
-  };
+  inherit catallaxy;
 }
 // import ./signature-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/signatures;
-  catallaxy = import ../../lib/floe-catallaxy {
-    inherit lib pkgs floeCore;
-    k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib floeCore;
-      specFile = k8sSpecs.specs."1.31";
-      crdGroups = floeCrds.groups;
-    };
-  };
+  inherit catallaxy;
 }
 // import ./content-cache.nix { inherit lib pkgs labDefs; }
 // import ./cluster-documents.nix {

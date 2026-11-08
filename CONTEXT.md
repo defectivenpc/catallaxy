@@ -28,8 +28,9 @@ recipe, lifecycle, bootstrap
 render, with the partial order that installs them. _Avoid_: manifests,
 payload, desired state, workloads
 
-**Delivery**: How content reaches a claim — kapp, Argo CD, Fleet — and what
-bootstraps whatever applies it. _Avoid_: deploy strategy, CD, apply method
+**Delivery**: How content reaches a cluster — kapp, Argo CD, Fleet — and
+what bootstraps whatever applies it. _Avoid_: deploy strategy, CD, apply
+method
 
 ## Composing one
 
@@ -43,6 +44,18 @@ component's own `upstream.nix` — a Helm chart, a release file, a path in a
 git tree. One upstream has one owner: the component that installs it, which
 is also the only thing that may pin it. _Avoid_: chart, registry entry,
 dependency, vendored chart
+
+**Capability**: A signature any of several products could provide, because
+its fields say what is offered and not whose API offers it — an OIDC issuer,
+an ingest endpoint, a storage class. Catallaxy's own vocabulary, written
+`sigs.<NAME>`. _Avoid_: shared signature, core signature, interface
+
+**Product signature**: A signature that describes one product's API, so a
+floe requiring it writes that product's resources and no rival could fill it
+— netbird's admin API, cnpg's CRDs. Owned by the floe that provides it and
+written `sigs.<floe>.<NAME>`. The test between the two: could a second
+product provide this without imitating the first? _Avoid_: private
+signature, floe-local signature, internal signature
 
 **Lab-scope floe**: A floe that is a unit of the lab's link rather than a
 cluster's. It installs nothing into any cluster. What it does varies —
@@ -152,11 +165,11 @@ hint, dependency, hook
 thing that answers for the zone learns the name from the link rather than by
 reading what rendered. _Avoid_: route registration, hostname declaration
 
-**Lab**: A floe whose units are clusters, the claim that answers each, and
-the floes the lab holds itself — so it closes clusters and holds what sits
-between them: the host services, the lab stores, and the values one cluster
-hands another. It exports nothing, because nothing links labs. _Avoid_:
-environment, site, fleet, deployment
+**Lab**: A floe whose units are clusters, the provisioner that answers each,
+and the floes the lab holds itself — so it closes clusters and holds what
+sits between them: the host services, the lab stores, and the values one
+cluster hands another. It exports nothing, because nothing links labs.
+_Avoid_: environment, site, fleet, deployment
 
 **Lab floe**: The definition a lab is an instance of, written with
 `mkLabFloe` — which applies the lab frame and adds the units every lab

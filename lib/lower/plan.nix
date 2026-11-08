@@ -4,9 +4,9 @@
 }:
 
 let
-  t = import ../plan-tokens.nix { inherit lib; };
-  inherit (import ../eval/anchors.nix { }) needs wants;
-  planGraph = import ../eval/plan-graph.nix { inherit lib; };
+  t = (import ../../steps { inherit lib; }).tokens;
+  inherit (import ../authoring/anchors.nix { }) needs wants;
+  planGraph = import ./plan-graph.nix { inherit lib; };
   infraLib = import ../render/infra.nix { inherit lib; };
   inherit (catallaxy) stepKinds;
 

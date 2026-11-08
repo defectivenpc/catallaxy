@@ -30,7 +30,7 @@ let
     document, tree = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
     waves = json.loads(document.read_text())["content"]["waves"]
 
-    # `lib/eval/bundle-key.nix`: a bundle's key is its name with the path
+    # `lib/render/bundle-key.nix`: a bundle's key is its name with the path
     # separator replaced, because the name is a path and the directory is not.
     def sanitize(name):
         return name.replace("/", "__")

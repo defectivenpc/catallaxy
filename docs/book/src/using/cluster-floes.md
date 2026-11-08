@@ -8,7 +8,7 @@ the cluster you keep building gets made once and used from anywhere.
 ```nix
 app = mkClusterFloe {
   name = "app";
-  requires.claim = sigs.KUBERNETES_CLUSTER;
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
 
   units = _: {
     platform = floes.standard-cluster { };
@@ -25,8 +25,8 @@ app, and a hole for the thing that brings the cluster into existence.
 Three things about that block are decisions rather than accidents.
 
 **The claim sits beside it, not inside it.** `standard-cluster` installs
-into a cluster and does not make one, so it leaves `requires.claim` open and
-whoever places it answers. That is what lets one assembly serve a k3d
+into a cluster and does not make one, so it leaves `requires.cluster` open
+and whoever places it answers. That is what lets one assembly serve a k3d
 cluster on a laptop, a Talos cluster, and one that already exists — the lab
 writes the claim under the cluster:
 

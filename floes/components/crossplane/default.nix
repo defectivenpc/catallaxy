@@ -40,7 +40,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  provides.controlPlane = sigs.MANAGED_RESOURCE_CONTROL_PLANE;
+  provides.controlPlane = sigs.crossplane.MANAGED_RESOURCE_CONTROL_PLANE;
 
   out.component = kinds.component;
   modules = [

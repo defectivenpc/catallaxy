@@ -1,9 +1,9 @@
 { lib, pkgs }:
 
 let
-  render = import ../render/manifest.nix { inherit lib pkgs; };
-  yamlUtil = import ../render/yaml.nix { inherit lib pkgs; };
-  inherit (import ../eval/bundle-key.nix { }) sanitize;
+  render = import ./manifest.nix { inherit lib pkgs; };
+  yamlUtil = import ./yaml.nix { inherit lib pkgs; };
+  inherit (import ./bundle-key.nix { }) sanitize;
 
   toHelmSpec = spec: {
     inherit (spec)

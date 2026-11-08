@@ -34,9 +34,9 @@
         lib.attrValues (link.out."catallaxy.routedHosts" or { })
       );
 
-      imageUtil = import ../../lib/eval/images.nix { inherit lib; };
+      imageUtil = import ./images.nix { inherit lib; };
       infraLib = import ../../lib/render/infra.nix { inherit lib; };
-      tofuProviders = import ../../lib/tofu-providers.nix { inherit lib pkgs; };
+      tofuProviders = import ../render/tofu-providers.nix { inherit lib pkgs; };
 
       allStacks = lib.foldl' lib.mergeAttrs { } (lib.mapAttrsToList (_: c: c.stacks) clusters);
 

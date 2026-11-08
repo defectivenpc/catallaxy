@@ -9,7 +9,7 @@
      registry had `local-path-provisioner` and `openebs` as byte-identical
      entries — same repo, chart, version and hash — and nothing noticed,
      because a table of names cannot tell you that two of them are one.
-  2. **No API group is claimed by two floes.** `lib/floe-crds.nix` merges
+  2. **No API group is claimed by two floes.** `lib/upstream/crds.nix` merges
      `group -> type file` across the set, and a group in two floes would be
      two files claiming one key. `cata-build generate` refused this when it
      saw every source at once; a floe that owns its own generation does not
@@ -130,7 +130,7 @@ in
               ++ lib.mapAttrsToList (g: floes: "  ${g} <- ${inline floes}") contested
               ++ [
                 ""
-                "A group is one key in `lib/floe-crds.nix`, so two floes generating"
+                "A group is one key in `lib/upstream/crds.nix`, so two floes generating"
                 "it would be two files claiming it. Whichever floe installs the CRDs"
                 "owns the group; the other should resolve against them, not restate"
                 "them."

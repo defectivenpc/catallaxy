@@ -10,7 +10,7 @@ The docker network a lab's containers share, and the steps that make and unmake 
 | --- | --- | --- | --- |
 | managed | boolean | `true` | Whether this lab creates the network and removes it again.  False for a lab with nothing on it — every cluster in a cloud and no host services — where a `docker network create` would sit in the plan looking like a step that means something. The address facts above stay true either way, which is why this is an input and not a reason to leave the floe out.  |
 | name | string | *(required)* | Docker network name, which is the lab's. Required. |
-| subnet | null or string | `the lab's slot in `lib/allocation.nix`` | The network's range, in CIDR form.  `cata lab up` parses it before it runs anything, to refuse a lab whose subnet overlaps one already on the host.  Null takes the lab's allocated slot, which is what every lab in this tree uses. Subnets are scarce and shared, so the plan is written down once and derived from the name rather than chosen per lab.  |
+| subnet | null or string | `the lab's slot in `lib/authoring/allocation.nix`` | The network's range, in CIDR form.  `cata lab up` parses it before it runs anything, to refuse a lab whose subnet overlaps one already on the host.  Null takes the lab's allocated slot, which is what every lab in this tree uses. Subnets are scarce and shared, so the plan is written down once and derived from the name rather than chosen per lab.  |
 
 ## Provides
 

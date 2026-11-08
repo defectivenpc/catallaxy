@@ -72,7 +72,7 @@ floe.mkFloe {
   # link rather than by reading what rendered. The gateway collects these.
   # ADR 0004.
   provides.route = sigs.ROUTE_CLAIM;
-  requires.generation = sigs.SECRET_GENERATION;
+  requires.generation = sigs.external-secrets.SECRET_GENERATION;
 
   # What it reconciles from. Exactly-one and not optional: an Argo CD with no
   # repository is a controller with nothing to do, and a lab that installed it

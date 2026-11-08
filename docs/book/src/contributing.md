@@ -2,7 +2,7 @@
 
 For changing catallaxy itself. Read
 [How It Works](./understanding/how-it-works.md) first — this page assumes
-you know which of the three layers your change lands in.
+you know which part of the tree your change lands in.
 
 ```bash
 git clone https://github.com/defectivenpc/catallaxy
@@ -85,8 +85,7 @@ Never `unwrap()` data from outside the process.
 The **stable public API** is what `flake.nix` puts under `legacyPackages`:
 `labs` and `labPackages` (the two the CLI resolves), plus `charts`,
 `clusters`, `floeInterfaces` and `labPlans` for reading by hand. Breaking
-one needs a changelog note. `modules/`, `lib/eval/`, `lib/render/` and
-`lib/floe-catallaxy/` are internal.
+one needs a changelog note. Everything under `lib/` is internal.
 
 ## Adding a built-in floe
 

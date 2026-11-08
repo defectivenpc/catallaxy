@@ -50,13 +50,13 @@
         );
 
         kubelib = nix-kube-generators.lib { inherit pkgs; };
-        k8sSpecs = import ./lib/k8s-specs.nix { inherit lib pkgs; };
+        k8sSpecs = import ./lib/kubernetes/specs.nix { inherit lib pkgs; };
 
         floePaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ./floes));
 
-        upstream = import ./lib/upstream.nix { inherit lib pkgs kubelib; };
+        upstream = import ./lib/upstream { inherit lib pkgs kubelib; };
 
-        floeCrds = import ./lib/floe-crds.nix { inherit lib; } { floeSet = floePaths; };
+        floeCrds = import ./lib/upstream/crds.nix { inherit lib; } { floeSet = floePaths; };
         crdSources = lib.mapAttrs (_: f: f upstream) floeCrds.sources;
 
         typeGen = import ./nix/crd-types.nix {
@@ -86,7 +86,7 @@
             ;
         };
 
-        labs = import ./lib/lab.nix labArgs;
+        labs = import ./lib labArgs;
 
         # The example corpus is this flake's test input, not its output.
         # `examples/flake.nix` is what exposes it, as a consumer would.
@@ -143,7 +143,7 @@
           # here, not from the attributes above: those were built from the
           # built-in groups alone, and a custom resource whose group is missing
           # resolves to no schema and is checked for nothing.
-          withFloes = extraFloes: import ./lib/lab.nix (labArgs // { inherit extraFloes; });
+          withFloes = extraFloes: import ./lib (labArgs // { inherit extraFloes; });
           inherit (packages') optionDocs;
         };
 

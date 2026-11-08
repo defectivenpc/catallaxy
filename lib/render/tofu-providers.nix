@@ -27,7 +27,7 @@ in
     if unknown != [ ] then
       throw (
         "infra: no provider is built for ${lib.concatMapStringsSep ", " (n: "'${n}'") unknown}. "
-        + "Add it to `lib/tofu-providers.nix`; the lab pins what it uses, so a name that is not "
+        + "Add it to `lib/render/tofu-providers.nix`; the lab pins what it uses, so a name that is not "
         + "there is a typo rather than a provider that happens not to be built yet."
       )
     else

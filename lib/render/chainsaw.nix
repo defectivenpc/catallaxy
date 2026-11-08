@@ -2,7 +2,7 @@
 
 let
   yamlUtil = import ./yaml.nix { inherit lib pkgs; };
-  verifyTypes = import ../verify-types.nix { inherit lib; };
+  verifyTypes = import ../authoring/verify-types.nix { inherit lib; };
 in
 {
   mkVerifyTest =

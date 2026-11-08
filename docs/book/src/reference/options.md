@@ -18,8 +18,8 @@ rendered from the module's own definition.
 
 In its own `lab.nix`, as the `inputs` of a `mkLabFloe` call. The inputs
 every lab has whatever else its author declares — `name`, `zone`, `units`,
-`clusters`, `defaults` — come from `lib/floe-catallaxy/lab-floe.nix`, and a
-lab may refine one rather than redeclare it:
+`clusters`, `defaults` — come from `lib/authoring/lab-floe.nix`, and a lab
+may refine one rather than redeclare it:
 
 ```nix
 inputs.zone.default = "minimal.test";
@@ -48,8 +48,8 @@ for as long as the page did not exist.
 
 It is here and not on a floe's page because it is not any one floe's: it is
 the type every contributed step is checked against. `nixosOptionsDoc` runs
-over exactly the module `lib/eval/step-type.nix` exports and the merge uses,
-so the page cannot describe a field the merge would reject.
+over exactly the module `steps/types.nix` exports and the merge uses, so the
+page cannot describe a field the merge would reject.
 
 What a given `kind` accepts in its `params` is a different document —
 [Plan Step Kinds](./step-kinds.md) — because the kind decides that, and the

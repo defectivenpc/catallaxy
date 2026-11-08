@@ -25,7 +25,7 @@ floe.mkFloe {
       defaultText = lib.literalExpression "upstream.crds";
       description = ''
         Store path of the upstream CRD bundle. Required — the caller pins the
-        URL and hash in `lib/k8s-specs.nix`.
+        URL and hash in `lib/kubernetes/specs.nix`.
       '';
     };
 

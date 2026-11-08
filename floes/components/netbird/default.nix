@@ -132,7 +132,7 @@ floe.mkFloe {
   # The relay secret and the datastore encryption key are minted in-cluster.
   # Neither may appear in a rendered manifest: one is a shared authenticator
   # and the other decrypts the store.
-  requires.generation = sigs.SECRET_GENERATION;
+  requires.generation = sigs.external-secrets.SECRET_GENERATION;
 
   # Not optional. netbird has no local accounts at all — every identity comes
   # from a token — so a netbird with no issuer is one nobody can log into,
@@ -156,16 +156,16 @@ floe.mkFloe {
   # is never written. Required rather than assumed: the floe that installs the
   # operator and the floe that installs the issuer are different floes, and a
   # lab can have the second without the first.
-  requires.identityOperator = sigs.IDENTITY_OPERATOR;
+  requires.identityOperator = sigs.kaniop.IDENTITY_OPERATOR;
 
-  provides.mesh = sigs.MESH_NETWORK;
+  provides.mesh = sigs.netbird.MESH_NETWORK;
 
   # Where the token that administers the mesh lands. A separate promise rather
   # than a field of MESH_NETWORK, because the two have opposite reach: the
   # mesh spans clusters and this is a Secret in one namespace of one of them.
   # `netbird-operator` resolves this when it runs beside the control plane and
   # is told where the token is when it does not.
-  provides.meshAdmin = sigs.MESH_ADMIN;
+  provides.meshAdmin = sigs.netbird.MESH_ADMIN;
 
   out.component = kinds.component;
   modules = [

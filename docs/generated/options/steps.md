@@ -37,7 +37,7 @@ run a DNS server".
 
 **Default:** `[ ]`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -51,7 +51,7 @@ about one cluster, and naming the others would over-order the plan.
 
 **Type:** `null or one of "cloudReleased", "created", "deployed", "destroyed", "gone", "kubeconfigSynced", "managedResourceAdopted", "managedResourceDeleted", "managedResourceReconciled"`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -65,7 +65,7 @@ has never heard of it.
 
 **Default:** `[ ]`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -75,7 +75,7 @@ Cluster this acts on, when it acts on one.
 
 **Type:** `null or string`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -87,7 +87,7 @@ One line, shown by `cata lab plan`.
 
 **Default:** `the attribute name`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -99,7 +99,7 @@ the two to disagree.
 
 **Type:** `null or one of "deploy", "teardown"`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -111,7 +111,7 @@ retry class the executor applies.
 
 **Type:** `one of "apply-root-application", "bootstrap-argocd-kubectl-ssa", "bootstrap-forgejo-repos", "cert-generate", "create-cluster", "delete-managed-resource", "deploy-manifests", "destroy-cluster", "dns-setup", "dns-teardown", "docker-network-create", "ensure-secrets", "infra-apply", "infra-destroy", "infra-plan", "publish-manifests", "reconcile-managed-resource", "registry-setup", "release-cluster-cloud-resources", "remove-network", "remove-services", "run-script", "setup-services", "sync-kubeconfig", "wait-for-cluster-gone", "wait-for-resources", "warm-cache"`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -127,7 +127,7 @@ without knowing which floe to open.
 
 **Default:** `"lab"`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -139,7 +139,7 @@ Payload for the step kind, checked against its schema.
 
 **Default:** `{ }`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -151,7 +151,7 @@ Tokens that are true once this step has run.
 
 **Default:** `[ ]`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -167,7 +167,7 @@ only has its own input. The planner knows both and expands it.
 
 **Type:** `null or one of "cloudReleased", "created", "deployed", "destroyed", "gone", "kubeconfigSynced", "managedResourceAdopted", "managedResourceDeleted", "managedResourceReconciled"`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -181,7 +181,7 @@ the signatures exist to keep it away from.
 
 **Type:** `null or value "before-cluster-destroy" (singular enum)`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -200,7 +200,7 @@ retrying.
 
 **Default:** `false`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---
 
@@ -216,6 +216,6 @@ prevent removing the network it was on.
 
 **Default:** `"fatal"`
 
-**Declared in:** lib/eval/step-type.nix
+**Declared in:** steps/types.nix
 
 ---

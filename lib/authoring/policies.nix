@@ -1,6 +1,6 @@
 {
   lib,
-  sigs,
+  signatures,
   k8sApi,
 }:
 
@@ -14,7 +14,7 @@ in
     let
       components = componentsIn result;
 
-      obligated = lib.filterAttrs (_: sig: (sig.behaviour or [ ]) != [ ]) sigs;
+      obligated = lib.filterAttrs (_: sig: (sig.behaviour or [ ]) != [ ]) signatures;
 
       missingFor =
         sigName: sig:

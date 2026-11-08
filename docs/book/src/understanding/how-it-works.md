@@ -12,14 +12,15 @@ The consequence worth knowing up front is that everything is decided before
 anything runs, so `cata lab plan` and `cata lab plan-manifests` show you the
 whole decision without touching a cluster.
 
-## The three layers
+## The tree
 
-| Directory  | Is                                            | Public?                              |
-| ---------- | --------------------------------------------- | ------------------------------------ |
-| `floes/`   | the floes themselves, one directory each      | `floes/default.nix`                  |
-| `modules/` | the option tree: everything a lab can declare | internal — configure through options |
-| `lib/`     | the algorithms: linking, graphs, rendering    | internal                             |
-| `cli/`     | `cata`: executes the plan                     | the CLI surface                      |
+| Directory     | Is                                                  | Public?                |
+| ------------- | --------------------------------------------------- | ---------------------- |
+| `floes/`      | the floes themselves, one directory each            | `floes/default.nix`    |
+| `signatures/` | the capabilities: what one floe can promise another | `sigs.<NAME>`          |
+| `steps/`      | the step kinds `cata` runs, and the plan's tokens   | `catallaxy.planTokens` |
+| `lib/`        | the machinery: authoring, lowering, rendering       | internal               |
+| `cli/`        | `cata`: executes the plan                           | the CLI surface        |
 
 `cli/` is organised so that only `io/` talks to the outside world;
 `domain/`, `plan/`, `lint/`, `codegen/` and `topology/` are pure, and
@@ -141,17 +142,19 @@ them needs a cluster.
 - The `floes` flake input — the primitive, in its own repository. `floe.nix`
   is `mkFloe`, `link.nix` is exactly-one-provider resolution and sealing,
   `types.nix` the type language.
-- `lib/floe-catallaxy/` — this distribution on top of core: `component.nix`
-  is the bundle schema, `elaborate.nix` turns a link result into a cluster
-  picture, `render.nix` writes it out.
-- `lib/eval/` — `manifest-graph.nix` and `plan-graph.nix` are the two sorts;
+- `signatures/` — the capabilities, one file per family. A floe's own
+  product signatures sit beside it in `signatures.nix` and are written
+  `sigs.<floe>.<NAME>`.
+- `lib/default.nix` — the entry point: loads the floe set and defines
+  `mkLab` and `mkCluster`.
+- `lib/authoring/` — this distribution on top of core: the prelude, the
+  frames, `component.nix` (the bundle schema), the kinds and the policies.
+- `lib/lower/` — `elaborate.nix` turns a link result into a cluster picture;
+  `manifest-graph.nix` and `plan-graph.nix` are the two sorts, and
   `manifest-autoedges.nix` derives the structural edges.
-- `lib/render/` — one file per delivery strategy over shared helpers.
-- `modules/lab/` — the other side of that line: the shape of the declaration
-  a deployer writes and the lowering from it. Options, the host's own
-  containers, the document and the plan; nothing here is substitutable,
-  which is the test that keeps it apart from `floes/`. `out.nix` holds both
-  seam artifacts.
+- `lib/render/` — writes a lowered cluster out, one file per artifact.
+- `lib/upstream/` and `lib/kubernetes/` — pinning third-party artifacts, and
+  the Kubernetes API they are checked against.
 
 ## Next
 

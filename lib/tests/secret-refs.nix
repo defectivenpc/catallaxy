@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  sr = import ../eval/secret-refs.nix { inherit lib; };
+  sr = import ../kubernetes/secret-refs.nix { inherit lib; };
 
   ns = name: {
     inherit name;

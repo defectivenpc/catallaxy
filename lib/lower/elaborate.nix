@@ -5,12 +5,12 @@
 }:
 
 let
-  componentLib = import ../floe-catallaxy/domain/component.nix { inherit lib floe k8sApi; };
+  componentLib = import ../authoring/component.nix { inherit lib floe k8sApi; };
 
   waitUtil = import ../kubernetes/wait.nix { inherit lib; };
-  manifestGraph = import ../eval/manifest-graph.nix { inherit lib; };
-  autoedges = import ../eval/manifest-autoedges.nix { inherit lib; };
-  inherit (import ../eval/secret-refs.nix { inherit lib; }) secretAddress;
+  manifestGraph = import ./manifest-graph.nix { inherit lib; };
+  autoedges = import ./manifest-autoedges.nix { inherit lib; };
+  inherit (import ../kubernetes/secret-refs.nix { inherit lib; }) secretAddress;
 
   namespaceAggregate = "namespaces";
 

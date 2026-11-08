@@ -84,7 +84,7 @@ floe.mkFloe {
   # so the value lands in the manifest, in the digest that pins it and in the
   # Nix store, and it changes on every re-render. `secret-material` refuses
   # exactly that, and caught this floe doing it.
-  requires.generation = sigs.SECRET_GENERATION;
+  requires.generation = sigs.external-secrets.SECRET_GENERATION;
 
   # Zero or one of each. A datasource exists exactly when its backend does.
   optional.metrics = sigs.METRICS_INGEST;

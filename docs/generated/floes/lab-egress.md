@@ -9,7 +9,7 @@ A forward proxy on the lab network, so host tools resolve lab hostnames.
 | input | type | default | description |
 | --- | --- | --- | --- |
 | image | string | `"ghcr.io/querateam/docker-tinyproxy:latest"` | tinyproxy container image. |
-| port | null or 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `the lab's slot in `lib/allocation.nix`` | Loopback port the proxy is published on.  Null takes the lab's allocated slot, which is every lab in this tree. Set it to move off one: an allocated port looks free in a table of registered names and may not be — the ranges contain 5353 (mDNS) and 5355 (LLMNR), and a host already running something is a fact no allocation can see.  |
+| port | null or 16 bit unsigned integer; between 0 and 65535 (both inclusive) | `the lab's slot in `lib/authoring/allocation.nix`` | Loopback port the proxy is published on.  Null takes the lab's allocated slot, which is every lab in this tree. Set it to move off one: an allocated port looks free in a table of registered names and may not be — the ranges contain 5353 (mDNS) and 5355 (LLMNR), and a host already running something is a fact no allocation can see.  |
 
 ## Requires
 

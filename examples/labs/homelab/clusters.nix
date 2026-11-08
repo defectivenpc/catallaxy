@@ -243,7 +243,7 @@ rec {
     requires = meshRequires;
 
     provides = {
-      mesh = sigs.MESH_NETWORK_SHARED;
+      mesh = sigs.netbird.MESH_NETWORK_SHARED;
       publication = sigs.PUBLISHED_SECRET;
     };
 
@@ -280,7 +280,7 @@ rec {
     # `MESH_NETWORK` carries a reference to a Secret in `core`, and no other
     # cluster is that place.
     requires = meshRequires // {
-      mesh = sigs.MESH_NETWORK_SHARED;
+      mesh = sigs.netbird.MESH_NETWORK_SHARED;
 
       # And the PAT itself. `subscribe-pat` reads what `core` published, so
       # the publication crosses the same way the mesh does — one cluster

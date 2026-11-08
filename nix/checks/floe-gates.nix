@@ -13,11 +13,8 @@
 {
   lib,
   pkgs,
-  floeCore,
   mkFloes,
   labDefs,
-  floeCrds,
-  k8sSpecs,
   floeSet,
 
   # Floes that cannot answer for their own images, and say so.
@@ -32,7 +29,14 @@
 
 let
   refuse = import ./refuse.nix { inherit lib pkgs; };
-  imageUtil = import ../../lib/eval/images.nix { inherit lib; };
+  imageUtil = import ../../lib/lower/images.nix { inherit lib; };
+
+  # Applied by the distribution rather than here. This file used to build
+  # the set itself, which meant a fourth copy of `applyFloes` that had to
+  # be kept in step with what a floe is handed.
+  floes = mkFloes floeSet;
+
+  defOf = name: floes.${name};
 
   # Only the floes that install something into a cluster.
   #
@@ -45,22 +49,6 @@ let
   # Exempted by what it emits rather than by name, so the exemption cannot go
   # stale: a resources floe that later grows bundles rejoins the gate on its
   # own, and a name in a list would have had to be noticed and removed.
-  catallaxy = import ../../lib/floe-catallaxy {
-    inherit lib pkgs floeCore;
-    k8sApi = import ../../lib/kubernetes/api.nix {
-      inherit lib floeCore;
-      specFile = k8sSpecs.specs."1.31";
-      crdGroups = floeCrds.groups;
-    };
-  };
-
-  # Applied by the distribution rather than here. This file used to build
-  # the set itself, which meant a fourth copy of `applyFloes` that had to
-  # be kept in step with what a floe is handed.
-  floes = mkFloes floeSet;
-
-  defOf = name: floes.${name};
-
   installsIntoACluster =
     name: lib.any (k: k.name == "catallaxy.component") (lib.attrValues (defOf name).out);
 

@@ -5,8 +5,8 @@
 }:
 
 let
-  floe = import ../floe-catallaxy/authoring/prelude.nix { inherit lib floeCore; };
-  kinds = import ../floe-catallaxy/domain/component.nix {
+  floe = import ../authoring/prelude.nix { inherit lib floeCore; };
+  kinds = import ../authoring/component.nix {
     inherit lib floe;
     k8sApi = import ../kubernetes/api.nix {
       inherit lib floeCore specFile;

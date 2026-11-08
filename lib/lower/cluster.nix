@@ -1,10 +1,20 @@
 {
   lib,
+  pkgs,
   catallaxy,
 }:
 
 let
   inherit (catallaxy.k8sApi) coreKinds;
+  inherit
+    (import ./elaborate.nix {
+      inherit lib;
+      inherit (catallaxy) floe k8sApi;
+    })
+    elaborateCluster
+    ;
+  inherit (import ./slice.nix { inherit lib; }) sliceFor;
+  inherit (import ../render/cluster.nix { inherit lib pkgs; }) renderCluster;
   infraLib = import ../render/infra.nix { inherit lib; };
 in
 {
@@ -84,12 +94,12 @@ in
       provisionerUnit = catallaxy.provisionerUnitFor clusterName;
       inherit (placed) security;
 
-      link = catallaxy.sliceFor {
+      link = sliceFor {
         inherit clusterName;
         provisionerFrom = provisionerUnit;
       } lab.link;
 
-      out = catallaxy.elaborateCluster {
+      out = elaborateCluster {
         linkResult = link;
         inherit coreKinds;
       };
@@ -131,7 +141,7 @@ in
             + "provisioner starts without its own.";
         };
 
-      manifests = catallaxy.renderCluster {
+      manifests = renderCluster {
         name = clusterName;
         owner = lab.name;
         cluster = out;

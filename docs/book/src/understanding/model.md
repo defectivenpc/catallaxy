@@ -64,7 +64,7 @@ serving several clusters, and one cluster bringing another into existence.
 ```nix
 app = mkClusterFloe {
   name = "app";
-  requires.claim = sigs.KUBERNETES_CLUSTER;   # the hole a lab fills
+  requires.cluster = sigs.KUBERNETES_CLUSTER;   # the hole a lab fills
 
   units = _: {
     kapp     = floes.kapp { };             # how content reaches it

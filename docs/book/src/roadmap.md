@@ -27,6 +27,18 @@
   that knows an invariant about its own manifests cannot express it except
   as an assertion over the configuration.
 
+- **`provisions-cluster` goes.** It hard-codes Crossplane into how a cluster
+  is established, and with it `CLUSTER_PROVISIONING` and `RESOURCE_OUTPUT`.
+- **`CLUSTER_EDGE` redesigned or removed.**
+- **Secrets between a lab and its clusters, as floes.** How a cluster gets a
+  value from the lab and how it publishes one back.
+- **Floe instances typed.** `floeInstance` and a cluster's floes are
+  `types.raw`, so nothing checks what is placed.
+- **Cluster security in its own file.** The two namespace controls every
+  cluster has sit in `lib/authoring/default.nix`, beside the distribution
+  they are not part of.
+- **Options documented as input → output types.**
+
 ## Later
 
 - **Talos on bare metal.** `cluster.provisioner = "talos"` exists today, but

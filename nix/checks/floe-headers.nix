@@ -14,7 +14,7 @@ let
     "internalHostnames" = "the gateway fan-in was inverted; consumers render their own routes";
     "bootstrapManifests" = "now an `autoDeployManifests` input on the provisioner floe";
     "cluster.prerequisites" = "replaced by exactly-one-provider resolution";
-    "ROUTE_REQUEST" = "the routing inversion removed it; see sigs.nix API_GATEWAY";
+    "ROUTE_REQUEST" = "the routing inversion removed it; see signatures/routing.nix API_GATEWAY";
     ".exports" = "floes provide signatures; there is no exports channel";
     "camp" = "say bundles and resources; reconciled and state-tracked are the adjectives";
   };

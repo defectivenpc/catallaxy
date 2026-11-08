@@ -91,7 +91,7 @@ let
         "host port ${toString port}/${claim.proto} is claimed by "
         + lib.concatMapStringsSep ", " (h: "${h.lab}'s ${h.what}") holders
         + ".\n    Every allocation is derived from the lab's name "
-        + "(lib/allocation.nix), so two labs collided on slot "
+        + "(lib/authoring/allocation.nix), so two labs collided on slot "
         + "${toString (lib.mod port 256)} or one was overridden by hand. "
         + "Free slots: ${
           lib.concatMapStringsSep ", " toString (

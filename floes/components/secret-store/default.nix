@@ -121,7 +121,7 @@ floe.mkFloe {
   # The CRDs and the validating webhook. Applying a ClusterSecretStore before
   # the webhook answers is rejected outright.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  requires.generation = sigs.SECRET_GENERATION;
+  requires.generation = sigs.external-secrets.SECRET_GENERATION;
 
   # Which store on the operator's machine this backs, resolved rather than
   # spelled. It also answers `writable`, which was an input a deployer set by
@@ -138,7 +138,7 @@ floe.mkFloe {
       { config, ... }:
       let
         inputs = config.floe.inputs;
-        address = import ../../../lib/eval/secret-address.nix { inherit lib; };
+        address = import ../../../lib/authoring/secret-address.nix { inherit lib; };
         labStore = config.floe.requires.labStore;
 
         storeName = address.storeResourceName labStore.name;

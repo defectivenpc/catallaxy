@@ -199,7 +199,7 @@ let
   );
 
   stepsModule = {
-    _file = toString ./step-type.nix;
+    _file = toString ./types.nix;
 
     options.steps = mkOption {
       type = types.attrsOf declaredStepType;

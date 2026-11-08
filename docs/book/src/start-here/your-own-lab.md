@@ -84,7 +84,7 @@ catallaxy.mkLabFloe {
         catallaxy.mkClusterFloe {
           name = "app";
           summary = "A platform behind a gateway, and your app.";
-          requires.claim = catallaxy.sigs.KUBERNETES_CLUSTER;
+          requires.cluster = catallaxy.sigs.KUBERNETES_CLUSTER;
           provides.delivery = catallaxy.sigs.DELIVERY_POLICY;
           exports.delivery = "kapp/delivery";
 

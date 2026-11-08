@@ -39,7 +39,7 @@ floe.mkFloe {
     subnet = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      defaultText = lib.literalExpression "the lab's slot in `lib/allocation.nix`";
+      defaultText = lib.literalExpression "the lab's slot in `lib/authoring/allocation.nix`";
       description = ''
         The network's range, in CIDR form.
 

@@ -20,9 +20,9 @@ let
     "k8sSpecs." = "a floe defaults its own manifest from the pin";
     "instanceOf = clusterName:" = "the cluster module derives instanceName";
     "instanceName =" = "derived from the lab's name and the attribute path";
-    "lab.network.subnet =" = "derived from the lab's name; see lib/allocation.nix";
-    "lab.registry.port =" = "derived from the lab's name; see lib/allocation.nix";
-    "lab.dns.hostPort =" = "derived from the lab's name; see lib/allocation.nix";
+    "lab.network.subnet =" = "derived from the lab's name; see lib/authoring/allocation.nix";
+    "lab.registry.port =" = "derived from the lab's name; see lib/authoring/allocation.nix";
+    "lab.dns.hostPort =" = "derived from the lab's name; see lib/authoring/allocation.nix";
   };
 
   # Where a newcomer learns the idiom. Not the whole book: a history document

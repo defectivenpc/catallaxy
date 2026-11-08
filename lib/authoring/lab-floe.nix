@@ -83,7 +83,7 @@ let
     zonePort = mkOption {
       type = types.nullOr types.port;
       default = null;
-      defaultText = lib.literalExpression "the lab's slot in `lib/allocation.nix`";
+      defaultText = lib.literalExpression "the lab's slot in `lib/authoring/allocation.nix`";
       description = ''
         Port the zone's server answers on: what `lab-dns` publishes and what a
         pod forwards to.
@@ -98,7 +98,7 @@ let
     subnet = mkOption {
       type = types.nullOr types.str;
       default = null;
-      defaultText = lib.literalExpression "the lab's slot in `lib/allocation.nix`";
+      defaultText = lib.literalExpression "the lab's slot in `lib/authoring/allocation.nix`";
       description = ''
         Docker network the lab's containers share, in CIDR form. `cata lab up`
         parses this before it runs anything, to refuse a lab whose subnet

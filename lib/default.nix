@@ -8,7 +8,7 @@
 }:
 
 let
-  upstreamLib = import ./upstream.nix { inherit lib pkgs kubelib; };
+  upstreamLib = import ./upstream { inherit lib pkgs kubelib; };
 
   builtInPaths = lib.foldl' lib.mergeAttrs { } (lib.attrValues (import ../floes));
 
@@ -28,12 +28,20 @@ let
     in
     if builtins.pathExists pin then import pin { upstream = upstreamLib; } else null;
 
-  inherit (import ./floe-crds.nix { inherit lib; } { floeSet = allFloePaths; }) groups;
+  inherit (import ./upstream/crds.nix { inherit lib; } { floeSet = allFloePaths; }) groups;
 
-  k8sSpecs = import ./k8s-specs.nix { inherit lib pkgs; };
+  productSignatureFiles = lib.filterAttrs (_: builtins.pathExists) (
+    lib.mapAttrs (_: path: path + "/signatures.nix") allFloePaths
+  );
 
-  catallaxy = import ./floe-catallaxy {
-    inherit lib pkgs floeCore;
+  k8sSpecs = import ./kubernetes/specs.nix { inherit lib pkgs; };
+
+  catallaxy = import ./authoring {
+    inherit
+      lib
+      floeCore
+      productSignatureFiles
+      ;
     k8sApi = import ./kubernetes/api.nix {
       inherit lib floeCore;
       specFile = k8sSpecs.specs."1.31";
@@ -62,10 +70,14 @@ let
 
   floes = applyFloes allFloePaths;
 
+  inherit (import ./lower/cluster.nix { inherit lib pkgs catallaxy; })
+    placeCluster
+    lowerCluster
+    ;
+
   inherit
     (catallaxy.mkLabFloeWith {
-      inherit floes;
-      inherit (import ./lower/cluster.nix { inherit lib catallaxy; }) placeCluster;
+      inherit floes placeCluster;
     })
     mkLabFloe
     ;
@@ -77,7 +89,6 @@ let
   catalogue = lib.mapAttrs (_: def: map (s: s.name) (lib.attrValues def.provides)) floes;
 
   inherit (import ./lower/link.nix { inherit lib catallaxy; }) linkLab;
-  inherit (import ./lower/cluster.nix { inherit lib catallaxy; }) lowerCluster;
   inherit
     (import ./lower/lab.nix {
       inherit lib pkgs;
@@ -86,11 +97,48 @@ let
     lowerLab
     ;
   plan = import ./lower/plan.nix { inherit lib catallaxy; };
-  stepTypes = import ./eval/step-type.nix {
-    inherit lib;
-    planTokens = import ./plan-tokens.nix { inherit lib; };
-    stepKinds = import ./step-kinds.nix { inherit lib; };
-  };
+  stepTypes = (import ../steps { inherit lib; }).types;
+
+  mkCluster =
+    {
+      name,
+      floe,
+      provisioner,
+    }:
+    let
+      placed = placeCluster {
+        clusterName = name;
+        labName = name;
+        inherit floe provisioner;
+      };
+
+      link = catallaxy.floe.link {
+        units = {
+          ${name} = placed.clusterFloe;
+          ${catallaxy.provisionerUnitFor name} = placed.provisioner;
+
+          delivery = floes.lab-delivery { };
+        };
+        inherit catalogue;
+      };
+
+      lowered = lowerCluster {
+        clusterName = name;
+        inherit placed;
+
+        lab = {
+          inherit name link;
+          hasIngress = false;
+          cdArrangement = catallaxy.cdArrangementOf link;
+        };
+      };
+
+      failed = builtins.filter (a: !a.assertion) lowered.assertions;
+    in
+    lib.throwIf (failed != [ ]) (
+      "cluster '${name}' has failed assertions:\n"
+      + lib.concatMapStringsSep "\n" (a: "- ${a.message}") failed
+    ) (placed // lowered);
 
   mkLab =
     instance:
@@ -227,15 +275,5 @@ in
 
   mkFloes = applyFloes;
 
-  inherit
-    (import ./cluster.nix {
-      inherit
-        lib
-        catallaxy
-        floes
-        catalogue
-        ;
-    })
-    mkCluster
-    ;
+  inherit mkCluster;
 }

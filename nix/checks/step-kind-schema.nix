@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  kinds = import ../../lib/step-kinds.nix { inherit lib; };
+  kinds = import ../../steps/kinds.nix { inherit lib; };
 
   sampleFor =
     kindName: fieldName: type:

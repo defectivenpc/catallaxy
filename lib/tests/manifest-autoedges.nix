@@ -1,8 +1,8 @@
 { lib }:
 
 let
-  autoedges = import ../eval/manifest-autoedges.nix { inherit lib; };
-  graph = import ../eval/manifest-graph.nix { inherit lib; };
+  autoedges = import ../lower/manifest-autoedges.nix { inherit lib; };
+  graph = import ../lower/manifest-graph.nix { inherit lib; };
   inherit (autoedges) deriveAutoEdges;
   inherit (graph) computeWaves buildEdges;
 

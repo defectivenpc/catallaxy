@@ -1,7 +1,7 @@
 # mkFloe API
 
 Declared by the `floes` flake input, a library in its own repository. The
-distribution's sugar and catalogues are in `lib/floe-catallaxy/`.
+distribution's sugar and catalogues are in `lib/authoring/`.
 
 ```nix
 catallaxy.floe   # mkFloe, mkSig, link, narrows, T — the library, plus this
@@ -120,7 +120,7 @@ separate `*_OPERATOR` signatures — `POSTGRES_`, `IDENTITY_`, `REDIS_`,
 two providers of one signature, and every lab holding both would fail to
 link. The nominal distinction _is_ the mechanism.
 
-`behaviour` is added by `lib/floe-catallaxy/prelude.nix` and is not in the
+`behaviour` is added by `lib/authoring/prelude.nix` and is not in the
 library. It names the runtime checks any provider of a signature owes.
 Compatibility settles a provider's _shape_; nothing settles that whatever
 answers `X509_ISSUANCE` actually signs anything. A signature does not carry
@@ -160,11 +160,10 @@ in anything that crosses.
 | `T.derivedFrom`                               | folded out of a collection; withheld from contributors                 |
 | `T.moduleType`                                | a NixOS type, for a field that is a schema                             |
 
-`k8sName` is **not** in that list. It lives in
-`lib/floe-catallaxy/prelude.nix`, because it was the one thing making the
-library's "knows nothing about Kubernetes" claim false. The prelude is the
-library plus this distribution's own types, and it is what a floe actually
-gets.
+`k8sName` is **not** in that list. It lives in `lib/authoring/prelude.nix`,
+because it was the one thing making the library's "knows nothing about
+Kubernetes" claim false. The prelude is the library plus this distribution's
+own types, and it is what a floe actually gets.
 
 ### What crosses a cluster boundary
 

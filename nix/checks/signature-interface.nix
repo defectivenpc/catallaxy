@@ -38,7 +38,7 @@ lib.foldl' lib.mergeAttrs { } (
           fi
           touch $out
         '';
-  }) (lib.attrNames catallaxy.sigs)
+  }) (lib.attrNames catallaxy.signatures)
   ++ [
     {
       signature-index = pkgs.runCommand "signature-index" { nativeBuildInputs = [ pkgs.diffutils ]; } ''

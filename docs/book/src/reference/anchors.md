@@ -13,7 +13,7 @@ else:
 An _anchor_ is a string naming other nodes. It resolves to a set, and every
 member of that set becomes a predecessor.
 
-### Install DAG (`lib/eval/manifest-graph.nix`)
+### Install DAG (`lib/lower/manifest-graph.nix`)
 
 | Form               | Matches                                          |
 | ------------------ | ------------------------------------------------ |
@@ -35,7 +35,7 @@ A bundle's key is its name, so the anchor is `bundle:cert-manager`.
 > `kind:` anchor now falls through to the ordinary provided-name index, so
 > the floe installing the CRD supplies it by name.
 
-### Plan DAG (`lib/eval/plan-graph.nix`)
+### Plan DAG (`lib/lower/plan-graph.nix`)
 
 | Form                    | Matches                                          |
 | ----------------------- | ------------------------------------------------ |
@@ -68,7 +68,7 @@ nothing.
 ```
 
 `kind:` and `namespace:` appear in that list as **derived** names —
-`lib/eval/manifest-autoedges.nix` stamps them onto the bundle that installs
+`lib/lower/manifest-autoedges.nix` stamps them onto the bundle that installs
 a CRD or declares a namespace. They are resolved through the ordinary
 provided-name index, which is why they are not forms in the table above.
 
@@ -98,7 +98,7 @@ self-edges are filtered.
 ## Structural auto-edges
 
 Three edges are derived from Kubernetes shape rather than authored
-(`lib/eval/manifest-autoedges.nix`). They are inserted as **hard**
+(`lib/lower/manifest-autoedges.nix`). They are inserted as **hard**
 `bundle:<provider>` anchors, because a consumer referencing a namespace, CRD
 kind, or SecretStore that no bundle declares is a real bug.
 

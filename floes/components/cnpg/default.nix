@@ -32,7 +32,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  provides.postgresOperator = sigs.POSTGRES_OPERATOR;
+  provides.postgresOperator = sigs.cnpg.POSTGRES_OPERATOR;
 
   out.component = kinds.component;
   modules = [

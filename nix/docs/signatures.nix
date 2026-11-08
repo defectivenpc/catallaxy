@@ -7,7 +7,13 @@
 }:
 
 let
-  inherit (catallaxy) sigs;
+  sigs = catallaxy.signatures;
+
+  ownerOf = lib.concatMapAttrs (owner: lib.mapAttrs (_: _: owner)) catallaxy.productSignatures;
+
+  writtenAs =
+    sigName:
+    if ownerOf ? ${sigName} then "sigs.${ownerOf.${sigName}}.${sigName}" else "sigs.${sigName}";
   inherit (page)
     table
     floeLink
@@ -43,6 +49,8 @@ let
       lead = [
         sig.description
         banner
+
+        "Written `${writtenAs sigName}`."
 
         ''
           Canonically `${sig.canonicalName}`. A floe providing this must declare it

@@ -4,7 +4,7 @@
 # ones. The webhook is admitting `Certificate` CRs long before any issuer can
 # sign one; a floe that only needs the kind installed should not wait for a
 # CA that may not exist. Splitting them is also half of what removes the
-# cycle this floe used to be in — see `lib/floe-catallaxy/domain/sigs.nix`.
+# cycle this floe used to be in.
 #
 # It distributes nothing. The old floe emitted trust-manager `Bundle` CRs
 # itself, which is what made cert-manager depend on trust-manager while
@@ -55,7 +55,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  provides.webhook = sigs.X509_WEBHOOK;
+  provides.webhook = sigs.cert-manager.X509_WEBHOOK;
   provides.issuance = sigs.X509_ISSUANCE;
 
   # The lab's root, when there is one. Resolved means "sign from it": the

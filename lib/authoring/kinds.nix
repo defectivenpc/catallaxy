@@ -8,11 +8,7 @@
 let
   T = floe.T;
 
-  stepType = import ../../eval/step-type.nix {
-    inherit lib;
-    planTokens = import ../../plan-tokens.nix { inherit lib; };
-    stepKinds = import ../../step-kinds.nix { inherit lib; };
-  };
+  stepType = (import ../../steps { inherit lib; }).types;
 
   k3dSchema = T.record {
     clusterName = T.str;

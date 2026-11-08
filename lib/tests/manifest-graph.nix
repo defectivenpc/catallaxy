@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  graph = import ../eval/manifest-graph.nix { inherit lib; };
+  graph = import ../lower/manifest-graph.nix { inherit lib; };
   inherit (graph) topoSort computeWaves;
 
   b =

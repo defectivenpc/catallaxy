@@ -39,7 +39,7 @@ floe's units are an attrset of those:
 ```nix
 app = mkClusterFloe {
   name = "app";
-  requires.claim = sigs.KUBERNETES_CLUSTER;
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
 
   units = _: {
     cert-manager = floes.cert-manager { };

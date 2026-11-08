@@ -99,7 +99,7 @@ floe.mkFloe {
   # rendered output to say why. The claim answers it when the provisioner ships
   # one, and a storage floe in the cluster answers it otherwise.
   requires.storageClass = sigs.STORAGE_CLASS;
-  requires.webhook = sigs.X509_WEBHOOK;
+  requires.webhook = sigs.cert-manager.X509_WEBHOOK;
   requires.issuance = sigs.X509_ISSUANCE;
 
   provides.metrics = sigs.METRICS_INGEST;

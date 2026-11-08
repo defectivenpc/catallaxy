@@ -1,19 +1,29 @@
 {
   lib,
-  pkgs,
   floeCore,
 
   k8sApi,
+  productSignatureFiles,
 }:
 
 let
-  floe = import ./authoring/prelude.nix { inherit lib floeCore; };
+  steps = import ../../steps { inherit lib; };
 
-  inherit (import ./authoring/frame.nix { inherit lib floe; }) mkFramedFloe;
+  floe = import ./prelude.nix { inherit lib floeCore; };
 
-  sigs = import ./domain/sigs.nix { inherit lib floe; };
+  inherit (import ./frame.nix { inherit lib floe; }) mkFramedFloe;
 
-  kinds = import ./domain/kinds.nix {
+  capabilities = import ../../signatures { inherit lib floe; };
+
+  productSignatures = lib.mapAttrs (_: file: import file { inherit lib floe; }) productSignatureFiles;
+
+  sigs = lib.attrsets.unionOfDisjoint capabilities productSignatures;
+
+  signatures = lib.foldl' lib.attrsets.unionOfDisjoint capabilities (
+    lib.attrValues productSignatures
+  );
+
+  kinds = import ./kinds.nix {
     inherit
       lib
       floe
@@ -21,7 +31,7 @@ let
       sigs
       ;
   };
-  policies = import ./domain/policies.nix { inherit lib sigs k8sApi; };
+  policies = import ./policies.nix { inherit lib signatures k8sApi; };
 
   distribution = floe.mkDistribution {
     name = "catallaxy";
@@ -37,6 +47,8 @@ rec {
     floe
     kinds
     sigs
+    signatures
+    productSignatures
     policies
     ;
 
@@ -51,11 +63,11 @@ rec {
 
   hostContainerFor = labName: role: "catallaxy-${labName}-${role}";
 
-  inherit (import ../allocation.nix { inherit lib; }) allocationFor;
+  inherit (import ./allocation.nix { inherit lib; }) allocationFor;
 
   mkLabFloeWith =
     { floes, placeCluster }:
-    import ./authoring/lab-floe.nix {
+    import ./lab-floe.nix {
       inherit
         lib
         floe
@@ -213,11 +225,8 @@ rec {
     policies.componentsTargetTheCluster
   ];
 
-  planTokens = import ../plan-tokens.nix { inherit lib; };
-  stepKinds = import ../step-kinds.nix { inherit lib; };
-  inherit (import ../eval/anchors.nix { }) needs wants;
+  planTokens = steps.tokens;
+  stepKinds = steps.kinds;
+  inherit (import ./anchors.nix { }) needs wants;
 
-  inherit (import ../lower/elaborate.nix { inherit lib floe k8sApi; }) elaborateCluster;
-  inherit (import ../lower/slice.nix { inherit lib; }) sliceFor;
-  inherit (import ../lower/render.nix { inherit lib pkgs; }) renderCluster;
 }

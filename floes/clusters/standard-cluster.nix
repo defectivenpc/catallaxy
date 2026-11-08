@@ -37,8 +37,8 @@ floe.mkFloe {
     exposure = sigs.HOST_EXPOSURE;
     gatewayApi = sigs.GATEWAY_API;
     issuance = sigs.X509_ISSUANCE;
-    webhook = sigs.X509_WEBHOOK;
-    generation = sigs.SECRET_GENERATION;
+    webhook = sigs.cert-manager.X509_WEBHOOK;
+    generation = sigs.external-secrets.SECRET_GENERATION;
     trust = sigs.TRUST_BUNDLE;
   };
 

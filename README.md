@@ -33,7 +33,7 @@ provides them.
 ```nix
 core = mkClusterFloe {
   name = "core";
-  requires.claim = sigs.KUBERNETES_CLUSTER;
+  requires.cluster = sigs.KUBERNETES_CLUSTER;
 
   units = _: {
     cert-manager = floes.cert-manager { };

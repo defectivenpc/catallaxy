@@ -73,7 +73,7 @@ floe.mkFloe {
   provides.route = sigs.ROUTE_CLAIM;
 
   # Six of them, and the reason is in the header.
-  requires.generation = sigs.SECRET_GENERATION;
+  requires.generation = sigs.external-secrets.SECRET_GENERATION;
 
   # The token-signing CA. Left to itself the chart mints one per render.
   requires.issuance = sigs.X509_ISSUANCE;

@@ -8,9 +8,7 @@
 
 let
   # declared :: [KindName]
-  declared = lib.sort (a: b: a < b) (
-    lib.attrNames (import ../../lib/step-kinds.nix { inherit lib; })
-  );
+  declared = lib.sort (a: b: a < b) (lib.attrNames (import ../../steps/kinds.nix { inherit lib; }));
 
   # orphans :: { KindName -> Why }
   #
@@ -31,7 +29,7 @@ in
           fileset = lib.fileset.unions [
             ../../lib/lower/plan.nix
             ../../lib/lower/plan-provisions.nix
-            ../../lib/floe-catallaxy
+            ../../lib/authoring
             ../../floes
             ../../examples/labs
           ];

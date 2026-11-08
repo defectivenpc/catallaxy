@@ -37,7 +37,7 @@ let
 
   resourcesOf = bundle: attrValues (bundle.resources or { });
 
-  secretRefs = import ./secret-refs.nix { inherit lib; };
+  secretRefs = import ../kubernetes/secret-refs.nix { inherit lib; };
 
   secretsMadeBy =
     bundle:

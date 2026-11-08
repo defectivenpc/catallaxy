@@ -30,7 +30,7 @@ floe.mkFloe {
     httpPort = lib.mkOption {
       type = lib.types.nullOr lib.types.port;
       default = null;
-      defaultText = lib.literalExpression "the lab's slot in `lib/allocation.nix`";
+      defaultText = lib.literalExpression "the lab's slot in `lib/authoring/allocation.nix`";
       description = ''
         Loopback port the HTTP listener is published on.
 
@@ -45,7 +45,7 @@ floe.mkFloe {
     httpsPort = lib.mkOption {
       type = lib.types.nullOr lib.types.port;
       default = null;
-      defaultText = lib.literalExpression "the lab's slot in `lib/allocation.nix`";
+      defaultText = lib.literalExpression "the lab's slot in `lib/authoring/allocation.nix`";
       description = ''
         Loopback port the HTTPS listener is published on.
 

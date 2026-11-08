@@ -38,7 +38,7 @@ floe.mkFloe {
     port = lib.mkOption {
       type = lib.types.nullOr lib.types.port;
       default = null;
-      defaultText = lib.literalExpression "the lab's slot in `lib/allocation.nix`";
+      defaultText = lib.literalExpression "the lab's slot in `lib/authoring/allocation.nix`";
       description = ''
         Port the zone's server answers on: what `lab-dns` publishes and what a
         pod forwards to.

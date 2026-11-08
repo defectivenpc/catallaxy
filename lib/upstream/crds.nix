@@ -12,7 +12,7 @@ let
   yields =
     dir:
     import (dir + "/upstream.nix") {
-      upstream = throw "lib/floe-crds.nix: a pin must declare its CRDs without fetching them";
+      upstream = throw "lib/upstream/crds.nix: a pin must declare its CRDs without fetching them";
     };
 
   withCrds = lib.filterAttrs (_: dir: yields dir ? crds) pinned;

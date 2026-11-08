@@ -33,7 +33,7 @@ floe.mkFloe {
   };
 
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  provides.identityOperator = sigs.IDENTITY_OPERATOR;
+  provides.identityOperator = sigs.kaniop.IDENTITY_OPERATOR;
 
   out.component = kinds.component;
   modules = [

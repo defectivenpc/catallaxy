@@ -25,10 +25,10 @@ let
   # because the search excludes this file: an entry naming a symbol would
   # otherwise be a reader of it, and every exemption would resolve itself.
   unread = {
-    "lib/floe-catallaxy/default.nix: clusterFrame" =
+    "lib/authoring/default.nix: clusterFrame" =
       "the distribution's own `rec` set, where a frame reads as public whether or not a second kind of floe uses one yet";
 
-    "lib/floe-catallaxy/default.nix: clusterSecurityInputs" =
+    "lib/authoring/default.nix: clusterSecurityInputs" =
       "the same: what every cluster asks of its namespaces is part of the surface, and `clusterFrame` is its only caller";
   };
 

@@ -308,7 +308,7 @@ let
     bundleKey: bundleConfig:
     let
       ownership = bundleConfig.ownership;
-      dirName = (import ../eval/bundle-key.nix { }).sanitize bundleKey;
+      dirName = (import ./bundle-key.nix { }).sanitize bundleKey;
       helmOutputs = lib.mapAttrs renderHelmChart bundleConfig.helmCharts;
       hasResources = bundleConfig.resources != { };
       resourcesOutput = lib.optionalAttrs hasResources {

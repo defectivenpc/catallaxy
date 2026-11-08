@@ -111,15 +111,15 @@ floe.mkFloe {
   # asked for are available where it was put. Asking for the full signature
   # would pin it to the control plane's own cluster.
   requires.cluster = sigs.KUBERNETES_CLUSTER;
-  requires.mesh = sigs.MESH_NETWORK_SHARED;
+  requires.mesh = sigs.netbird.MESH_NETWORK_SHARED;
 
   # Where the token is, when something in this cluster knows. Optional because
   # in every cluster but one, nothing here can know — and `optional` is
   # how a floe says "resolve this if the link can" without a lab having to
   # tell it whether the link can.
-  optional.meshAdmin = sigs.MESH_ADMIN;
+  optional.meshAdmin = sigs.netbird.MESH_ADMIN;
 
-  provides.meshOperator = sigs.MESH_OPERATOR;
+  provides.meshOperator = sigs.netbird-operator.MESH_OPERATOR;
 
   out.component = kinds.component;
   modules = [

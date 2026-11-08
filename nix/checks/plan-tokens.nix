@@ -1,4 +1,4 @@
-# A plan token is spelled once, in `lib/plan-tokens.nix`.
+# A plan token is spelled once, in `steps/tokens.nix`.
 #
 # A producer and a consumer have to agree on the exact string, and `wants`
 # builds an `optional:` anchor that matches nothing *silently* — so a token
@@ -7,11 +7,11 @@
 # already declared, one inventing `mr-reconciled`, which the registry did not
 # have at all.
 #
-# `lib/` and `floes/` only: those write plan steps. Three things inside them
-# are excluded. `lib/plan-tokens.nix` is the registry, so it is the one place
+# `lib/`, `floes/`, `steps/` and `signatures/` only: those write plan steps. Three things inside them
+# are excluded. `steps/tokens.nix` is the registry, so it is the one place
 # the literals belong. And test files name literals on purpose, because a test
 # asserting on rendered output should say the string it expects — so
-# `lib/tests/` and `floes/tests/` are out, as `nix/checks/` is by not being
+# `lib/tests/` is out, as `nix/checks/` is by not being
 # scanned.
 { lib, pkgs }:
 
@@ -23,12 +23,13 @@ let
         (lib.fileset.unions [
           ../../lib
           ../../floes
+          ../../steps
+          ../../signatures
         ])
         (
           lib.fileset.unions [
-            ../../floes/tests
             ../../lib/tests
-            ../../lib/plan-tokens.nix
+            ../../steps/tokens.nix
           ]
         );
   };
@@ -43,7 +44,7 @@ in
     if hits=$(grep -rnoE ${lib.escapeShellArg pattern} . 2>/dev/null); then
       echo "$hits" | sed 's/^/  /' >&2
       echo "" >&2
-      echo "A plan token is spelled once, in lib/plan-tokens.nix, and reached" >&2
+      echo "A plan token is spelled once, in steps/tokens.nix, and reached" >&2
       echo "through \`t.cluster <name>\`, \`t.stack <name>\` or \`t.lab\`." >&2
       echo "" >&2
       echo "Writing one by hand is not caught by the graph: \`wants\` builds an" >&2
