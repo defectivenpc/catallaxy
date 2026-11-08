@@ -241,7 +241,7 @@ fn cleanup_never_reaches_for_a_flake() {
 
     for relative in guarded {
         let idents = idents_of(sources.file(relative));
-        for forbidden in ["get_lab_spec", "get_lab_config", "nix"] {
+        for forbidden in ["get_lab_document", "get_lab_config", "nix"] {
             assert!(
                 !idents.contains(forbidden),
                 "{relative} reaches for `{forbidden}`, so the orphan path \
@@ -296,7 +296,7 @@ fn trust_goes_through_the_process_seam() {
 /// No `serde_json::Value` crosses a public boundary outside `io/`.
 ///
 /// `contributing.md`: "Parse `nix eval` JSON into a typed struct at the seam;
-/// downstream code takes `LabSpec`, not `serde_json::Value`. A
+/// downstream code takes `LabDocument`, not `serde_json::Value`. A
 /// `.pointer("/foo/bar")` chain means a type is missing at the edge."
 ///
 /// `io/` is where JSON arrives and where the types are made, so it is exempt.

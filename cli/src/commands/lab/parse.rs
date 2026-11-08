@@ -16,7 +16,7 @@ use anyhow::{Context, Result};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 
 /// Parse a lab document, from a file or by evaluating the lab, and report
 /// what the cluster handle of each cluster says.
@@ -25,7 +25,7 @@ pub fn run(ctx: &CataContext, name: Option<&str>, from_file: Option<&Path>) -> R
         Some(path) => read(path)?,
         None => {
             let lab_name = ctx.resolve_lab_name(name)?;
-            crate::io::nix::get_lab_spec(ctx, &lab_name)?
+            crate::io::nix::get_lab_document(ctx, &lab_name)?
         }
     };
 
@@ -53,12 +53,12 @@ pub fn run(ctx: &CataContext, name: Option<&str>, from_file: Option<&Path>) -> R
     Ok(())
 }
 
-fn read(path: &Path) -> Result<LabSpec> {
+fn read(path: &Path) -> Result<LabDocument> {
     let raw = crate::io::fs::read_to_string(path)
         .with_context(|| format!("reading the lab document {}", path.display()))?;
     let value =
         serde_json::from_str(&raw).with_context(|| format!("{} is not JSON", path.display()))?;
-    LabSpec::from_value(value).with_context(|| {
+    LabDocument::from_value(value).with_context(|| {
         format!(
             "{} is JSON but not a lab document this cata understands",
             path.display()

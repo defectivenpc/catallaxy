@@ -11,7 +11,7 @@ pub fn run(ctx: &CataContext) -> Result<()> {
         .as_deref()
         .ok_or_else(|| anyhow::anyhow!("No lab specified. Use --flake <ref>#<lab>"))?;
 
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
     println!(
         "{} Kubeconfig contexts for lab '{name}'",

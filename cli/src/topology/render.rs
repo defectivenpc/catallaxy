@@ -29,8 +29,8 @@ fn render_table(topo: &LabTopology) -> String {
     let _ = writeln!(
         out,
         "  {} {} {} {} {} {} {}",
-        style("strategy:").dim(),
-        topo.cd_strategy,
+        style("delivery:").dim(),
+        topo.delivery,
         style("|").dim(),
         style("zone:").dim(),
         zone_str,

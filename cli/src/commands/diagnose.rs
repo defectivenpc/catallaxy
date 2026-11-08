@@ -3,7 +3,7 @@ use clap::Args;
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::{ClusterSpec, KappStatus};
+use crate::domain::{ClusterDocument, KappStatus};
 use crate::io;
 
 #[derive(Args)]
@@ -37,7 +37,7 @@ pub fn run(ctx: &CataContext, args: DiagnoseArgs) -> Result<()> {
     }
 
     let lab_name = ctx.resolve_lab_name(None)?;
-    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, &lab_name)?;
 
     let cluster_name = match &args.cluster {
         Some(name) => name.clone(),
@@ -58,7 +58,7 @@ pub fn run(ctx: &CataContext, args: DiagnoseArgs) -> Result<()> {
 
 fn diagnose_all(ctx: &CataContext, args: &DiagnoseArgs) -> Result<()> {
     let lab_name = ctx.resolve_lab_name(None)?;
-    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, &lab_name)?;
 
     for cluster_name in &lab.cluster_names {
         let spec = lab.cluster(cluster_name)?;
@@ -74,7 +74,7 @@ fn diagnose_cluster(
     _ctx: &CataContext,
     cluster_name: &str,
     kube_context: &str,
-    cluster: &ClusterSpec,
+    cluster: &ClusterDocument,
     args: &DiagnoseArgs,
 ) -> Result<()> {
     println!(
@@ -183,7 +183,7 @@ fn print_kapp_status(context: &str) -> Result<()> {
 /// emitted, so the namespace was the unit's own name, guessed, and the
 /// version printed as `?`. The content says which namespaces are this
 /// cluster's, so this asks about those.
-fn print_namespace_health(context: &str, cluster: &ClusterSpec) {
+fn print_namespace_health(context: &str, cluster: &ClusterDocument) {
     if cluster.content.namespaces.is_empty() {
         return;
     }

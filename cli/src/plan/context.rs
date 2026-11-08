@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use crate::config::Context as CataContext;
 use crate::domain::SecretsCache;
-use crate::domain::{BootstrapTool, LabSpec, StepFailure};
+use crate::domain::{BootstrapTool, LabDocument, StepFailure};
 
 pub struct StepContext<'a> {
     pub ctx: &'a CataContext,
@@ -13,7 +13,7 @@ pub struct StepContext<'a> {
 
     pub lab_name: &'a str,
 
-    pub lab: &'a LabSpec,
+    pub lab: &'a LabDocument,
 
     pub lab_package: &'a str,
 

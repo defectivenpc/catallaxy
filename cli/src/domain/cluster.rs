@@ -6,7 +6,7 @@ use serde_json::Value;
 
 /// One Secret a cluster builds out of a store's values.
 ///
-/// Was `serde_json::Value` on `ClusterSpec`, decoded by `parse_projections`,
+/// Was `serde_json::Value` on `ClusterDocument`, decoded by `parse_projections`,
 /// which printed a warning and returned an empty map when the decode failed —
 /// so a misconfigured projection produced no Secret and no error, and the
 /// deploy went on to fail wherever that Secret was mounted.
@@ -36,7 +36,7 @@ pub struct ProjectionKeyConfig {
 /// `docs/cluster-spec.md` is the derivation.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ClusterSpec {
+pub struct ClusterDocument {
     pub cluster_handle: ClusterHandle,
     pub provisioning: Provisioning,
     pub content: Content,
@@ -119,7 +119,7 @@ pub struct WaveBundle {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Delivery {
-    pub strategy: DeployStrategy,
+    pub kind: DeliveryKind,
 
     /// How long an apply may take to settle. The other half of what one
     /// `waitTimeout` used to mean.
@@ -164,25 +164,25 @@ pub struct ClusterNetwork {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum DeployStrategy {
+pub enum DeliveryKind {
     Kapp,
     Argocd,
     Fleet,
 }
 
-impl DeployStrategy {
+impl DeliveryKind {
     pub fn tag(self) -> &'static str {
         match self {
-            DeployStrategy::Kapp => "kapp",
-            DeployStrategy::Argocd => "argocd",
-            DeployStrategy::Fleet => "fleet",
+            DeliveryKind::Kapp => "kapp",
+            DeliveryKind::Argocd => "argocd",
+            DeliveryKind::Fleet => "fleet",
         }
     }
 
     pub fn is_gitops(self) -> bool {
         match self {
-            DeployStrategy::Kapp => false,
-            DeployStrategy::Argocd | DeployStrategy::Fleet => true,
+            DeliveryKind::Kapp => false,
+            DeliveryKind::Argocd | DeliveryKind::Fleet => true,
         }
     }
 }
@@ -227,7 +227,7 @@ pub struct ExternalConfig {
 impl ProvisionerConfig {
     /// The provisioner this config is for.
     ///
-    /// `ClusterSpec::provisioner` carries the same fact, because the plan
+    /// `ClusterDocument::provisioner` carries the same fact, because the plan
     /// steps and the lab document name it as a string. Derived from one place
     /// on the Nix side (the union's key) so the two cannot disagree;
     /// `spec_provisioner_agrees_with_its_config` holds the line here.
@@ -425,7 +425,7 @@ impl ExposedHost {
     }
 }
 
-impl ClusterSpec {
+impl ClusterDocument {
     pub fn from_value(value: Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
@@ -478,22 +478,22 @@ pub(crate) mod tests {
                 "exposedHosts": [],
                 "projections": {},
             },
-            "delivery": { "strategy": "kapp", "waitTimeout": "10m" },
+            "delivery": { "kind": "kapp", "waitTimeout": "10m" },
         })
     }
 
     #[test]
     fn a_cluster_parses_from_the_document_nix_emits() {
-        let spec = ClusterSpec::from_value(cluster_json()).expect("cluster document parses");
+        let spec = ClusterDocument::from_value(cluster_json()).expect("cluster document parses");
         assert_eq!(spec.provisioning.config.kind(), ProvisionerKind::K3d);
         assert_eq!(spec.cluster_handle.context, "k3d-minimal-local-app");
         assert_eq!(spec.cluster_handle.kubernetes.workers, 0);
-        assert_eq!(spec.delivery.strategy, DeployStrategy::Kapp);
+        assert_eq!(spec.delivery.kind, DeliveryKind::Kapp);
     }
 
     #[test]
     fn the_provisioning_config_carries_what_nix_computed() {
-        let spec = ClusterSpec::from_value(cluster_json()).unwrap();
+        let spec = ClusterDocument::from_value(cluster_json()).unwrap();
         let k3d = spec.provisioning.config.k3d().expect("a k3d cluster");
         assert_eq!(k3d.cluster_name, "minimal-local-app");
         assert!(!k3d.no_flannel);
@@ -503,7 +503,7 @@ pub(crate) mod tests {
     /// that does the waiting.
     #[test]
     fn the_two_waits_are_separate_fields() {
-        let spec = ClusterSpec::from_value(cluster_json()).unwrap();
+        let spec = ClusterDocument::from_value(cluster_json()).unwrap();
         assert_eq!(spec.provisioning.wait, "10m");
         assert_eq!(spec.delivery.wait_timeout, "10m");
     }
@@ -518,7 +518,7 @@ pub(crate) mod tests {
             .as_object_mut()
             .unwrap()
             .remove("instanceName");
-        assert!(ClusterSpec::from_value(json).is_err());
+        assert!(ClusterDocument::from_value(json).is_err());
     }
 
     /// Two variants at once is not a `ProvisionerConfig`. Serde's
@@ -528,14 +528,15 @@ pub(crate) mod tests {
     fn a_config_naming_two_provisioners_is_refused() {
         let mut json = cluster_json();
         json["provisioning"]["config"]["talos"] = serde_json::json!({ "clusterName": "x" });
-        assert!(ClusterSpec::from_value(json).is_err());
+        assert!(ClusterDocument::from_value(json).is_err());
     }
 
     #[test]
     fn a_provisioner_nix_does_not_declare_is_rejected() {
         let mut json = cluster_json();
         json["provisioning"]["config"] = serde_json::json!({ "kubeadm": {} });
-        let err = ClusterSpec::from_value(json).expect_err("unknown provisioner must not parse");
+        let err =
+            ClusterDocument::from_value(json).expect_err("unknown provisioner must not parse");
         assert!(
             err.to_string().contains("kubeadm"),
             "the error should name the offending value, got: {err}"
@@ -550,7 +551,7 @@ pub(crate) mod tests {
             .unwrap()
             .remove("context");
         assert!(
-            ClusterSpec::from_value(json).is_err(),
+            ClusterDocument::from_value(json).is_err(),
             "the cluster_handle's context is always emitted; its absence means the contract broke"
         );
     }
@@ -611,7 +612,7 @@ pub(crate) mod tests {
         for (tag, block) in blocks {
             let mut json = cluster_json();
             json["provisioning"]["config"] = serde_json::json!({ tag: block });
-            let spec = ClusterSpec::from_value(json)
+            let spec = ClusterDocument::from_value(json)
                 .unwrap_or_else(|e| panic!("provisioner '{tag}' should parse: {e}"));
             assert_eq!(
                 serde_json::to_value(spec.provisioning.config.kind()).unwrap(),

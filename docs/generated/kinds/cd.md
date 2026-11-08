@@ -18,7 +18,7 @@ Written as `out.cd`. Checked against this shape where the floe is linked, by `co
 | --- | --- |
 | `bootstrap` | `string` |
 | `git` | map of `any` |
-| `perCluster` | map of record { strategy, waitTimeout } |
+| `perCluster` | map of record { kind, waitTimeout } |
 | `rootApplication` | map of `any` |
 
 ## Written by

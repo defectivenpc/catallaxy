@@ -4,7 +4,7 @@ use anyhow::Result;
 use console::style;
 
 use crate::domain::plan::DeployManifestsParams;
-use crate::domain::{BootstrapTool, DeployStrategy};
+use crate::domain::{BootstrapTool, DeliveryKind};
 use crate::io;
 use crate::plan::StepContext;
 
@@ -16,14 +16,11 @@ pub fn run(sctx: &StepContext<'_>, p: &DeployManifestsParams) -> Result<()> {
     } = p;
     let kube_context_override = kube_context_override.as_deref();
 
-    let strategy = sctx
-        .lab
-        .delivery_for(target)
-        .unwrap_or(DeployStrategy::Kapp);
+    let delivery = sctx.lab.delivery_for(target).unwrap_or(DeliveryKind::Kapp);
 
     let subdir = if *bootstrap {
         "stage1"
-    } else if strategy == DeployStrategy::Kapp {
+    } else if delivery == DeliveryKind::Kapp {
         "manifests"
     } else {
         "bootstrap"
@@ -34,7 +31,7 @@ pub fn run(sctx: &StepContext<'_>, p: &DeployManifestsParams) -> Result<()> {
         anyhow::bail!(
             "the deploy step for '{target}' found nothing at {cluster_manifests}.\n\
              The lab package has no '{subdir}' tree for this cluster, which means the \
-             deploy strategy and what the package actually built disagree. Deploying \
+             delivery and what the package actually built disagree. Deploying \
              nothing and reporting success would leave the cluster empty and green."
         );
     }

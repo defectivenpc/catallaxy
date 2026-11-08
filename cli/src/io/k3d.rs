@@ -420,7 +420,7 @@ pub fn add_servers(
 /// `provisioner.k3d.image` wins when set, because a lab that pins an exact
 /// image means it. Otherwise it is derived from the Kubernetes version the
 /// same way `cluster_create` derives it.
-pub fn node_image_for(spec: &crate::domain::ClusterSpec) -> String {
+pub fn node_image_for(spec: &crate::domain::ClusterDocument) -> String {
     spec.provisioning
         .config
         .k3d()

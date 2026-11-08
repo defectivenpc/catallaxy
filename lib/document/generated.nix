@@ -38,6 +38,15 @@ let
       }
     );
 
+    clusterDocument = T.named "ClusterDocument" (
+      T.record {
+        clusterHandle = clusterHandle;
+        content = content;
+        delivery = delivery;
+        provisioning = provisioning;
+      }
+    );
+
     clusterHandle = T.named "ClusterHandle" (
       T.record {
         context = T.str;
@@ -52,15 +61,6 @@ let
       T.record {
         podSubnet = T.str;
         serviceSubnet = T.str;
-      }
-    );
-
-    clusterSpec = T.named "ClusterSpec" (
-      T.record {
-        clusterHandle = clusterHandle;
-        content = content;
-        delivery = delivery;
-        provisioning = provisioning;
       }
     );
 
@@ -85,12 +85,12 @@ let
 
     delivery = T.named "Delivery" (
       T.record {
-        strategy = deployStrategy;
+        kind = deliveryKind;
         waitTimeout = T.str;
       }
     );
 
-    deployStrategy = T.named "DeployStrategy" (
+    deliveryKind = T.named "DeliveryKind" (
       T.enum [
         "kapp"
         "argocd"
@@ -431,11 +431,11 @@ let
       }
     );
 
-    labSpec = T.named "LabSpec" (
+    labDocument = T.named "LabDocument" (
       T.record {
         cd = cdConfig;
         clusterNames = T.listOf T.str;
-        clusters = T.attrsOf clusterSpec;
+        clusters = T.attrsOf clusterDocument;
         deploymentPlan = T.listOf plannedStep;
         destroy = destroyConfig;
         dnsInfo = T.optional (T.nullOr dnsInfo);
@@ -455,4 +455,4 @@ let
     );
   };
 in
-defs.labSpec
+defs.labDocument

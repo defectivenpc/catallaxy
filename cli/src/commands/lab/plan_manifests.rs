@@ -58,7 +58,7 @@ fn load_waves(
 
     let lab_name =
         name.ok_or_else(|| anyhow::anyhow!("lab name is required unless --from-file is set"))?;
-    let lab = crate::io::nix::get_lab_document(ctx, lab_name)?;
+    let lab = crate::io::nix::evaluate_lab(ctx, lab_name)?;
     extract_waves(&lab, cluster).with_context(|| {
         format!(
             "reading the wave summary for lab '{lab_name}' cluster '{}'",

@@ -2,7 +2,7 @@ use anyhow::Result;
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 use crate::io;
 
 #[derive(serde::Serialize)]
@@ -194,7 +194,7 @@ pub fn topology_cmd(
     format: crate::topology::TopologyFormat,
     live: bool,
 ) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
     let mut topo = crate::topology::extract::extract_static(&lab);
 
     if live {
@@ -236,7 +236,7 @@ struct LabState {
 }
 
 pub fn status_json(ctx: &CataContext, name: &str) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
     let services = lab
         .services
@@ -293,7 +293,7 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
     );
     println!();
 
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
     if !io::docker::daemon_reachable() {
         println!(
@@ -305,8 +305,8 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
         println!();
     }
 
-    let strategy = lab
-        .delivery_strategies()
+    let delivery = lab
+        .delivery_kinds()
         .iter()
         .map(|s| s.tag())
         .collect::<Vec<_>>()
@@ -314,8 +314,8 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
     let zone = lab.dns_info.as_ref().map_or("?", |d| d.zone.as_str());
     println!(
         "  {} {} {} {} {}",
-        style("strategy:").dim(),
-        strategy,
+        style("delivery:").dim(),
+        delivery,
         style("|").dim(),
         style("zone:").dim(),
         zone
@@ -328,7 +328,7 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
     Ok(())
 }
 
-fn print_service_status(lab: &LabSpec) {
+fn print_service_status(lab: &LabDocument) {
     if !lab.services.is_empty() {
         println!("{}", style("Services:").bold());
         for (svc_name, svc) in &lab.services {
@@ -368,7 +368,7 @@ fn print_service_status(lab: &LabSpec) {
     }
 }
 
-fn print_cluster_status(lab: &LabSpec) -> Result<()> {
+fn print_cluster_status(lab: &LabDocument) -> Result<()> {
     let cluster_names = &lab.cluster_names;
 
     println!("{}", style("Clusters:").bold());

@@ -17,8 +17,8 @@
 //! bundle's own resources are applied by argocd from git and the Application by
 //! the root app-of-apps, so labelling it with the bundle it names read as a
 //! resource dropped from a bundle the bootstrap had just applied, and one `lab
-//! up` deleted the whole gitops layer. Objects a strategy uses to deliver
-//! bundles get a bundle of their own instead, `deliveryBundle` in the render.
+//! up` deleted the whole gitops layer. Objects that do the delivering get
+//! a bundle of their own instead, `deliveryBundle` in the render.
 //!
 //! Storage is never deleted, only reported. A PersistentVolumeClaim removed
 //! from a declaration is far more likely to be a mistake than an instruction,

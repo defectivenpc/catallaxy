@@ -67,7 +67,7 @@ fn load_steps(
 
     let lab_name =
         name.ok_or_else(|| anyhow::anyhow!("lab name is required unless --from-file is set"))?;
-    let lab = crate::io::nix::get_lab_document(ctx, lab_name)?;
+    let lab = crate::io::nix::evaluate_lab(ctx, lab_name)?;
     Ok(lab
         .get(plan_key)
         .and_then(|v| v.as_array())

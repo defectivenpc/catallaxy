@@ -97,7 +97,7 @@ cata cluster up [OPTIONS] [NAME]
 | `--from-file <PATH>` |  | Stand the cluster up from its own document, with no lab |
 | `--bundle <BUNDLE>` |  | Apply only this bundle |
 | `--dry-run` |  | Print what would happen without doing it |
-| `--force` |  | Apply directly even when the cluster's deploy strategy is GitOps |
+| `--force` |  | Apply directly even when the cluster is delivered through GitOps |
 
 ### `cata cluster down` {#cluster-down}
 
@@ -324,7 +324,7 @@ cata lab apply [OPTIONS] [NAME]
 | `--bundle <BUNDLE>` |  | Apply only this bundle |
 | `--cluster <CLUSTER>` |  | Apply only to this cluster |
 | `--dry-run` |  | Print what would happen without doing it |
-| `--force` |  | Apply directly even when the cluster's deploy strategy is GitOps |
+| `--force` |  | Apply directly even when the cluster is delivered through GitOps |
 
 ### `cata lab verify` {#lab-verify}
 
@@ -465,7 +465,7 @@ cata apply [OPTIONS] [CLUSTER]
 | --- | --- | --- |
 | `--bundle <BUNDLE>` |  | Apply only this bundle |
 | `--dry-run` |  | Print what would happen without doing it |
-| `--force` |  | Apply directly even when the cluster's deploy strategy is GitOps |
+| `--force` |  | Apply directly even when the cluster is delivered through GitOps |
 
 ## `cata diagnose`
 

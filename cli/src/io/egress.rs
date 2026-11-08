@@ -32,7 +32,7 @@ pub fn activate(port: u16) {
 /// Read the proxy's published port off the lab, if it runs one.
 ///
 /// A lab with no ingress runs no proxy, and nothing changes for it.
-pub fn activate_from(lab: &crate::domain::lab::LabSpec) {
+pub fn activate_from(lab: &crate::domain::lab::LabDocument) {
     let Some(service) = lab.services.get("egress") else {
         return;
     };

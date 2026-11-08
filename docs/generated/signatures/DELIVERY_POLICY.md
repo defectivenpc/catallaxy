@@ -16,7 +16,7 @@ anything.
 | --- | --- |
 | bootstrapTool | one of ["kubectl-ssa", "helm", "none"] |
 | context | string |
-| strategy | one of ["kapp", "argocd", "fleet"] |
+| kind | one of ["kapp", "argocd", "fleet"] |
 | waitTimeout | string |
 
 ## Provided by

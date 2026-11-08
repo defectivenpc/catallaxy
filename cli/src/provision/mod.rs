@@ -5,7 +5,7 @@ use console::style;
 
 use crate::config::Context as CataContext;
 use crate::domain::cluster::{K3dConfig, TalosConfig};
-use crate::domain::{ClusterSpec, ProvisionerConfig, ProvisionerKind};
+use crate::domain::{ClusterDocument, ProvisionerConfig, ProvisionerKind};
 use crate::io;
 
 /// What the provisioner calls this cluster's containers.
@@ -14,7 +14,7 @@ use crate::io;
 /// exhaustive by construction and each has the data it names, where before
 /// the two carried the same fact and a new provisioner had to be added to
 /// both or fall through to `""`.
-pub fn provisioner_cluster_name(spec: &ClusterSpec) -> &str {
+pub fn provisioner_cluster_name(spec: &ClusterDocument) -> &str {
     match &spec.provisioning.config {
         ProvisionerConfig::K3d(c) => &c.cluster_name,
         ProvisionerConfig::Talos(c) => &c.cluster_name,
@@ -29,7 +29,7 @@ pub fn provisioner_cluster_name(spec: &ClusterSpec) -> &str {
 /// actually got is a bug someone can find. The old shape could not fail here
 /// at all — every spec carried a k3d block — so a mis-dispatched Talos
 /// cluster was provisioned with k3d's defaults instead.
-fn k3d_config(spec: &ClusterSpec) -> Result<&K3dConfig> {
+fn k3d_config(spec: &ClusterDocument) -> Result<&K3dConfig> {
     spec.provisioning.config.k3d().with_context(|| {
         format!(
             "cluster '{}' reached the k3d path carrying a {:?} configuration",
@@ -40,7 +40,7 @@ fn k3d_config(spec: &ClusterSpec) -> Result<&K3dConfig> {
 }
 
 /// The Talos settings, on a code path that only runs for a Talos cluster.
-fn talos_config(spec: &ClusterSpec) -> Result<&TalosConfig> {
+fn talos_config(spec: &ClusterDocument) -> Result<&TalosConfig> {
     match &spec.provisioning.config {
         ProvisionerConfig::Talos(c) => Ok(c),
         other => bail!(
@@ -51,7 +51,7 @@ fn talos_config(spec: &ClusterSpec) -> Result<&TalosConfig> {
     }
 }
 
-pub fn resolve_docker_host(ctx: &CataContext, _spec: &ClusterSpec) -> Result<Option<String>> {
+pub fn resolve_docker_host(ctx: &CataContext, _spec: &ClusterDocument) -> Result<Option<String>> {
     if !io::colima::is_macos() {
         return Ok(None);
     }
@@ -74,7 +74,7 @@ pub fn resolve_docker_host(ctx: &CataContext, _spec: &ClusterSpec) -> Result<Opt
     Ok(Some(io::colima::docker_socket(&colima.profile)))
 }
 
-fn run_pre_provision_hooks(name: &str, spec: &ClusterSpec) -> Result<()> {
+fn run_pre_provision_hooks(name: &str, spec: &ClusterDocument) -> Result<()> {
     for hook in &spec.provisioning.hooks {
         if hook.bin.is_empty() {
             continue;
@@ -106,7 +106,7 @@ fn run_pre_provision_hooks(name: &str, spec: &ClusterSpec) -> Result<()> {
 pub fn provision_cluster_with_registry(
     ctx: &CataContext,
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     registries_yaml: Option<&std::path::Path>,
     lab_package: Option<&str>,
 ) -> Result<()> {
@@ -167,7 +167,7 @@ pub fn provision_cluster_with_registry(
     Ok(())
 }
 
-pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result<()> {
+pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument) -> Result<()> {
     let cluster_name = provisioner_cluster_name(spec).to_string();
 
     match spec.provisioning.config.kind() {
@@ -193,7 +193,7 @@ pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result
     Ok(())
 }
 
-pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterSpec) -> Result<()> {
+pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument) -> Result<()> {
     let cluster_name = provisioner_cluster_name(spec).to_string();
 
     match spec.provisioning.config.kind() {
@@ -225,7 +225,7 @@ fn provision_k3d(
     ctx: &CataContext,
     name: &str,
     cluster_name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     registries_yaml: Option<&std::path::Path>,
     lab_package: Option<&str>,
 ) -> Result<()> {
@@ -333,7 +333,7 @@ enum Convergence {
 /// performs and a bare `lab up` refuses.
 fn converge_existing_cluster(
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     docker_host: Option<&str>,
     recreate: bool,
 ) -> Result<Convergence> {
@@ -405,7 +405,7 @@ fn converge_existing_cluster(
 /// exactly the case where convergence silently achieved nothing.
 fn confirm_converged(
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     declared: &crate::domain::cluster_shape::ClusterShape,
 ) -> Result<()> {
     let Some(want) = declared.image.as_deref() else {
@@ -443,7 +443,7 @@ fn confirm_converged(
 /// restart, and the message says so rather than implying otherwise.
 fn converge_k3d_in_place(
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     report: &crate::domain::cluster_shape::DriftReport,
     recorded: &crate::domain::cluster_shape::ClusterShape,
     docker_host: Option<&str>,
@@ -481,7 +481,7 @@ fn converge_k3d_in_place(
 
 fn replace_k3d_nodes(
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     recorded: &crate::domain::cluster_shape::ClusterShape,
     docker_host: Option<&str>,
 ) -> Result<()> {
@@ -536,7 +536,7 @@ fn replace_k3d_nodes(
 /// them, and it says so. When they disagree there is nothing to assert.
 fn adopt_existing_cluster(
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     declared: &crate::domain::cluster_shape::ClusterShape,
 ) -> Result<crate::domain::cluster_shape::ClusterShape> {
     let observed = io::kubectl::node_summary(&spec.cluster_handle.context);
@@ -641,7 +641,7 @@ pub fn describe_cluster_drift(
 /// added or removed behind catallaxy's back. Only the fields a live cluster
 /// answers for honestly, and a warning rather than a refusal, because it is
 /// corroboration rather than the check.
-fn report_out_of_band_drift(name: &str, spec: &ClusterSpec) {
+fn report_out_of_band_drift(name: &str, spec: &ClusterDocument) {
     let Some(nodes) = io::kubectl::node_summary(&spec.cluster_handle.context) else {
         return;
     };
@@ -709,7 +709,7 @@ fn resolve_placeholders(path: &str, state_dir: &std::path::Path, cluster_name: &
 fn resolve_auto_deploy(
     ctx: &CataContext,
     name: &str,
-    spec: &ClusterSpec,
+    spec: &ClusterDocument,
     lab_package: Option<&str>,
 ) -> Vec<(String, String)> {
     let mut auto_deploy: Vec<(String, String)> = spec
@@ -754,7 +754,7 @@ pub fn ensure_lab_services(ctx: &CataContext, cluster_name: &str) -> Option<Path
     };
 
     for lab_name in &lab_names {
-        let lab = match crate::io::nix::get_lab_spec(ctx, lab_name) {
+        let lab = match crate::io::nix::get_lab_document(ctx, lab_name) {
             Ok(lab) => lab,
             Err(_) => continue,
         };

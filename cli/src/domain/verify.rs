@@ -1,9 +1,9 @@
 //! What a lab declares about verifying itself.
 //!
-//! Lives here rather than in `crate::verify` because `LabSpec` carries it:
+//! Lives here rather than in `crate::verify` because `LabDocument` carries it:
 //! the field was a `serde_json::Value` for want of somewhere to put the type,
 //! which made `lab verify` parse the evaluated lab twice — once untyped to
-//! reach `raw["verify"]`, and once into `LabSpec`.
+//! reach `raw["verify"]`, and once into `LabDocument`.
 
 use schemars::JsonSchema;
 use std::collections::BTreeMap;

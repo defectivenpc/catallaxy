@@ -42,19 +42,19 @@ pub fn run(
 
     if let Some(ref lab_name) = lab_name {
         println!("{} Configuration", style("catallaxy").cyan().bold());
-        match crate::io::nix::get_lab_spec(ctx, lab_name) {
+        match crate::io::nix::get_lab_document(ctx, lab_name) {
             Ok(lab) => {
                 let cluster_names: Vec<&str> =
                     lab.cluster_names.iter().map(String::as_str).collect();
-                let strategy = lab
-                    .delivery_strategies()
+                let delivery = lab
+                    .delivery_kinds()
                     .iter()
                     .map(|s| s.tag())
                     .collect::<Vec<_>>()
                     .join(", ");
 
                 println!("  {} lab: {}", style("✓").green(), lab_name);
-                println!("  {} strategy: {}", style("✓").green(), strategy);
+                println!("  {} delivery: {}", style("✓").green(), delivery);
                 println!(
                     "  {} clusters: {}",
                     style("✓").green(),

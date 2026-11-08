@@ -219,7 +219,7 @@
         ]
       },
       "delivery": {
-        "strategy": "kapp",
+        "kind": "kapp",
         "waitTimeout": "10m"
       },
       "provisioning": {
@@ -390,7 +390,7 @@
         ]
       },
       "delivery": {
-        "strategy": "kapp",
+        "kind": "kapp",
         "waitTimeout": "10m"
       },
       "provisioning": {

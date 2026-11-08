@@ -208,7 +208,7 @@ fn actual(
 ) -> Result<()> {
     crate::io::process::check_tool("kubectl")?;
 
-    let lab = crate::io::nix::get_lab_spec(ctx, &ctx.resolve_lab_name(name)?)?;
+    let lab = crate::io::nix::get_lab_document(ctx, &ctx.resolve_lab_name(name)?)?;
 
     let clusters: Vec<(&String, &String)> = match cluster {
         Some(wanted) => {

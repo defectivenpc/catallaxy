@@ -29,7 +29,7 @@ const STABLE_HELP: &str =
 const FROM_FILE_HELP: &str = "Read plan JSON from a file instead of evaluating";
 const DIFF_HELP: &str =
     "Diff the stable output against a baseline, exiting non-zero on mismatch. Implies --stable";
-const FORCE_APPLY_HELP: &str = "Apply directly even when the cluster's deploy strategy is GitOps";
+const FORCE_APPLY_HELP: &str = "Apply directly even when the cluster is delivered through GitOps";
 
 #[derive(Subcommand)]
 pub enum LabCommands {

@@ -3,7 +3,7 @@ use console::style;
 
 use crate::config::Context as CataContext;
 use crate::domain::port_mapping::{contends_across_labs, host_port_of};
-use crate::domain::{LabSpec, subnet};
+use crate::domain::{LabDocument, subnet};
 use crate::io;
 use crate::plan::{Direction, execute};
 
@@ -38,7 +38,7 @@ fn preflight(ctx: &CataContext, name: &str) -> Result<()> {
         );
     }
 
-    let lab = io::nix::get_lab_spec(ctx, name)?;
+    let lab = io::nix::get_lab_document(ctx, name)?;
 
     refuse_colliding_subnet(name, &lab)?;
 
@@ -81,7 +81,7 @@ fn describe_holder(container: &str) -> String {
     }
 }
 
-fn refuse_legacy_router(lab: &LabSpec) -> Result<()> {
+fn refuse_legacy_router(lab: &LabDocument) -> Result<()> {
     let declares_router = lab
         .services
         .values()
@@ -101,7 +101,7 @@ fn refuse_legacy_router(lab: &LabSpec) -> Result<()> {
     )
 }
 
-fn refuse_taken_ports(name: &str, lab: &LabSpec) -> Result<()> {
+fn refuse_taken_ports(name: &str, lab: &LabDocument) -> Result<()> {
     let ours: Vec<&str> = lab
         .services
         .values()
@@ -153,7 +153,7 @@ fn refuse_taken_ports(name: &str, lab: &LabSpec) -> Result<()> {
     )
 }
 
-fn declared_host_ports(lab: &LabSpec) -> Vec<(String, u16)> {
+fn declared_host_ports(lab: &LabDocument) -> Vec<(String, u16)> {
     let mut seen = std::collections::BTreeSet::new();
 
     let services = lab.services.iter().flat_map(|(name, svc)| {
@@ -204,7 +204,7 @@ fn port_state(port: u16) -> PortState {
     classify_bind(io::net::try_bind(port))
 }
 
-fn refuse_colliding_subnet(name: &str, lab: &LabSpec) -> Result<()> {
+fn refuse_colliding_subnet(name: &str, lab: &LabDocument) -> Result<()> {
     let taken = io::docker::network_subnets();
     let ours = lab.network.docker_subnet.as_str();
 

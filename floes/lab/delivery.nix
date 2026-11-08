@@ -43,7 +43,7 @@ floe.mkFloe {
   body =
     { collects, ... }:
     let
-      gitops = lib.filterAttrs (_: p: p.strategy == "argocd") collects.policy;
+      gitops = lib.filterAttrs (_: p: p.kind == "argocd") collects.policy;
 
       anyPolicy = lib.attrValues collects.policy;
       chosen = if gitops != { } then lib.head (lib.attrValues gitops) else null;
@@ -81,7 +81,7 @@ floe.mkFloe {
       out.cd = refuse {
         inherit bootstrap;
 
-        perCluster = lib.mapAttrs (_: p: { inherit (p) strategy waitTimeout; }) collects.policy;
+        perCluster = lib.mapAttrs (_: p: { inherit (p) kind waitTimeout; }) collects.policy;
 
         git =
           lib.optionalAttrs handedOver {

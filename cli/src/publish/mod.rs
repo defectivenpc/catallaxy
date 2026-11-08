@@ -84,7 +84,7 @@ pub async fn publish(
     message: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
     let git = &lab.cd.git;
 
     if git.repo.is_empty() {

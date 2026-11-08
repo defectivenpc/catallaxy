@@ -10,7 +10,7 @@ pub struct LabTopology {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub zone: Option<String>,
-    pub cd_strategy: String,
+    pub delivery: String,
     pub network: LabNetwork,
     pub services: BTreeMap<String, LabService>,
     pub clusters: BTreeMap<String, ClusterTopology>,

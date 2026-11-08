@@ -5,7 +5,7 @@ use console::style;
 pub mod standalone;
 
 use crate::config::Context as CataContext;
-use crate::domain::{ClusterSpec, ProvisionerKind};
+use crate::domain::{ClusterDocument, ProvisionerKind};
 use crate::io;
 
 const CLUSTER_NAME_HELP: &str = "Cluster to act on. Defaults to the flake fragment";
@@ -42,7 +42,7 @@ pub enum ClusterCommands {
 
         #[arg(
             long,
-            help = "Apply directly even when the cluster's deploy strategy is GitOps"
+            help = "Apply directly even when the cluster is delivered through GitOps"
         )]
         force: bool,
     },
@@ -110,7 +110,7 @@ fn list(ctx: &CataContext) -> Result<()> {
     }
 
     for name in &names {
-        match load_cluster_spec(ctx, name) {
+        match load_cluster_document(ctx, name) {
             Ok(spec) => {
                 println!(
                     "  {} ({})",
@@ -138,7 +138,7 @@ fn init(ctx: &CataContext, name: &str) -> Result<()> {
     let registries_yaml_path = crate::provision::ensure_lab_services(ctx, name);
 
     println!("{} Loading cluster configuration...", style(">>>").cyan());
-    let spec = load_cluster_spec(ctx, name)?;
+    let spec = load_cluster_document(ctx, name)?;
 
     crate::provision::provision_cluster_with_registry(
         ctx,
@@ -183,7 +183,7 @@ fn down(ctx: &CataContext, name: &str) -> Result<()> {
         style("catallaxy").cyan().bold()
     );
 
-    let spec = load_cluster_spec(ctx, name)?;
+    let spec = load_cluster_document(ctx, name)?;
     crate::provision::deprovision_cluster(ctx, name, &spec)
 }
 
@@ -194,7 +194,7 @@ fn status(ctx: &CataContext, name: &str) -> Result<()> {
     );
     println!();
 
-    let spec = load_cluster_spec(ctx, name)?;
+    let spec = load_cluster_document(ctx, name)?;
 
     println!("{}", style("Configuration:").bold());
     println!("  Provisioner: {}", spec.provisioning.config.kind().tag());
@@ -235,8 +235,8 @@ fn status(ctx: &CataContext, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn load_cluster_spec(ctx: &CataContext, name: &str) -> Result<ClusterSpec> {
+fn load_cluster_document(ctx: &CataContext, name: &str) -> Result<ClusterDocument> {
     let lab_name = ctx.resolve_lab_name(None)?;
-    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, &lab_name)?;
     lab.cluster(name).cloned()
 }

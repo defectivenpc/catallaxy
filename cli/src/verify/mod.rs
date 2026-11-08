@@ -2,7 +2,7 @@ pub mod checks;
 
 use serde::Serialize;
 
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 pub use crate::domain::diagnostic::{Diagnostic, Severity};
 
 pub const CHECK_NAMES: [&str; 6] = [
@@ -20,7 +20,7 @@ pub use crate::domain::ExposedHost;
 
 pub struct VerifyContext<'a> {
     pub lab_name: &'a str,
-    pub lab: &'a LabSpec,
+    pub lab: &'a LabDocument,
     pub config: &'a VerifyConfig,
     pub package: Option<&'a std::path::Path>,
 }
@@ -266,11 +266,11 @@ mod tests {
                 "exposedHosts": [],
                 "projections": {},
             },
-            "delivery": { "strategy": "kapp", "waitTimeout": "10m" },
+            "delivery": { "kind": "kapp", "waitTimeout": "10m" },
         })
     }
 
-    fn with(overrides: Value) -> (LabSpec, VerifyConfig) {
+    fn with(overrides: Value) -> (LabDocument, VerifyConfig) {
         let mut lab = base_lab();
         merge(&mut lab, overrides);
         if let Some(clusters) = lab["clusters"].as_object_mut() {

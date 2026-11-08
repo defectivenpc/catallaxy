@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::cluster::{ClusterSpec, DeployStrategy};
+use super::cluster::{ClusterDocument, DeliveryKind};
 use super::plan::PlannedStep;
 use super::secrets::SecretsSpec;
 
@@ -20,12 +20,12 @@ pub struct InfraPublication {
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct LabSpec {
+pub struct LabDocument {
     pub lab_name: String,
 
     pub cluster_names: Vec<String>,
 
-    pub clusters: BTreeMap<String, ClusterSpec>,
+    pub clusters: BTreeMap<String, ClusterDocument>,
 
     /// The ingress's host map: every hostname this lab answers for, keyed by
     /// the cluster that serves it.
@@ -194,7 +194,7 @@ fn resolve_context<'a>(
     }
 }
 
-impl LabSpec {
+impl LabDocument {
     pub fn dns_container(&self) -> Option<&str> {
         self.services.get("dns").map(|s| s.container.as_str())
     }
@@ -203,7 +203,7 @@ impl LabSpec {
         serde_json::from_value(value)
     }
 
-    pub fn cluster(&self, name: &str) -> anyhow::Result<&ClusterSpec> {
+    pub fn cluster(&self, name: &str) -> anyhow::Result<&ClusterDocument> {
         self.clusters.get(name).ok_or_else(|| {
             let available: Vec<&str> = self.clusters.keys().map(String::as_str).collect();
             anyhow::anyhow!(
@@ -228,11 +228,11 @@ impl LabSpec {
 
     /// Every answer this lab's clusters gave, once each, in order. One entry
     /// for the ordinary lab; two when a CD tool took one cluster over.
-    pub fn delivery_strategies(&self) -> Vec<DeployStrategy> {
-        let mut out: Vec<DeployStrategy> = Vec::new();
+    pub fn delivery_kinds(&self) -> Vec<DeliveryKind> {
+        let mut out: Vec<DeliveryKind> = Vec::new();
         for cluster in self.clusters.values() {
-            if !out.contains(&cluster.delivery.strategy) {
-                out.push(cluster.delivery.strategy);
+            if !out.contains(&cluster.delivery.kind) {
+                out.push(cluster.delivery.kind);
             }
         }
         out
@@ -242,8 +242,8 @@ impl LabSpec {
     /// answered. It was one value for the whole lab, which is why two
     /// clusters delivering differently was an assertion rather than a thing
     /// to want.
-    pub fn delivery_for(&self, cluster: &str) -> Option<DeployStrategy> {
-        self.clusters.get(cluster).map(|c| c.delivery.strategy)
+    pub fn delivery_for(&self, cluster: &str) -> Option<DeliveryKind> {
+        self.clusters.get(cluster).map(|c| c.delivery.kind)
     }
 
     /// Off the cluster's own content, which is where the namespaces its
@@ -289,9 +289,9 @@ mod tests {
 
     #[test]
     fn a_lab_parses_from_the_config_nix_emits() {
-        let lab = LabSpec::from_value(lab_json()).expect("lab spec parses");
+        let lab = LabDocument::from_value(lab_json()).expect("lab spec parses");
         assert_eq!(lab.lab_name, "minimal.local");
-        assert_eq!(lab.delivery_strategies(), vec![DeployStrategy::Kapp]);
+        assert_eq!(lab.delivery_kinds(), vec![DeliveryKind::Kapp]);
         assert_eq!(lab.cd.bootstrap, BootstrapTool::KubectlSsa);
         assert_eq!(lab.dns_info.as_ref().unwrap().port, 5354);
         assert_eq!(lab.registry_port, Some(5050));
@@ -302,7 +302,7 @@ mod tests {
         let mut json = lab_json();
         json["dnsInfo"] = Value::Null;
         json["registryPort"] = Value::Null;
-        let lab = LabSpec::from_value(json).expect("a lab without dns or registry parses");
+        let lab = LabDocument::from_value(json).expect("a lab without dns or registry parses");
         assert!(lab.dns_info.is_none());
         assert!(lab.registry_port.is_none());
     }
@@ -312,7 +312,7 @@ mod tests {
         let mut json = lab_json();
         json.as_object_mut().unwrap().remove("cd");
         assert!(
-            LabSpec::from_value(json).is_err(),
+            LabDocument::from_value(json).is_err(),
             "cd is always emitted; defaulting it here would be a second source of truth"
         );
     }
@@ -321,7 +321,7 @@ mod tests {
     fn the_context_comes_from_runtime_contexts_which_a_pivot_rewrites() {
         let mut json = lab_json();
         json["clusters"]["app"]["clusterHandle"]["context"] = serde_json::json!("pivoted-app");
-        let lab = LabSpec::from_value(json).unwrap();
+        let lab = LabDocument::from_value(json).unwrap();
         assert_eq!(lab.kube_context("app").unwrap(), "pivoted-app");
     }
 
@@ -329,7 +329,7 @@ mod tests {
     fn an_empty_runtime_context_is_reported_rather_than_guessed_at() {
         let mut json = lab_json();
         json["clusters"]["app"]["clusterHandle"]["context"] = serde_json::json!("");
-        let lab = LabSpec::from_value(json).unwrap();
+        let lab = LabDocument::from_value(json).unwrap();
         let err = lab
             .kube_context("app")
             .expect_err("an empty context is not dialable");
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn an_unknown_cluster_names_the_ones_that_exist() {
-        let lab = LabSpec::from_value(lab_json()).unwrap();
+        let lab = LabDocument::from_value(lab_json()).unwrap();
         let err = lab
             .kube_context("nope")
             .expect_err("unknown cluster errors");
@@ -408,7 +408,7 @@ pub struct ReadyProbe {
 
 #[cfg(test)]
 mod schema {
-    use super::LabSpec;
+    use super::LabDocument;
 
     /// The document is reflectable, which is what lets Nix be handed the same
     /// shape the parser enforces instead of a second description of it.
@@ -418,7 +418,7 @@ mod schema {
     /// pinned where they are generated.
     #[test]
     fn the_document_reflects_every_block_the_parser_reads() {
-        let schema = schemars::schema_for!(LabSpec);
+        let schema = schemars::schema_for!(LabDocument);
         let json = serde_json::to_value(&schema).expect("schema serialises");
 
         let mut props: Vec<&str> = json["properties"]

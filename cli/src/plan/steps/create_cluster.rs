@@ -1,7 +1,7 @@
 use anyhow::{Result, bail};
 
 use crate::domain::plan::CreateClusterParams;
-use crate::domain::{ClusterSpec, ProvisionerConfig};
+use crate::domain::{ClusterDocument, ProvisionerConfig};
 use crate::host::state;
 use crate::plan::StepContext;
 
@@ -18,7 +18,10 @@ use crate::plan::StepContext;
 /// cluster mirrors, `registry-setup` runs before any cluster is created, and
 /// a node that silently pulls from upstream is a lab that is slow for reasons
 /// nobody can see.
-fn node_config(sctx: &StepContext<'_>, spec: &ClusterSpec) -> Result<Option<std::path::PathBuf>> {
+fn node_config(
+    sctx: &StepContext<'_>,
+    spec: &ClusterDocument,
+) -> Result<Option<std::path::PathBuf>> {
     let ProvisionerConfig::K3d(k3d) = &spec.provisioning.config else {
         return Ok(None);
     };

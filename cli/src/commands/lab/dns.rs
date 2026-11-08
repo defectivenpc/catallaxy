@@ -25,7 +25,7 @@ impl DnsAction {
 }
 
 pub fn dns(ctx: &CataContext, name: &str, action: DnsAction) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
     let Some(dns_info) = lab.dns_info.as_ref() else {
         println!(

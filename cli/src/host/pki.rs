@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use console::style;
 
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 use crate::host::state::service_state_dir;
 use crate::io;
 use crate::io::pki::CaPem;
@@ -316,7 +316,7 @@ fn signed_by(cert_pem: &Path, ca_cert: &Path) -> bool {
     crate::io::pki::issued_by(&cert, &ca).unwrap_or(true)
 }
 
-pub fn import_lab_ca(lab_name: &str, lab: &LabSpec, cluster_name: &str) -> Result<()> {
+pub fn import_lab_ca(lab_name: &str, lab: &LabDocument, cluster_name: &str) -> Result<()> {
     let ingress_dir =
         crate::host::state::service_state_dir(lab_name, crate::host::state::PROXY_SERVICE);
     let ca_crt = ingress_dir.join("ca.crt");

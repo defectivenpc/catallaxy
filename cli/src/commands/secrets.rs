@@ -241,7 +241,7 @@ fn rotate(_ctx: &CataContext, file: &str) -> Result<()> {
 
 fn get_lab_secrets(ctx: &CataContext, name: Option<&str>) -> Result<LabSecrets> {
     let lab_name = ctx.resolve_lab_name(name)?;
-    let lab = nix::get_lab_spec(ctx, &lab_name)?;
+    let lab = nix::get_lab_document(ctx, &lab_name)?;
 
     let projections = lab
         .clusters

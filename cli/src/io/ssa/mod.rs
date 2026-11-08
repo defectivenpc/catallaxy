@@ -11,7 +11,7 @@ use crate::apply::{ProjectionSource, inject_projections_with};
 use crate::config::Context as CataContext;
 use crate::domain::SecretsCache;
 use crate::domain::cluster::ProjectionConfig;
-use crate::domain::{ClusterSpec, SecretsSpec};
+use crate::domain::{ClusterDocument, SecretsSpec};
 use crate::io;
 
 mod probe;
@@ -128,7 +128,7 @@ pub struct ApplyManifests<'a> {
     pub field_manager: &'a str,
     pub wait_timeout_seconds: u64,
     pub dry_run: bool,
-    pub cluster: Option<&'a ClusterSpec>,
+    pub cluster: Option<&'a ClusterDocument>,
     pub lab_name: &'a str,
     pub secrets_spec: &'a SecretsSpec,
     pub secrets_cache: Option<&'a SecretsCache>,

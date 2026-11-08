@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 use crate::domain::StepFailure;
 use crate::domain::plan::{Direction, PlannedStep, StepParams};
 use crate::io;
@@ -26,7 +26,7 @@ pub async fn execute(
     }
     let ctx = &ctx_owned;
 
-    let lab = crate::io::nix::get_lab_spec(ctx, lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, lab_name)?;
     let steps = load_steps(&lab, direction)?;
     if steps.is_empty() {
         println!(
@@ -108,7 +108,7 @@ pub async fn execute(
     Ok(())
 }
 
-fn print_how_to_reach_it(lab_name: &str, lab: &LabSpec) {
+fn print_how_to_reach_it(lab_name: &str, lab: &LabDocument) {
     let Some(dns) = lab.dns_info.as_ref() else {
         return;
     };
@@ -262,7 +262,7 @@ fn should_skip_if_reachable(step: &PlannedStep) -> bool {
     }
 }
 
-fn load_steps(lab: &LabSpec, direction: Direction) -> Result<Vec<PlannedStep>> {
+fn load_steps(lab: &LabDocument, direction: Direction) -> Result<Vec<PlannedStep>> {
     let steps = match direction {
         Direction::Deploy => &lab.deployment_plan,
         Direction::Teardown => &lab.teardown_plan,
@@ -276,7 +276,7 @@ fn load_steps(lab: &LabSpec, direction: Direction) -> Result<Vec<PlannedStep>> {
 fn load_stores_upfront(
     ctx: &CataContext,
     lab_name: &str,
-    lab: &LabSpec,
+    lab: &LabDocument,
 ) -> Result<Option<crate::domain::SecretsCache>> {
     crate::io::secrets::load_secrets_cache(
         ctx,

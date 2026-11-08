@@ -56,7 +56,7 @@ Argo CD, which takes ownership of applying the cluster's manifests.
 | --- |
 | bootstrapTool |
 | context |
-| strategy |
+| kind |
 | waitTimeout |
 
 ### `route` — [ROUTE_CLAIM](../signatures/ROUTE_CLAIM.md)

@@ -143,7 +143,7 @@ impl Context {
             "no cluster given. The flake fragment names the lab, so pass the cluster as an \
              argument or use --flake <ref>#<lab>",
         )?;
-        let lab = crate::io::nix::get_lab_spec(self, &lab_name)?;
+        let lab = crate::io::nix::get_lab_document(self, &lab_name)?;
 
         match lab.cluster_names.as_slice() {
             [only] => Ok(only.clone()),

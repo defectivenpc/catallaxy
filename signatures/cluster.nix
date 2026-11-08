@@ -65,7 +65,7 @@ in
     canonicalName = "delivery";
     description = "How manifests reach the cluster, what bootstraps the applier, and how long an apply may take.";
     fields = {
-      strategy = T.enum [
+      kind = T.enum [
         "kapp"
         "argocd"
         "fleet"

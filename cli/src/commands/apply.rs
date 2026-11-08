@@ -17,7 +17,7 @@ pub struct ApplyArgs {
 
     #[arg(
         long,
-        help = "Apply directly even when the cluster's deploy strategy is GitOps"
+        help = "Apply directly even when the cluster is delivered through GitOps"
     )]
     pub force: bool,
 }

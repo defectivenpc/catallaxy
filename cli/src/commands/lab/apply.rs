@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 
 pub fn run(
     ctx: &CataContext,
@@ -12,7 +12,7 @@ pub fn run(
     dry_run: bool,
     force: bool,
 ) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
     let targets = targets_in(&lab, cluster.as_deref())?;
 
     println!("{} Applying lab '{name}'", style("catallaxy").cyan().bold());
@@ -52,7 +52,7 @@ pub fn diff(
     bundle: Option<String>,
     cluster: Option<String>,
 ) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
     let targets = targets_in(&lab, cluster.as_deref())?;
 
     println!("{} Building lab manifests...", style(">>>").cyan());
@@ -78,7 +78,7 @@ pub fn diff(
     Ok(())
 }
 
-fn targets_in(lab: &LabSpec, cluster: Option<&str>) -> Result<Vec<String>> {
+fn targets_in(lab: &LabDocument, cluster: Option<&str>) -> Result<Vec<String>> {
     match cluster {
         None => Ok(lab.cluster_names.clone()),
         Some(name) if lab.cluster_names.iter().any(|c| c == name) => Ok(vec![name.to_string()]),

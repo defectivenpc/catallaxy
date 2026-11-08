@@ -98,7 +98,7 @@ in
 
       perCluster = T.attrsOf (
         T.record {
-          strategy = T.str;
+          kind = T.str;
           waitTimeout = T.str;
         }
       );

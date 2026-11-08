@@ -130,7 +130,7 @@ floe.mkFloe {
       in
       {
         config.floe.provides.delivery = {
-          strategy = "argocd";
+          kind = "argocd";
           bootstrapTool = "kubectl-ssa";
           inherit (inputs) waitTimeout;
 

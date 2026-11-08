@@ -20,7 +20,7 @@ pub async fn run(
     }
 
     let lab_name = ctx.resolve_lab_name(name.as_deref())?;
-    let lab = crate::io::nix::get_lab_spec(ctx, &lab_name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, &lab_name)?;
     let config = lab.verify.clone();
 
     crate::io::trust::activate(&lab_name).ok();

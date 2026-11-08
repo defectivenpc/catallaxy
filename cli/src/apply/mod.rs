@@ -8,7 +8,7 @@ use crate::config::Context as CataContext;
 pub use crate::domain::cluster::{ProjectionConfig, ProjectionKeyConfig};
 
 use crate::domain::secrets::{self, SecretsSpec};
-use crate::domain::{ClusterSpec, LabSpec};
+use crate::domain::{ClusterDocument, LabDocument};
 use crate::io;
 use crate::io::nix;
 
@@ -21,7 +21,7 @@ pub struct ApplyRequest<'a> {
     pub force: bool,
     pub manifests_dir: Option<&'a str>,
     pub secrets_cache: Option<SecretsCache>,
-    pub lab: Option<&'a LabSpec>,
+    pub lab: Option<&'a LabDocument>,
     pub kube_context_override: Option<&'a str>,
 }
 
@@ -61,17 +61,17 @@ pub enum Narration {
 fn resolve_lab<'a>(
     ctx: &CataContext,
     args: &ApplyRequest<'a>,
-) -> Result<std::borrow::Cow<'a, LabSpec>> {
+) -> Result<std::borrow::Cow<'a, LabDocument>> {
     Ok(match args.lab {
         Some(lab) => std::borrow::Cow::Borrowed(lab),
         None => {
             let lab_name = ctx.resolve_lab_name(None)?;
-            std::borrow::Cow::Owned(nix::get_lab_spec(ctx, &lab_name)?)
+            std::borrow::Cow::Owned(nix::get_lab_document(ctx, &lab_name)?)
         }
     })
 }
 
-fn kube_context_for<'a>(args: &ApplyRequest<'a>, spec: &'a ClusterSpec) -> &'a str {
+fn kube_context_for<'a>(args: &ApplyRequest<'a>, spec: &'a ClusterDocument) -> &'a str {
     args.kube_context_override
         .filter(|s| !s.is_empty())
         .unwrap_or(&spec.cluster_handle.context)
@@ -126,9 +126,9 @@ pub fn apply(ctx: &CataContext, args: ApplyRequest<'_>) -> Result<()> {
     let lab = resolve_lab(ctx, &args)?;
     let spec = lab.cluster(&cluster)?;
 
-    let strategy = spec.delivery.strategy;
-    if strategy.is_gitops() && !args.force {
-        return Err(deployed_through_git(strategy));
+    let delivery = spec.delivery.kind;
+    if delivery.is_gitops() && !args.force {
+        return Err(deployed_through_git(delivery));
     }
 
     let kube_context = kube_context_for(&args, spec);
@@ -149,9 +149,9 @@ pub fn diff(ctx: &CataContext, args: ApplyRequest<'_>) -> Result<bool> {
     let lab = resolve_lab(ctx, &args)?;
     let spec = lab.cluster(&cluster)?;
 
-    let strategy = spec.delivery.strategy;
-    if strategy.is_gitops() && !args.force {
-        return Err(deployed_through_git(strategy));
+    let delivery = spec.delivery.kind;
+    if delivery.is_gitops() && !args.force {
+        return Err(deployed_through_git(delivery));
     }
 
     let kube_context = kube_context_for(&args, spec);
@@ -281,7 +281,7 @@ fn discover_bundles(cluster_manifests: &Path) -> Result<Vec<BundleDir>> {
 /// read `delivery.waitTimeout`, and a lab that raised the timeout moved one
 /// of them. Both were read, which is why nothing caught it: the tightness
 /// check sees a field nobody reads, not one fact with two sources.
-fn deploy_timeout(spec: &ClusterSpec) -> Result<String> {
+fn deploy_timeout(spec: &ClusterDocument) -> Result<String> {
     let timeout = &spec.delivery.wait_timeout;
     crate::io::kubectl::parse_timeout(timeout).ok_or_else(|| {
         anyhow::anyhow!(
@@ -297,8 +297,8 @@ fn apply_kapp(
     kube_context: &str,
     manifests_path: &str,
     args: &ApplyRequest<'_>,
-    lab: &LabSpec,
-    spec: &ClusterSpec,
+    lab: &LabDocument,
+    spec: &ClusterDocument,
 ) -> Result<()> {
     if !io::kubectl::api_reachable(kube_context) {
         bail!("Cannot reach cluster (context: {kube_context}). Is it running?");
@@ -535,7 +535,7 @@ where
     Ok(())
 }
 
-fn cleanup_bootstrap_resources(kube_context: &str, spec: &ClusterSpec) {
+fn cleanup_bootstrap_resources(kube_context: &str, spec: &ClusterDocument) {
     if spec.provisioning.config.auto_deploy_manifests().is_empty() {
         return;
     }
@@ -603,10 +603,10 @@ fn cleanup_bootstrap_resources(kube_context: &str, spec: &ClusterSpec) {
     }
 }
 
-fn deployed_through_git(strategy: crate::domain::DeployStrategy) -> anyhow::Error {
-    let strategy = strategy.tag();
+fn deployed_through_git(delivery: crate::domain::DeliveryKind) -> anyhow::Error {
+    let delivery = delivery.tag();
     anyhow::anyhow!(
-        "This lab uses '{strategy}' strategy. Manifests must be deployed via Git.\n\
+        "This cluster is delivered by '{delivery}'. Manifests must be deployed via Git.\n\
          Use 'cata lab publish' to push manifests to the Git repository.\n\
          To apply directly anyway, use --force."
     )
@@ -622,7 +622,7 @@ mod tests {
     #[test]
     fn the_timeout_is_read_from_the_document() {
         let spec = crate::domain::cluster::tests::cluster_json();
-        let spec = ClusterSpec::from_value(spec).unwrap();
+        let spec = ClusterDocument::from_value(spec).unwrap();
         assert_eq!(deploy_timeout(&spec).unwrap(), "10m");
     }
 
@@ -630,7 +630,7 @@ mod tests {
     fn a_duration_kapp_cannot_read_is_refused_rather_than_defaulted() {
         let mut json = crate::domain::cluster::tests::cluster_json();
         json["delivery"]["waitTimeout"] = serde_json::json!("soon");
-        let spec = ClusterSpec::from_value(json).unwrap();
+        let spec = ClusterDocument::from_value(json).unwrap();
         assert!(deploy_timeout(&spec).is_err());
     }
 

@@ -171,7 +171,7 @@ fn generate(config: GenerateConfig) -> Result<()> {
 
 /// `cata-build document <out>` — the lab document's shape, as a `floes` type.
 ///
-/// Emitted from `schemars` over `LabSpec`, so adding a field to the struct the
+/// Emitted from `schemars` over `LabDocument`, so adding a field to the struct the
 /// parser uses is what changes the type Nix checks against.
 pub fn document(out: &str) -> Result<()> {
     let nix = crate::codegen::document::lab_document()?;

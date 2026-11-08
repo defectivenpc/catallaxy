@@ -73,7 +73,7 @@ appear nowhere else. `commands/` is thin glue — logic that accumulates there
 cannot be unit-tested or reused.
 
 Parse `nix eval` JSON into a typed struct at the seam (`io::nix::eval_lab`);
-downstream code takes `LabSpec`, not `serde_json::Value`. A
+downstream code takes `LabDocument`, not `serde_json::Value`. A
 `.pointer("/foo/bar")` chain means a type is missing at the edge.
 
 `commands/` returns `anyhow::Result<T>` because the context is what the user

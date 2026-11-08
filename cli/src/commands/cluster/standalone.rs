@@ -2,7 +2,7 @@
 //!
 //! The test this exists to answer: can `cata` stand up a cluster given
 //! nothing but the cluster's own document? Everything else in the CLI
-//! resolves a cluster *through* a lab — `load_cluster_spec` evaluates the lab
+//! resolves a cluster *through* a lab — `load_cluster_document` evaluates the lab
 //! and digs the cluster out, `ensure_lab_services` scans every lab on the
 //! flake — so a field that leaked back to the lab was invisible. Here it is a
 //! parse failure naming the field.
@@ -20,16 +20,16 @@ use anyhow::{Context, Result};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::{ClusterSpec, SecretsSpec};
+use crate::domain::{ClusterDocument, SecretsSpec};
 use crate::io;
 
 /// Read one cluster document.
-pub fn read(path: &Path) -> Result<ClusterSpec> {
+pub fn read(path: &Path) -> Result<ClusterDocument> {
     let raw = io::fs::read_to_string(path)
         .with_context(|| format!("reading the cluster document {}", path.display()))?;
     let value =
         serde_json::from_str(&raw).with_context(|| format!("{} is not JSON", path.display()))?;
-    ClusterSpec::from_value(value).with_context(|| {
+    ClusterDocument::from_value(value).with_context(|| {
         format!(
             "{} is JSON but not a cluster document this cata understands",
             path.display()
@@ -49,7 +49,7 @@ pub fn parse(path: &Path) -> Result<()> {
     let cluster_handle = &spec.cluster_handle;
     let variant = spec.provisioning.config.kind().tag();
     let bundles: usize = spec.content.waves.iter().map(Vec::len).sum();
-    let strategy = spec.delivery.strategy.tag();
+    let delivery = spec.delivery.kind.tag();
 
     println!(
         "{} {} parses on its own",
@@ -70,7 +70,7 @@ pub fn parse(path: &Path) -> Result<()> {
         "    content      {bundles} bundle(s) in {}",
         spec.content.tree
     );
-    println!("    delivery     {strategy}");
+    println!("    delivery     {delivery}");
 
     Ok(())
 }
@@ -95,7 +95,7 @@ pub fn up(ctx: &CataContext, path: &Path, dry_run: bool) -> Result<()> {
 }
 
 /// Converge the content onto the cluster handle.
-fn apply(ctx: &CataContext, spec: &ClusterSpec, dry_run: bool) -> Result<()> {
+fn apply(ctx: &CataContext, spec: &ClusterDocument, dry_run: bool) -> Result<()> {
     let tree = Path::new(&spec.content.tree);
     let wait = &spec.delivery.wait_timeout;
     let seconds = io::kubectl::parse_timeout(wait)

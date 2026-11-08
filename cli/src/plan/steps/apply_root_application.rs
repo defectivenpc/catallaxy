@@ -29,7 +29,7 @@ pub fn run(sctx: &StepContext<'_>, p: &ApplyRootApplicationParams) -> Result<()>
     if !Path::new(&full_path).exists() {
         bail!(
             "root Application manifest not found at {full_path}. \
-             Rebuild the lab package; ensure lab.cd.strategy = argocd \
+             Rebuild the lab package; ensure the cluster is delivered by argocd \
              and lib/render/argocd.nix ran."
         );
     }

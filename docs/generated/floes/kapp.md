@@ -30,5 +30,5 @@
 | --- |
 | bootstrapTool |
 | context |
-| strategy |
+| kind |
 | waitTimeout |

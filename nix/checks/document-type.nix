@@ -4,7 +4,7 @@
   Two halves, and both are needed.
 
   `lib/document/generated.nix` must match what `cata-build document` emits, so
-  the Rust types stay the definition: add a field to `LabSpec` and this fails
+  the Rust types stay the definition: add a field to `LabDocument` and this fails
   until the type is regenerated. That is the same net as `generated-types`, for
   the same reason.
 

@@ -128,10 +128,10 @@ YAML resource. No forensic effort required.
 ### Multiple deployment targets
 
 The same component declarations compile to output for kapp (direct apply),
-ArgoCD, or Fleet. Switching deployment strategy is a single option change.
-No component code needs to be rewritten. The rendering pipeline transforms
-the same intermediate representation into strategy-specific directory
-layouts and metadata.
+ArgoCD, or Fleet. Switching delivery is a single option change. No component
+code needs to be rewritten. The rendering pipeline transforms the same
+intermediate representation into delivery-specific directory layouts and
+metadata.
 
 ## Who this is for
 

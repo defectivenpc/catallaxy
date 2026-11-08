@@ -2,7 +2,7 @@ use anyhow::Result;
 use console::style;
 
 use crate::domain::plan::DestroyClusterParams;
-use crate::domain::{ClusterSpec, ProvisionerKind, StepFailure};
+use crate::domain::{ClusterDocument, ProvisionerKind, StepFailure};
 use crate::io;
 use crate::plan::StepContext;
 
@@ -70,14 +70,14 @@ pub fn run(sctx: &StepContext<'_>, p: &DestroyClusterParams) -> Result<()> {
 /// Both callers already guard on the provisioner, so the empty case is
 /// unreachable. It stays a `&str` rather than an `Option` so the guard
 /// remains the one place the provisioner is decided.
-fn k3d_name(spec: &ClusterSpec) -> &str {
+fn k3d_name(spec: &ClusterDocument) -> &str {
     spec.provisioning
         .config
         .k3d()
         .map_or("", |c| c.cluster_name.as_str())
 }
 
-fn k3d_already_gone(sctx: &StepContext<'_>, spec: &ClusterSpec) -> bool {
+fn k3d_already_gone(sctx: &StepContext<'_>, spec: &ClusterDocument) -> bool {
     if spec.provisioning.config.kind() != ProvisionerKind::K3d {
         return false;
     }

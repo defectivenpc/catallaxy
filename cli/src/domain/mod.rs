@@ -19,15 +19,15 @@ pub mod teardown;
 pub mod verify;
 
 pub use cluster::{
-    ClusterHandle, ClusterSpec, Content, Delivery, DeployStrategy, ExposedHost, ProvisionerConfig,
-    ProvisionerKind, WaveBundle,
+    ClusterDocument, ClusterHandle, Content, Delivery, DeliveryKind, ExposedHost,
+    ProvisionerConfig, ProvisionerKind, WaveBundle,
 };
 pub use diagnostic::{Diagnostic, Severity};
 pub use exit::ExitWith;
 pub use kapp_status::KappStatus;
 pub use lab::{
-    BootstrapTool, CdConfig, DnsInfo, ExtraMount, HostService, LabSpec, NetworkInfo, ReadyProbe,
-    ServiceVolume,
+    BootstrapTool, CdConfig, DnsInfo, ExtraMount, HostService, LabDocument, NetworkInfo,
+    ReadyProbe, ServiceVolume,
 };
 pub use plan::{Direction, PlannedStep, StepParams};
 pub use secrets::{Backend, HostProjection, SecretsCache, SecretsSpec, StoreValues};

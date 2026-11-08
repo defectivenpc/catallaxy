@@ -36,8 +36,8 @@ nix build       …#legacyPackages.<system>.labPackages."<lab>"    # what to do 
 ```
 
 The first resolves to `lab.out.cliConfig` and is parsed once into a typed
-`LabSpec`. The second resolves to `lab.out.package`: a store path holding
-the rendered manifests, the lint checks, and every hook binary.
+`LabDocument`. The second resolves to `lab.out.package`: a store path
+holding the rendered manifests, the lint checks, and every hook binary.
 
 The CLI re-derives nothing. That is deliberate — Rust code deciding install
 order would be a second source of truth for something the module system

@@ -21,7 +21,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::cluster::ClusterSpec;
+use super::cluster::ClusterDocument;
 
 /// Bumped when the recorded shape stops meaning what it did, so an old record
 /// reads as unverifiable rather than as a spurious drift report.
@@ -85,7 +85,7 @@ pub struct ClusterShape {
 }
 
 impl ClusterShape {
-    pub fn of(spec: &ClusterSpec) -> Self {
+    pub fn of(spec: &ClusterDocument) -> Self {
         let shape = ClusterShape {
             schema_version: SCHEMA_VERSION,
             provisioner: format!("{:?}", spec.provisioning.config.kind()).to_lowercase(),
@@ -810,7 +810,7 @@ mod tests {
                 "reachableFrom": [],
             }
         });
-        let spec = ClusterSpec::from_value(json).expect("fixture parses");
+        let spec = ClusterDocument::from_value(json).expect("fixture parses");
 
         let recorded = ClusterShape::of(&spec);
         assert_eq!(recorded.provisioner, "talos");
@@ -826,7 +826,7 @@ mod tests {
         json["provisioning"]["config"]["k3d"]["noTraefik"] = serde_json::json!(true);
         json["provisioning"]["config"]["k3d"]["image"] =
             serde_json::json!("rancher/k3s:v1.31.4-k3s1");
-        let spec = ClusterSpec::from_value(json).expect("fixture parses");
+        let spec = ClusterDocument::from_value(json).expect("fixture parses");
 
         let recorded = ClusterShape::of(&spec);
         assert_eq!(recorded.image.as_deref(), Some("rancher/k3s:v1.31.4-k3s1"));

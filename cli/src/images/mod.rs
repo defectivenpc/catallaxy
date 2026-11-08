@@ -8,14 +8,14 @@ use anyhow::{Context, Result, bail};
 use console::style;
 
 use crate::config::Context as CataContext;
-use crate::domain::LabSpec;
+use crate::domain::LabDocument;
 use crate::io::nix;
 
 pub async fn warm_to_target_with(
     ctx: &CataContext,
     name: Option<&str>,
     target_registry: &str,
-    lab: Option<&LabSpec>,
+    lab: Option<&LabDocument>,
     lab_pkg: Option<&str>,
 ) -> Result<()> {
     let images = if let Some(pkg) = lab_pkg {
@@ -30,7 +30,7 @@ pub async fn warm_to_target_with(
             lab.lab_owned_registries.clone(),
         ),
         None => {
-            let lab = crate::io::nix::get_lab_spec(ctx, &ctx.resolve_lab_name(name)?)?;
+            let lab = crate::io::nix::get_lab_document(ctx, &ctx.resolve_lab_name(name)?)?;
             (lab.registry_upstreams, lab.lab_owned_registries)
         }
     };

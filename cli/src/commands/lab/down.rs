@@ -9,7 +9,7 @@ pub fn run(ctx: &CataContext, name: &str) -> Result<()> {
         style("catallaxy").cyan().bold()
     );
 
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
     let cluster_names = &lab.cluster_names;
 

@@ -5,7 +5,7 @@
 # got when nothing said anything at all. Absence of a provider meant the
 # default, so a lab that meant to run Argo and forgot to add it was a lab
 # `cata` quietly applied by hand — and a cluster's document asserted a
-# strategy nothing in the cluster had chosen.
+# delivery nothing in the cluster had chosen.
 #
 # So this is the floe for the ordinary case, and holding it beside a CD tool
 # is two providers of one signature, which the linker refuses by name. That
@@ -45,7 +45,7 @@ floe.mkFloe {
     { inputs, requires, ... }:
     {
       provides.delivery = {
-        strategy = "kapp";
+        kind = "kapp";
 
         bootstrapTool = "kubectl-ssa";
 

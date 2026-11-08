@@ -7,14 +7,14 @@
 //! until they don't.
 //!
 //! Reads `schemars` output rather than the types directly, because that is
-//! derived: a field added to `LabSpec` changes the schema with no edit here.
+//! derived: a field added to `LabDocument` changes the schema with no edit here.
 
 use std::collections::BTreeMap;
 
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 
-/// A JSON Schema definition name (`LabSpec`) as a Nix binding (`labSpec`).
+/// A JSON Schema definition name (`LabDocument`) as a Nix binding (`labDocument`).
 fn binding(name: &str) -> String {
     let mut chars = name.chars();
     match chars.next() {
@@ -23,7 +23,7 @@ fn binding(name: &str) -> String {
     }
 }
 
-/// `{"$ref": "#/$defs/LabSpec"}` -> `LabSpec`.
+/// `{"$ref": "#/$defs/LabDocument"}` -> `LabDocument`.
 fn ref_target(schema: &Value) -> Option<&str> {
     schema.get("$ref")?.as_str()?.strip_prefix("#/$defs/")
 }
@@ -48,7 +48,7 @@ fn is_null(schema: &Value) -> bool {
 /// The type of a JSON Schema node, in `T`.
 ///
 /// Total over what `schemars` emits for the document: every arm below is
-/// reached by some field of `LabSpec`, and anything else is an error rather
+/// reached by some field of `LabDocument`, and anything else is an error rather
 /// than a guess, because a silent `T.any` is how a shape stops describing the
 /// value.
 fn render(schema: &Value) -> Result<String> {
@@ -199,7 +199,7 @@ fn render_object(schema: &Value) -> Result<String> {
 /// Takes no schema: the module knows which types it describes, so there is no
 /// way to call it with the wrong one.
 pub fn lab_document() -> Result<String> {
-    let schema = schemars::schema_for!(crate::domain::lab::LabSpec);
+    let schema = schemars::schema_for!(crate::domain::lab::LabDocument);
     let json = serde_json::to_value(&schema).context("serialising the document schema")?;
     emit(&json).context("emitting the document type")
 }
@@ -207,7 +207,7 @@ pub fn lab_document() -> Result<String> {
 /// The whole generated file.
 ///
 /// One `rec` set of every named definition, because the references between
-/// them are a graph rather than a tree — `ClusterSpec` reaches `Content`,
+/// them are a graph rather than a tree — `ClusterDocument` reaches `Content`,
 /// which reaches `WaveBundle` — and `rec` is what lets the emitted order not
 /// matter.
 fn emit(schema: &Value) -> Result<String> {

@@ -167,7 +167,7 @@
         ]
       },
       "delivery": {
-        "strategy": "argocd",
+        "kind": "argocd",
         "waitTimeout": "10m"
       },
       "provisioning": {

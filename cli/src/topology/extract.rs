@@ -4,10 +4,10 @@ use anyhow::Result;
 
 use super::*;
 use crate::config::Context as CataContext;
-use crate::domain::{ClusterSpec, LabSpec, StepParams};
+use crate::domain::{ClusterDocument, LabDocument, StepParams};
 use crate::io;
 
-pub fn extract_static(lab: &LabSpec) -> LabTopology {
+pub fn extract_static(lab: &LabDocument) -> LabTopology {
     let network = LabNetwork {
         name: lab.network.name.clone(),
         docker_subnet: lab.network.docker_subnet.clone(),
@@ -21,8 +21,8 @@ pub fn extract_static(lab: &LabSpec) -> LabTopology {
     LabTopology {
         name: lab.lab_name.clone(),
         zone: lab.dns_info.as_ref().map(|d| d.zone.clone()),
-        cd_strategy: lab
-            .delivery_strategies()
+        delivery: lab
+            .delivery_kinds()
             .iter()
             .map(|s| s.tag())
             .collect::<Vec<_>>()
@@ -42,7 +42,7 @@ pub fn extract_static(lab: &LabSpec) -> LabTopology {
 /// port is the ingress: two answers to that question would eventually differ,
 /// and the one that probes is the one that must be right.
 fn extract_endpoints(
-    lab: &LabSpec,
+    lab: &LabDocument,
     services: &BTreeMap<String, LabService>,
 ) -> Vec<crate::topology::Endpoint> {
     let ingress = services.get("proxy").and_then(|p| {
@@ -94,7 +94,7 @@ fn extract_endpoints(
     out
 }
 
-fn extract_services(lab: &LabSpec) -> BTreeMap<String, LabService> {
+fn extract_services(lab: &LabDocument) -> BTreeMap<String, LabService> {
     let mut services = BTreeMap::new();
     for (name, svc) in &lab.services {
         services.insert(
@@ -110,7 +110,7 @@ fn extract_services(lab: &LabSpec) -> BTreeMap<String, LabService> {
     services
 }
 
-fn extract_clusters(lab: &LabSpec) -> BTreeMap<String, ClusterTopology> {
+fn extract_clusters(lab: &LabDocument) -> BTreeMap<String, ClusterTopology> {
     let mut clusters = BTreeMap::new();
 
     for cluster_name in &lab.cluster_names {
@@ -155,7 +155,7 @@ fn extract_clusters(lab: &LabSpec) -> BTreeMap<String, ClusterTopology> {
 /// name, guessed. The content says what actually installs, so a unit is named
 /// here when a bundle of it is in a wave, and a bundle name is
 /// `<unit>/<bundle>` at whatever depth the unit sits.
-fn extract_components(cluster: &ClusterSpec) -> BTreeMap<String, ComponentSummary> {
+fn extract_components(cluster: &ClusterDocument) -> BTreeMap<String, ComponentSummary> {
     let mut out: BTreeMap<String, ComponentSummary> = BTreeMap::new();
 
     for bundle in cluster.content.waves.iter().flatten() {
@@ -171,7 +171,7 @@ fn extract_components(cluster: &ClusterSpec) -> BTreeMap<String, ComponentSummar
     out
 }
 
-fn extract_edges_from_plan(lab: &LabSpec) -> Vec<TopologyEdge> {
+fn extract_edges_from_plan(lab: &LabDocument) -> Vec<TopologyEdge> {
     let mut edges = Vec::new();
 
     for step in &lab.deployment_plan {
@@ -189,7 +189,7 @@ fn extract_edges_from_plan(lab: &LabSpec) -> Vec<TopologyEdge> {
     edges
 }
 
-fn extract_plan_steps(lab: &LabSpec) -> Vec<PlanStep> {
+fn extract_plan_steps(lab: &LabDocument) -> Vec<PlanStep> {
     lab.deployment_plan
         .iter()
         .map(|s| PlanStep {

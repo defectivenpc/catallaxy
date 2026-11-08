@@ -4,7 +4,7 @@ use console::style;
 use crate::config::Context as CataContext;
 
 pub fn ops(ctx: &CataContext, name: &str, args: &[String]) -> Result<()> {
-    let lab = crate::io::nix::get_lab_spec(ctx, name)?;
+    let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
     let Some(ops_tool_path) = lab.ops_tool_path.as_deref() else {
         println!(

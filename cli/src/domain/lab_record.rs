@@ -20,7 +20,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::lab::LabSpec;
+use super::lab::LabDocument;
 
 /// Bumped when a field stops meaning what it did, so an older record reads as
 /// absent rather than being misread.
@@ -58,7 +58,7 @@ pub struct LabRecord {
 }
 
 impl LabRecord {
-    pub fn of(lab: &LabSpec, flake: &str) -> Self {
+    pub fn of(lab: &LabDocument, flake: &str) -> Self {
         LabRecord {
             schema_version: SCHEMA_VERSION,
             lab: lab.lab_name.clone(),
