@@ -30,7 +30,7 @@
 }:
 
 let
-  hcl = import ../../../lib/util/hcl.nix { inherit lib; };
+  hcl = import ../../../lib/render/hcl.nix { inherit lib; };
   idempotent = import ../../../lib/kubernetes/idempotent-job.nix { inherit lib; };
 in
 

@@ -73,8 +73,6 @@
             craneLib
             rustToolchain
             ;
-
-          optionsJSON = import ./nix/docs/options-json.nix { inherit lib pkgs; };
         };
 
         labArgs = {
@@ -100,28 +98,15 @@
 
         cliConfigs = import ./nix/cli-configs.nix { inherit lib pkgs labDefs; };
 
-        page = import ./nix/docs/page.nix { inherit lib pkgs; };
-
-        pageArgs = {
-          inherit lib page;
+        docs = import ./nix/docs {
+          inherit lib pkgs labDefs;
+          inherit (packages') cata;
           inherit (labs) catallaxy mkFloes;
           floeSet = floePaths;
         };
 
-        floePages = import ./nix/docs/floes.nix (pageArgs // { inherit labDefs; });
-        kindPages = import ./nix/docs/kinds.nix pageArgs;
-        signaturePages = import ./nix/docs/signatures.nix pageArgs;
+        inherit (docs) referencePages;
 
-        referencePages = import ./pkgs/reference-pages.nix {
-          inherit
-            lib
-            pkgs
-            floePages
-            signaturePages
-            kindPages
-            ;
-          inherit (packages') cata;
-        };
         legacyPackages' = {
           inherit
             referencePages
@@ -144,7 +129,7 @@
           # built-in groups alone, and a custom resource whose group is missing
           # resolves to no schema and is checked for nothing.
           withFloes = extraFloes: import ./lib (labArgs // { inherit extraFloes; });
-          inherit (packages') optionDocs;
+          inherit (docs) optionDocs;
         };
 
         flakePackages = {
@@ -152,7 +137,8 @@
           cata = packages'.cataWrapped;
           cata-unwrapped = packages'.cata;
 
-          inherit (packages') talks docs;
+          inherit (docs) talks;
+          docs = docs.book;
         };
 
       in
@@ -199,7 +185,7 @@
             floes
             ;
           inherit (legacyPackages') withFloes;
-          inherit (packages') optionDocs;
+          inherit (docs) optionDocs;
 
           packages = packages';
         };

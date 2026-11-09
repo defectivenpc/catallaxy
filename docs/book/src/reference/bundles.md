@@ -51,7 +51,7 @@ instead.
 
 ## `readyProbe`
 
-A kind-tagged attrset from the probe DSL in `lib/util/wait.nix`. When
+A kind-tagged attrset from the probe DSL in `lib/kubernetes/wait.nix`. When
 `null`, the bundle counts as ready as soon as its resources apply.
 
 Use `null` for purely declarative bundles (Secret, ConfigMap, Namespace).

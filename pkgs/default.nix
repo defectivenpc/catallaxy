@@ -1,10 +1,9 @@
-# The CLI, the tools it shells out to, and the documents built from it.
+# The CLI and the tools it shells out to.
 {
   lib,
   pkgs,
   craneLib,
   rustToolchain,
-  optionsJSON,
 }:
 
 let
@@ -55,24 +54,11 @@ let
     '';
   };
 
-  optionDocs = import ./option-docs.nix {
-    inherit
-      lib
-      pkgs
-      cata
-      optionsJSON
-      ;
-  };
-  talks = import ./talks.nix { inherit lib pkgs; };
-  docs = import ./docs.nix { inherit lib pkgs talks; };
 in
 {
   inherit
     tools
     cata
     cataWrapped
-    optionDocs
-    talks
-    docs
     ;
 }

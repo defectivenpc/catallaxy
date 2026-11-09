@@ -112,9 +112,9 @@ gate on them being established.
 
 **Ship a test suite** at `floes/tests/<name>.nix`, built on
 `floes/tests/support.nix`. Not optional, and enforced 1:1 by
-`nix/checks/lib-tests.nix`. The harness stubs each required signature and
-runs the real linker and elaborator, so a suite exercises what the lab will
-do rather than an approximation of it.
+`nix/checks/lib/lib-tests.nix`. The harness stubs each required signature
+and runs the real linker and elaborator, so a suite exercises what the lab
+will do rather than an approximation of it.
 
 **Regenerate the floe's interface page** from `nix build .#referencePages`,
 copy it over `docs/generated`, and commit it, or its diff check fails.
@@ -127,17 +127,17 @@ the fresh output and the copy is yours.
 
 The book is mdBook. `mdbook serve` over `docs/book` works for the
 hand-written pages, but shows no per-floe reference and no changelog: those
-are spliced in at build time by `pkgs/docs.nix`.
+are spliced in at build time by `nix/docs/book.nix`.
 
 ```bash
 nix build .#docs && open result/index.html
 ```
 
 The per-floe pages come from `docs/generated/floes/`, which
-`nix/docs/floes.nix` generates and 37 checks diff. `pkgs/docs.nix` copies
-them in, derives an index and the `SUMMARY.md` nav entries from the file
-list, and appends the repo's `CHANGELOG.md`. So adding a floe adds a page
-and a nav entry with no edit to anything.
+`nix/docs/floes.nix` generates and 37 checks diff. `nix/docs/book.nix`
+copies them in, derives an index and the `SUMMARY.md` nav entries from the
+file list, and appends the repo's `CHANGELOG.md`. So adding a floe adds a
+page and a nav entry with no edit to anything.
 
 Two checks hold it. `book.toml` sets `create-missing = false`, so a
 `SUMMARY.md` entry with no file fails the build rather than rendering a

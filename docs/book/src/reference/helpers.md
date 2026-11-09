@@ -37,17 +37,19 @@ generated page shows which it used.
 
 ## What survives
 
-| Helper                     | Where                         | Is                                                           |
-| -------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| `mkIdempotentJob`          | `lib/util/idempotent-job.nix` | a one-shot Job that survives re-apply, keyed by content hash |
-| `wait.*`                   | `lib/util/wait.nix`           | the readiness probe DSL                                      |
-| duration, CIDR, HCL, parse | `lib/util/`                   | small pure helpers                                           |
+| Helper            | Where                               | Is                                                           |
+| ----------------- | ----------------------------------- | ------------------------------------------------------------ |
+| `mkIdempotentJob` | `lib/kubernetes/idempotent-job.nix` | a one-shot Job that survives re-apply, keyed by content hash |
+| `wait.*`          | `lib/kubernetes/wait.nix`           | the readiness probe DSL                                      |
+| duration          | `lib/kubernetes/duration.nix`       | a Kubernetes duration string, parsed and typed               |
+| IPv4 and CIDR     | `lib/authoring/ipv4.nix`            | address arithmetic over a subnet                             |
+| HCL               | `lib/render/hcl.nix`                | a Nix value rendered as HCL                                  |
 
 `wait.nix` is the same probe language a bundle's `ready` uses — `content`
 wraps it as `readyDeployment` and `readyCondition` — but rendered into a
-container you place yourself. `lib/util/wait.nix:requiredBy` is the table
-saying which fields a probe of each kind needs, and the elaborator checks
-against it.
+container you place yourself. `lib/kubernetes/wait.nix:requiredBy` is the
+table saying which fields a probe of each kind needs, and the elaborator
+checks against it.
 
 ## Related
 

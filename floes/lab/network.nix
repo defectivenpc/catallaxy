@@ -76,7 +76,7 @@ floe.mkFloe {
       subnet =
         if inputs.subnet != null then inputs.subnet else (catallaxy.allocationFor inputs.name).subnet;
 
-      gateway = (import ../../lib/util/network.nix { inherit lib; }).cidrFirstIP subnet;
+      gateway = (import ../../lib/authoring/ipv4.nix { inherit lib; }).cidrFirstIP subnet;
     in
     {
       provides.network = {

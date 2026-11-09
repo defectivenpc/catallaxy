@@ -38,15 +38,15 @@ in
   cli-clippy = packages.cata.passthru.clippy;
   formatting = treefmtEval.config.build.check self;
 }
-// import ./lib-tests.nix { inherit lib pkgs floeCore; }
-// import ./lab-manifests.nix { inherit lib pkgs labDefs; }
-// import ./step-kinds.nix { inherit lib pkgs; }
-// import ./consumer-template.nix {
+// import ./lib/lib-tests.nix { inherit lib pkgs floeCore; }
+// import ./labs/lab-manifests.nix { inherit lib pkgs labDefs; }
+// import ./steps/step-kinds.nix { inherit lib pkgs; }
+// import ./docs/consumer-template.nix {
   inherit lib pkgs withFloes;
   exposed = legacyPackages;
 }
-// import ./option-docs.nix { inherit lib pkgs optionDocs; }
-// import ./schema-coverage.nix {
+// import ./docs/option-docs.nix { inherit lib pkgs optionDocs; }
+// import ./lib/schema-coverage.nix {
   inherit
     lib
     pkgs
@@ -54,12 +54,12 @@ in
     k8sSpecs
     ;
 }
-// import ./document-type.nix {
+// import ./document/document-type.nix {
   inherit lib pkgs floeCore;
   cata = packages.cata;
   cliConfigDir = ../../examples/labs/tests/cli-configs;
 }
-// import ./generated-types.nix {
+// import ./floes/generated-types.nix {
   inherit
     lib
     pkgs
@@ -67,10 +67,10 @@ in
     floeCrds
     ;
 }
-// import ./chart-values.nix { inherit lib pkgs labDefs; }
-// import ./teaching.nix { inherit lib pkgs; }
-// import ./lib-exports.nix { inherit lib pkgs; }
-// import ./signature-reach.nix {
+// import ./floes/chart-values.nix { inherit lib pkgs labDefs; }
+// import ./docs/teaching.nix { inherit lib pkgs; }
+// import ./lib/lib-exports.nix { inherit lib pkgs; }
+// import ./signatures/signature-reach.nix {
   inherit
     lib
     pkgs
@@ -89,8 +89,8 @@ in
     MESH_OPERATOR = "every field is link-local — a controller here, CRDs here — so neither cluster can offer it to the other and neither should.";
   };
 }
-// import ./prose-writes-no-options.nix { inherit lib pkgs; }
-// import ./documented-outputs.nix {
+// import ./docs/prose-writes-no-options.nix { inherit lib pkgs; }
+// import ./docs/documented-outputs.nix {
   inherit
     lib
     pkgs
@@ -107,9 +107,9 @@ in
     labPlans = "the two plans, read back with `nix eval` when a snapshot moves";
   };
 }
-// import ./ops-tool.nix { inherit lib pkgs; }
-// import ./across-labs.nix { inherit lib pkgs labDefs; }
-// import ./lab-checks.nix {
+// import ./labs/ops-tool.nix { inherit lib pkgs; }
+// import ./labs/across-labs.nix { inherit lib pkgs labDefs; }
+// import ./labs/lab-checks.nix {
   inherit
     lib
     pkgs
@@ -121,7 +121,7 @@ in
   digestDir = ../../examples/labs/tests/manifest-digests;
   cliConfigDir = ../../examples/labs/tests/cli-configs;
 }
-// import ./floe-gates.nix {
+// import ./floes/floe-gates.nix {
   inherit
     lib
     pkgs
@@ -133,7 +133,7 @@ in
     "custom"
   ];
 }
-// import ./lab-edge.nix {
+// import ./labs/lab-edge.nix {
   inherit
     lib
     pkgs
@@ -142,7 +142,7 @@ in
     floes
     ;
 }
-// import ./floe-upstream.nix {
+// import ./floes/floe-upstream.nix {
   inherit
     lib
     pkgs
@@ -151,20 +151,20 @@ in
     ;
   floeSet = allFloes;
 }
-// import ./floe-headers.nix { inherit lib pkgs; }
-// import ./step-kind-producers.nix { inherit lib pkgs; }
-// import ./lab-link-reads.nix { inherit lib pkgs; }
-// import ./plan-tokens.nix { inherit lib pkgs; }
-// import ./counts.nix {
+// import ./docs/floe-headers.nix { inherit lib pkgs; }
+// import ./steps/step-kind-producers.nix { inherit lib pkgs; }
+// import ./labs/lab-link-reads.nix { inherit lib pkgs; }
+// import ./steps/plan-tokens.nix { inherit lib pkgs; }
+// import ./docs/counts.nix {
   inherit lib pkgs;
   floeSet = allFloes;
   labDefs = exampleLabs;
 }
-// import ./docs.nix {
+// import ./docs/docs.nix {
   inherit lib pkgs;
-  inherit (packages) docs;
+  inherit (flakePackages) docs;
 }
-// import ./floe-names.nix {
+// import ./floes/floe-names.nix {
   inherit
     lib
     pkgs
@@ -174,23 +174,23 @@ in
   inherit catallaxy;
   floeSet = allFloes;
 }
-// import ./floe-interface.nix {
+// import ./floes/floe-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/floes;
   floeSet = allFloes;
 }
-// import ./kind-interface.nix {
+// import ./kinds/kind-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/kinds;
   inherit catallaxy;
 }
-// import ./signature-interface.nix {
+// import ./signatures/signature-interface.nix {
   inherit lib pkgs referencePages;
   docDir = ../../docs/generated/signatures;
   inherit catallaxy;
 }
-// import ./content-cache.nix { inherit lib pkgs labDefs; }
-// import ./cluster-documents.nix {
+// import ./document/content-cache.nix { inherit lib pkgs labDefs; }
+// import ./document/cluster-documents.nix {
   inherit
     lib
     pkgs
@@ -198,7 +198,7 @@ in
     labDefs
     ;
 }
-// import ./lab-scope.nix {
+// import ./labs/lab-scope.nix {
   inherit
     lib
     pkgs
@@ -208,7 +208,7 @@ in
     floes
     ;
 }
-// import ./secret-sharing.nix {
+// import ./labs/secret-sharing.nix {
   inherit
     lib
     pkgs

@@ -11,7 +11,7 @@
 #
 #   - The TSIG secret was a plain option interpolated into `extraArgs`, which
 #     renders it into the Deployment's argv. That is secret material in a
-#     manifest, and `nix/checks/lab-checks.nix`'s `secret-material` rule would
+#     manifest, and `nix/checks/labs/lab-checks.nix`'s `secret-material` rule would
 #     refuse it. It now arrives as an environment variable from a Secret, which
 #     is what `needsSecrets` is for.
 #
@@ -31,7 +31,7 @@
 }:
 
 let
-  duration = import ../../../lib/util/duration.nix { inherit lib; };
+  duration = import ../../../lib/kubernetes/duration.nix { inherit lib; };
 in
 
 floe.mkFloe {

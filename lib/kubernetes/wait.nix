@@ -19,7 +19,7 @@ let
 
   caBundleVolumeName = "ca-bundle";
 
-  parseDurationSeconds = (import ../util/duration.nix { inherit lib; }).toSeconds "wait.nix";
+  parseDurationSeconds = (import ./duration.nix { inherit lib; }).toSeconds "wait.nix";
 
   divCeil = a: b: (a + b - 1) / b;
 
