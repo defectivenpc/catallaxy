@@ -55,8 +55,15 @@ floe.mkFloe {
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "ghcr.io/project-zot/zot-linux-amd64:v2.1.17";
-      description = "Zot container image.";
+      default = "ghcr.io/project-zot/zot:v2.1.17";
+      description = ''
+        Zot container image.
+
+        The multi-architecture tag, not one of the `zot-linux-<arch>` ones:
+        the registry runs on the operator's machine rather than in a cluster,
+        so the architecture is whatever they are sitting at. A fixed arch runs
+        under emulation on an Apple Silicon host if it runs at all.
+      '';
     };
 
     warmCache = lib.mkOption {

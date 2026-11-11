@@ -142,8 +142,9 @@ fn open_vm_forwarding(docker_subnet: &str, colima_profile: &str) -> Vec<String> 
 }
 
 fn add_host_route(docker_subnet: &str, vm_ip: &str) -> Result<()> {
-    let existing_gw =
-        io::route::gateway_for(docker_subnet.split('/').next().unwrap_or("172.19.0.0"));
+    let existing_gw = io::route::gateway_for_exactly(
+        docker_subnet.split('/').next().unwrap_or("172.19.0.0"),
+    );
 
     match existing_gw.as_deref() {
         Some(gw) if gw == vm_ip => {
@@ -188,7 +189,18 @@ fn add_host_route(docker_subnet: &str, vm_ip: &str) -> Result<()> {
     Ok(())
 }
 
+/// Removes the lab's host route, if this machine has one.
+///
+/// Looks before escalating. `route delete` needs `sudo`, so running it
+/// unconditionally asked every teardown on macOS for an admin password and
+/// then reported there had been nothing to remove — and since nothing in the
+/// deploy direction installs this route today, that was every teardown.
 pub fn teardown_host_networking_macos(docker_subnet: &str) -> Result<()> {
+    let destination = docker_subnet.split('/').next().unwrap_or(docker_subnet);
+    if io::route::gateway_for_exactly(destination).is_none() {
+        return Ok(());
+    }
+
     println!("{} Removing route: {}", style(">>>").cyan(), docker_subnet);
 
     match io::route::delete(docker_subnet) {

@@ -5,7 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     nix-kube-generators.url = "github:farcaller/nix-kube-generators";
-    floes.url = "path:/home/whitehead/workspace/praxiotic/floes";
+    #floes.url = "path:/home/whitehead/workspace/praxiotic/floes";
+    floes.url = "path:/Users/whitehead/workspace/praxiotic/floes";
     crane.url = "github:ipetkov/crane";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";

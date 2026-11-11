@@ -51,7 +51,16 @@ fn talos_config(spec: &ClusterDocument) -> Result<&TalosConfig> {
     }
 }
 
-pub fn resolve_docker_host(ctx: &CataContext, _spec: &ClusterDocument) -> Result<Option<String>> {
+/// The docker socket this machine's labs are built on, with the VM up.
+///
+/// On macOS that is Colima's, started if it is not already running; the
+/// profile is one per operator rather than one per lab, so the second lab of
+/// a session finds it up. Everywhere else docker is the host's own and this
+/// is `None`, meaning "whatever the environment resolves to".
+///
+/// Starting a VM is the point, so call it before probing the daemon and not
+/// after: a reachability check that runs first can only ever refuse.
+pub fn resolve_docker_host(ctx: &CataContext) -> Result<Option<String>> {
     if !io::colima::is_macos() {
         return Ok(None);
     }
@@ -119,7 +128,7 @@ pub fn provision_cluster_with_registry(
             provision_k3d(ctx, name, &cluster_name, spec, registries_yaml, lab_package)?;
         }
         ProvisionerKind::Talos => {
-            let docker_host = resolve_docker_host(ctx, spec)?;
+            let docker_host = resolve_docker_host(ctx)?;
             if io::talos::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 match converge_existing_cluster(
                     name,
@@ -172,7 +181,7 @@ pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument) -> Re
 
     match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
-            let docker_host = resolve_docker_host(ctx, spec)?;
+            let docker_host = resolve_docker_host(ctx)?;
             if !io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 println!("{} Cluster '{name}' is not running", style(">>>").green());
                 return Ok(());
@@ -198,7 +207,7 @@ pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument
 
     match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
-            let docker_host = resolve_docker_host(ctx, spec)?;
+            let docker_host = resolve_docker_host(ctx)?;
             if !io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 println!("{} Cluster '{name}' is not running", style(">>>").green());
                 return Ok(());
@@ -206,7 +215,7 @@ pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument
             io::k3d::cluster_destroy(&cluster_name, docker_host.as_deref())?;
         }
         ProvisionerKind::Talos => {
-            let docker_host = resolve_docker_host(ctx, spec)?;
+            let docker_host = resolve_docker_host(ctx)?;
             if !io::talos::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 println!("{} Cluster '{name}' is not running", style(">>>").green());
                 return Ok(());
@@ -229,7 +238,7 @@ fn provision_k3d(
     registries_yaml: Option<&std::path::Path>,
     lab_package: Option<&str>,
 ) -> Result<()> {
-    let docker_host = resolve_docker_host(ctx, spec)?;
+    let docker_host = resolve_docker_host(ctx)?;
     if io::k3d::cluster_exists(cluster_name, docker_host.as_deref()) {
         io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
         match converge_existing_cluster(name, spec, docker_host.as_deref(), ctx.may_recreate(name))?
@@ -779,17 +788,13 @@ pub fn ensure_lab_services(ctx: &CataContext, cluster_name: &str) -> Option<Path
         }
 
         if let Some(port) = lab.registry_port {
-            let dns_ip = lab
-                .dns_info
-                .as_ref()
-                .and(lab.dns_container())
-                .and_then(io::docker::first_network_ip);
+            let dns = crate::domain::lab::LabDns::resolve(&lab, io::docker::first_network_ip);
             match crate::host::registry::write_node_config(
                 lab_name,
                 port,
                 &lab.registry_upstreams,
-                lab.dns_info.as_ref().map(|d| d.zone.as_str()),
-                dns_ip.as_deref(),
+                lab.registry_trust_zone(),
+                &dns,
             ) {
                 Ok(path) => return Some(path),
                 Err(e) => println!(

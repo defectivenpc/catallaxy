@@ -576,7 +576,7 @@ fn kubeconfig(
         "clusters": [{
             "cluster": {
                 "certificate-authority-data": ca_data,
-                "server": format!("https://0.0.0.0:6443")
+                "server": "https://0.0.0.0:6443"
             },
             "name": cluster_name
         }],

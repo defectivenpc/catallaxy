@@ -45,6 +45,12 @@ let
   # nixpkgs reading as a change to what the lab declares — a fixture that
   # moved on every input bump would be refreshed without being read.
   #
+  # The shebang goes too, name and all. Stripping the hash alone leaves the
+  # interpreter's version in the text, so every generated wrapper — each
+  # lint check, each `<lab>-ops` — moved on a nixpkgs bump that changed
+  # nothing the lab declares. The name is kept everywhere else, because once
+  # the hash is gone it is the only thing left that still names a dependency.
+  #
   # Whatever refreshes the committed digest must use this same pipeline.
   digestCheck =
     name: lab:
@@ -60,7 +66,8 @@ let
       ''
         cd ${lab.package}
         find -L . -type f | sed 's|^\./||' | LC_ALL=C sort | while read -r f; do
-          hash=$(sed 's|/nix/store/[a-z0-9]\{32\}-|/nix/store/HASH-|g' "$f" \
+          hash=$(sed -e '1s|^#![[:space:]]*/nix/store/.*|#!SHEBANG|' \
+            -e 's|/nix/store/[a-z0-9]\{32\}-|/nix/store/HASH-|g' "$f" \
             | sha256sum | cut -d' ' -f1)
           printf '%s  %s\n' "$hash" "$f"
         done > $TMPDIR/actual.txt

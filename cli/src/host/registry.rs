@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use console::style;
 
+use crate::domain::lab::LabDns;
 use crate::host::services;
 use crate::host::state;
 
@@ -18,10 +19,17 @@ use crate::host::state;
 ///
 /// Returns the path to `registries.yaml`, which is what a provisioner mounts.
 ///
-/// `zone` absent means the lab has no DNS, so there is no registry hostname to
-/// trust and only the mirror config is written. `dns_ip` absent is reported
-/// rather than fatal: nodes fall back to docker's resolver and lab hostnames
-/// stop resolving, which is worth saying and not worth refusing a cluster for.
+/// `zone` absent means there is no registry hostname worth trusting — the lab
+/// has no DNS to resolve it or no CA to verify it — so only the mirror config
+/// is written. Ask [`LabDocument::registry_trust_zone`] rather than deciding
+/// here: writing the trust config without the CA beside it points containerd
+/// at a `ca.crt` that was never minted. `dns_ip` absent is reported rather
+/// than fatal: nodes fall back to docker's resolver and lab hostnames stop
+/// resolving, which is worth saying and not worth refusing a cluster for —
+/// and is said only for [`LabDns::Unresolved`], since a lab that declares no
+/// host DNS has nothing missing.
+///
+/// [`LabDocument::registry_trust_zone`]: crate::domain::LabDocument::registry_trust_zone
 ///
 /// # Errors
 ///
@@ -32,7 +40,7 @@ pub fn write_node_config(
     port: u16,
     upstreams: &[String],
     zone: Option<&str>,
-    dns_ip: Option<&str>,
+    dns: &LabDns,
 ) -> Result<PathBuf> {
     let state_dir = state::service_state_dir(lab_name, "registry");
     crate::io::fs::create_dir_all(&state_dir)
@@ -49,21 +57,22 @@ pub fn write_node_config(
         write_registry_trust(&state_dir, lab_name, zone)?;
     }
 
-    match dns_ip {
-        Some(ip) => {
+    match dns {
+        LabDns::At(ip) => {
             crate::io::fs::write(
                 state_dir.join("lab-resolv.conf"),
                 services::lab_resolv_conf(ip),
             )
             .context("writing lab-resolv.conf")?;
         }
-        None => {
+        LabDns::Unresolved => {
             println!(
                 "{} Could not resolve lab DNS container IP; cluster nodes \
                  will fall back to Docker DNS (lab hostnames won't resolve)",
                 style("Warning:").yellow(),
             );
         }
+        LabDns::NotDeclared => {}
     }
 
     Ok(registries_yaml)

@@ -101,11 +101,6 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
         cmd.args(["-p", port]);
     }
 
-    cmd.args([
-        "--volume",
-        "/var/run/docker.sock:/var/run/docker.sock@server:0",
-    ]);
-
     if let Some(path) = registries_yaml {
         cmd.args([
             "--volume",

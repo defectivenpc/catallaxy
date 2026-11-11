@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use console::style;
 
+use crate::domain::lab::LabDns;
 use crate::domain::plan::RegistrySetupParams;
 use crate::host::registry;
 use crate::plan::StepContext;
@@ -9,7 +10,7 @@ pub fn run(sctx: &StepContext<'_>, p: &RegistrySetupParams) -> Result<()> {
     let RegistrySetupParams {
         port,
         upstreams,
-        zone,
+        zone: _,
     } = p;
 
     if sctx.dry_run {
@@ -28,17 +29,14 @@ pub fn run(sctx: &StepContext<'_>, p: &RegistrySetupParams) -> Result<()> {
         )
     })?;
 
-    let dns_ip = sctx
-        .lab
-        .dns_container()
-        .and_then(crate::io::docker::first_network_ip);
+    let dns = LabDns::resolve(sctx.lab, crate::io::docker::first_network_ip);
 
     registry::write_node_config(
         sctx.lab_name,
         port,
         upstreams,
-        Some(zone),
-        dns_ip.as_deref(),
+        sctx.lab.registry_trust_zone(),
+        &dns,
     )?;
     Ok(())
 }

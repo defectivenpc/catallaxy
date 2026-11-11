@@ -91,6 +91,37 @@ pub struct DnsInfo {
     pub zone: String,
 }
 
+/// Where a cluster node should send lab hostname lookups.
+///
+/// Three states, because the two ways of having no address mean opposite
+/// things to whoever writes `resolv.conf`: a lab that declares no host DNS is
+/// working as designed and nodes fall through to docker's resolver, while a
+/// lab that declares one and cannot be told its address has lost something it
+/// asked for. Collapsing both into a missing address made the second
+/// unreportable and the first report a problem that was not one.
+pub enum LabDns {
+    /// No host DNS in this lab. Lab hostnames are not expected to resolve.
+    NotDeclared,
+    /// The lab's DNS container, at this address.
+    At(String),
+    /// Declared, but its container address could not be found.
+    Unresolved,
+}
+
+impl LabDns {
+    /// Which of the three this lab is in, given a way to look up a container.
+    ///
+    /// The lookup is passed in rather than performed here: which address a
+    /// container has is a question for the docker adapter, and the decision
+    /// this makes is not.
+    pub fn resolve(lab: &LabDocument, ip_of: impl FnOnce(&str) -> Option<String>) -> Self {
+        match lab.dns_info.as_ref().and(lab.dns_container()) {
+            None => Self::NotDeclared,
+            Some(container) => ip_of(container).map_or(Self::Unresolved, Self::At),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CdConfig {
@@ -197,6 +228,34 @@ fn resolve_context<'a>(
 impl LabDocument {
     pub fn dns_container(&self) -> Option<&str> {
         self.services.get("dns").map(|s| s.container.as_str())
+    }
+
+    /// Whether anything in this lab mints the lab CA.
+    ///
+    /// Read off the plan rather than carried as a flag: the CA exists on disk
+    /// because `cert-generate` put it there, so the step's presence is the
+    /// fact, and a lab cannot declare one without the other.
+    pub fn mints_lab_ca(&self) -> bool {
+        self.deployment_plan
+            .iter()
+            .any(|step| matches!(step.params, crate::domain::plan::StepParams::CertGenerate(_)))
+    }
+
+    /// The zone whose registry hostname a node should be told to trust.
+    ///
+    /// Both halves have to hold. The trust config names
+    /// `https://registry.<zone>` and verifies it against the lab CA, so
+    /// without lab DNS the hostname never resolves and without the CA the
+    /// `ca =` line points at a file that was never minted — a node told to
+    /// trust it fails the pull it was supposed to enable.
+    ///
+    /// `None` is the ordinary answer for a lab that reaches its registry
+    /// through the localhost mirror instead, which `minimal.local` does.
+    pub fn registry_trust_zone(&self) -> Option<&str> {
+        self.dns_info
+            .as_ref()
+            .filter(|_| self.mints_lab_ca())
+            .map(|d| d.zone.as_str())
     }
 
     pub fn from_value(value: Value) -> Result<Self, serde_json::Error> {

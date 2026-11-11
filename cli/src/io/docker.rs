@@ -28,9 +28,16 @@ pub fn apply_host(cmd: &mut Command, docker_host: Option<&str>) {
     }
 }
 
-pub fn daemon_reachable() -> bool {
-    command()
-        .args(["info", "--format", "{{.ServerVersion}}"])
+/// Whether the daemon the caller is about to use answers.
+///
+/// `docker_host` is the socket to probe, as [`apply_host`] takes it: pass the
+/// one a lab will actually be built on, so that a reachable daemon somewhere
+/// else — the operator's active context, a stopped VM's leftover setting —
+/// cannot answer for it. `None` probes whatever the environment resolves to.
+pub fn daemon_reachable(docker_host: Option<&str>) -> bool {
+    let mut cmd = command();
+    apply_host(&mut cmd, docker_host);
+    cmd.args(["info", "--format", "{{.ServerVersion}}"])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()

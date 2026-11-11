@@ -295,7 +295,7 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
 
     let lab = crate::io::nix::get_lab_document(ctx, name)?;
 
-    if !io::docker::daemon_reachable() {
+    if !io::docker::daemon_reachable(None) {
         println!(
             "  {} the docker daemon is not reachable, so every container below \
              reads as stopped whether or not the lab was ever started.",

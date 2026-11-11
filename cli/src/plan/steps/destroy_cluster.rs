@@ -82,7 +82,7 @@ fn k3d_already_gone(sctx: &StepContext<'_>, spec: &ClusterDocument) -> bool {
         return false;
     }
     let cluster_short = k3d_name(spec);
-    let docker_host = crate::provision::resolve_docker_host(sctx.ctx, spec)
+    let docker_host = crate::provision::resolve_docker_host(sctx.ctx)
         .ok()
         .flatten();
     if io::k3d::cluster_exists(cluster_short, docker_host.as_deref()) {

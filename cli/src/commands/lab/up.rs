@@ -31,7 +31,9 @@ pub async fn run(
 fn preflight(ctx: &CataContext, name: &str) -> Result<()> {
     io::process::check_required_tools()?;
 
-    if !io::docker::daemon_reachable() {
+    let docker_host = crate::provision::resolve_docker_host(ctx)?;
+
+    if !io::docker::daemon_reachable(docker_host.as_deref()) {
         bail!(
             "the docker daemon is not reachable, and every cluster and host service \
              this lab needs runs on it. Start docker (or check DOCKER_HOST) and try again."
