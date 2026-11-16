@@ -26,7 +26,8 @@ pub struct CleanupRequest {
 }
 
 pub fn run(req: CleanupRequest) -> Result<()> {
-    let inventory = crate::domain::inventory::correlate(&io::host_inventory::gather());
+    let docker = io::container_host::operator_docker();
+    let inventory = crate::domain::inventory::correlate(&io::host_inventory::gather(&docker));
 
     if !inventory.docker_reachable {
         bail!(
@@ -35,7 +36,7 @@ pub fn run(req: CleanupRequest) -> Result<()> {
         );
     }
 
-    let selected = select(&inventory, &req)?;
+    let selected = select(&docker, &inventory, &req)?;
     let plans: Vec<CleanupPlan> = selected
         .iter()
         .map(|lab| {
@@ -77,11 +78,11 @@ pub fn run(req: CleanupRequest) -> Result<()> {
     let mut failed = Vec::new();
     for plan in &plans {
         for action in &plan.actions {
-            apply(action, &mut failed);
+            apply(&docker, action, &mut failed);
         }
     }
     for action in &orphan_actions {
-        apply(action, &mut failed);
+        apply(&docker, action, &mut failed);
     }
 
     println!();
@@ -96,7 +97,11 @@ pub fn run(req: CleanupRequest) -> Result<()> {
     )
 }
 
-fn select(inventory: &Inventory, req: &CleanupRequest) -> Result<Vec<RunningLab>> {
+fn select(
+    docker: &io::docker::Docker,
+    inventory: &Inventory,
+    req: &CleanupRequest,
+) -> Result<Vec<RunningLab>> {
     if req.all {
         return Ok(inventory.labs.clone());
     }
@@ -104,7 +109,7 @@ fn select(inventory: &Inventory, req: &CleanupRequest) -> Result<Vec<RunningLab>
         if let Some(lab) = inventory.labs.iter().find(|l| &l.name == name) {
             return Ok(vec![lab.clone()]);
         }
-        let leftovers = remnants_of(name);
+        let leftovers = remnants_of(docker, name);
         if leftovers.network.is_some() || leftovers.has_record {
             return Ok(vec![leftovers]);
         }
@@ -123,13 +128,13 @@ fn select(inventory: &Inventory, req: &CleanupRequest) -> Result<Vec<RunningLab>
 }
 
 /// What is left of a lab that the inventory no longer recognises.
-fn remnants_of(name: &str) -> RunningLab {
+fn remnants_of(docker: &io::docker::Docker, name: &str) -> RunningLab {
     RunningLab {
         name: name.to_string(),
         origin: crate::domain::inventory::Origin::Unknown,
         containers: Vec::new(),
         k3d_clusters: Vec::new(),
-        network: io::docker::network_exists(name).then(|| name.to_string()),
+        network: docker.network_exists(name).then(|| name.to_string()),
         has_record: crate::host::state::read_lab_record(name).is_some(),
         attributions: Default::default(),
     }
@@ -252,29 +257,29 @@ fn confirm() -> Result<bool> {
     Ok(io::fs::read_line()?.trim().eq_ignore_ascii_case("y"))
 }
 
-fn apply(action: &CleanupAction, failed: &mut Vec<String>) {
+fn apply(docker: &io::docker::Docker, action: &CleanupAction, failed: &mut Vec<String>) {
     match action {
         CleanupAction::DestroyK3dCluster(name) => {
             println!("{} destroying k3d cluster {name}", style(">>>").cyan());
-            if io::k3d::cluster_destroy(name, None).is_err() {
+            if io::k3d::cluster_destroy(name, docker.host()).is_err() {
                 failed.push(format!("k3d cluster {name}"));
                 return;
             }
-            if !io::k3d::sweep_stragglers(name) {
+            if !io::k3d::sweep_stragglers(docker, name) {
                 failed.push(format!("containers of k3d cluster {name}"));
             }
         }
         CleanupAction::RemoveContainer(name) => {
             println!("{} removing container {name}", style(">>>").cyan());
-            io::docker::force_remove_container(name);
-            if io::docker::container_exists(name) {
+            docker.force_remove_container(name);
+            if docker.container_exists(name) {
                 failed.push(format!("container {name}"));
             }
         }
         CleanupAction::RemoveNetwork(name) => {
             println!("{} removing docker network {name}", style(">>>").cyan());
-            io::docker::remove_network(name);
-            if io::docker::network_exists(name) {
+            docker.remove_network(name);
+            if docker.network_exists(name) {
                 failed.push(format!(
                     "docker network {name} is still in use, so something on it did not go"
                 ));

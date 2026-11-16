@@ -63,6 +63,13 @@ in
     fields = T.attrsOf (T.named "labStep" (T.moduleType stepType.declaredStepType));
   };
 
+  labHost = floe.mkSig {
+    name = "catallaxy.labHost";
+    canonicalName = "labHost";
+    description = "The container host the lab's network and host services are on.";
+    fields = sigs.CONTAINER_HOST.fields.engine;
+  };
+
   dnsInfo = floe.mkSig {
     name = "catallaxy.dnsInfo";
     canonicalName = "dnsInfo";

@@ -34,8 +34,8 @@ fn preflight(ctx: &CataContext, name: &str) -> Result<()> {
     let lab = io::nix::get_lab_document(ctx, name)?;
 
     for host in lab.container_hosts() {
-        let docker_host = crate::provision::resolve_docker_host(ctx, host)?;
-        if !io::docker::daemon_reachable(docker_host.as_deref()) {
+        let docker_host = io::container_host::ensure_up(&ctx.colima, host)?;
+        if !io::docker::Docker::at(docker_host.clone()).daemon_reachable() {
             bail!(
                 "the docker daemon at {} is not reachable, and this lab runs on it. \
                  Start docker (or check DOCKER_HOST) and try again.",
@@ -44,11 +44,13 @@ fn preflight(ctx: &CataContext, name: &str) -> Result<()> {
         }
     }
 
-    refuse_colliding_subnet(name, &lab)?;
+    let docker = io::container_host::docker_for(&ctx.colima, &lab.host);
 
-    refuse_taken_ports(name, &lab)?;
+    refuse_colliding_subnet(&docker, name, &lab)?;
 
-    refuse_legacy_router(&lab)?;
+    refuse_taken_ports(&docker, name, &lab)?;
+
+    refuse_legacy_router(&docker, &lab)?;
 
     crate::host::state::write_lab_record(&crate::domain::lab_record::LabRecord::of(
         &lab,
@@ -72,9 +74,10 @@ const LEGACY_ROUTER: &str = "catallaxy-router";
 ///
 /// The label is authoritative; the name shape covers containers created
 /// before catallaxy recorded provenance.
-fn describe_holder(container: &str) -> String {
-    if let Some(lab) = io::docker::container_label(container, crate::domain::provenance::LAB) {
-        let flake = io::docker::container_label(container, crate::domain::provenance::FLAKE)
+fn describe_holder(docker: &io::docker::Docker, container: &str) -> String {
+    if let Some(lab) = docker.container_label(container, crate::domain::provenance::LAB) {
+        let flake = docker
+            .container_label(container, crate::domain::provenance::FLAKE)
             .map(|f| format!(" from {f}"))
             .unwrap_or_default();
         return format!("which belongs to lab '{lab}'{flake}");
@@ -85,13 +88,13 @@ fn describe_holder(container: &str) -> String {
     }
 }
 
-fn refuse_legacy_router(lab: &LabDocument) -> Result<()> {
+fn refuse_legacy_router(docker: &io::docker::Docker, lab: &LabDocument) -> Result<()> {
     let declares_router = lab
         .services
         .values()
         .any(|s| s.container.ends_with("-router"));
 
-    if !declares_router || !io::docker::container_exists(LEGACY_ROUTER) {
+    if !declares_router || !docker.container_exists(LEGACY_ROUTER) {
         return Ok(());
     }
 
@@ -105,7 +108,7 @@ fn refuse_legacy_router(lab: &LabDocument) -> Result<()> {
     )
 }
 
-fn refuse_taken_ports(name: &str, lab: &LabDocument) -> Result<()> {
+fn refuse_taken_ports(docker: &io::docker::Docker, name: &str, lab: &LabDocument) -> Result<()> {
     let ours: Vec<&str> = lab
         .services
         .values()
@@ -114,7 +117,7 @@ fn refuse_taken_ports(name: &str, lab: &LabDocument) -> Result<()> {
 
     let mut taken: Vec<String> = Vec::new();
     for (service, port) in declared_host_ports(lab) {
-        let publishers = io::docker::containers_publishing(port);
+        let publishers = docker.containers_publishing(port);
         let holders: Vec<&String> = publishers
             .iter()
             .filter(|c| !ours.contains(&c.as_str()))
@@ -124,7 +127,7 @@ fn refuse_taken_ports(name: &str, lab: &LabDocument) -> Result<()> {
             for holder in &holders {
                 taken.push(format!(
                     "  port {port} ({service}) is published by {holder}, {}",
-                    describe_holder(holder)
+                    describe_holder(docker, holder)
                 ));
             }
             continue;
@@ -208,11 +211,15 @@ fn port_state(port: u16) -> PortState {
     classify_bind(io::net::try_bind(port))
 }
 
-fn refuse_colliding_subnet(name: &str, lab: &LabDocument) -> Result<()> {
-    let taken = io::docker::network_subnets();
+fn refuse_colliding_subnet(
+    docker: &io::docker::Docker,
+    name: &str,
+    lab: &LabDocument,
+) -> Result<()> {
+    let taken = docker.network_subnets();
     let ours = lab.network.docker_subnet.as_str();
 
-    let existing_lab_network = io::docker::network_subnets_of(&lab.network.name);
+    let existing_lab_network = docker.network_subnets_of(&lab.network.name);
     let collisions: Vec<&str> = subnet::colliding(ours, &taken)
         .into_iter()
         .filter(|c| !existing_lab_network.iter().any(|own| own == c))

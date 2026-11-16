@@ -31,7 +31,14 @@ pub fn run(sctx: &StepContext<'_>, p: &DestroyClusterParams) -> Result<()> {
                 );
             }
             if spec.provisioning.config.kind() == ProvisionerKind::K3d
-                && !io::k3d::sweep_stragglers(k3d_name(spec))
+                && !io::k3d::sweep_stragglers(
+                    &io::docker::Docker::at(
+                        crate::provision::cluster_docker_host(sctx.ctx, spec)
+                            .ok()
+                            .flatten(),
+                    ),
+                    k3d_name(spec),
+                )
             {
                 step_failed = true;
             }

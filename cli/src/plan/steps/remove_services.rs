@@ -1,7 +1,6 @@
 use anyhow::Result;
 use console::style;
 
-use crate::io;
 use crate::plan::StepContext;
 
 pub fn run(sctx: &StepContext<'_>) -> Result<()> {
@@ -13,7 +12,7 @@ pub fn run(sctx: &StepContext<'_>) -> Result<()> {
             continue;
         }
         println!("{} Removing {}...", style(">>>").cyan(), svc_desc);
-        io::docker::stop_container(container)?;
+        sctx.docker().stop_container(container)?;
         println!("{} {} removed", style(">>>").green(), svc_desc);
     }
     Ok(())

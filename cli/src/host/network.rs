@@ -142,9 +142,8 @@ fn open_vm_forwarding(docker_subnet: &str, colima_profile: &str) -> Vec<String> 
 }
 
 fn add_host_route(docker_subnet: &str, vm_ip: &str) -> Result<()> {
-    let existing_gw = io::route::gateway_for_exactly(
-        docker_subnet.split('/').next().unwrap_or("172.19.0.0"),
-    );
+    let existing_gw =
+        io::route::gateway_for_exactly(docker_subnet.split('/').next().unwrap_or("172.19.0.0"));
 
     match existing_gw.as_deref() {
         Some(gw) if gw == vm_ip => {

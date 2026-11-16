@@ -156,6 +156,16 @@ fn fns_containing_run_detached(file: &syn::File) -> Vec<(String, IdentCounts)> {
         found: Vec<(String, IdentCounts)>,
     }
 
+    fn starts_container(calls: &MethodCalls) -> bool {
+        calls.found.iter().any(|call| {
+            call.args.first().is_some_and(|first| {
+                let strings = array_strings(first);
+                strings.first().map(String::as_str) == Some("run")
+                    && strings.get(1).map(String::as_str) == Some("-d")
+            })
+        })
+    }
+
     impl Visit<'_> for Finder {
         fn visit_item_fn(&mut self, item: &syn::ItemFn) {
             let mut calls = MethodCalls {
@@ -163,21 +173,24 @@ fn fns_containing_run_detached(file: &syn::File) -> Vec<(String, IdentCounts)> {
                 found: Vec::new(),
             };
             calls.visit_item_fn(item);
-
-            let starts_container = calls.found.iter().any(|call| {
-                call.args.first().is_some_and(|first| {
-                    let strings = array_strings(first);
-                    strings.first().map(String::as_str) == Some("run")
-                        && strings.get(1).map(String::as_str) == Some("-d")
-                })
-            });
-
-            if starts_container {
+            if starts_container(&calls) {
                 self.found
                     .push((item.sig.ident.to_string(), idents_of(item)));
             }
-
             syn::visit::visit_item_fn(self, item);
+        }
+
+        fn visit_impl_item_fn(&mut self, item: &syn::ImplItemFn) {
+            let mut calls = MethodCalls {
+                name: "args",
+                found: Vec::new(),
+            };
+            calls.visit_impl_item_fn(item);
+            if starts_container(&calls) {
+                self.found
+                    .push((item.sig.ident.to_string(), idents_of(item)));
+            }
+            syn::visit::visit_impl_item_fn(self, item);
         }
     }
 

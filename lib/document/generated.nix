@@ -464,6 +464,7 @@ let
         deploymentPlan = T.listOf plannedStep;
         destroy = destroyConfig;
         dnsInfo = T.optional (T.nullOr dnsInfo);
+        host = T.optional containerHost;
         infraPublications = T.optional (T.listOf infraPublication);
         labName = T.str;
         labOwnedRegistries = T.listOf T.str;

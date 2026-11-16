@@ -5,7 +5,6 @@ use console::style;
 
 use crate::config::Context as CataContext;
 use crate::domain::cluster::{K3dConfig, TalosConfig};
-use crate::domain::container_host::{ColimaHost, ContainerHost};
 use crate::domain::{ClusterDocument, ProvisionerConfig, ProvisionerKind};
 use crate::io;
 
@@ -52,50 +51,13 @@ fn talos_config(spec: &ClusterDocument) -> Result<&TalosConfig> {
     }
 }
 
-/// The `DOCKER_HOST` a host is reached through, with its engine up.
-///
-/// `None` means "whatever the environment resolves to". A local host on macOS
-/// is Colima's `catallaxy` profile, and any Colima host becomes `None` when
-/// the operator set `CATA_COLIMA_DISABLE` because their docker is Docker
-/// Desktop. A profile that is not running is started, sized by the
-/// operator's `CATA_COLIMA_*`, because one profile serves every lab and so
-/// its size is not any one lab's to say.
-///
-/// Starting a VM is the point, so call it before probing the daemon and not
-/// after: a reachability check that runs first can only ever refuse.
-pub fn resolve_docker_host(ctx: &CataContext, host: &ContainerHost) -> Result<Option<String>> {
-    match host {
-        ContainerHost::Local(_) if io::colima::is_macos() => resolve_docker_host(
-            ctx,
-            &ContainerHost::Colima(ColimaHost {
-                profile: "catallaxy".to_string(),
-            }),
-        ),
-        ContainerHost::Local(_) => Ok(None),
-        ContainerHost::Ssh(_) => Ok(host.ssh_endpoint()),
-        ContainerHost::Colima(_) if !ctx.colima.enable => Ok(None),
-        ContainerHost::Colima(ColimaHost { profile }) => {
-            let colima = &ctx.colima;
-            if io::colima::profile_running(profile) {
-                println!(
-                    "{} Colima VM already running (profile: {profile})",
-                    style(">>>").green(),
-                );
-            } else {
-                io::colima::start(profile, colima.cpu, colima.memory, colima.disk)?;
-            }
-            Ok(Some(io::colima::docker_socket(profile)))
-        }
-    }
-}
-
-/// [`resolve_docker_host`] for a cluster `cata` runs, and `None` for one it
-/// does not.
+/// The `DOCKER_HOST` a cluster `cata` runs is on, with its engine up, and
+/// `None` for one it does not run.
 pub fn cluster_docker_host(ctx: &CataContext, spec: &ClusterDocument) -> Result<Option<String>> {
     spec.provisioning
         .config
         .host()
-        .map_or(Ok(None), |h| resolve_docker_host(ctx, h))
+        .map_or(Ok(None), |h| io::container_host::ensure_up(&ctx.colima, h))
 }
 
 fn run_pre_provision_hooks(name: &str, spec: &ClusterDocument) -> Result<()> {
@@ -787,10 +749,11 @@ pub fn ensure_lab_services(ctx: &CataContext, cluster_name: &str) -> Option<Path
             continue;
         }
 
+        let docker = io::container_host::docker_for(&ctx.colima, &lab.host);
         let provenance = crate::domain::provenance::Provenance::new(lab_name, ctx.flake_uri());
         for (svc_name, svc) in &lab.services {
             if let Err(e) =
-                crate::host::services::start_service(lab_name, svc_name, svc, &provenance)
+                crate::host::services::start_service(&docker, lab_name, svc_name, svc, &provenance)
             {
                 let description = svc.description.as_str();
                 println!(
@@ -803,7 +766,7 @@ pub fn ensure_lab_services(ctx: &CataContext, cluster_name: &str) -> Option<Path
         }
 
         if let Some(port) = lab.registry_port {
-            let dns = crate::domain::lab::LabDns::resolve(&lab, io::docker::first_network_ip);
+            let dns = crate::domain::lab::LabDns::resolve(&lab, |c| docker.first_network_ip(c));
             match crate::host::registry::write_node_config(
                 lab_name,
                 port,

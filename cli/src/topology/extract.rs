@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 
 use super::*;
-use crate::config::Context as CataContext;
 use crate::domain::{ClusterDocument, LabDocument, StepParams};
 use crate::io;
 
@@ -200,10 +199,10 @@ fn extract_plan_steps(lab: &LabDocument) -> Vec<PlanStep> {
         .collect()
 }
 
-pub fn enrich_live(_ctx: &CataContext, topo: &mut LabTopology) -> Result<()> {
+pub fn enrich_live(docker: &io::docker::Docker, topo: &mut LabTopology) -> Result<()> {
     for svc in topo.services.values_mut() {
         if !svc.container.is_empty() {
-            svc.running = Some(io::docker::container_running(&svc.container));
+            svc.running = Some(docker.container_running(&svc.container));
         }
     }
 

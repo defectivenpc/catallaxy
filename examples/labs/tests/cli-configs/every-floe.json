@@ -501,6 +501,11 @@
   },
   "destroy": {},
   "dnsInfo": null,
+  "host": {
+    "colima": {
+      "profile": "catallaxy"
+    }
+  },
   "infraPublications": [
     {
       "key": "provisioned/identity",

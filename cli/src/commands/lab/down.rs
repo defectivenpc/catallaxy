@@ -10,6 +10,7 @@ pub fn run(ctx: &CataContext, name: &str) -> Result<()> {
     );
 
     let lab = crate::io::nix::get_lab_document(ctx, name)?;
+    let docker = crate::io::container_host::docker_for(&ctx.colima, &lab.host);
 
     let cluster_names = &lab.cluster_names;
 
@@ -54,7 +55,7 @@ pub fn run(ctx: &CataContext, name: &str) -> Result<()> {
     let running: Vec<String> = lab
         .services
         .iter()
-        .filter(|(_, svc)| crate::io::docker::container_running(&svc.container))
+        .filter(|(_, svc)| docker.container_running(&svc.container))
         .map(|(svc_name, _)| svc_name.clone())
         .collect();
 

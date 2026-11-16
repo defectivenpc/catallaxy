@@ -241,6 +241,9 @@
     "port": 5310,
     "zone": "self-edge.test"
   },
+  "host": {
+    "local": {}
+  },
   "infraPublications": [],
   "labName": "self-edge",
   "labOwnedRegistries": [],
@@ -276,8 +279,10 @@
         "self-edge"
       ],
       "ports": [
-        "5310:53/tcp",
-        "5310:53/udp"
+        "127.0.0.1:5310:53/tcp",
+        "127.0.0.1:5310:53/udp",
+        "172.16.160.1:5310:53/tcp",
+        "172.16.160.1:5310:53/udp"
       ],
       "readyProbe": null,
       "volumes": {

@@ -41,6 +41,7 @@ pub async fn run(
         lab: &lab,
         config: &config,
         package: package.as_deref(),
+        docker: crate::io::container_host::docker_for(&ctx.colima, &lab.host),
     };
 
     if !json {

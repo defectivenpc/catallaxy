@@ -71,6 +71,11 @@ pub struct LabDocument {
 
     pub services: BTreeMap<String, HostService>,
 
+    /// The container host the lab's network and host services are on. The
+    /// operator machine's own docker when the document does not say.
+    #[serde(default)]
+    pub host: ContainerHost,
+
     pub destroy: DestroyConfig,
 
     #[serde(default)]
@@ -227,11 +232,14 @@ fn resolve_context<'a>(
 }
 
 impl LabDocument {
-    /// Every engine this lab's clusters run on, once each, in cluster order.
+    /// Every engine this lab runs on, once each: its own, then its clusters'.
     pub fn container_hosts(&self) -> Vec<&ContainerHost> {
-        self.clusters
-            .values()
-            .filter_map(|c| c.provisioning.config.host())
+        std::iter::once(&self.host)
+            .chain(
+                self.clusters
+                    .values()
+                    .filter_map(|c| c.provisioning.config.host()),
+            )
             .fold(Vec::new(), |mut seen, h| {
                 if !seen.contains(&h) {
                     seen.push(h);
@@ -514,6 +522,7 @@ mod schema {
                 "deploymentPlan",
                 "destroy",
                 "dnsInfo",
+                "host",
                 "infraPublications",
                 "labName",
                 "labOwnedRegistries",

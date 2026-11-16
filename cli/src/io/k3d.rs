@@ -513,9 +513,9 @@ pub fn node_names(cluster: &str, docker_host: Option<&str>) -> Vec<String> {
 /// `k3d cluster delete` reports success while leaving nodes running often
 /// enough that this exists. Shared with `lab cleanup`, which has no spec to
 /// reach it through.
-pub fn sweep_stragglers(k3d_cluster_name: &str) -> bool {
+pub fn sweep_stragglers(docker: &crate::io::docker::Docker, k3d_cluster_name: &str) -> bool {
     let container_prefix = format!("k3d-{k3d_cluster_name}-");
-    let out = match crate::io::docker::containers_named(&container_prefix) {
+    let out = match docker.containers_named(&container_prefix) {
         Ok(o) if o.status.success() => o,
         Ok(o) => {
             println!(
@@ -552,7 +552,7 @@ pub fn sweep_stragglers(k3d_cluster_name: &str) -> bool {
     );
     for c in &stragglers {
         println!("{} docker rm -f {c}", style(">>>").yellow());
-        crate::io::docker::force_remove_container(c);
+        docker.force_remove_container(c);
     }
     false
 }

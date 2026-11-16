@@ -159,6 +159,9 @@
   },
   "destroy": {},
   "dnsInfo": null,
+  "host": {
+    "local": {}
+  },
   "infraPublications": [],
   "labName": "minimal.cilium",
   "labOwnedRegistries": [],
@@ -195,7 +198,8 @@
       "image": "ghcr.io/project-zot/zot:v2.1.17",
       "networks": [],
       "ports": [
-        "5176:5000"
+        "127.0.0.1:5176:5000",
+        "172.27.0.1:5176:5000"
       ],
       "readyProbe": {
         "expectedStatus": 200,

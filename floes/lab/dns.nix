@@ -156,9 +156,13 @@ floe.mkFloe {
         inherit (inputs) image;
 
         command = [ "knotd" ];
+        # Loopback for the operator machine, the gateway for pods; never every
+        # interface, which on a remote container host is its LAN.
         ports = [
-          "${toString port}:53/tcp"
-          "${toString port}:53/udp"
+          "127.0.0.1:${toString port}:53/tcp"
+          "127.0.0.1:${toString port}:53/udp"
+          "${network.gateway}:${toString port}:53/tcp"
+          "${network.gateway}:${toString port}:53/udp"
         ];
 
         networks = [ network.name ];

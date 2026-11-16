@@ -231,7 +231,12 @@ floe.mkFloe {
         inherit (inputs) image;
 
         command = [ ];
-        ports = [ "${toString port}:5000" ];
+        # Loopback for the operator machine, the gateway for nodes; never every
+        # interface, which on a remote container host is its LAN.
+        ports = [
+          "127.0.0.1:${toString port}:5000"
+          "${requires.network.gateway}:${toString port}:5000"
+        ];
         networks = [ ];
         dnsContainers = [ ];
         extraMounts = [ ];

@@ -204,6 +204,9 @@
   },
   "destroy": {},
   "dnsInfo": null,
+  "host": {
+    "local": {}
+  },
   "infraPublications": [],
   "labName": "provisions",
   "labOwnedRegistries": [],

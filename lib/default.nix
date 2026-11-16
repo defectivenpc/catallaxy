@@ -191,7 +191,12 @@ let
       lowered = lowerLab {
         labName = name;
         inherit clusters;
-        inherit (folds) link cdArrangement services;
+        inherit (folds)
+          link
+          cdArrangement
+          services
+          host
+          ;
         inherit (ordered) deploymentPlan teardownPlan;
 
         network.subnet = subnet;

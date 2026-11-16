@@ -25,7 +25,9 @@ struct RunningJson {
 
 pub fn list(ctx: &CataContext, json: bool) -> Result<()> {
     let defined = crate::io::nix::list_labs_with_cluster_counts(ctx);
-    let inventory = crate::domain::inventory::correlate(&io::host_inventory::gather());
+    let inventory = crate::domain::inventory::correlate(&io::host_inventory::gather(
+        &io::container_host::operator_docker(),
+    ));
 
     if json {
         let defined_names: Vec<String> = defined
@@ -198,7 +200,10 @@ pub fn topology_cmd(
     let mut topo = crate::topology::extract::extract_static(&lab);
 
     if live {
-        crate::topology::extract::enrich_live(ctx, &mut topo)?;
+        crate::topology::extract::enrich_live(
+            &io::container_host::docker_for(&ctx.colima, &lab.host),
+            &mut topo,
+        )?;
     }
 
     print!("{}", crate::topology::render::render(&topo, format)?);
@@ -237,6 +242,7 @@ struct LabState {
 
 pub fn status_json(ctx: &CataContext, name: &str) -> Result<()> {
     let lab = crate::io::nix::get_lab_document(ctx, name)?;
+    let docker = io::container_host::docker_for(&ctx.colima, &lab.host);
 
     let services = lab
         .services
@@ -245,7 +251,7 @@ pub fn status_json(ctx: &CataContext, name: &str) -> Result<()> {
             let container = svc.container.clone();
             ServiceState {
                 name: svc_name.clone(),
-                running: !container.is_empty() && io::docker::container_running(&container),
+                running: !container.is_empty() && docker.container_running(&container),
                 container,
             }
         })
@@ -294,8 +300,9 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
     println!();
 
     let lab = crate::io::nix::get_lab_document(ctx, name)?;
+    let docker = io::container_host::docker_for(&ctx.colima, &lab.host);
 
-    if !io::docker::daemon_reachable(None) {
+    if !docker.daemon_reachable() {
         println!(
             "  {} the docker daemon is not reachable, so every container below \
              reads as stopped whether or not the lab was ever started.",
@@ -322,20 +329,20 @@ pub fn status(ctx: &CataContext, name: &str, json: bool) -> Result<()> {
     );
     println!();
 
-    print_service_status(&lab);
+    print_service_status(&docker, &lab);
     print_cluster_status(&lab)?;
 
     Ok(())
 }
 
-fn print_service_status(lab: &LabDocument) {
+fn print_service_status(docker: &io::docker::Docker, lab: &LabDocument) {
     if !lab.services.is_empty() {
         println!("{}", style("Services:").bold());
         for (svc_name, svc) in &lab.services {
             let container = svc.container.as_str();
             let description = svc.description.as_str();
             let running = if !container.is_empty() {
-                io::docker::container_running(container)
+                docker.container_running(container)
             } else {
                 false
             };

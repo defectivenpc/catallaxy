@@ -13,6 +13,7 @@ pub mod chainsaw;
 pub mod check_script;
 pub mod clusterctl;
 pub mod colima;
+pub mod container_host;
 pub mod crane;
 pub mod diff;
 pub mod discovery;

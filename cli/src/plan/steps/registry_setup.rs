@@ -29,7 +29,7 @@ pub fn run(sctx: &StepContext<'_>, p: &RegistrySetupParams) -> Result<()> {
         )
     })?;
 
-    let dns = LabDns::resolve(sctx.lab, crate::io::docker::first_network_ip);
+    let dns = LabDns::resolve(sctx.lab, |c| sctx.docker().first_network_ip(c));
 
     registry::write_node_config(
         sctx.lab_name,

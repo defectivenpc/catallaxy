@@ -400,6 +400,9 @@
     "port": 5486,
     "zone": "homelab.test"
   },
+  "host": {
+    "local": {}
+  },
   "infraPublications": [],
   "labName": "homelab.local",
   "labOwnedRegistries": [],
@@ -449,8 +452,10 @@
         "homelab.local"
       ],
       "ports": [
-        "5486:53/tcp",
-        "5486:53/udp"
+        "127.0.0.1:5486:53/tcp",
+        "127.0.0.1:5486:53/udp",
+        "172.27.160.1:5486:53/tcp",
+        "172.27.160.1:5486:53/udp"
       ],
       "readyProbe": null,
       "volumes": {
@@ -526,7 +531,8 @@
       "image": "ghcr.io/project-zot/zot:v2.1.17",
       "networks": [],
       "ports": [
-        "5186:5000"
+        "127.0.0.1:5186:5000",
+        "172.27.160.1:5186:5000"
       ],
       "readyProbe": {
         "expectedStatus": 200,

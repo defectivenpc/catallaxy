@@ -12,6 +12,7 @@
       link,
       cdArrangement,
       services,
+      host,
       deploymentPlan,
       teardownPlan,
       secrets,
@@ -179,7 +180,7 @@
 
         opsToolPath = if opsTool == null then null else "${opsTool}/bin/${labName}-ops";
 
-        inherit services;
+        inherit services host;
 
         dnsInfo = if dnsInfo == null then null else { inherit (dnsInfo) host port zone; };
 

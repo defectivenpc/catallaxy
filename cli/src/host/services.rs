@@ -97,6 +97,7 @@ fn prepare_volumes(
 }
 
 pub fn start_service(
+    docker: &io::docker::Docker,
     lab_name: &str,
     svc_name: &str,
     svc: &HostService,
@@ -117,10 +118,10 @@ pub fn start_service(
 
     let (mut volume_mounts, content_changed) = prepare_volumes(lab_name, svc_name, &svc.volumes)?;
 
-    if io::docker::container_running(container) {
-        let actual_image = io::docker::container_image(container);
-        let actual_ports = io::docker::container_ports(container);
-        let labelled_lab = io::docker::container_label(container, crate::domain::provenance::LAB);
+    if docker.container_running(container) {
+        let actual_image = docker.container_image(container);
+        let actual_ports = docker.container_ports(container);
+        let labelled_lab = docker.container_label(container, crate::domain::provenance::LAB);
         let mut drift = service_drift(
             image,
             actual_image.as_deref(),
@@ -132,7 +133,7 @@ pub fn start_service(
             drift.push("config file contents changed".to_string());
         }
 
-        if io::docker::container_restarting(container) {
+        if docker.container_restarting(container) {
             drift.push("docker is restarting it".to_string());
         }
 
@@ -149,7 +150,7 @@ pub fn start_service(
         for line in &drift {
             println!("      - {line}");
         }
-        io::docker::stop_container(container)?;
+        docker.stop_container(container)?;
     }
 
     let ports: Vec<&str> = svc.ports.iter().map(String::as_str).collect();
@@ -167,11 +168,11 @@ pub fn start_service(
     let networks: Vec<String> = svc.networks.clone();
     let command: Vec<String> = svc.command.clone();
     let network_ips = network_ips(svc);
-    let dns_ips = dns_container_ips(svc);
+    let dns_ips = dns_container_ips(docker, svc);
 
     println!("{} Starting {}...", style(">>>").cyan(), description);
 
-    io::docker::run_container_extended(io::docker::RunContainer {
+    docker.run_container_extended(io::docker::RunContainer {
         name: container,
         image,
         ports: &ports,
@@ -187,7 +188,7 @@ pub fn start_service(
     })?;
 
     wait_for_service_ready(svc, description)?;
-    refuse_a_crash_loop(container, description)?;
+    refuse_a_crash_loop(docker, container, description)?;
 
     println!("{} {} started", style(">>>").green(), description);
 
@@ -200,14 +201,19 @@ pub fn start_service(
 /// service with no `readyProbe` is otherwise never asked anything, so a
 /// misconfigured one reads as started and the failure only surfaces much later
 /// as every endpoint that routes through it timing out.
-fn refuse_a_crash_loop(container: &str, description: &str) -> Result<()> {
-    let Some(restarts) = io::docker::container_restart_count(container) else {
+fn refuse_a_crash_loop(
+    docker: &io::docker::Docker,
+    container: &str,
+    description: &str,
+) -> Result<()> {
+    let Some(restarts) = docker.container_restart_count(container) else {
         return Ok(());
     };
     if restarts == 0 {
         return Ok(());
     }
-    let logs = io::docker::container_logs(container, 20)
+    let logs = docker
+        .container_logs(container, 20)
         .unwrap_or_else(|| "docker had no output for it".to_string());
     bail!(
         "{description} has restarted {restarts} time(s) since it was started, so it is not running its own configuration:\n\n{logs}"
@@ -242,13 +248,13 @@ fn network_ips(svc: &HostService) -> HashMap<String, String> {
 /// `.NetworkSettings.IPAddress`, which is only set for the default bridge and
 /// is empty for anything on a lab's own network. This path had never been
 /// used, so it had never been noticed that it always yielded nothing.
-fn dns_container_ips(svc: &HostService) -> Vec<String> {
+fn dns_container_ips(docker: &io::docker::Docker, svc: &HostService) -> Vec<String> {
     svc.dns_containers
         .as_array()
         .map(|arr| {
             arr.iter()
                 .filter_map(|v| v.as_str())
-                .filter_map(io::docker::first_network_ip)
+                .filter_map(|c| docker.first_network_ip(c))
                 .collect()
         })
         .unwrap_or_default()

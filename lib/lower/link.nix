@@ -63,6 +63,8 @@
 
       services = fold "catallaxy.labServices";
 
+      host = lib.head (lib.attrValues link.out."catallaxy.labHost");
+
       steps = fold "catallaxy.labSteps";
 
       secrets = {

@@ -122,6 +122,12 @@ impl<'a> VisitableWith<'a> for syn::ItemFn {
     }
 }
 
+impl<'a> VisitableWith<'a> for syn::ImplItemFn {
+    fn accept(&'a self, visitor: &mut IdentCounts) {
+        visitor.visit_impl_item_fn(self);
+    }
+}
+
 impl<'a> VisitableWith<'a> for syn::Expr {
     fn accept(&'a self, visitor: &mut IdentCounts) {
         visitor.visit_expr(self);

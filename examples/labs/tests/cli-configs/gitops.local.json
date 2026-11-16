@@ -202,6 +202,9 @@
     "port": 5552,
     "zone": "gitops.test"
   },
+  "host": {
+    "local": {}
+  },
   "infraPublications": [],
   "labName": "gitops.local",
   "labOwnedRegistries": [],
@@ -248,8 +251,10 @@
         "gitops.local"
       ],
       "ports": [
-        "5552:53/tcp",
-        "5552:53/udp"
+        "127.0.0.1:5552:53/tcp",
+        "127.0.0.1:5552:53/udp",
+        "172.31.192.1:5552:53/tcp",
+        "172.31.192.1:5552:53/udp"
       ],
       "readyProbe": null,
       "volumes": {
@@ -325,7 +330,8 @@
       "image": "ghcr.io/project-zot/zot:v2.1.17",
       "networks": [],
       "ports": [
-        "5252:5000"
+        "127.0.0.1:5252:5000",
+        "172.31.192.1:5252:5000"
       ],
       "readyProbe": {
         "expectedStatus": 200,

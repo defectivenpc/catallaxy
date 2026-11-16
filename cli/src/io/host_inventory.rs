@@ -114,8 +114,8 @@ fn inspect(names: &[String]) -> Vec<ContainerFact> {
         .collect()
 }
 
-pub fn gather() -> HostFacts {
-    let docker_reachable = crate::io::docker::daemon_reachable(None);
+pub fn gather(docker: &crate::io::docker::Docker) -> HostFacts {
+    let docker_reachable = docker.daemon_reachable();
 
     if !docker_reachable {
         return HostFacts {

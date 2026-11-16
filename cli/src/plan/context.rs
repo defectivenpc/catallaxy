@@ -31,3 +31,10 @@ pub struct StepContext<'a> {
 
     pub failures: RefCell<Vec<StepFailure>>,
 }
+
+impl StepContext<'_> {
+    /// The daemon this lab's network and host services are on.
+    pub fn docker(&self) -> crate::io::docker::Docker {
+        crate::io::container_host::docker_for(&self.ctx.colima, &self.lab.host)
+    }
+}

@@ -1,5 +1,4 @@
 use crate::host::services::probe_once;
-use crate::io;
 use crate::verify::{Diagnostic, Severity, VerifyContext, diag};
 
 const CHECK: &str = "services";
@@ -9,7 +8,7 @@ pub fn run(ctx: &VerifyContext<'_>) -> Vec<Diagnostic> {
 
     for (name, svc) in &ctx.lab.services {
         let container = svc.container.as_str();
-        if !io::docker::container_running(container) {
+        if !ctx.docker.container_running(container) {
             diags.push(diag(
                 Severity::Error,
                 CHECK,

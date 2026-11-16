@@ -2,7 +2,6 @@ use anyhow::{Context, Result, bail};
 use console::style;
 
 use crate::domain::plan::DockerNetworkCreateParams;
-use crate::io;
 use crate::plan::StepContext;
 
 pub fn run(sctx: &StepContext<'_>, p: &DockerNetworkCreateParams) -> Result<()> {
@@ -30,11 +29,13 @@ pub fn run(sctx: &StepContext<'_>, p: &DockerNetworkCreateParams) -> Result<()> 
         subnet
     );
 
-    if io::docker::network_exists(name) {
+    if sctx.docker().network_exists(name) {
         return Ok(());
     }
 
-    let output = io::docker::create_network(name, subnet, gateway)
+    let output = sctx
+        .docker()
+        .create_network(name, subnet, gateway)
         .context("failed to invoke `docker network create`")?;
 
     if !output.status.success() {

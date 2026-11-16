@@ -28,4 +28,5 @@ anything.
 | floe | as |
 | --- | --- |
 | [`k3d-cluster`](../floes/k3d-cluster.md) | `requires.host` |
+| [`lab-services`](../floes/lab-services.md) | `requires.host` |
 | [`talos-cluster`](../floes/talos-cluster.md) | `requires.host` |

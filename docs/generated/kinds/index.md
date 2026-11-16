@@ -15,6 +15,7 @@ which of the two a thing should be.
 | [catallaxy.cluster](./cluster.md) | `clusterDescriptor` | How a cluster is created and who fronts it — the descriptor `cata` builds it from. |
 | [catallaxy.component](./component.md) | `component` | What a floe installs into a cluster: bundles, and the operator surface around them. |
 | [catallaxy.dnsInfo](./dnsInfo.md) | `dnsInfo` | Where the lab's resolver answers, as `cata lab dns` configures the host. |
+| [catallaxy.labHost](./labHost.md) | `labHost` | The container host the lab's network and host services are on. |
 | [catallaxy.labSecrets](./labSecrets.md) | `labSecrets` | Every secret the lab holds, keyed by the name the CLI knows it as. |
 | [catallaxy.labServices](./labServices.md) | `labServices` | Every host service the lab runs, keyed by the name the CLI knows it as. |
 | [catallaxy.labSteps](./labSteps.md) | `labSteps` | Every plan step the lab's floes contribute, keyed by step name. |

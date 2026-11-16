@@ -23,6 +23,8 @@ pub struct VerifyContext<'a> {
     pub lab: &'a LabDocument,
     pub config: &'a VerifyConfig,
     pub package: Option<&'a std::path::Path>,
+    /// The daemon the lab's host services are on.
+    pub docker: crate::io::docker::Docker,
 }
 
 impl VerifyContext<'_> {
@@ -306,6 +308,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         let hosts: Vec<String> = ctx
             .exposed_hosts()
@@ -339,6 +342,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         assert_eq!(
             ctx.exposed_hosts()
@@ -386,6 +390,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         let hosts: Vec<String> = ctx
             .exposed_hosts()
@@ -413,6 +418,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         assert!(ctx.exposed_hosts().is_empty());
     }
@@ -430,6 +436,7 @@ mod tests {
             lab: &plain.0,
             config: &plain.1,
             package: None,
+            docker: Default::default(),
         };
         assert_eq!(ctx.ingress(), Some(("http", 80)));
 
@@ -444,6 +451,7 @@ mod tests {
             lab: &tls.0,
             config: &tls.1,
             package: None,
+            docker: Default::default(),
         };
         assert_eq!(ctx.ingress(), Some(("https", 443)));
     }
@@ -456,6 +464,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         assert_eq!(ctx.ingress(), None);
     }
@@ -471,6 +480,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         assert_eq!(
             ctx.namespaces_for("app").to_vec(),
@@ -493,6 +503,7 @@ mod tests {
             lab: &lab,
             config: &config,
             package: None,
+            docker: Default::default(),
         };
         assert_eq!(ctx.context_for("app"), None);
         assert_eq!(ctx.context_for("obs"), Some("k3d-obs"));

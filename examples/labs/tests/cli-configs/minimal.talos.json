@@ -148,6 +148,9 @@
   },
   "destroy": {},
   "dnsInfo": null,
+  "host": {
+    "local": {}
+  },
   "infraPublications": [],
   "labName": "minimal.talos",
   "labOwnedRegistries": [],

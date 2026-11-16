@@ -33,14 +33,20 @@ floe.mkFloe {
 
   collects.service = sigs.HOST_SERVICE;
 
+  # Where every service it folds runs. One container host for all of them;
+  # with several in a lab, `defaults.CONTAINER_HOST` says which.
+  requires.host = sigs.CONTAINER_HOST;
+
   provides.step = sigs.LAB_STEPS;
 
   out.labServices = kinds.labServices;
+  out.labHost = kinds.labHost;
 
   body =
-    { collects, ... }:
+    { collects, requires, ... }:
     {
       out.labServices = collects.service;
+      out.labHost = requires.host.engine;
 
       provides.step.steps = lib.optionalAttrs (collects.service != { }) {
         setup-services = {
