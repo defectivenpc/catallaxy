@@ -105,11 +105,11 @@ Reusable and documented; never lowered on its own. _Avoid_: partial,
 abstract, templated
 
 **Host floe**: A lab-scope floe that provides a `HOST_SERVICE` — a container
-the lab runs on the operator's machine rather than in any cluster. It
-installs nothing; its _unit name_ is a CLI contract, because `lab-services`
-keys the collection by it and that is the name of its state directory. A lab
-runs one by placing it, so there is no `enable` to turn off. _Avoid_:
-service module, sidecar, lab container
+the lab runs on its container host rather than in any cluster. It installs
+nothing; its _unit name_ is a CLI contract, because `lab-services` keys the
+collection by it and that is the name of its state directory. A lab runs one
+by placing it, so there is no `enable` to turn off. _Avoid_: service module,
+sidecar, lab container
 
 **Withdrawal**: An environment removing a unit its base lab placed, written
 `units.<n> = null` where it is instantiated. The negation placement does not
@@ -193,6 +193,34 @@ profile
 three — an output kind, the wiring, and which floe each unit instantiates —
 and a unit's `provides` is not one of them, because a lab seals its units.
 _Avoid_: output, hatch, escape
+
+## Reaching one
+
+**Operator machine**: Where `cata` runs, and where the lab record, the lab
+stores and the trust store live. One per person running a lab, and not
+necessarily where any of the lab's containers are. _Avoid_: host, laptop
+
+**Container host**: The docker engine a lab places its clusters and host
+services on, as a unit providing `CONTAINER_HOST`: the operator machine's
+own docker, a named Colima profile, or a remote engine over SSH. Which one
+is the lab's to say; how big a VM it runs in is the operator's. _Avoid_:
+host, docker host, substrate
+
+**Reach**: Everything a consumer needs to use a lab from outside it — which
+names resolve where, which roots to trust, which API servers exist and how
+to authenticate, and the egress proxy that stands in for routes. Data only;
+the same for a lab whatever container host it is on. _Avoid_: surface,
+front, access (that is one part of it)
+
+**Attachment**: One consumer joined to a lab's reach, in session mode
+(environment variables, nothing on the machine changes) or system mode
+(resolver, routes, trust store, with sudo). Undone from what it recorded
+doing, never by guessing what to remove. _Avoid_: integration, host setup
+
+**Vantage**: Where a consumer sits relative to a container host: directly,
+or through an SSH tunnel. What turns a reach's endpoints, which are relative
+to the container host, into addresses the consumer can dial. _Avoid_: path,
+route
 
 ## Lowering one
 
