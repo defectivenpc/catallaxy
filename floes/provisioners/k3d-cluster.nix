@@ -241,6 +241,10 @@ floe.mkFloe {
     };
   };
 
+  # The docker engine this cluster's nodes run on. One host in the lab wires
+  # itself; with several, `.bind { host = "<unit>"; }` places the cluster.
+  requires.host = sigs.CONTAINER_HOST;
+
   provides.cluster = sigs.KUBERNETES_CLUSTER;
 
   # Where this cluster is dialled. k3d's container naming is the only place
@@ -394,6 +398,7 @@ floe.mkFloe {
 
           config.k3d = {
             clusterName = inputs.instanceName;
+            host = config.floe.requires.host.engine;
             inherit (inputs) image;
 
             inherit (inputs) network;

@@ -159,6 +159,10 @@ floe.mkFloe {
     };
   };
 
+  # The docker engine this cluster's nodes run on. One host in the lab wires
+  # itself; with several, `.bind { host = "<unit>"; }` places the cluster.
+  requires.host = sigs.CONTAINER_HOST;
+
   provides.cluster = sigs.KUBERNETES_CLUSTER;
 
   # talosctl's container naming, which nothing outside this floe knows.
@@ -267,6 +271,7 @@ floe.mkFloe {
 
           config.talos = {
             clusterName = inputs.instanceName;
+            host = config.floe.requires.host.engine;
             inherit (inputs)
               image
               subnet

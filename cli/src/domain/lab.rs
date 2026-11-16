@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::cluster::{ClusterDocument, DeliveryKind};
+use super::container_host::ContainerHost;
 use super::plan::PlannedStep;
 use super::secrets::SecretsSpec;
 
@@ -226,6 +227,19 @@ fn resolve_context<'a>(
 }
 
 impl LabDocument {
+    /// Every engine this lab's clusters run on, once each, in cluster order.
+    pub fn container_hosts(&self) -> Vec<&ContainerHost> {
+        self.clusters
+            .values()
+            .filter_map(|c| c.provisioning.config.host())
+            .fold(Vec::new(), |mut seen, h| {
+                if !seen.contains(&h) {
+                    seen.push(h);
+                }
+                seen
+            })
+    }
+
     pub fn dns_container(&self) -> Option<&str> {
         self.services.get("dns").map(|s| s.container.as_str())
     }
@@ -236,9 +250,12 @@ impl LabDocument {
     /// because `cert-generate` put it there, so the step's presence is the
     /// fact, and a lab cannot declare one without the other.
     pub fn mints_lab_ca(&self) -> bool {
-        self.deployment_plan
-            .iter()
-            .any(|step| matches!(step.params, crate::domain::plan::StepParams::CertGenerate(_)))
+        self.deployment_plan.iter().any(|step| {
+            matches!(
+                step.params,
+                crate::domain::plan::StepParams::CertGenerate(_)
+            )
+        })
     }
 
     /// The zone whose registry hostname a node should be told to trust.

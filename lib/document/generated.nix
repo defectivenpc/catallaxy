@@ -64,6 +64,20 @@ let
       }
     );
 
+    colimaHost = T.named "ColimaHost" (
+      T.record {
+        profile = T.str;
+      }
+    );
+
+    containerHost = T.named "ContainerHost" (
+      T.taggedUnion {
+        local = localHost;
+        colima = colimaHost;
+        ssh = sshHost;
+      }
+    );
+
     content = T.named "Content" (
       T.record {
         exposedHosts = T.listOf exposedHost;
@@ -233,6 +247,7 @@ let
         extraApiServerArgs = T.listOf T.str;
         extraK3sArgs = T.optional (T.listOf k3sArg);
         extraVolumes = T.listOf extraVolume;
+        host = T.optional containerHost;
         image = T.optional (T.nullOr T.str);
         network = T.optional (T.nullOr T.str);
         noFlannel = T.bool;
@@ -259,6 +274,8 @@ let
         workers = T.int;
       }
     );
+
+    localHost = T.named "LocalHost" (T.any);
 
     managedKeyDef = T.named "ManagedKeyDef" (
       T.record {
@@ -377,6 +394,13 @@ let
       }
     );
 
+    sshHost = T.named "SshHost" (
+      T.record {
+        address = T.str;
+        user = T.optional (T.nullOr T.str);
+      }
+    );
+
     stepPolicy = T.named "StepPolicy" (
       T.record {
         interactive = T.optional T.bool;
@@ -399,6 +423,7 @@ let
         configPatches = T.listOf T.str;
         cpus = T.str;
         exposedPorts = T.listOf T.str;
+        host = T.optional containerHost;
         image = T.optional (T.nullOr T.str);
         kubernetesVersion = T.optional (T.nullOr T.str);
         memory = T.str;

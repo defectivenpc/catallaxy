@@ -1,6 +1,7 @@
 {
   lib,
   floe,
+  sigs,
   ...
 }:
 
@@ -9,8 +10,11 @@ let
 
   stepType = (import ../steps { inherit lib; }).types;
 
+  inherit (sigs.CONTAINER_HOST.fields) engine;
+
   k3dSchema = T.record {
     clusterName = T.str;
+    host = engine;
     image = T.nullOr T.str;
     network = T.nullOr T.str;
 
@@ -44,6 +48,7 @@ let
   talosSchema = T.named "talos" (
     T.record {
       clusterName = T.str;
+      host = engine;
       image = T.nullOr T.str;
       kubernetesVersion = T.nullOr T.str;
       subnet = T.str;

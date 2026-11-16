@@ -16,6 +16,7 @@ neither side names the other.
 | [CLUSTER_STORE](./CLUSTER_STORE.md) | `clusterStore` | A named store an ExternalSecret reads from, and whether it may be written to. |
 | [CNI_BOOTSTRAP](./CNI_BOOTSTRAP.md) | `cniBootstrap` | A CNI's bootstrap manifest, applied by the provisioner before the first node is Ready. |
 | [CONFIG_RELOAD](./CONFIG_RELOAD.md) | `reload` | The annotations that make a workload restart when a Secret or ConfigMap it mounts changes. |
+| [CONTAINER_HOST](./CONTAINER_HOST.md) | `host` | A docker engine the lab places clusters and host services on, as `cata` reaches it. |
 | [DELIVERY_POLICY](./DELIVERY_POLICY.md) | `delivery` | How manifests reach the cluster, what bootstraps the applier, and how long an apply may take. |
 | [DNS_ZONE](./DNS_ZONE.md) | `zone` | The lab's DNS zone and the server authoritative for it. The only fully portable signature. |
 | [GATEWAY_API](./GATEWAY_API.md) | `gatewayApi` | The Gateway API CRDs are registered, so Gateway and route kinds have types. |

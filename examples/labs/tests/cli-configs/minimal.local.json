@@ -138,6 +138,9 @@
                 "hostPath": "/nix/store/HASH-audit-policy.yaml"
               }
             ],
+            "host": {
+              "local": {}
+            },
             "image": "rancher/k3s:v1.31.4-k3s1",
             "network": "minimal.local",
             "noFlannel": false,

@@ -37,6 +37,10 @@ catallaxy.mkLabFloe
     summary = "Every floe in the catalogue, enabled somewhere.";
 
     units = _: {
+      # The one lab that names a Colima profile rather than the operator's
+      # default, so the floe has a lab that renders it.
+      host = floes.colima-host { };
+
       # Three stores and two secrets, every one a unit of the lab's link.
       # Nothing resolves by itself at this width, which is the point of having
       # it here: each secret binds its store and the cluster binds each secret.

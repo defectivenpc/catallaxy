@@ -209,7 +209,7 @@ fn status(ctx: &CataContext, name: &str) -> Result<()> {
     println!("{}", style("Runtime:").bold());
     match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
-            let docker_host = crate::provision::resolve_docker_host(ctx)?;
+            let docker_host = crate::provision::cluster_docker_host(ctx, &spec)?;
             if io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 let _ = io::k3d::cluster_show(&cluster_name, docker_host.as_deref());
             } else {
@@ -217,7 +217,7 @@ fn status(ctx: &CataContext, name: &str) -> Result<()> {
             }
         }
         ProvisionerKind::Talos => {
-            let docker_host = crate::provision::resolve_docker_host(ctx)?;
+            let docker_host = crate::provision::cluster_docker_host(ctx, &spec)?;
             if io::talos::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 let _ = io::talos::cluster_show(&cluster_name, docker_host.as_deref());
             } else {

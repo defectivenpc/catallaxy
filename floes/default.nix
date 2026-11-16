@@ -64,6 +64,11 @@
     lab-delivery = ./lab/delivery.nix;
   };
 
+  hosts = {
+    local-docker = ./hosts/local-docker.nix;
+    colima-host = ./hosts/colima-host.nix;
+  };
+
   provisioners = {
     external-cluster = ./provisioners/external-cluster.nix;
     k3d-cluster = ./provisioners/k3d-cluster.nix;

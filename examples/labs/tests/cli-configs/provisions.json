@@ -86,6 +86,9 @@
             "extraApiServerArgs": [],
             "extraK3sArgs": [],
             "extraVolumes": [],
+            "host": {
+              "local": {}
+            },
             "image": "rancher/k3s:v1.31.4-k3s1",
             "network": "provisions",
             "noFlannel": false,

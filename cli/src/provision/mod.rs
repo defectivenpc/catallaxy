@@ -5,6 +5,7 @@ use console::style;
 
 use crate::config::Context as CataContext;
 use crate::domain::cluster::{K3dConfig, TalosConfig};
+use crate::domain::container_host::{ColimaHost, ContainerHost};
 use crate::domain::{ClusterDocument, ProvisionerConfig, ProvisionerKind};
 use crate::io;
 
@@ -51,36 +52,50 @@ fn talos_config(spec: &ClusterDocument) -> Result<&TalosConfig> {
     }
 }
 
-/// The docker socket this machine's labs are built on, with the VM up.
+/// The `DOCKER_HOST` a host is reached through, with its engine up.
 ///
-/// On macOS that is Colima's, started if it is not already running; the
-/// profile is one per operator rather than one per lab, so the second lab of
-/// a session finds it up. Everywhere else docker is the host's own and this
-/// is `None`, meaning "whatever the environment resolves to".
+/// `None` means "whatever the environment resolves to". A local host on macOS
+/// is Colima's `catallaxy` profile, and any Colima host becomes `None` when
+/// the operator set `CATA_COLIMA_DISABLE` because their docker is Docker
+/// Desktop. A profile that is not running is started, sized by the
+/// operator's `CATA_COLIMA_*`, because one profile serves every lab and so
+/// its size is not any one lab's to say.
 ///
 /// Starting a VM is the point, so call it before probing the daemon and not
 /// after: a reachability check that runs first can only ever refuse.
-pub fn resolve_docker_host(ctx: &CataContext) -> Result<Option<String>> {
-    if !io::colima::is_macos() {
-        return Ok(None);
+pub fn resolve_docker_host(ctx: &CataContext, host: &ContainerHost) -> Result<Option<String>> {
+    match host {
+        ContainerHost::Local(_) if io::colima::is_macos() => resolve_docker_host(
+            ctx,
+            &ContainerHost::Colima(ColimaHost {
+                profile: "catallaxy".to_string(),
+            }),
+        ),
+        ContainerHost::Local(_) => Ok(None),
+        ContainerHost::Ssh(_) => Ok(host.ssh_endpoint()),
+        ContainerHost::Colima(_) if !ctx.colima.enable => Ok(None),
+        ContainerHost::Colima(ColimaHost { profile }) => {
+            let colima = &ctx.colima;
+            if io::colima::profile_running(profile) {
+                println!(
+                    "{} Colima VM already running (profile: {profile})",
+                    style(">>>").green(),
+                );
+            } else {
+                io::colima::start(profile, colima.cpu, colima.memory, colima.disk)?;
+            }
+            Ok(Some(io::colima::docker_socket(profile)))
+        }
     }
+}
 
-    let colima = &ctx.colima;
-    if !colima.enable {
-        return Ok(None);
-    }
-
-    if io::colima::profile_running(&colima.profile) {
-        println!(
-            "{} Colima VM already running (profile: {})",
-            style(">>>").green(),
-            colima.profile
-        );
-    } else {
-        io::colima::start(&colima.profile, colima.cpu, colima.memory, colima.disk)?;
-    }
-
-    Ok(Some(io::colima::docker_socket(&colima.profile)))
+/// [`resolve_docker_host`] for a cluster `cata` runs, and `None` for one it
+/// does not.
+pub fn cluster_docker_host(ctx: &CataContext, spec: &ClusterDocument) -> Result<Option<String>> {
+    spec.provisioning
+        .config
+        .host()
+        .map_or(Ok(None), |h| resolve_docker_host(ctx, h))
 }
 
 fn run_pre_provision_hooks(name: &str, spec: &ClusterDocument) -> Result<()> {
@@ -128,7 +143,7 @@ pub fn provision_cluster_with_registry(
             provision_k3d(ctx, name, &cluster_name, spec, registries_yaml, lab_package)?;
         }
         ProvisionerKind::Talos => {
-            let docker_host = resolve_docker_host(ctx)?;
+            let docker_host = cluster_docker_host(ctx, spec)?;
             if io::talos::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 match converge_existing_cluster(
                     name,
@@ -181,7 +196,7 @@ pub fn stop_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument) -> Re
 
     match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
-            let docker_host = resolve_docker_host(ctx)?;
+            let docker_host = cluster_docker_host(ctx, spec)?;
             if !io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 println!("{} Cluster '{name}' is not running", style(">>>").green());
                 return Ok(());
@@ -207,7 +222,7 @@ pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument
 
     match spec.provisioning.config.kind() {
         ProvisionerKind::K3d => {
-            let docker_host = resolve_docker_host(ctx)?;
+            let docker_host = cluster_docker_host(ctx, spec)?;
             if !io::k3d::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 println!("{} Cluster '{name}' is not running", style(">>>").green());
                 return Ok(());
@@ -215,7 +230,7 @@ pub fn deprovision_cluster(ctx: &CataContext, name: &str, spec: &ClusterDocument
             io::k3d::cluster_destroy(&cluster_name, docker_host.as_deref())?;
         }
         ProvisionerKind::Talos => {
-            let docker_host = resolve_docker_host(ctx)?;
+            let docker_host = cluster_docker_host(ctx, spec)?;
             if !io::talos::cluster_exists(&cluster_name, docker_host.as_deref()) {
                 println!("{} Cluster '{name}' is not running", style(">>>").green());
                 return Ok(());
@@ -238,7 +253,7 @@ fn provision_k3d(
     registries_yaml: Option<&std::path::Path>,
     lab_package: Option<&str>,
 ) -> Result<()> {
-    let docker_host = resolve_docker_host(ctx)?;
+    let docker_host = cluster_docker_host(ctx, spec)?;
     if io::k3d::cluster_exists(cluster_name, docker_host.as_deref()) {
         io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
         match converge_existing_cluster(name, spec, docker_host.as_deref(), ctx.may_recreate(name))?

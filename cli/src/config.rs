@@ -53,16 +53,15 @@ impl FlakeRef {
     }
 }
 
-/// The macOS VM the operator runs docker in.
+/// How the operator runs a Colima host: whether at all, and how big its VM is.
 ///
-/// It describes the operator's machine and not any cluster, so it is `cata`'s
-/// own configuration rather than a field on a cluster document — where it sat
-/// until the document became what a cluster *is*. Environment-driven, because
+/// The lab names a Colima host and its profile; these describe the operator's
+/// machine, which every lab on it shares, so they are `cata`'s own
+/// configuration rather than a field of any lab. Environment-driven, because
 /// the one person it concerns is the one running the command.
 #[derive(Clone, Debug)]
 pub struct Colima {
     pub enable: bool,
-    pub profile: String,
     pub cpu: u64,
     pub memory: u64,
     pub disk: u64,
@@ -71,8 +70,7 @@ pub struct Colima {
 impl Default for Colima {
     fn default() -> Self {
         Self {
-            enable: crate::io::colima::is_macos(),
-            profile: "catallaxy".to_string(),
+            enable: true,
             cpu: 4,
             memory: 8,
             disk: 60,
@@ -81,7 +79,7 @@ impl Default for Colima {
 }
 
 impl Colima {
-    /// `CATA_COLIMA_{DISABLE,PROFILE,CPU,MEMORY,DISK}`, each falling back to
+    /// `CATA_COLIMA_{DISABLE,CPU,MEMORY,DISK}`, each falling back to
     /// the default above.
     pub fn from_env() -> Self {
         let d = Self::default();
@@ -90,7 +88,6 @@ impl Colima {
             |k: &str, fallback: u64| setting(k).and_then(|v| v.parse().ok()).unwrap_or(fallback);
         Self {
             enable: d.enable && setting("CATA_COLIMA_DISABLE").is_none(),
-            profile: setting("CATA_COLIMA_PROFILE").unwrap_or(d.profile),
             cpu: num("CATA_COLIMA_CPU", d.cpu),
             memory: num("CATA_COLIMA_MEMORY", d.memory),
             disk: num("CATA_COLIMA_DISK", d.disk),

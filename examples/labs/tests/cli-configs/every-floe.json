@@ -479,6 +479,11 @@
             "extraApiServerArgs": [],
             "extraK3sArgs": [],
             "extraVolumes": [],
+            "host": {
+              "colima": {
+                "profile": "catallaxy"
+              }
+            },
             "image": "rancher/k3s:v1.31.4-k3s1",
             "network": "every-floe",
             "noFlannel": true,

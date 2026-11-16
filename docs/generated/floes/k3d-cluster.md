@@ -20,6 +20,12 @@ A k3d cluster on the operator's docker host.
 | version | string | `"1.31"` | Kubernetes minor version this cluster answers as. |
 | wait | string | `"10m"` | How long to wait for the API server to answer once the cluster has been created.  Here rather than on the cluster, because how long a cluster takes to come up is a property of what makes it. The wait for an *apply* to settle belongs to whatever applies, and is `DELIVERY_POLICY`'s.  |
 
+## Requires
+
+| hole | signature | what it is |
+| --- | --- | --- |
+| host | [CONTAINER_HOST](../signatures/CONTAINER_HOST.md) | A docker engine the lab places clusters and host services on, as `cata` reaches it. |
+
 ## Requires, optionally
 
 | hole | signature | what it is |

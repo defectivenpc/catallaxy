@@ -616,8 +616,9 @@ fn cluster_drift_sees_every_declared_field() {
     let shape = idents_of(sources.file("domain/cluster_shape.rs"));
 
     // A different k3d cluster name is a different cluster, so `cluster_exists`
-    // never matches one and there is nothing to drift.
-    let exempt = ["cluster_name"];
+    // never matches one and there is nothing to drift. The same holds for a
+    // cluster on another host: `cluster_exists` asks that host, not this one.
+    let exempt = ["cluster_name", "host"];
 
     let mut missing = Vec::new();
     for name in ["K3dConfig", "ClusterNetwork", "KubernetesSpec"] {

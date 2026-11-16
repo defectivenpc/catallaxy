@@ -1,5 +1,6 @@
 pub mod cluster;
 pub mod cluster_shape;
+pub mod container_host;
 pub mod crossplane;
 pub mod diagnostic;
 pub mod exit;

@@ -24,6 +24,12 @@ A Talos cluster in docker, on a network talosctl makes.
 | wait | string | `"10m"` | How long to wait for the API server to answer once the cluster has been created.  Here rather than on the cluster, because how long a cluster takes to come up is a property of what makes it. The wait for an *apply* to settle belongs to whatever applies, and is `DELIVERY_POLICY`'s.  |
 | workers | unsigned integer, meaning >=0 | `1` | Worker nodes.  At least one unless nothing has to be scheduled. A Talos control plane keeps the standard NoSchedule taint, unlike a k3d server node, so a cluster with none has nowhere to run a workload — and the symptom is every Pod Pending rather than anything naming the taint.  |
 
+## Requires
+
+| hole | signature | what it is |
+| --- | --- | --- |
+| host | [CONTAINER_HOST](../signatures/CONTAINER_HOST.md) | A docker engine the lab places clusters and host services on, as `cata` reaches it. |
+
 ## Provides
 
 | provision | signature | what it is |

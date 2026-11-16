@@ -6,6 +6,24 @@ let
   stepType = (import ../steps { inherit lib; }).types;
 in
 {
+  CONTAINER_HOST = floe.mkSig {
+    name = "CONTAINER_HOST";
+    canonicalName = "host";
+    description = "A docker engine the lab places clusters and host services on, as `cata` reaches it.";
+    fields = {
+      engine = T.taggedUnion {
+        local = T.record { };
+        colima = T.record {
+          profile = T.str;
+        };
+        ssh = T.record {
+          address = T.str;
+          user = T.nullOr T.str;
+        };
+      };
+    };
+  };
+
   LAB_NETWORK = floe.mkSig {
     name = "LAB_NETWORK";
     canonicalName = "network";

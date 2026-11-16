@@ -349,6 +349,7 @@ mod tests {
             cpus: "2.0".into(),
             config_patches: vec![r#"{"cluster":{"inlineManifests":[]}}"#.into()],
             reachable_from: vec!["catallaxy-minimal.talos-ingress".into()],
+            host: crate::domain::container_host::ContainerHost::Local(Default::default()),
         }
     }
 

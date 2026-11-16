@@ -31,16 +31,18 @@ pub async fn run(
 fn preflight(ctx: &CataContext, name: &str) -> Result<()> {
     io::process::check_required_tools()?;
 
-    let docker_host = crate::provision::resolve_docker_host(ctx)?;
-
-    if !io::docker::daemon_reachable(docker_host.as_deref()) {
-        bail!(
-            "the docker daemon is not reachable, and every cluster and host service \
-             this lab needs runs on it. Start docker (or check DOCKER_HOST) and try again."
-        );
-    }
-
     let lab = io::nix::get_lab_document(ctx, name)?;
+
+    for host in lab.container_hosts() {
+        let docker_host = crate::provision::resolve_docker_host(ctx, host)?;
+        if !io::docker::daemon_reachable(docker_host.as_deref()) {
+            bail!(
+                "the docker daemon at {} is not reachable, and this lab runs on it. \
+                 Start docker (or check DOCKER_HOST) and try again.",
+                docker_host.as_deref().unwrap_or("the local socket")
+            );
+        }
+    }
 
     refuse_colliding_subnet(name, &lab)?;
 

@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::container_host::ContainerHost;
+
 /// One Secret a cluster builds out of a store's values.
 ///
 /// Was `serde_json::Value` on `ClusterDocument`, decoded by `parse_projections`,
@@ -265,6 +267,15 @@ impl ProvisionerConfig {
         }
     }
 
+    /// The engine this cluster's nodes run on, when `cata` runs them.
+    pub fn host(&self) -> Option<&ContainerHost> {
+        match self {
+            ProvisionerConfig::K3d(c) => Some(&c.host),
+            ProvisionerConfig::Talos(c) => Some(&c.host),
+            ProvisionerConfig::External(_) => None,
+        }
+    }
+
     /// Manifests the provisioner applies before the node is Ready.
     ///
     /// Empty for a provisioner with no such mechanism, which is a real answer
@@ -285,6 +296,10 @@ impl ProvisionerConfig {
 #[serde(rename_all = "camelCase")]
 pub struct TalosConfig {
     pub cluster_name: String,
+    /// The engine the nodes run on. Defaulted to the operator's machine, which
+    /// is where every cluster recorded before the lab named one was built.
+    #[serde(default)]
+    pub host: ContainerHost,
     pub image: Option<String>,
     pub kubernetes_version: Option<String>,
     pub subnet: String,
@@ -308,6 +323,10 @@ pub struct TalosConfig {
 #[serde(rename_all = "camelCase")]
 pub struct K3dConfig {
     pub cluster_name: String,
+    /// The engine the nodes run on. Defaulted to the operator's machine, which
+    /// is where every cluster recorded before the lab named one was built.
+    #[serde(default)]
+    pub host: ContainerHost,
     pub image: Option<String>,
     pub network: Option<String>,
 

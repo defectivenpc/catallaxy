@@ -309,6 +309,8 @@ let
       apply = f: if lib.isFunction f then f { inputs = given; } else f;
 
       frameworkUnits = {
+        host = floes.local-docker { };
+
         network = floes.lab-network {
           name = labName;
           inherit subnet;

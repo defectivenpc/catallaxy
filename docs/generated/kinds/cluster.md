@@ -41,6 +41,7 @@ Written as `out.clusterDescriptor`. Checked against this shape where the floe is
 | `configPatches` | list of `string` |
 | `cpus` | `string` |
 | `exposedPorts` | list of `string` |
+| `host` | `tagged union { colima \| local \| ssh }` |
 | `image` | `string`, or null |
 | `kubernetesVersion` | `string`, or null |
 | `memory` | `string` |
