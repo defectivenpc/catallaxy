@@ -319,7 +319,7 @@
       "description": "Zot OCI registry (image cache)",
       "dnsContainers": [],
       "extraMounts": [],
-      "image": "ghcr.io/project-zot/zot-linux-amd64:v2.1.17",
+      "image": "ghcr.io/project-zot/zot:v2.1.17",
       "networks": [],
       "ports": [
         "5252:5000"
