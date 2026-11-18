@@ -157,7 +157,11 @@ pub fn start_service(
 
     add_extra_mounts(lab_name, svc, &mut volume_mounts);
 
-    let mount_refs: Vec<(&str, &str)> = volume_mounts
+    let placed: Vec<(String, String)> = volume_mounts
+        .iter()
+        .map(|(h, c)| Ok((io::container_host::place(docker, h)?, c.clone())))
+        .collect::<Result<_>>()?;
+    let mount_refs: Vec<(&str, &str)> = placed
         .iter()
         .map(|(h, c)| (h.as_str(), c.as_str()))
         .collect();
@@ -187,12 +191,35 @@ pub fn start_service(
         labels: &provenance.labels(svc_name),
     })?;
 
+    for port in loopback_ports(&svc.ports) {
+        io::container_host::forward(docker, &lab_state_dir(lab_name), port)?;
+    }
+
     wait_for_service_ready(svc, description)?;
     refuse_a_crash_loop(docker, container, description)?;
 
     println!("{} {} started", style(">>>").green(), description);
 
     Ok(())
+}
+
+/// The host ports a service publishes on loopback, which is what the
+/// operator machine dials and so what a tunnel to a remote host carries.
+///
+/// ```
+/// use cata::host::services::loopback_ports;
+/// let ports = ["127.0.0.1:5300:53/tcp", "127.0.0.1:5300:53/udp", "172.16.0.1:5300:53/tcp"];
+/// assert_eq!(loopback_ports(&ports.map(String::from)), vec![5300]);
+/// ```
+pub fn loopback_ports(ports: &[String]) -> Vec<u16> {
+    let mut found: Vec<u16> = ports
+        .iter()
+        .filter_map(|p| p.strip_prefix("127.0.0.1:"))
+        .filter(|rest| !rest.ends_with("/udp"))
+        .filter_map(|rest| rest.split(':').next()?.parse().ok())
+        .collect();
+    found.dedup();
+    found
 }
 
 /// A container docker has already had to restart did not start.

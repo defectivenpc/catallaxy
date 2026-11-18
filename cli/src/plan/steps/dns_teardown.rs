@@ -7,6 +7,9 @@ use crate::plan::StepContext;
 
 pub fn run(sctx: &StepContext<'_>, p: &DnsTeardownParams) -> Result<()> {
     let DnsTeardownParams { zone } = p;
+    if sctx.lab.host.ssh_target().is_some() {
+        return Ok(());
+    }
 
     if sctx.dry_run {
         println!(

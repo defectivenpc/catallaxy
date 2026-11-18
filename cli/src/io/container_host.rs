@@ -36,6 +36,30 @@ pub fn docker_for(colima: &Colima, host: &ContainerHost) -> Docker {
     Docker::at(endpoint(colima, host))
 }
 
+/// The path a container on this daemon mounts a local file from: the file
+/// itself here, or a copy of it on a remote host.
+///
+/// # Errors
+///
+/// If the copy to a remote host fails.
+pub fn place(docker: &Docker, local: &str) -> Result<String> {
+    docker
+        .ssh_target()
+        .map_or_else(|| Ok(local.to_string()), |t| io::remote::place(t, local))
+}
+
+/// Make a port this lab's daemon publishes on loopback dialable at the same
+/// number on the operator machine. Nothing to do for a local daemon.
+///
+/// # Errors
+///
+/// If the tunnel to a remote host cannot carry it.
+pub fn forward(docker: &Docker, state_dir: &std::path::Path, port: u16) -> Result<()> {
+    docker
+        .ssh_target()
+        .map_or(Ok(()), |t| io::remote::forward(state_dir, t, port))
+}
+
 /// The docker on the operator machine, as a local host resolves there.
 ///
 /// For the commands that look at what is running without a lab to ask:

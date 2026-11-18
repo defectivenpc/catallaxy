@@ -216,8 +216,14 @@ fn provision_k3d(
     lab_package: Option<&str>,
 ) -> Result<()> {
     let docker_host = cluster_docker_host(ctx, spec)?;
+    let docker = io::docker::Docker::at(docker_host.clone());
+    let state_dir = match ctx.resolve_lab_name(None) {
+        Ok(lab_name) => crate::host::state::lab_state_dir(&lab_name),
+        Err(_) => crate::host::state::cluster_state_dir(&spec.cluster_handle.instance_name),
+    };
     if io::k3d::cluster_exists(cluster_name, docker_host.as_deref()) {
         io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
+        reach_api(&docker, &state_dir, cluster_name)?;
         match converge_existing_cluster(name, spec, docker_host.as_deref(), ctx.may_recreate(name))?
         {
             Convergence::Unchanged => return Ok(()),
@@ -231,10 +237,6 @@ fn provision_k3d(
     let auto_deploy = resolve_auto_deploy(ctx, name, spec, lab_package);
     let port_refs: Vec<&str> = k3d.ports.iter().map(String::as_str).collect();
 
-    let state_dir = match ctx.resolve_lab_name(None) {
-        Ok(lab_name) => crate::host::state::lab_state_dir(&lab_name),
-        Err(_) => crate::host::state::cluster_state_dir(&spec.cluster_handle.instance_name),
-    };
     let extra_volumes: Vec<(String, String)> = k3d
         .extra_volumes
         .iter()
@@ -285,9 +287,15 @@ fn provision_k3d(
         extra_api_server_args: &k3d.extra_api_server_args,
         extra_k3s_args: &extra_k3s_args,
         extra_volumes: &extra_volumes,
+        place: &|path| io::container_host::place(&docker, path),
+        api_port: docker
+            .ssh_target()
+            .map(|_| io::remote::free_port())
+            .transpose()?,
     })?;
 
     io::k3d::kubeconfig_merge(cluster_name, docker_host.as_deref())?;
+    reach_api(&docker, &state_dir, cluster_name)?;
 
     wait_until_answering(&spec.cluster_handle.context, &spec.provisioning.wait)?;
 
@@ -317,6 +325,26 @@ enum Convergence {
 /// Adding workers is done here. Everything else is baked into node containers
 /// at creation, so the only convergence is recreation, which `--recreate`
 /// performs and a bare `lab up` refuses.
+/// Carry a remote cluster's API through the lab's tunnel, at the port its
+/// kubeconfig already names. Nothing to do for a cluster on this machine.
+fn reach_api(
+    docker: &io::docker::Docker,
+    state_dir: &std::path::Path,
+    cluster: &str,
+) -> Result<()> {
+    if docker.ssh_target().is_none() {
+        return Ok(());
+    }
+    let port = io::k3d::api_port(cluster, docker.host()).with_context(|| {
+        format!(
+            "k3d cluster '{cluster}' is on a remote host but its kubeconfig names no \
+             loopback port, so there is nothing to tunnel. It was probably created \
+             before the lab named that host: recreate it with `--recreate {cluster}`."
+        )
+    })?;
+    io::container_host::forward(docker, state_dir, port)
+}
+
 fn converge_existing_cluster(
     name: &str,
     spec: &ClusterDocument,

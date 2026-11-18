@@ -36,6 +36,7 @@ pub mod nix;
 pub mod pki;
 pub mod poll;
 pub mod process;
+pub mod remote;
 pub mod route;
 pub mod secret_sink;
 pub mod secrets;

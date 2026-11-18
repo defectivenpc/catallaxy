@@ -67,6 +67,7 @@
   hosts = {
     local-docker = ./hosts/local-docker.nix;
     colima-host = ./hosts/colima-host.nix;
+    ssh-docker-host = ./hosts/ssh-docker-host.nix;
   };
 
   provisioners = {

@@ -22,6 +22,7 @@ anything.
 | --- | --- |
 | [`colima-host`](../floes/colima-host.md) | `provides.host` |
 | [`local-docker`](../floes/local-docker.md) | `provides.host` |
+| [`ssh-docker-host`](../floes/ssh-docker-host.md) | `provides.host` |
 
 ## Required by
 

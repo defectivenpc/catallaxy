@@ -49,6 +49,12 @@ impl Docker {
         self.host.as_deref()
     }
 
+    /// The `user@address` of a daemon reached over SSH, whose files and
+    /// loopback ports are on another machine.
+    pub fn ssh_target(&self) -> Option<&str> {
+        self.host()?.strip_prefix("ssh://")
+    }
+
     #[must_use]
     pub fn command(&self) -> Command {
         let mut cmd = command();

@@ -56,10 +56,16 @@ impl ContainerHost {
     /// assert_eq!(box1.ssh_endpoint().as_deref(), Some("ssh://ops@10.0.0.11"));
     /// ```
     pub fn ssh_endpoint(&self) -> Option<String> {
+        self.ssh_target().map(|t| format!("ssh://{t}"))
+    }
+
+    /// What `ssh` is pointed at for a remote host: `user@address`, or the
+    /// address alone when the operator's SSH config names the user.
+    pub fn ssh_target(&self) -> Option<String> {
         match self {
             Self::Ssh(SshHost { address, user }) => Some(match user {
-                Some(u) => format!("ssh://{u}@{address}"),
-                None => format!("ssh://{address}"),
+                Some(u) => format!("{u}@{address}"),
+                None => address.clone(),
             }),
             Self::Local(_) | Self::Colima(_) => None,
         }

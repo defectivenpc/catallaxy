@@ -271,7 +271,19 @@ floe.mkFloe {
 
           config.talos = {
             clusterName = inputs.instanceName;
-            host = config.floe.requires.host.engine;
+            host =
+              let
+                engine = config.floe.requires.host.engine;
+              in
+              if engine ? ssh then
+                throw (
+                  "talos-cluster '${inputs.name}' is placed on a remote container host "
+                  + "(${engine.ssh.address}), but talosctl dials its nodes on the docker bridge, "
+                  + "which only a local host lets the operator machine reach. Place it on a local "
+                  + "host, or use k3d-cluster there."
+                )
+              else
+                engine;
             inherit (inputs)
               image
               subnet

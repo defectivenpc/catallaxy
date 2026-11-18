@@ -6,7 +6,7 @@ use crate::plan::StepContext;
 pub fn run(sctx: &StepContext<'_>) -> Result<()> {
     let docker_subnet = sctx.lab.network.docker_subnet.as_str();
 
-    if cfg!(target_os = "macos") {
+    if cfg!(target_os = "macos") && sctx.lab.host.ssh_target().is_none() {
         let _ = crate::host::network::teardown_host_networking_macos(docker_subnet);
     }
 

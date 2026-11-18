@@ -29,6 +29,13 @@ pub struct ClusterCreate<'a> {
     /// flag like `--datastore-endpoint` has no route through that one.
     pub extra_k3s_args: &'a [(String, String)],
     pub extra_volumes: &'a [(String, String)],
+    /// Where the daemon mounts each local path from: the path itself, or a
+    /// copy of it on a remote container host.
+    pub place: &'a dyn Fn(&str) -> Result<String>,
+    /// Publish the API on `127.0.0.1:<port>` of the container host rather
+    /// than on every interface at a port k3d picks. What a remote host needs,
+    /// so its tunnel can carry the API under the same number.
+    pub api_port: Option<u16>,
 }
 
 /// # Errors
@@ -57,6 +64,8 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
         extra_api_server_args,
         extra_k3s_args,
         extra_volumes,
+        place,
+        api_port,
     } = opts;
     println!("{} Creating k3d cluster '{name}'...", style(">>>").cyan());
 
@@ -67,6 +76,10 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
         "--kubeconfig-update-default=false",
         "--kubeconfig-switch-context=false",
     ]);
+
+    if let Some(port) = api_port {
+        cmd.args(["--api-port", &format!("127.0.0.1:{port}")]);
+    }
 
     if let Some(net) = network {
         cmd.args(["--network", net]);
@@ -92,10 +105,10 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
     for (host_path, container_path) in extra_volumes {
         cmd.args([
             "--volume",
-            &format!("{host_path}:{container_path}@server:*"),
+            &format!("{}:{container_path}@server:*", place(host_path)?),
         ]);
     }
-    mount_auto_deploy_manifests(&mut cmd, name, auto_deploy_manifests)?;
+    mount_auto_deploy_manifests(&mut cmd, name, auto_deploy_manifests, place)?;
 
     for port in ports {
         cmd.args(["-p", port]);
@@ -104,19 +117,25 @@ pub fn cluster_create(opts: ClusterCreate<'_>) -> Result<()> {
     if let Some(path) = registries_yaml {
         cmd.args([
             "--volume",
-            &format!("{path}:/etc/rancher/k3s/registries.yaml@server:*"),
+            &format!("{}:/etc/rancher/k3s/registries.yaml@server:*", place(path)?),
         ]);
     }
 
     if let Some(path) = certs_d {
         cmd.args([
             "--volume",
-            &format!("{path}:/var/lib/rancher/k3s/agent/etc/containerd/certs.d@server:*"),
+            &format!(
+                "{}:/var/lib/rancher/k3s/agent/etc/containerd/certs.d@server:*",
+                place(path)?
+            ),
         ]);
     }
 
     if let Some(path) = resolv_conf {
-        cmd.args(["--volume", &format!("{path}:/etc/resolv.conf@server:*")]);
+        cmd.args([
+            "--volume",
+            &format!("{}:/etc/resolv.conf@server:*", place(path)?),
+        ]);
         cmd.env("K3D_FIX_DNS", "0");
     }
 
@@ -200,6 +219,33 @@ fn kubeconfig_merge_args(name: &str, kubeconfig: &Path) -> Vec<String> {
     ]
 }
 
+/// The loopback port a kubeconfig's first server is dialled at.
+///
+/// ```
+/// use cata::io::k3d::server_port;
+/// assert_eq!(server_port("    server: https://127.0.0.1:41235\n"), Some(41235));
+/// assert_eq!(server_port("    server: https://10.0.0.11:6443\n"), None);
+/// ```
+pub fn server_port(kubeconfig: &str) -> Option<u16> {
+    kubeconfig
+        .lines()
+        .find_map(|l| l.trim().strip_prefix("server: https://127.0.0.1:"))?
+        .trim()
+        .parse()
+        .ok()
+}
+
+/// The loopback port this cluster's API is published on, if it is.
+pub fn api_port(name: &str, docker_host: Option<&str>) -> Option<u16> {
+    let mut cmd = Command::new("k3d");
+    cmd.args(["kubeconfig", "get", name]);
+    crate::io::docker::apply_host(&mut cmd, docker_host);
+    let out = cmd.stderr(Stdio::null()).output().ok()?;
+    out.status
+        .success()
+        .then(|| server_port(&String::from_utf8_lossy(&out.stdout)))?
+}
+
 /// Write the cluster's entry into the lab's own kubeconfig.
 ///
 /// # Errors
@@ -279,6 +325,7 @@ fn mount_auto_deploy_manifests(
     cmd: &mut Command,
     name: &str,
     auto_deploy_manifests: &[(String, String)],
+    place: &dyn Fn(&str) -> Result<String>,
 ) -> Result<()> {
     let auto_deploy_dir = if !auto_deploy_manifests.is_empty() {
         let dir = std::env::temp_dir().join(format!("cata-autodeploy-{name}"));
@@ -300,7 +347,8 @@ fn mount_auto_deploy_manifests(
         cmd.args([
             "--volume",
             &format!(
-                "{host_path}:/var/lib/rancher/k3s/server/manifests/{manifest_name}.yaml@server:*"
+                "{}:/var/lib/rancher/k3s/server/manifests/{manifest_name}.yaml@server:*",
+                place(&host_path)?
             ),
         ]);
     }

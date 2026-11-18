@@ -1,0 +1,225 @@
+{
+  "cd": {
+    "bootstrap": "kubectl-ssa",
+    "git": {}
+  },
+  "clusterNames": [
+    "app"
+  ],
+  "clusters": {
+    "app": {
+      "clusterHandle": {
+        "context": "k3d-minimal-remote-app",
+        "instanceName": "minimal-remote-app",
+        "kubernetes": {
+          "controlPlanes": 1,
+          "distribution": "k3s",
+          "version": "1.31",
+          "workers": 0
+        },
+        "name": "app",
+        "network": {
+          "podSubnet": "10.244.0.0/16",
+          "serviceSubnet": "10.96.0.0/12"
+        }
+      },
+      "content": {
+        "exposedHosts": [
+          {
+            "bundle": "podinfo/podinfo",
+            "host": "podinfo.minimal.test",
+            "namespace": "podinfo",
+            "paths": [
+              "/"
+            ],
+            "tier": "public"
+          }
+        ],
+        "namespaces": [
+          "cert-manager",
+          "external-secrets",
+          "podinfo"
+        ],
+        "projections": {},
+        "tree": "/nix/store/HASH-floe-cluster-app",
+        "waves": [
+          [
+            {
+              "hasReadyProbe": false,
+              "name": "namespaces",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/coredns-zone/coredns",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/external-secrets/crds",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": false,
+              "name": "platform/gateway-api/crds",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/cert-manager",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/external-secrets/external-secrets",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/cert-manager/issuers",
+              "resourceCount": 3
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/controller",
+              "resourceCount": 0
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/trust-manager",
+              "resourceCount": 0
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "platform/gateway/gateway",
+              "resourceCount": 1
+            },
+            {
+              "hasReadyProbe": true,
+              "name": "platform/trust-manager/bundles",
+              "resourceCount": 2
+            }
+          ],
+          [
+            {
+              "hasReadyProbe": true,
+              "name": "podinfo/podinfo",
+              "resourceCount": 3
+            }
+          ]
+        ]
+      },
+      "delivery": {
+        "kind": "kapp",
+        "waitTimeout": "10m"
+      },
+      "provisioning": {
+        "config": {
+          "k3d": {
+            "autoDeployManifests": [],
+            "clusterName": "minimal-remote-app",
+            "extraApiServerArgs": [],
+            "extraK3sArgs": [],
+            "extraVolumes": [],
+            "host": {
+              "ssh": {
+                "address": "10.10.100.177",
+                "user": "whitehead"
+              }
+            },
+            "image": "rancher/k3s:v1.31.4-k3s1",
+            "network": "minimal.remote",
+            "noFlannel": false,
+            "noLocalStorage": false,
+            "noServiceLB": false,
+            "noTraefik": true,
+            "nodeConfigFrom": "registry",
+            "ports": []
+          }
+        },
+        "hooks": [],
+        "wait": "10m"
+      }
+    }
+  },
+  "destroy": {},
+  "dnsInfo": null,
+  "host": {
+    "ssh": {
+      "address": "10.10.100.177",
+      "user": "whitehead"
+    }
+  },
+  "infraPublications": [],
+  "labName": "minimal.remote",
+  "labOwnedRegistries": [],
+  "network": {
+    "dockerSubnet": "172.22.80.0/20",
+    "name": "minimal.remote"
+  },
+  "opsToolPath": "/nix/store/HASH-minimal.remote-ops/bin/minimal.remote-ops",
+  "registryPort": 5101,
+  "registryUpstreams": [
+    "codeberg.org",
+    "registry.k8s.io",
+    "ghcr.io",
+    "quay.io",
+    "docker.io",
+    "public.ecr.aws",
+    "xpkg.upbound.io",
+    "oci.external-secrets.io"
+  ],
+  "routedHosts": {},
+  "secrets": {
+    "envFile": null,
+    "hostProjections": [],
+    "managed": {},
+    "stores": {}
+  },
+  "services": {
+    "registry": {
+      "command": [],
+      "container": "catallaxy-minimal.remote-registry",
+      "description": "Zot OCI registry (image cache)",
+      "dnsContainers": [],
+      "extraMounts": [],
+      "image": "ghcr.io/project-zot/zot:v2.1.17",
+      "networks": [],
+      "ports": [
+        "127.0.0.1:5101:5000",
+        "172.22.80.1:5101:5000"
+      ],
+      "readyProbe": {
+        "expectedStatus": 200,
+        "host": "127.0.0.1",
+        "kind": "http",
+        "path": "/v2/",
+        "port": 5101,
+        "timeout": "60s"
+      },
+      "volumes": {
+        "/etc/zot/config.json": {
+          "content": "{\"distSpecVersion\":\"1.1.0\",\"extensions\":{\"sync\":{\"enable\":true,\"registries\":[{\"content\":[{\"prefix\":\"forgejo/**\"}],\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://codeberg.org\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry.k8s.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://ghcr.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://quay.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://registry-1.docker.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://public.ecr.aws\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://xpkg.upbound.io\"]},{\"onDemand\":true,\"tlsVerify\":true,\"urls\":[\"https://oci.external-secrets.io\"]}]}},\"http\":{\"address\":\"0.0.0.0\",\"compat\":[\"docker2s2\"],\"port\":\"5000\"},\"storage\":{\"dedupe\":true,\"rootDirectory\":\"/var/lib/zot\"}}"
+        },
+        "/var/lib/zot": {
+          "persist": "data"
+        }
+      }
+    }
+  },
+  "verify": {
+    "checks": {},
+    "endpoints": {
+      "acceptStatuses": [],
+      "enable": false
+    }
+  }
+}
